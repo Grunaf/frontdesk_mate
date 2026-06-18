@@ -1,64 +1,81 @@
-"use server";
+'use server';
 
-import { supabase } from "@/lib/db/client";
+import { supabase } from '@/shared/lib/db';
 
-interface UploadParams {
-  files: File[];
-  instagramAccount?: string;
-  filesLength: number;
+export type UploadMemoriesErrorKey = 'noFiles' | 'uploadFailed' | 'timeout' | 'unknown';
+
+interface UploadMemoriesResult {
+  success: boolean;
+  errorKey?: UploadMemoriesErrorKey;
 }
 
-function validateServerData(filesLength: number, instagram: string) {
-    if (filesLength === 0) {
-        throw new Error("No files provided");
-    }
+const UPLOAD_TIMEOUT_MS = 30_000;
+type UploadError = { message: string } | null;
+type UploadFileFn = (filePath: string, file: File) => Promise<{ error: UploadError }>;
 
-    const cleanInstagram = instagram.trim().replace("@", "");
-    return { cleanInstagram };
+export class UploadMemoriesError extends Error {
+  constructor(public readonly errorKey: UploadMemoriesErrorKey) {
+    super(errorKey);
+    this.name = 'UploadMemoriesError';
+  }
 }
-function chooseFilePath(file: File) {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-    const isVideo = file.type.startsWith("video/");
-    const isImage = file.type.startsWith("image/");
-    
-    const folder = isVideo ? "videos" : isImage ? "image" : "others";
-    // почему нужен знак доллара
-    return `${folder}/${fileName}`
+function validateServerData(filesLength: number) {
+  if (filesLength === 0) {
+    throw new UploadMemoriesError('noFiles');
+  }
 }
-export async function uploadMemoriesAction(formData: FormData) {
+
+export function chooseFilePath(file: File) {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+  const isVideo = file.type.startsWith('video/');
+  const isImage = file.type.startsWith('image/');
+
+  const folder = isVideo ? 'videos' : isImage ? 'image' : 'others';
+  return `${folder}/${fileName}`;
+}
+
+async function uploadWithTimeout(filePath: string, file: File): Promise<{ error: UploadError }> {
+  const uploadPromise = supabase.storage.from('memories').upload(filePath, file);
+  const timeoutPromise = new Promise<{ error: UploadError }>((_, reject) => {
+    setTimeout(() => reject(new UploadMemoriesError('timeout')), UPLOAD_TIMEOUT_MS);
+  });
+
+  return Promise.race([uploadPromise, timeoutPromise]);
+}
+
+export function createUploadMemoriesAction(uploadFile: UploadFileFn) {
+  return async function uploadMemoriesAction(formData: FormData): Promise<UploadMemoriesResult> {
     try {
-        const files = formData.getAll("files") as File[];
-        const instagram = formData.get("instagram") as string || "";
-        // нужно поместить данные в БД
-        // const { cleanInstagram } = validateServerData(filesLength, instagramAccount || "");
+      const files = formData.getAll('files') as File[];
+      validateServerData(files.length);
 
-        // if (cleanInstagram) {
-        //     formData.append("instagram_account", cleanInstagram);
-        // }
-        await Promise.all(
-            files.map(async (file) => {
-                const filePath = chooseFilePath(file);
-    
-                // почему в кавычках?
-                // откуда берется form
-                const {data, error } = await supabase.storage
-                    .from("memories")
-                    .upload(filePath, file)
+      await Promise.all(
+        files.map(async (file) => {
+          const filePath = chooseFilePath(file);
+          const { error } = await uploadFile(filePath, file);
 
-                if (error) {
-                    throw new Error("Upload failed");
-                }
-            })
-        )
+          if (error) {
+            throw new UploadMemoriesError('uploadFailed');
+          }
+        })
+      );
 
-        // можно ли унифицировать ответ с бэка
-        return {success: true};
-    } catch (error: any) {
-        // подходит ли это для будущей отладки
-        // Нужно ли хранить ошибки в отдельном файле
-        console.error("Server Action Error:", error);
-        return { success: false, error: error.message || "Something went wrong" }
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('Server Action Error:', error);
+
+      if (error instanceof UploadMemoriesError) {
+        return { success: false, errorKey: error.errorKey };
+      }
+
+      return { success: false, errorKey: 'unknown' };
     }
+  };
 }
+
+const uploadFileToSupabase: UploadFileFn = (filePath, file) => uploadWithTimeout(filePath, file);
+
+export const uploadMemoriesAction = createUploadMemoriesAction(uploadFileToSupabase);
