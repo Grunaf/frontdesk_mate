@@ -9,7 +9,7 @@ test.describe('city packs smoke', () => {
     await loginAsAdmin(page, config);
   });
 
-  test('lists sarajevo pack as ready', async ({ page }) => {
+  test('lists configured city pack as ready', async ({ page }) => {
     await page.goto(e2eAdminUrl(config, '/admin/city-packs'));
     await expect(page.getByRole('heading', { name: 'City packs' })).toBeVisible();
 
