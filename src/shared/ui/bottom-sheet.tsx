@@ -5,7 +5,7 @@ import { Drawer as DrawerPrimitive } from 'vaul';
 import { X } from 'lucide-react';
 
 import { cn } from '@/shared/lib/utils';
-import { Button } from './Button';
+import { Button } from './button';
 
 function BottomSheet({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
   return <DrawerPrimitive.Root data-slot="bottom-sheet" {...props} />;

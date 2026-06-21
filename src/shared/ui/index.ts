@@ -3,7 +3,7 @@ export {
   ExternalServiceTouchLink,
   TouchLink,
 } from './external-service';
-export { Button, buttonVariants } from './Button';
+export { Button, buttonVariants } from './button';
 export { SegmentedChipBar, type SegmentedChipBarProps, type SegmentedChipItem } from './SegmentedChipBar';
 export { BaseHeader } from './BaseHeader/BaseHeader';
 export { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card';

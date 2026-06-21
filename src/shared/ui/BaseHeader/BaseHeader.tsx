@@ -11,7 +11,7 @@ import {
 import { TenantBrand } from '@/entities/tenant/ui/TenantBrand';
 import { TenantContext } from '@/entities/tenant/ui/tenant-context';
 import { useTranslations } from '@/shared/i18n';
-import { Button } from '../Button';
+import { Button } from '../button';
 import { Icon } from '../icon';
 
 interface BaseHeaderProps {
