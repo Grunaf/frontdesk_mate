@@ -1,12 +1,10 @@
 import type { CategoryConfig, RouteConfig, RouteId } from '../routes';
 import { buildCityPackLocale } from './locale';
-import { KOTOR_PLACES } from './kotor.places';
 import {
   KOTOR_CONTENT_KEYS,
   KOTOR_ROUTE_CATEGORIES,
   KOTOR_ROUTES,
 } from './kotor';
-import { SARAJEVO_PLACES } from './sarajevo.places';
 import {
   SARAJEVO_CONTENT_KEYS,
   SARAJEVO_ROUTE_CATEGORIES,
@@ -61,7 +59,6 @@ interface CityPackDefinition {
   routes: Record<RouteId, RouteConfig>;
   categories: CategoryConfig[];
   contentKeys: CityPackContentKeys;
-  places: Place[];
   preTripTips?: PreTripTipId[];
   recommendedTaxi?: RecommendedTaxi;
 }
@@ -69,6 +66,7 @@ interface CityPackDefinition {
 function defineCityPack(definition: CityPackDefinition): CityPack {
   return {
     ...definition,
+    places: [],
     locale: buildCityPackLocale(definition.id),
   };
 }
@@ -85,7 +83,6 @@ const CITY_PACKS: Record<CityPackId, CityPack> = {
     routes: SARAJEVO_ROUTES,
     categories: SARAJEVO_ROUTE_CATEGORIES,
     contentKeys: SARAJEVO_CONTENT_KEYS,
-    places: SARAJEVO_PLACES,
     preTripTips: ['sundayClosure'],
     recommendedTaxi: { name: 'Zuti Taxi' },
   }),
@@ -95,7 +92,6 @@ const CITY_PACKS: Record<CityPackId, CityPack> = {
     routes: KOTOR_ROUTES,
     categories: KOTOR_ROUTE_CATEGORIES,
     contentKeys: KOTOR_CONTENT_KEYS,
-    places: KOTOR_PLACES,
     recommendedTaxi: {
       name: 'Red Taxi',
       phoneRaw: '38267019719',
@@ -110,14 +106,4 @@ export function isCityPackId(value: string): value is CityPackId {
 
 export function getCityPack(cityPackId: CityPackId): CityPack {
   return CITY_PACKS[cityPackId];
-}
-
-export function getPlacesPack(cityPackId: CityPackId): Place[] {
-  return CITY_PACKS[cityPackId].places;
-}
-
-import { MIN_PLACES_FOR_PACK } from '@/entities/city-pack/lib/constants';
-
-export function hasPlacesPack(cityPackId: CityPackId): boolean {
-  return getPlacesPack(cityPackId).length >= MIN_PLACES_FOR_PACK;
 }

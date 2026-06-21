@@ -12,6 +12,7 @@
     "city-pack:migrate-v3": "node scripts/migrate-city-pack-places-v3.js --dry-run",
     "city-pack:migrate-v3:apply": "node scripts/migrate-city-pack-places-v3.js --apply",
     "city-pack:validate-v3": "node scripts/validate-city-pack-places-v3.js",
+    "city-pack:parity": "node scripts/verify-city-pack-db-parity.js",
     "validate-i18n": "node scripts/validate-i18n.js",
     "validate-i18n:strict": "node scripts/validate-i18n.js --strict",
     "sync-i18n": "node scripts/sync-i18n.js && node scripts/validate-i18n.js --strict",

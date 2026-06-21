@@ -4,11 +4,14 @@ import { headers } from 'next/headers';
 import { supabase } from '@/shared/lib/db';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import type { TenantConfig } from '../model/tenant-config';
-import { MIN_PLACES_FOR_PACK } from '@/entities/city-pack/lib/constants';
+import {
+  getDevEnvCityPackPlaces,
+  hasDevEnvCityPackPlaces,
+} from '@/entities/city-pack/lib/devEnvCityPackPlaces';
 import { adminPlacesToPlaces } from '@/entities/city-pack/lib/adminPlaceToPlace';
 import { resolveHasPlacesPack } from '@/entities/city-pack/lib/resolveCityPackGate';
 import { getCityPackForAdmin } from '@/entities/city-pack/server';
-import { getPlacesPack, isCityPackId, type CityPackId } from '@/entities/hostel';
+import { isCityPackId, type CityPackId } from '@/entities/hostel';
 import type { TenantRecord, TenantSettings } from '../model/settings';
 import { buildHostelConfig } from '../lib/buildHostelConfig';
 import { getEnvTenantSettings } from '../lib/getEnvTenantSettings';
@@ -96,7 +99,7 @@ function buildTenantConfig(input: {
 /** Dev-only path when Supabase is not configured (single-hostel .env.local workflow). */
 function buildEnvFallbackConfig(slug: string): TenantConfig {
   const cityPackId = resolveFallbackCityPackId();
-  const codePlaces = getPlacesPack(cityPackId);
+  const devPlaces = getDevEnvCityPackPlaces(cityPackId);
 
   return buildTenantConfig({
     slug,
@@ -104,8 +107,8 @@ function buildEnvFallbackConfig(slug: string): TenantConfig {
     cityPackId,
     settings: getEnvTenantSettings(),
     source: 'env',
-    cityPackPlaces: codePlaces,
-    cityPackHasPlaces: codePlaces.length >= MIN_PLACES_FOR_PACK,
+    cityPackPlaces: devPlaces,
+    cityPackHasPlaces: hasDevEnvCityPackPlaces(cityPackId),
   });
 }
 

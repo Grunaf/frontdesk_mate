@@ -1,7 +1,6 @@
 import 'server-only';
 
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
-import { getCityPack, isCityPackId } from '@/entities/hostel';
 import { buildCityPackGateSnapshot, type CityPackGateSnapshot } from '../lib/resolveCityPackGateForTenant';
 import {
   countGatePlaces,
@@ -188,20 +187,6 @@ export async function listCityPacksForTenantSelect(currentPackId?: string): Prom
         placesCount: current.placesCount,
         readyForTenants: current.readyForTenants,
         notReadyReason: current.notReadyReason ?? undefined,
-      });
-    } else if (isCityPackId(currentPackId)) {
-      ready.unshift({
-        id: currentPackId,
-        label: getCityPack(currentPackId).label,
-        status: 'ready',
-        placesCount: countGatePlaces({
-          places: getCityPack(currentPackId).places.map((place) => ({
-            id: place.id,
-            name: place.name,
-            category: place.category,
-          })),
-        }),
-        readyForTenants: true,
       });
     }
   }

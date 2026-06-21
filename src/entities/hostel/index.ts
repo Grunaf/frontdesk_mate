@@ -22,8 +22,6 @@ export {
   type RecommendedTaxi,
 } from './model/routes';
 export {
-  getPlacesPack,
-  hasPlacesPack,
   type Place,
   type PlaceCategory,
   type PlaceIconId,

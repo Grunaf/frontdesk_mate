@@ -1,0 +1,98 @@
+[
+  {
+    "id": "atm-dalmatinska",
+    "category": "essential",
+    "name": "ATM UniCredit / Raiffeisen",
+    "googleMapsUrl": "https://maps.google.com/?q=UniCredit+Bank+Dalmatinska+Sarajevo",
+    "isTopPick": false,
+    "needNow": true
+  },
+  {
+    "id": "konzum-dalmatinska",
+    "category": "essential",
+    "name": "Konzum (Dalmatinska)",
+    "googleMapsUrl": "https://maps.google.com/?q=Konzum+Dalmatinska+Sarajevo",
+    "isTopPick": false,
+    "needNow": true
+  },
+  {
+    "id": "apoteka-titova",
+    "category": "essential",
+    "name": "Apoteka – Titova Street",
+    "googleMapsUrl": "https://maps.google.com/?q=Apoteka+Titova+Sarajevo",
+    "isTopPick": false,
+    "needNow": true
+  },
+  {
+    "id": "u2-pizza",
+    "category": "food",
+    "name": "U2 Pizza",
+    "googleMapsUrl": "https://maps.google.com/?q=U2+Pizza+Sarajevo",
+    "isTopPick": false,
+    "needNow": true
+  },
+  {
+    "id": "zeljo-cevapi",
+    "category": "food",
+    "name": "Željo",
+    "googleMapsUrl": "https://maps.google.com/?q=Cevabdzinica+Zeljo+Sarajevo",
+    "isTopPick": true,
+    "needNow": false
+  },
+  {
+    "id": "pizzerija-mahir",
+    "category": "food",
+    "name": "Pizzerija Mahir",
+    "googleMapsUrl": "https://maps.google.com/?q=Pizzerija+Mahir+Sarajevo",
+    "isTopPick": true,
+    "needNow": false
+  },
+  {
+    "id": "bakehouse-edin",
+    "category": "food",
+    "name": "Bakehouse Edin",
+    "googleMapsUrl": "https://maps.google.com/?q=Pekara+Edin+Sarajevo",
+    "isTopPick": true,
+    "needNow": false
+  },
+  {
+    "id": "pub-vucko",
+    "category": "bars",
+    "name": "Gastro Pub Vučko",
+    "googleMapsUrl": "https://maps.google.com/?q=Gastro+Pub+Vucko+Sarajevo",
+    "isTopPick": true,
+    "needNow": false
+  },
+  {
+    "id": "zlatna-ribica",
+    "category": "bars",
+    "name": "Zlatna ribica",
+    "googleMapsUrl": "https://maps.google.com/?q=Zlatna+ribica+Sarajevo",
+    "isTopPick": true,
+    "needNow": false
+  },
+  {
+    "id": "kino-bosna",
+    "category": "bars",
+    "name": "Kino Bosna",
+    "googleMapsUrl": "https://maps.google.com/?q=Kino+Bosna+Sarajevo",
+    "isTopPick": true,
+    "needNow": false
+  },
+  {
+    "id": "fabrika-coffee",
+    "category": "cafes",
+    "name": "Fabrika Coffee",
+    "googleMapsUrl": "https://maps.google.com/?q=Fabrika+Coffee+Sarajevo",
+    "isTopPick": true,
+    "needNow": false
+  },
+  {
+    "id": "yellow-fortress",
+    "category": "sights",
+    "name": "Yellow Fortress (Žuta Tabija)",
+    "googleMapsUrl": "https://maps.google.com/?q=Zuta+Tabija+Sarajevo",
+    "isTopPick": true,
+    "needNow": false
+  }
+]
