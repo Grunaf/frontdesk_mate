@@ -87,9 +87,9 @@ export function LocalGuide() {
       sortGuestRecommendations(
         (settings.hostelPlaces ?? [])
           .filter((place) => place.name.trim())
-          .map(hostelPlaceToGuestRecommendation)
+          .map((place) => hostelPlaceToGuestRecommendation(place, t))
       ),
-    [settings.hostelPlaces]
+    [settings.hostelPlaces, t]
   );
 
   const allCityRecommendations = useMemo(

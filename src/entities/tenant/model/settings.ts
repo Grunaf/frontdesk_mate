@@ -14,7 +14,14 @@ export type { CityPackId } from '@/entities/hostel';
 import type { HostelPlace } from './hostelPlaces';
 
 export type { HostelPlace, HostelPlaceCategory } from './hostelPlaces';
-export { HOSTEL_PLACE_CATEGORIES } from './hostelPlaces';
+export {
+  HOSTEL_PLACE_CATEGORIES,
+  HOSTEL_PLACE_CATEGORY_IDS,
+  HOSTEL_PLACE_CATEGORY_REGISTRY,
+  isHostelPlaceCategory,
+  resolveHostelPlaceCategoryAdminLabel,
+  resolveHostelPlaceCategoryLabelKey,
+} from './hostelPlaces';
 
 import type { HouseRule } from '@/entities/house-rules';
 

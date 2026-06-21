@@ -224,6 +224,14 @@
               "exploreCityTitle": "Исследуйте город",
               "exploreCitySubtitle": "Подборка мест по городу"
             },
+            "hostelPlaceCategories": {
+              "food": "Еда",
+              "shop": "Магазин / продукты",
+              "atm": "Банкомат",
+              "pharmacy": "Аптека",
+              "nightlife": "Ночная жизнь",
+              "other": "Другое"
+            },
             "places": {
               "atm": {
                 "desc": "Cash & ATMs — withdraw BAM (KM) at UniCredit or Raiffeisen ATMs on Dalmatinska, about a 2-minute walk from the hostel."
@@ -378,6 +386,14 @@
               "subtitle": "В пешей доступности",
               "exploreCityTitle": "Исследуйте город",
               "exploreCitySubtitle": "Места вокруг Которской бухты"
+            },
+            "hostelPlaceCategories": {
+              "food": "Еда",
+              "shop": "Магазин / продукты",
+              "atm": "Банкомат",
+              "pharmacy": "Аптека",
+              "nightlife": "Ночная жизнь",
+              "other": "Другое"
             },
             "places": {}
           },

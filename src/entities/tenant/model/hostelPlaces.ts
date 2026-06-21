@@ -9,11 +9,39 @@ export interface HostelPlace {
   note?: string;
 }
 
-export const HOSTEL_PLACE_CATEGORIES: { id: HostelPlaceCategory; label: string }[] = [
-  { id: 'food', label: 'Food' },
-  { id: 'shop', label: 'Shop / grocery' },
-  { id: 'atm', label: 'ATM' },
-  { id: 'pharmacy', label: 'Pharmacy' },
-  { id: 'nightlife', label: 'Nightlife' },
-  { id: 'other', label: 'Other' },
+export const HOSTEL_PLACE_CATEGORY_REGISTRY: {
+  id: HostelPlaceCategory;
+  adminLabel: string;
+  labelKey: string;
+}[] = [
+  { id: 'food', adminLabel: 'Food', labelKey: 'hostelPlaceCategories.food' },
+  { id: 'shop', adminLabel: 'Shop / grocery', labelKey: 'hostelPlaceCategories.shop' },
+  { id: 'atm', adminLabel: 'ATM', labelKey: 'hostelPlaceCategories.atm' },
+  { id: 'pharmacy', adminLabel: 'Pharmacy', labelKey: 'hostelPlaceCategories.pharmacy' },
+  { id: 'nightlife', adminLabel: 'Nightlife', labelKey: 'hostelPlaceCategories.nightlife' },
+  { id: 'other', adminLabel: 'Other', labelKey: 'hostelPlaceCategories.other' },
 ];
+
+export const HOSTEL_PLACE_CATEGORY_IDS = HOSTEL_PLACE_CATEGORY_REGISTRY.map((entry) => entry.id);
+
+const CATEGORY_BY_ID = Object.fromEntries(
+  HOSTEL_PLACE_CATEGORY_REGISTRY.map((entry) => [entry.id, entry])
+) as Record<HostelPlaceCategory, (typeof HOSTEL_PLACE_CATEGORY_REGISTRY)[number]>;
+
+export function isHostelPlaceCategory(value: string): value is HostelPlaceCategory {
+  return value in CATEGORY_BY_ID;
+}
+
+export function resolveHostelPlaceCategoryAdminLabel(category: HostelPlaceCategory): string {
+  return CATEGORY_BY_ID[category].adminLabel;
+}
+
+export function resolveHostelPlaceCategoryLabelKey(category: HostelPlaceCategory): string {
+  return CATEGORY_BY_ID[category].labelKey;
+}
+
+/** Admin select options — English labels until admin i18n is added. */
+export const HOSTEL_PLACE_CATEGORIES = HOSTEL_PLACE_CATEGORY_REGISTRY.map(({ id, adminLabel }) => ({
+  id,
+  label: adminLabel,
+}));

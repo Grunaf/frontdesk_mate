@@ -1,6 +1,9 @@
 import type { Place, PlaceIconId } from '@/entities/hostel';
 import type { HostelPlace } from '@/entities/tenant/model/hostelPlaces';
-import { HOSTEL_PLACE_CATEGORIES } from '@/entities/tenant/model/hostelPlaces';
+import {
+  resolveHostelPlaceCategoryAdminLabel,
+  resolveHostelPlaceCategoryLabelKey,
+} from '@/entities/tenant/model/hostelPlaces';
 import {
   LOCAL_GUIDE_CATEGORY_TAB_IDS,
   type LocalGuideCategoryTabId,
@@ -25,10 +28,25 @@ export interface GuestRecommendation {
 
 type TranslateFn = (key: string) => string;
 
-function hostelCategoryLabel(category: HostelPlace['category']): string {
-  return HOSTEL_PLACE_CATEGORIES.find((entry) => entry.id === category)?.label ?? category;
-}
+export function hostelPlaceToGuestRecommendation(
+  place: HostelPlace,
+  translate?: TranslateFn
+): GuestRecommendation {
+  const categoryFallback = resolveHostelPlaceCategoryAdminLabel(place.category);
+  const categoryLabel = translate
+    ? translate(resolveHostelPlaceCategoryLabelKey(place.category))
+    : categoryFallback;
 
+  return {
+    id: place.id,
+    scope: 'hostel',
+    name: place.name.trim(),
+    category: place.category,
+    why: place.note?.trim() || categoryLabel,
+    walkHint: place.walkHint?.trim() || undefined,
+    mapsUrl: place.mapsUrl?.trim() || undefined,
+  };
+}
 export function placeToGuestRecommendation(
   place: Place,
   translate: TranslateFn
@@ -44,18 +62,6 @@ export function placeToGuestRecommendation(
     iconId: place.iconId,
     isTopPick: place.isTopPick,
     needNow: place.needNow,
-  };
-}
-
-export function hostelPlaceToGuestRecommendation(place: HostelPlace): GuestRecommendation {
-  return {
-    id: place.id,
-    scope: 'hostel',
-    name: place.name.trim(),
-    category: place.category,
-    why: place.note?.trim() || hostelCategoryLabel(place.category),
-    walkHint: place.walkHint?.trim() || undefined,
-    mapsUrl: place.mapsUrl?.trim() || undefined,
   };
 }
 

@@ -224,6 +224,14 @@
               "exploreCityTitle": "Explore the city",
               "exploreCitySubtitle": "Handpicked places across the city"
             },
+            "hostelPlaceCategories": {
+              "food": "Food",
+              "shop": "Shop / grocery",
+              "atm": "ATM",
+              "pharmacy": "Pharmacy",
+              "nightlife": "Nightlife",
+              "other": "Other"
+            },
             "places": {
               "atm": {
                 "desc": "Cash & ATMs — withdraw BAM (KM) at UniCredit or Raiffeisen ATMs on Dalmatinska, about a 2-minute walk from the hostel."
@@ -378,6 +386,14 @@
               "subtitle": "Walking distance from us",
               "exploreCityTitle": "Explore the city",
               "exploreCitySubtitle": "Curated places around Kotor Bay"
+            },
+            "hostelPlaceCategories": {
+              "food": "Food",
+              "shop": "Shop / grocery",
+              "atm": "ATM",
+              "pharmacy": "Pharmacy",
+              "nightlife": "Nightlife",
+              "other": "Other"
             },
             "places": {}
           },

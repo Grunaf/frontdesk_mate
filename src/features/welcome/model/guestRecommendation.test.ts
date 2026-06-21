@@ -3,6 +3,7 @@ import type { Place } from '@/entities/hostel';
 import {
   buildMetaLine,
   getVisibleTabIds,
+  hostelPlaceToGuestRecommendation,
   limitRecommendationsForAllTab,
   placeToGuestRecommendation,
   resolveActiveLocalGuideTab,
@@ -47,6 +48,30 @@ describe('guestRecommendation', () => {
     );
 
     expect(recommendation.iconId).toBe('pizza');
+  });
+
+  it('uses translated hostel category label when note is empty', () => {
+    const recommendation = hostelPlaceToGuestRecommendation(
+      {
+        id: 'near-shop',
+        name: 'Konzum',
+        category: 'shop',
+      },
+      (key) => (key === 'hostelPlaceCategories.shop' ? 'Магазин' : key)
+    );
+
+    expect(recommendation.why).toBe('Магазин');
+  });
+
+  it('prefers custom note over category label for hostel places', () => {
+    const recommendation = hostelPlaceToGuestRecommendation({
+      id: 'near-shop',
+      name: 'Konzum',
+      category: 'shop',
+      note: 'Open until 22:00',
+    });
+
+    expect(recommendation.why).toBe('Open until 22:00');
   });
 
   it('builds meta line from walkHint only', () => {
