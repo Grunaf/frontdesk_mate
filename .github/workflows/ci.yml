@@ -57,7 +57,7 @@ jobs:
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
       E2E_GUEST_PIN: ${{ secrets.E2E_GUEST_PIN }}
       E2E_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
-      E2E_CITY_PACK_ID: sarajevo
+      E2E_CITY_PACK_ID: ${{ secrets.E2E_CITY_PACK_ID }}
       CI: true
     steps:
       - uses: actions/checkout@v4
