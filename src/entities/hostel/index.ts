@@ -5,6 +5,8 @@ export {
   CITY_PACK_IDS,
   getCityPack,
   isCityPackId,
+  isCodeCityPackId,
+  CODE_CITY_PACK_IDS,
   hasOfficialRouteSchedule,
   isRouteActive,
   getRouteMode,

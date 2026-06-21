@@ -1,5 +1,5 @@
 import type { CategoryConfig, RouteConfig, RouteId } from '../routes';
-import { buildCityPackLocale } from './locale';
+import { buildCityPackLocale, cityPackRoutesNamespace } from './locale';
 import {
   KOTOR_CONTENT_KEYS,
   KOTOR_ROUTE_CATEGORIES,
@@ -32,8 +32,16 @@ export {
 } from './place-category-registry';
 export { buildCityPackLocale, cityPackRoutesNamespace, type CityPackLocale } from './locale';
 
-export const CITY_PACK_IDS = ['sarajevo', 'kotor'] as const;
-export type CityPackId = (typeof CITY_PACK_IDS)[number];
+/** Packs with arrival routes authored in code (until routes move to DB). */
+export const CODE_CITY_PACK_IDS = ['sarajevo', 'kotor'] as const;
+export type CodeCityPackId = (typeof CODE_CITY_PACK_IDS)[number];
+
+/** @deprecated Prefer CODE_CITY_PACK_IDS for code-backed packs. */
+export const CITY_PACK_IDS = CODE_CITY_PACK_IDS;
+
+export type CityPackId = string;
+
+const CITY_PACK_ID_PATTERN = /^[a-z][a-z0-9-]{1,48}$/;
 
 export interface CityPackContentKeys {
   taxiStandWarning: string;
@@ -62,8 +70,8 @@ export interface CityPack {
   recommendedTaxi?: RecommendedTaxi;
 }
 
-interface CityPackDefinition {
-  id: CityPackId;
+interface CodeCityPackDefinition {
+  id: CodeCityPackId;
   label: string;
   routes: Record<RouteId, RouteConfig>;
   categories: CategoryConfig[];
@@ -72,7 +80,7 @@ interface CityPackDefinition {
   recommendedTaxi?: RecommendedTaxi;
 }
 
-function defineCityPack(definition: CityPackDefinition): CityPack {
+function defineCodeCityPack(definition: CodeCityPackDefinition): CityPack {
   return {
     ...definition,
     places: [],
@@ -80,13 +88,13 @@ function defineCityPack(definition: CityPackDefinition): CityPack {
   };
 }
 
-export const CITY_PACK_LIST: { id: CityPackId; label: string }[] = [
+export const CITY_PACK_LIST: { id: CodeCityPackId; label: string }[] = [
   { id: 'sarajevo', label: 'Sarajevo (Bosnia)' },
   { id: 'kotor', label: 'Kotor Bay (Montenegro)' },
 ];
 
-const CITY_PACKS: Record<CityPackId, CityPack> = {
-  sarajevo: defineCityPack({
+const CODE_CITY_PACKS: Record<CodeCityPackId, CityPack> = {
+  sarajevo: defineCodeCityPack({
     id: 'sarajevo',
     label: 'Sarajevo (Bosnia)',
     routes: SARAJEVO_ROUTES,
@@ -95,7 +103,7 @@ const CITY_PACKS: Record<CityPackId, CityPack> = {
     preTripTips: ['sundayClosure'],
     recommendedTaxi: { name: 'Zuti Taxi' },
   }),
-  kotor: defineCityPack({
+  kotor: defineCodeCityPack({
     id: 'kotor',
     label: 'Kotor Bay (Montenegro)',
     routes: KOTOR_ROUTES,
@@ -110,9 +118,42 @@ const CITY_PACKS: Record<CityPackId, CityPack> = {
 };
 
 export function isCityPackId(value: string): value is CityPackId {
-  return CITY_PACK_IDS.includes(value as CityPackId);
+  return CITY_PACK_ID_PATTERN.test(value.trim());
+}
+
+export function isCodeCityPackId(value: string): value is CodeCityPackId {
+  return CODE_CITY_PACK_IDS.includes(value as CodeCityPackId);
+}
+
+function createDynamicCityPack(id: CityPackId): CityPack {
+  const routesNamespace = cityPackRoutesNamespace(id);
+
+  return {
+    id,
+    label: id,
+    routes: {} as Record<RouteId, RouteConfig>,
+    categories: [],
+    contentKeys: {
+      taxiStandWarning: `${routesNamespace}.taxiService.standWarning`,
+      taxiMeterWarning: `${routesNamespace}.taxiService.meterWarning`,
+    },
+    places: [],
+    locale: buildCityPackLocale(id),
+  };
 }
 
 export function getCityPack(cityPackId: CityPackId): CityPack {
-  return CITY_PACKS[cityPackId];
+  if (isCodeCityPackId(cityPackId)) {
+    return CODE_CITY_PACKS[cityPackId];
+  }
+
+  if (!isCityPackId(cityPackId)) {
+    throw new Error(`Invalid city pack id: ${cityPackId}`);
+  }
+
+  return createDynamicCityPack(cityPackId.trim());
+}
+
+export function getCodeCityPackLabel(cityPackId: CodeCityPackId): string {
+  return CODE_CITY_PACKS[cityPackId].label;
 }

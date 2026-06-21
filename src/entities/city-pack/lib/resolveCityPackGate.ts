@@ -1,7 +1,7 @@
 import {
   getActiveRoutes,
   getCityPack,
-  isCityPackId,
+  isCodeCityPackId,
   type RouteId,
 } from '@/entities/hostel';
 import { MIN_PLACES_FOR_PACK } from './constants';
@@ -16,7 +16,7 @@ export function hasRouteGate(content: CityPackContent, packId: string): boolean 
     return true;
   }
 
-  if (isCityPackId(packId)) {
+  if (isCodeCityPackId(packId)) {
     return getActiveRoutes(getCityPack(packId).routes).length > 0;
   }
 

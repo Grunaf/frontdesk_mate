@@ -115,12 +115,13 @@ function buildEnvFallbackConfig(slug: string): TenantConfig {
 function mapTenantRow(row: TenantRecord): TenantConfig {
   const settings = (row.settings ?? {}) as TenantSettings;
   let cityPackId: CityPackId = DEFAULT_CITY_PACK;
+  const packIdFromRow = row.city_pack_id?.trim() ?? '';
 
-  if (isCityPackId(row.city_pack_id)) {
-    cityPackId = row.city_pack_id;
-  } else if (process.env.NODE_ENV !== 'production') {
+  if (isCityPackId(packIdFromRow)) {
+    cityPackId = packIdFromRow;
+  } else if (packIdFromRow && process.env.NODE_ENV !== 'production') {
     console.warn(
-      `[tenant] Unknown city_pack_id "${row.city_pack_id}" for "${row.slug}" — falling back to "${DEFAULT_CITY_PACK}".`
+      `[tenant] Invalid city_pack_id "${row.city_pack_id}" for "${row.slug}" — falling back to "${DEFAULT_CITY_PACK}".`
     );
   }
 
@@ -310,7 +311,7 @@ export async function upsertTenant(input: {
   subscriptionEndsAt: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!isCityPackId(input.cityPackId)) {
-    return { ok: false, error: 'Unknown city pack' };
+    return { ok: false, error: 'City pack id must be lowercase letters, numbers, or hyphens' };
   }
 
   const admin = getSupabaseAdmin();

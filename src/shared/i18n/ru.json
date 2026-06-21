@@ -185,21 +185,21 @@
             "title": "Локальный гид от хостела",
             "subtitle": "Собрали для вас проверенные места в Сараево, чтобы вы не переплачивали как турист.",
             "essentials": {
-              "title": "Essentials nearby",
-              "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
-              "expand": "Show",
-              "collapse": "Hide",
-              "atm": "ATM",
-              "shop": "Shop",
-              "pharmacy": "Pharmacy",
-              "lateFood": "Late food"
+              "title": "Рядом с хостелом",
+              "subtitle": "Банкомат, магазин, аптека и еда допоздна — открыть в Maps одним нажатием.",
+              "expand": "Показать",
+              "collapse": "Скрыть",
+              "atm": "Банкомат",
+              "shop": "Магазин",
+              "pharmacy": "Аптека",
+              "lateFood": "Еда ночью"
             },
             "exploreArrival": {
-              "title": "Explore the city",
-              "subtitle": "Our handpicked bars, cafes, food, and sights are ready when you are.",
-              "teaserTitle": "More recommendations waiting",
-              "teaserDescription": "Bars, coffee shops, and viewpoints are tucked away for now. Open the full city guide whenever you want.",
-              "showAllButton": "Show all recommendations"
+              "title": "Исследуйте город",
+              "subtitle": "Наши проверенные бары, кафе, еда и достопримечательности — когда будете готовы.",
+              "teaserTitle": "Ещё рекомендации ждут",
+              "teaserDescription": "Бары, кофейни и смотровые пока спрятаны. Откройте полный гид, когда захотите.",
+              "showAllButton": "Показать все рекомендации"
             },
             "mapCard": {
               "title": "{hostelName} Custom Google Map",
@@ -340,21 +340,21 @@
             "title": "Гид от {hostelName}",
             "subtitle": "Подборка мест вокруг Которской бухты — скоро.",
             "essentials": {
-              "title": "Essentials nearby",
-              "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
-              "expand": "Show",
-              "collapse": "Hide",
-              "atm": "ATM",
-              "shop": "Shop",
-              "pharmacy": "Pharmacy",
-              "lateFood": "Late food"
+              "title": "Рядом с хостелом",
+              "subtitle": "Банкомат, магазин, аптека и еда допоздна — открыть в Maps одним нажатием.",
+              "expand": "Показать",
+              "collapse": "Скрыть",
+              "atm": "Банкомат",
+              "shop": "Магазин",
+              "pharmacy": "Аптека",
+              "lateFood": "Еда ночью"
             },
             "exploreArrival": {
-              "title": "Explore the city",
-              "subtitle": "Our handpicked bars, cafes, food, and sights are ready when you are.",
-              "teaserTitle": "More recommendations waiting",
-              "teaserDescription": "Bars, coffee shops, and viewpoints are tucked away for now. Open the full city guide whenever you want.",
-              "showAllButton": "Show all recommendations"
+              "title": "Исследуйте город",
+              "subtitle": "Наши проверенные бары, кафе, еда и достопримечательности — когда будете готовы.",
+              "teaserTitle": "Ещё рекомендации ждут",
+              "teaserDescription": "Бары, кофейни и смотровые пока спрятаны. Откройте полный гид, когда захотите.",
+              "showAllButton": "Показать все рекомендации"
             },
             "mapCard": {
               "title": "{hostelName} Custom Google Map",

@@ -3,9 +3,11 @@ import { LucideIcon } from 'lucide-react';
 export type { CityPackId, CityPack, CityPackContentKeys, RecommendedTaxi } from './city-packs';
 export {
   CITY_PACK_IDS,
+  CODE_CITY_PACK_IDS,
   CITY_PACK_LIST,
   getCityPack,
   isCityPackId,
+  isCodeCityPackId,
 } from './city-packs';
 export {
   SARAJEVO_ROUTES as ARRIVAL_ROUTES_CONFIG,

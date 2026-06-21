@@ -97,7 +97,7 @@ export function RoomSetupCard({
               <input
                 value={room.doorImage ?? ''}
                 onChange={(event) => onRoomChange({ ...room, doorImage: event.target.value })}
-                placeholder="/images/vega/2_floor_door.jpg"
+                placeholder="/images/your-hostel/door.jpg"
                 className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
               />
             </label>
