@@ -10,7 +10,9 @@ export async function checkInWithPin(page: Page, config: E2eConfig): Promise<voi
 
 export async function openGuestRouteStep(page: Page, config: E2eConfig): Promise<void> {
   await page.goto(`${e2eGuestAppUrl(config, '/welcome')}?step=route`);
-  await page.getByText('From which location are you arriving?', { timeout: config.navTimeoutMs }).waitFor();
+  await page.getByText('From which location are you arriving?').waitFor({
+    timeout: config.navTimeoutMs,
+  });
 }
 
 export async function openConcierge(page: Page, config: E2eConfig): Promise<void> {
