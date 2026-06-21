@@ -69,9 +69,6 @@ jobs:
           npm install -g npm@11
           npm ci
 
-      - name: Install Playwright browser
-        run: npx playwright install chromium --with-deps
-
       - name: Apply migrations
         run: npm run db:migrate
 
