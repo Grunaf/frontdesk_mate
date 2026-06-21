@@ -12,7 +12,7 @@ npm run smoke
 
 1. Add repository **secrets**: `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `E2E_ADMIN_PASSWORD`, `E2E_GUEST_PIN`, `E2E_TENANT_SLUG`
 2. Add repository **variable**: `ENABLE_SMOKE_CI` = `true`
-3. Push a PR — the `smoke` job runs against your staging/dev Supabase (same DB as secrets)
+3. Push a PR — smoke job uses the Playwright Docker image (browsers preinstalled, no download step)
 
 ## Manual pass (after `npm run smoke` is green)
 
