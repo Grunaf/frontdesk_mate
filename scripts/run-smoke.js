@@ -6,10 +6,19 @@ const { spawnSync } = require('node:child_process');
 
 const envLocalPath = path.join(__dirname, '..', 'e2e', 'env.local');
 
-if (!fs.existsSync(envLocalPath)) {
-  console.error(
-    '[smoke] Missing e2e/env.local — copy e2e/env.example and fill E2E_ADMIN_PASSWORD + E2E_GUEST_PIN.'
+function hasCiE2eEnv() {
+  return (
+    Boolean(process.env.E2E_ADMIN_PASSWORD?.trim()) &&
+    Boolean(process.env.E2E_GUEST_PIN?.trim()) &&
+    Boolean(process.env.E2E_TENANT_SLUG?.trim())
   );
+}
+
+if (!fs.existsSync(envLocalPath) && !hasCiE2eEnv()) {
+  console.error(
+    '[smoke] Missing e2e/env.local — copy e2e/env.example and fill E2E_ADMIN_PASSWORD + E2E_GUEST_PIN + E2E_TENANT_SLUG.'
+  );
+  console.error('[smoke] In CI, set repository secrets and ENABLE_SMOKE_CI=true (see SMOKE.md).');
   process.exit(1);
 }
 

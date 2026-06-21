@@ -1,4 +1,20 @@
-# Manual smoke (after `npm run smoke` is green)
+# Smoke tests
+
+## Local
+
+```bash
+cp e2e/env.example e2e/env.local   # fill E2E_ADMIN_PASSWORD, E2E_GUEST_PIN, E2E_TENANT_SLUG
+npm run dev                          # in another terminal
+npm run smoke
+```
+
+## CI (optional)
+
+1. Add repository **secrets**: `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `E2E_ADMIN_PASSWORD`, `E2E_GUEST_PIN`, `E2E_TENANT_SLUG`
+2. Add repository **variable**: `ENABLE_SMOKE_CI` = `true`
+3. Push a PR — the `smoke` job runs against your staging/dev Supabase (same DB as secrets)
+
+## Manual pass (after `npm run smoke` is green)
 
 Automated smoke covers admin login, city packs, guest PIN, arrival routes, and Local Guide essentials.
 These items still need a quick human pass:

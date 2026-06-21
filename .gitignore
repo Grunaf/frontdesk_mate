@@ -43,5 +43,6 @@ e2e/env.local
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+CONTEXT_SNAPSHOT.md
 
 certificates
