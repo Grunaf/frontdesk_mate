@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      ADMIN_SECRET: ci-admin-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm --version
+          node --version
+          npm install -g npm@11
+          npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Validate i18n
+        run: npm run validate-i18n
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+  # Playwright smoke needs e2e/env.local secrets — run locally: npm run smoke
+  smoke:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Enable when GitHub secrets for E2E_* are configured"

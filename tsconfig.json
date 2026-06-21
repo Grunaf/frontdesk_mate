@@ -20,8 +20,9 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
+      "@/views/*": ["./src/views/*"],
       "@/modules/*": ["./src/features/*"],
-      "@/shared/*": ["./src/shared/*"],
+      "@/shared/*": ["./src/shared/*"]
     }
   },
   "include": [
@@ -30,7 +31,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "src/shared/lib/analytics"
   ],
   "exclude": ["node_modules"]
 }

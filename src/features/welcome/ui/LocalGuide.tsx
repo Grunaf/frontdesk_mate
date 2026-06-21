@@ -1,49 +1,273 @@
-import React from 'react';
-import { GUIDE_DATA, PlaceToVisit } from '../model/constants';
+'use client';
 
-// Хелпер для иконок категорий
-const getCategoryIcon = (category: PlaceToVisit['category']) => {
-  switch (category) {
-    case 'food': return '🍖';
-    case 'exchange': return '💱';
-    case 'shop': return '🛒';
-    default: return '📍';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from '@/shared/i18n';
+import { SITE_CONFIG } from '@/shared/config';
+import { useGuestSession } from '@/features/guest-check-in';
+import { useLocalGuideArrivalMode } from '../model/useLocalGuideArrivalMode';
+import { useHostelConfig, useTenant } from '@/entities/tenant';
+import { Button, Card, CardContent, Icon, SegmentedChipBar } from '@/shared/ui';
+import { MapPin } from 'lucide-react';
+import { resolvePlaceCategoryLucideIcon } from '@/entities/hostel';
+import {
+  getVisibleTabIds,
+  hostelPlaceToGuestRecommendation,
+  limitRecommendationsForAllTab,
+  placeToGuestRecommendation,
+  resolveActiveLocalGuideTab,
+  sortGuestRecommendations,
+  splitCityRecommendations,
+  type GuestRecommendation,
+} from '../model/guestRecommendation';
+import {
+  ALL_TAB_INITIAL_LIMIT,
+  DEFAULT_LOCAL_GUIDE_TAB,
+  type LocalGuideCategoryTabId,
+} from '../model/localGuideConstants';
+import { RecommendationCard } from './RecommendationCard';
+import { EssentialsSection } from './EssentialsSection';
+
+function resolveGuideTabIcon(tabId: string) {
+  if (tabId === 'all') {
+    return undefined;
   }
-};
+
+  return resolvePlaceCategoryLucideIcon(tabId as LocalGuideCategoryTabId);
+}
+
+function RecommendationsList({
+  recommendations,
+  activeTab,
+  t,
+}: {
+  recommendations: GuestRecommendation[];
+  activeTab: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  if (recommendations.length === 0) {
+    return (
+      <p className="py-6 text-center text-xs text-muted-foreground">{t('emptyCategory')}</p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {recommendations.map((recommendation) => (
+        <RecommendationCard
+          key={recommendation.id}
+          recommendation={recommendation}
+          activeTab={activeTab}
+          categoryLabel={
+            activeTab === 'all' && recommendation.scope === 'city'
+              ? t(`tabs.${recommendation.category}`)
+              : undefined
+          }
+          openInMapsLabel={t('openInMaps')}
+          topPickLabel={recommendation.isTopPick ? t('topPick') : undefined}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function LocalGuide() {
-  return (
-    <section className="px-4 space-y-4">
-      <div className="space-y-1">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-          Локальный гид от хостела
-        </h3>
-        <p className="text-xs text-slate-500">
-          Собрали для вас проверенные места в Сараево, чтобы вы не переплачивали как турист.
-        </p>
-      </div>
+  const { name, cityPack, settings } = useTenant();
+  const t = useTranslations(cityPack.locale.guideNamespace);
+  const { session, checkInAt } = useGuestSession();
+  const hostel = useHostelConfig();
+  const {
+    isArrivalMode,
+    utilitiesExpanded,
+    setUtilitiesExpanded,
+    unlockExplore,
+  } = useLocalGuideArrivalMode(checkInAt, session?.stayId ?? null);
 
-      <div className="space-y-3">
-        {GUIDE_DATA.map((place, index) => (
-          <div 
-            key={index}
-            className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex gap-3 items-start"
-          >
-            <div className="text-xl bg-white p-2 rounded-lg shadow-sm shrink-0">
-              {getCategoryIcon(place.category)}
-            </div>
-            
-            <div className="space-y-1">
-              <h4 className="text-sm font-bold text-slate-900">
-                {place.name}
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {place.description}
-              </p>
-            </div>
+  const hostelPlaces = useMemo(
+    () =>
+      sortGuestRecommendations(
+        (settings.hostelPlaces ?? [])
+          .filter((place) => place.name.trim())
+          .map((place) => hostelPlaceToGuestRecommendation(place, t))
+      ),
+    [settings.hostelPlaces, t]
+  );
+
+  const allCityRecommendations = useMemo(
+    () => sortGuestRecommendations(cityPack.places.map((place) => placeToGuestRecommendation(place, t))),
+    [cityPack.places, t]
+  );
+
+  const { utilities, explore } = useMemo(
+    () => splitCityRecommendations(allCityRecommendations),
+    [allCityRecommendations]
+  );
+
+  const [activeTab, setActiveTab] = useState<string>(DEFAULT_LOCAL_GUIDE_TAB);
+  const [allTabExpanded, setAllTabExpanded] = useState(false);
+
+  const visibleTabIds = useMemo(() => getVisibleTabIds(explore), [explore]);
+
+  useEffect(() => {
+    setActiveTab((current) =>
+      resolveActiveLocalGuideTab(current, visibleTabIds, DEFAULT_LOCAL_GUIDE_TAB)
+    );
+  }, [visibleTabIds]);
+
+  const mapId = hostel.sources.recommendation.map;
+  const customMapUrl = mapId
+    ? `${SITE_CONFIG.googleMapsViewerPrefix}${mapId}`
+    : null;
+
+  const getRecommendationsForTab = (tabId: string) => {
+    if (tabId === 'all') {
+      return explore;
+    }
+
+    return explore.filter((recommendation) => recommendation.category === tabId);
+  };
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    if (tabId !== 'all') {
+      setAllTabExpanded(false);
+    }
+  };
+
+  const tabRecommendations = getRecommendationsForTab(activeTab);
+  const { visible: visibleRecommendations, hasMore, total } = limitRecommendationsForAllTab(
+    tabRecommendations,
+    activeTab,
+    allTabExpanded,
+    ALL_TAB_INITIAL_LIMIT
+  );
+
+  const showExploreSection = !isArrivalMode;
+
+  return (
+    <section className="animate-fade-in space-y-5">
+      {hostelPlaces.length > 0 ? (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              {t('nearHostel.title')}
+            </h3>
+            <p className="text-xs text-muted-foreground">{t('nearHostel.subtitle')}</p>
           </div>
-        ))}
-      </div>
+          <RecommendationsList recommendations={hostelPlaces} activeTab="all" t={t} />
+        </div>
+      ) : null}
+
+      <EssentialsSection
+        utilities={utilities}
+        expanded={utilitiesExpanded}
+        onExpandedChange={setUtilitiesExpanded}
+        highlight={isArrivalMode}
+        title={t('essentials.title')}
+        subtitle={t('essentials.subtitle')}
+        expandLabel={t('essentials.expand')}
+        collapseLabel={t('essentials.collapse')}
+        openInMapsLabel={t('openInMaps')}
+        t={t}
+      />
+
+      {showExploreSection ? (
+        <>
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              {hostelPlaces.length > 0 ? t('nearHostel.exploreCityTitle') : t('title', { hostelName: name })}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {hostelPlaces.length > 0 ? t('nearHostel.exploreCitySubtitle') : t('subtitle')}
+            </p>
+          </div>
+
+          {customMapUrl ? (
+            <a href={customMapUrl} target="_blank" rel="noopener noreferrer" className="group block">
+              <Card className="border-primary/20 bg-primary/5 p-3.5 transition-colors hover:bg-primary/10">
+                <CardContent className="flex items-center justify-between gap-3 p-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="shrink-0 rounded-lg border border-primary/20 bg-card p-2 shadow-xs">
+                      <Icon icon={MapPin} className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 space-y-0.5">
+                      <h4 className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                        {t('mapCard.title', { hostelName: name })}
+                        <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                      </h4>
+                      <p className="truncate pr-2 text-[11px] text-muted-foreground">
+                        {t('mapCard.description')}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-sm font-bold text-primary transition-transform select-none group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </CardContent>
+              </Card>
+            </a>
+          ) : null}
+
+          {visibleTabIds.length === 0 ? (
+            <RecommendationsList recommendations={[]} activeTab="all" t={t} />
+          ) : (
+            <div className="space-y-3">
+              <div className="sticky top-0 z-10 -mx-4 border-b border-border/60 bg-background/95 px-4 py-2 backdrop-blur-sm sm:mx-0 sm:px-0">
+                <SegmentedChipBar
+                  items={visibleTabIds.map((tabId) => ({
+                    id: tabId,
+                    label: t(`tabs.${tabId}`),
+                    icon: resolveGuideTabIcon(tabId),
+                  }))}
+                  value={activeTab}
+                  onValueChange={handleTabChange}
+                  ariaLabel={t('title', { hostelName: name })}
+                  className="py-0"
+                />
+              </div>
+              <RecommendationsList
+                recommendations={visibleRecommendations}
+                activeTab={activeTab}
+                t={t}
+              />
+              {hasMore ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setAllTabExpanded(true)}
+                >
+                  {t('showAllPlaces', { count: String(total) })}
+                </Button>
+              ) : null}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              {t('exploreArrival.title')}
+            </h3>
+            <p className="text-xs text-muted-foreground">{t('exploreArrival.subtitle')}</p>
+          </div>
+          <Card className="border-primary/30 bg-primary/5 shadow-sm">
+            <CardContent className="space-y-3 p-4">
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold tracking-wide text-primary uppercase">
+                  {t('exploreArrival.teaserTitle')}
+                </h4>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t('exploreArrival.teaserDescription')}
+                </p>
+              </div>
+              <Button onClick={unlockExplore} size="sm" className="w-full sm:w-auto">
+                {t('exploreArrival.showAllButton')}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </section>
   );
 }

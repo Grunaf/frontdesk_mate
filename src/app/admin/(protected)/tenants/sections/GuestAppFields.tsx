@@ -1,0 +1,67 @@
+'use client';
+
+import { useEffect, useMemo } from 'react';
+import type { CityPackGateSnapshot } from '@/entities/city-pack';
+import type { CityPackId } from '@/entities/hostel';
+import type { TenantSettings } from '@/entities/tenant';
+import type { TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
+import type { AdminSectionId } from '../lib/adminSections';
+import { AdminModuleStatusPanel } from '../ui/AdminModuleStatusPanel';
+import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
+import { GuestStayFields } from './GuestStayFields';
+import { HostelPlacesFields } from './HostelPlacesFields';
+import { HouseRulesFields } from './HouseRulesFields';
+
+interface GuestAppFieldsProps {
+  settings?: TenantSettings;
+  cityPackId: CityPackId;
+  cityPackGateSnapshot?: CityPackGateSnapshot;
+  readinessInput: TenantReadinessInput;
+  onJumpToSection?: (sectionId: AdminSectionId) => void;
+  scope?: 'full' | 'rules-only';
+}
+
+export function GuestAppFields({
+  settings,
+  cityPackId,
+  cityPackGateSnapshot,
+  readinessInput,
+  onJumpToSection,
+  scope = 'full',
+}: GuestAppFieldsProps) {
+  const { draft, updateDraft } = useTenantFormDraft();
+
+  const mergedSettings = useMemo(
+    () => mergeDraftSettings(settings ?? {}, draft),
+    [settings, draft]
+  );
+
+  useEffect(() => {
+    if (settings?.houseRules !== undefined && draft.houseRules === undefined) {
+      updateDraft({ houseRules: settings.houseRules });
+    }
+  }, [settings?.houseRules, draft.houseRules, updateDraft]);
+
+  return (
+    <div className="space-y-6">
+      {scope === 'full' ? (
+        <>
+          <AdminModuleStatusPanel
+            cityPackId={cityPackId}
+            cityPackGateSnapshot={cityPackGateSnapshot}
+            settings={mergedSettings}
+            onJumpToSection={onJumpToSection}
+          />
+          <GuestStayFields settings={settings} readinessInput={readinessInput} />
+        </>
+      ) : null}
+
+      <HostelPlacesFields settings={mergedSettings} />
+
+      <HouseRulesFields
+        settings={settings}
+        readinessInput={readinessInput}
+      />
+    </div>
+  );
+}
