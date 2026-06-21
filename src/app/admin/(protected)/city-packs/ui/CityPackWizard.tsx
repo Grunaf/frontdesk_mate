@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PlaceCategory } from '@/entities/hostel';
+import { PLACE_CATEGORY_IDS, resolvePlaceCategoryAdminLabel } from '@/entities/hostel';
 import {
   CITY_PACK_WIZARD_STEPS,
   countGatePlaces,
@@ -24,8 +25,6 @@ import { saveCityPackAction } from '../actions';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/ui';
 import { PlaceIconPicker } from './PlaceIconPicker';
-
-const PLACE_CATEGORIES: PlaceCategory[] = ['essential', 'food', 'bars', 'cafes', 'sights'];
 
 interface CityPackWizardProps {
   pack: CityPackRecord;
@@ -223,9 +222,9 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
                       }
                       className="rounded-md border bg-background px-3 py-2 text-sm"
                     >
-                      {PLACE_CATEGORIES.map((category) => (
+                      {PLACE_CATEGORY_IDS.map((category) => (
                         <option key={category} value={category}>
-                          {category}
+                          {resolvePlaceCategoryAdminLabel(category)}
                         </option>
                       ))}
                     </select>

@@ -7,8 +7,8 @@ import { useGuestSession } from '@/features/guest-check-in';
 import { useLocalGuideArrivalMode } from '../model/useLocalGuideArrivalMode';
 import { useHostelConfig, useTenant } from '@/entities/tenant';
 import { Button, Card, CardContent, Icon, SegmentedChipBar } from '@/shared/ui';
-import { Banknote, Coffee, Landmark, MapPin, UtensilsCrossed, Wine } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { MapPin } from 'lucide-react';
+import { resolvePlaceCategoryLucideIcon } from '@/entities/hostel';
 import {
   getVisibleTabIds,
   hostelPlaceToGuestRecommendation,
@@ -27,14 +27,13 @@ import {
 import { RecommendationCard } from './RecommendationCard';
 import { EssentialsSection } from './EssentialsSection';
 
-const TAB_ICONS: Record<'all' | LocalGuideCategoryTabId, LucideIcon | undefined> = {
-  all: undefined,
-  essential: Banknote,
-  food: UtensilsCrossed,
-  bars: Wine,
-  cafes: Coffee,
-  sights: Landmark,
-};
+function resolveGuideTabIcon(tabId: string) {
+  if (tabId === 'all') {
+    return undefined;
+  }
+
+  return resolvePlaceCategoryLucideIcon(tabId as LocalGuideCategoryTabId);
+}
 
 function RecommendationsList({
   recommendations,
@@ -217,7 +216,7 @@ export function LocalGuide() {
                   items={visibleTabIds.map((tabId) => ({
                     id: tabId,
                     label: t(`tabs.${tabId}`),
-                    icon: TAB_ICONS[tabId as keyof typeof TAB_ICONS],
+                    icon: resolveGuideTabIcon(tabId),
                   }))}
                   value={activeTab}
                   onValueChange={handleTabChange}

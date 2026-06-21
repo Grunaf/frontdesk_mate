@@ -1,4 +1,7 @@
-import { resolvePlaceUtilityLabelKey } from '@/entities/hostel';
+import {
+  resolvePlaceCategoryUtilityLabelKey,
+  resolvePlaceUtilityLabelKey,
+} from '@/entities/hostel';
 import type { GuestRecommendation } from '../model/guestRecommendation';
 
 type TranslateFn = (key: string) => string;
@@ -7,8 +10,9 @@ export function resolveUtilityShortLabel(
   recommendation: GuestRecommendation,
   translate: TranslateFn
 ): string {
-  if (recommendation.category === 'food') {
-    return translate('essentials.lateFood');
+  const categoryLabelKey = resolvePlaceCategoryUtilityLabelKey(recommendation.category);
+  if (categoryLabelKey) {
+    return translate(categoryLabelKey);
   }
 
   const labelKey = resolvePlaceUtilityLabelKey(recommendation.iconId);

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { HostelPlaceCategory } from '@/entities/tenant/model/hostelPlaces';
 import type { PlaceCategory } from './places.types';
+import { isPlaceCategory, resolvePlaceCategoryLucideIcon } from './place-category-registry';
 
 export const PLACE_ICON_IDS = [
   'default',
@@ -65,14 +66,6 @@ const PLACE_LUCIDE_ICONS: Record<PlaceIconId, LucideIcon> = {
   landmark: Landmark,
   viewpoint: Mountain,
   nightlife: Moon,
-};
-
-const CITY_CATEGORY_ICONS: Record<PlaceCategory, LucideIcon> = {
-  essential: Banknote,
-  food: UtensilsCrossed,
-  bars: Wine,
-  cafes: Coffee,
-  sights: Landmark,
 };
 
 const HOSTEL_CATEGORY_ICONS: Record<HostelPlaceCategory, LucideIcon> = {
@@ -126,8 +119,8 @@ export function resolvePlaceLucideIcon(input: {
     );
   }
 
-  if (input.category) {
-    return CITY_CATEGORY_ICONS[input.category as PlaceCategory] ?? MapPin;
+  if (input.category && isPlaceCategory(input.category)) {
+    return resolvePlaceCategoryLucideIcon(input.category);
   }
 
   return MapPin;

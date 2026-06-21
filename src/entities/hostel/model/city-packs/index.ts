@@ -21,6 +21,15 @@ export {
   resolvePlaceLucideIcon,
   resolvePlaceUtilityLabelKey,
 } from './place-icons';
+export {
+  PLACE_CATEGORY_IDS,
+  PLACE_CATEGORY_REGISTRY,
+  isPlaceCategory,
+  resolvePlaceCategoryAdminLabel,
+  resolvePlaceCategoryGuideTabKey,
+  resolvePlaceCategoryLucideIcon,
+  resolvePlaceCategoryUtilityLabelKey,
+} from './place-category-registry';
 export { buildCityPackLocale, cityPackRoutesNamespace, type CityPackLocale } from './locale';
 
 export const CITY_PACK_IDS = ['sarajevo', 'kotor'] as const;

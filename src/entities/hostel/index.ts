@@ -31,5 +31,10 @@ export {
   normalizePlaceIconId,
   resolvePlaceLucideIcon,
   resolvePlaceUtilityLabelKey,
+  PLACE_CATEGORY_IDS,
+  PLACE_CATEGORY_REGISTRY,
+  resolvePlaceCategoryLucideIcon,
+  resolvePlaceCategoryUtilityLabelKey,
+  resolvePlaceCategoryAdminLabel,
 } from './model/city-packs';
 export { RULES_DISPLAY_CONFIG } from './config/rules';

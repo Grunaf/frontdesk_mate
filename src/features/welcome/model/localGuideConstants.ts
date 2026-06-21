@@ -1,12 +1,8 @@
-export const LOCAL_GUIDE_CATEGORY_TAB_IDS = [
-  'essential',
-  'food',
-  'bars',
-  'cafes',
-  'sights',
-] as const;
+import { PLACE_CATEGORY_IDS, type PlaceCategory } from '@/entities/hostel';
 
-export type LocalGuideCategoryTabId = (typeof LOCAL_GUIDE_CATEGORY_TAB_IDS)[number];
+export const LOCAL_GUIDE_CATEGORY_TAB_IDS = PLACE_CATEGORY_IDS;
 
-export const DEFAULT_LOCAL_GUIDE_TAB = 'food';
+export type LocalGuideCategoryTabId = PlaceCategory;
+
+export const DEFAULT_LOCAL_GUIDE_TAB: LocalGuideCategoryTabId = 'food';
 export const ALL_TAB_INITIAL_LIMIT = 6;
