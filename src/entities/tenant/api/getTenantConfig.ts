@@ -8,8 +8,9 @@ import {
   getDevEnvCityPackPlaces,
   hasDevEnvCityPackPlaces,
 } from '@/entities/city-pack/lib/devEnvCityPackPlaces';
+import { getDevEnvCityPackEnabledRoutes } from '@/entities/city-pack/lib/devEnvCityPackRoutes';
 import { adminPlacesToPlaces } from '@/entities/city-pack/lib/adminPlaceToPlace';
-import { resolveHasPlacesPack } from '@/entities/city-pack/lib/resolveCityPackGate';
+import { resolveHasPlacesPack, normalizeEnabledRoutes } from '@/entities/city-pack/lib/resolveCityPackGate';
 import { getCityPackForAdmin } from '@/entities/city-pack/server';
 import { isCityPackId, type CityPackId } from '@/entities/hostel';
 import type { TenantRecord, TenantSettings } from '../model/settings';
@@ -72,6 +73,7 @@ function buildTenantConfig(input: {
   lifecycleStatus?: TenantConfig['lifecycleStatus'];
   subscriptionStartsAt?: string | null;
   cityPackPlaces?: TenantConfig['cityPackPlaces'];
+  cityPackEnabledRoutes?: TenantConfig['cityPackEnabledRoutes'];
   cityPackHasPlaces?: boolean;
 }): TenantConfig {
   const lifecycleStatus = input.lifecycleStatus ?? 'active';
@@ -92,6 +94,7 @@ function buildTenantConfig(input: {
     settings: input.settings,
     source: input.source,
     cityPackPlaces: input.cityPackPlaces,
+    cityPackEnabledRoutes: input.cityPackEnabledRoutes,
     cityPackHasPlaces: input.cityPackHasPlaces,
   };
 }
@@ -100,6 +103,7 @@ function buildTenantConfig(input: {
 function buildEnvFallbackConfig(slug: string): TenantConfig {
   const cityPackId = resolveFallbackCityPackId();
   const devPlaces = getDevEnvCityPackPlaces(cityPackId);
+  const devEnabledRoutes = getDevEnvCityPackEnabledRoutes(cityPackId);
 
   return buildTenantConfig({
     slug,
@@ -108,6 +112,7 @@ function buildEnvFallbackConfig(slug: string): TenantConfig {
     settings: getEnvTenantSettings(),
     source: 'env',
     cityPackPlaces: devPlaces,
+    cityPackEnabledRoutes: devEnabledRoutes,
     cityPackHasPlaces: hasDevEnvCityPackPlaces(cityPackId),
   });
 }
@@ -138,6 +143,7 @@ function mapTenantRow(row: TenantRecord): TenantConfig {
 
 async function resolveCityPackRuntime(cityPackId: CityPackId): Promise<{
   cityPackPlaces?: TenantConfig['cityPackPlaces'];
+  cityPackEnabledRoutes?: TenantConfig['cityPackEnabledRoutes'];
   cityPackHasPlaces: boolean;
 }> {
   const { pack } = await getCityPackForAdmin(cityPackId);
@@ -156,7 +162,12 @@ async function resolveCityPackRuntime(cityPackId: CityPackId): Promise<{
       ? adminPlacesToPlaces(pack.content.places)
       : undefined;
 
-  return { cityPackPlaces, cityPackHasPlaces };
+  const cityPackEnabledRoutes =
+    pack.status === 'ready'
+      ? normalizeEnabledRoutes(pack.content.enabledRoutes ?? [])
+      : undefined;
+
+  return { cityPackPlaces, cityPackEnabledRoutes, cityPackHasPlaces };
 }
 
 async function enrichTenantConfig(config: TenantConfig): Promise<TenantConfig> {
@@ -171,6 +182,7 @@ async function enrichTenantConfig(config: TenantConfig): Promise<TenantConfig> {
     lifecycleStatus: config.lifecycleStatus,
     subscriptionStartsAt: config.subscriptionStartsAt,
     cityPackPlaces: packRuntime.cityPackPlaces,
+    cityPackEnabledRoutes: packRuntime.cityPackEnabledRoutes,
     cityPackHasPlaces: packRuntime.cityPackHasPlaces,
   });
 }

@@ -4,31 +4,6 @@ import { cityPackRoutesNamespace } from './locale';
 
 const K = cityPackRoutesNamespace('kotor');
 
-/** Unused route slots for packs without train / second bus hub. */
-const INACTIVE_ROUTE_STUB = (id: RouteId, category: RouteConfig['category']): RouteConfig => ({
-  id,
-  category,
-  isActive: false,
-  titleKey: `${K}.from.busMain`,
-  locationKey: `${K}.busMain.locationGenitive`,
-  translationKeys: {
-    taxiCost: `${K}.busMain.taxi.costEstimation`,
-    taxiPickupPoint: `${K}.busMain.taxi.pickupPoint`,
-    publicTitle: `${K}.busMain.public.title`,
-    publicSummary: `${K}.busMain.public.summary`,
-    publicPreview: `${K}.busMain.public.walkToStop`,
-    publicText: `${K}.busMain.public.text`,
-    publicGetOffAt: `${K}.busMain.public.getOffAt`,
-    publicWalkToHostel: `${K}.busMain.public.walkToHostel`,
-  },
-  metadata: {
-    taxiPriceKM: { min: 5, max: 10 },
-    taxiPriceEUR: { min: 5, max: 10 },
-    taxiDurationMin: { min: 5, max: 15 },
-    publicTransport: { durationMin: 5 },
-  },
-});
-
 export const KOTOR_CONTENT_KEYS: CityPackContentKeys = {
   taxiStandWarning: `${K}.taxiService.standWarning`,
   taxiMeterWarning: `${K}.taxiService.meterWarning`,
@@ -49,7 +24,7 @@ export const KOTOR_ROUTE_CATEGORIES: CategoryConfig[] = [
   },
 ];
 
-export const KOTOR_ROUTES: Record<RouteId, RouteConfig> = {
+export const KOTOR_ROUTES = {
   airport: {
     id: 'airport',
     category: 'airport',
@@ -102,6 +77,4 @@ export const KOTOR_ROUTES: Record<RouteId, RouteConfig> = {
       },
     },
   },
-  bus_istochno: INACTIVE_ROUTE_STUB('bus_istochno', 'bus'),
-  train_station: INACTIVE_ROUTE_STUB('train_station', 'train'),
-};
+} satisfies Partial<Record<RouteId, RouteConfig>>;

@@ -20,7 +20,7 @@ const STEP_ORDER: LaunchStepId[] = [
 
 const baseSettings: TenantSettings = {
   checkInTime: '14:00',
-  heroBgUrl: '/images/vega/hero.jpg',
+  heroBgUrl: '/images/your-hostel/hero.jpg',
   contacts: {
     phoneRaw: '38761123456',
     address: 'Test street 1',
@@ -36,7 +36,7 @@ const baseSettings: TenantSettings = {
     },
   ],
   arrivalAccess: {
-    landmark: '/images/vega/facade.jpg',
+    landmark: '/images/your-hostel/facade.jpg',
     accessPoints: [{ id: 'floor_1', kind: 'zone', label: 'Floor 1', image: '/images/door.jpg' }],
   },
   guestStay: {
@@ -90,7 +90,7 @@ describe('resolveGuestPathGate', () => {
       settings: {
         ...baseSettings,
         arrivalAccess: {
-          landmark: '/images/vega/facade.jpg',
+          landmark: '/images/your-hostel/facade.jpg',
           accessPoints: [],
         },
       },

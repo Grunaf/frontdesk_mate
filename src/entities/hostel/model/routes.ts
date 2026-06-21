@@ -47,8 +47,12 @@ export function isWalkOnlyRoute(route: RouteConfig): boolean {
   return getRouteMode(route) === 'walk_only';
 }
 
-export function getActiveRoutes(routes: Record<RouteId, RouteConfig>): RouteConfig[] {
-  return Object.values(routes).filter(isRouteActive);
+export function getActiveRoutes(
+  routes: Partial<Record<RouteId, RouteConfig>>
+): RouteConfig[] {
+  return Object.values(routes).filter(
+    (route): route is RouteConfig => route != null && isRouteActive(route)
+  );
 }
 
 export interface CategoryConfig {

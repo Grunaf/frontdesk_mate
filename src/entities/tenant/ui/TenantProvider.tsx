@@ -25,7 +25,11 @@ export function useTenant() {
   }
 
   const guestBedId = useGuestRuntimeBedId();
-  const cityPack = useTenantCityPack(context.cityPackId, context.cityPackPlaces);
+  const cityPack = useTenantCityPack(
+    context.cityPackId,
+    context.cityPackPlaces,
+    context.cityPackEnabledRoutes
+  );
 
   const settings = useMemo(() => {
     const effectiveBedId = resolveGuestBedId(context.settings, guestBedId);

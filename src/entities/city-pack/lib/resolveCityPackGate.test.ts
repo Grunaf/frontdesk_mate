@@ -92,10 +92,9 @@ describe('city pack gate', () => {
     ).toBe(1);
   });
 
-  it('accepts code routes for known packs when enabledRoutes empty', () => {
-    expect(
-      hasRouteGate({ places: [] }, 'sarajevo')
-    ).toBe(true);
+  it('requires enabledRoutes in DB content', () => {
+    expect(hasRouteGate({ places: [] })).toBe(false);
+    expect(hasRouteGate({ places: [], enabledRoutes: ['airport'] })).toBe(true);
   });
 
   it('marks pack ready only when places and routes gates pass', () => {

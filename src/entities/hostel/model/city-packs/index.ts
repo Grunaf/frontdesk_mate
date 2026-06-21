@@ -60,7 +60,7 @@ export type PreTripTipId = 'sundayClosure';
 export interface CityPack {
   id: CityPackId;
   label: string;
-  routes: Record<RouteId, RouteConfig>;
+  routes: Partial<Record<RouteId, RouteConfig>>;
   categories: CategoryConfig[];
   contentKeys: CityPackContentKeys;
   places: Place[];
@@ -73,7 +73,7 @@ export interface CityPack {
 interface CodeCityPackDefinition {
   id: CodeCityPackId;
   label: string;
-  routes: Record<RouteId, RouteConfig>;
+  routes: Partial<Record<RouteId, RouteConfig>>;
   categories: CategoryConfig[];
   contentKeys: CityPackContentKeys;
   preTripTips?: PreTripTipId[];
@@ -131,7 +131,7 @@ function createDynamicCityPack(id: CityPackId): CityPack {
   return {
     id,
     label: id,
-    routes: {} as Record<RouteId, RouteConfig>,
+    routes: {},
     categories: [],
     contentKeys: {
       taxiStandWarning: `${routesNamespace}.taxiService.standWarning`,

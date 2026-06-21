@@ -4,10 +4,10 @@ import { resolveTenantBrand } from './resolveTenantBrand';
 describe('resolveTenantBrand', () => {
   it('returns logo when logoUrl is set', () => {
     expect(
-      resolveTenantBrand({ name: 'Vega Hostel', logoUrl: '/images/vega/logo.png' })
+      resolveTenantBrand({ name: 'Vega Hostel', logoUrl: '/images/your-hostel/logo.png' })
     ).toEqual({
       kind: 'logo',
-      src: '/images/vega/logo.png',
+      src: '/images/your-hostel/logo.png',
       alt: 'Vega Hostel',
     });
   });

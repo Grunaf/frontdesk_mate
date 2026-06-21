@@ -17,7 +17,7 @@ const balkanStay: TenantSettings = {
         id: 'vega',
         label: 'Vega',
         floorId: '2',
-        doorImage: '/images/vega/2_floor_door.jpg',
+        doorImage: '/images/your-hostel/door.jpg',
       },
     ],
     beds: [

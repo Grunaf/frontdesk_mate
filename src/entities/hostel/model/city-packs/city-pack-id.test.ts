@@ -27,4 +27,10 @@ describe('city pack ids', () => {
     expect(Object.keys(pack.routes)).toHaveLength(0);
     expect(pack.locale.guideNamespace).toContain('dubrovnik');
   });
+
+  it('keeps only active kotor routes in code pack', () => {
+    const pack = getCityPack('kotor');
+
+    expect(Object.keys(pack.routes).sort()).toEqual(['airport', 'bus_central']);
+  });
 });

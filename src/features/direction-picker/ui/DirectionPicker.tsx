@@ -36,6 +36,10 @@ export function DirectionPicker() {
   }, [routeCategories]);
 
   const currentRoute = arrivalRoutes[activeRouteId];
+  if (!currentRoute) {
+    return null;
+  }
+
   const activeCategory = currentRoute.category;
   const activeRoutesList = getActiveRoutes(arrivalRoutes);
   const sameCategoryRoutes = activeRoutesList.filter((route) => route.category === activeCategory);

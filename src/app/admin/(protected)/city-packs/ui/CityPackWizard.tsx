@@ -64,7 +64,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   );
 
   const placesCount = countGatePlaces(content);
-  const routesGateMet = hasRouteGate(content, pack.id);
+  const routesGateMet = hasRouteGate(content);
   const gateContentMet = isPackReadyForTenants({
     status: 'ready',
     content,
