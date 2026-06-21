@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/migrate-db.js --quiet && next dev",
     "dev:next": "next dev",
-    "build": "node scripts/validate-i18n.js && next build",
+    "build": "node scripts/validate-i18n.js && npm run city-pack:validate-v3 && npm run city-pack:parity && next build",
     "db:migrate": "node scripts/migrate-db.js",
     "db:migrate:status": "node scripts/migrate-db.js --status",
     "db:baseline": "node scripts/migrate-db.js --baseline",

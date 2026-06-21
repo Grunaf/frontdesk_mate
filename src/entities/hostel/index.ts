@@ -2,7 +2,6 @@ export {
   ARRIVAL_ROUTES_CONFIG,
   ROUTE_CATEGORIES,
   CITY_PACK_LIST,
-  CITY_PACK_IDS,
   getCityPack,
   isCityPackId,
   isCodeCityPackId,

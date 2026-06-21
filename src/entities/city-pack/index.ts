@@ -32,12 +32,3 @@ export {
   type CityPackGateEntry,
   type CityPackGateSnapshot,
 } from './lib/resolveCityPackGateForTenant';
-export {
-  getCityPackRegistry,
-  getCityPackRegistryEntry,
-  listReadyCityPacksFromRegistry,
-  resolveHasPlacesPackFromRegistry,
-  resolvePackNotReadyReasonFromRegistry,
-  setCityPackRegistry,
-  type CityPackRegistryEntry,
-} from './lib/packRegistry';

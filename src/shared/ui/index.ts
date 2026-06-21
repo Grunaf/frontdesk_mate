@@ -38,16 +38,6 @@ export {
   BottomSheetFooter,
   BottomSheetTitle,
   BottomSheetDescription,
-  Drawer,
-  DrawerPortal,
-  DrawerOverlay,
-  DrawerTrigger,
-  DrawerClose,
-  DrawerContent,
-  DrawerHeader,
-  DrawerFooter,
-  DrawerTitle,
-  DrawerDescription,
 } from './bottom-sheet';
 export {
   Sheet,

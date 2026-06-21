@@ -160,26 +160,3 @@ export function resolveArchivedAtOnArchive(input: {
 export function resolveIsActiveOnArchive(archived: boolean): boolean {
   return !archived;
 }
-
-/** @deprecated Use resolveArchivedAtOnArchive — archive is no longer part of tenant save. */
-export function resolveArchivedAtOnSave(input: {
-  archived: boolean;
-  subscriptionEndsAt: string | null;
-  previousArchivedAt: string | null;
-  now?: Date;
-}): string | null {
-  return resolveArchivedAtOnArchive({
-    archived: input.archived,
-    previousArchivedAt: input.previousArchivedAt,
-    now: input.now,
-  });
-}
-
-/** @deprecated Use resolveIsActiveOnArchive — is_active reflects archive only. */
-export function resolveIsActiveOnSave(input: {
-  archived: boolean;
-  subscriptionEndsAt: string | null;
-  now?: Date;
-}): boolean {
-  return resolveIsActiveOnArchive(input.archived);
-}

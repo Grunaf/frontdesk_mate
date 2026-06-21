@@ -6,6 +6,5 @@ export {
   getCityPackGateSnapshotForAdmin,
   listCityPacksForAdmin,
   listCityPacksForTenantSelect,
-  loadCityPackRegistryFromDb,
   upsertCityPack,
 } from './api/cityPackRepository';

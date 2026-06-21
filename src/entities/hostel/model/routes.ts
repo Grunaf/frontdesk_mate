@@ -2,7 +2,6 @@ import { LucideIcon } from 'lucide-react';
 
 export type { CityPackId, CityPack, CityPackContentKeys, RecommendedTaxi } from './city-packs';
 export {
-  CITY_PACK_IDS,
   CODE_CITY_PACK_IDS,
   CITY_PACK_LIST,
   getCityPack,

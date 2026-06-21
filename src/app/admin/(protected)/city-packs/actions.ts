@@ -11,7 +11,7 @@ import {
   type CityPackContent,
   type CityPackStatus,
 } from '@/entities/city-pack';
-import { getCityPackForAdmin, loadCityPackRegistryFromDb, upsertCityPack } from '@/entities/city-pack/server';
+import { getCityPackForAdmin, upsertCityPack } from '@/entities/city-pack/server';
 import { assertAdminAuthenticated } from '../../lib/adminSession';
 
 function parsePlaces(raw: string): CityPackAdminPlace[] {
@@ -73,7 +73,6 @@ export async function saveCityPackAction(formData: FormData) {
   revalidatePath('/admin/city-packs');
   revalidatePath(`/admin/city-packs/${id}`);
   revalidatePath('/admin/tenants');
-  await loadCityPackRegistryFromDb();
   redirect(`/admin/city-packs/${id}?saved=1`);
 }
 

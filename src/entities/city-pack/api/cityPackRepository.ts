@@ -227,26 +227,7 @@ export async function upsertCityPack(input: {
     return { ok: false, error: error.message };
   }
 
-  await loadCityPackRegistryFromDb();
-
   return { ok: true, error: null };
-}
-
-export async function loadCityPackRegistryFromDb(): Promise<void> {
-  const { packs } = await listCityPacksForAdmin();
-  const { setCityPackRegistry } = await import('../lib/packRegistry');
-
-  setCityPackRegistry(
-    packs.map((pack) => ({
-      id: pack.id,
-      label: pack.label,
-      status: pack.status,
-      placesCount: pack.placesCount,
-      routesGateMet: pack.routesGateMet,
-      readyForTenants: pack.readyForTenants,
-      notReadyReason: pack.notReadyReason,
-    }))
-  );
 }
 
 export async function getCityPackGateSnapshotForAdmin(): Promise<{

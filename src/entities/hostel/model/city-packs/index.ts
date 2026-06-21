@@ -36,9 +36,6 @@ export { buildCityPackLocale, cityPackRoutesNamespace, type CityPackLocale } fro
 export const CODE_CITY_PACK_IDS = ['sarajevo', 'kotor'] as const;
 export type CodeCityPackId = (typeof CODE_CITY_PACK_IDS)[number];
 
-/** @deprecated Prefer CODE_CITY_PACK_IDS for code-backed packs. */
-export const CITY_PACK_IDS = CODE_CITY_PACK_IDS;
-
 export type CityPackId = string;
 
 const CITY_PACK_ID_PATTERN = /^[a-z][a-z0-9-]{1,48}$/;

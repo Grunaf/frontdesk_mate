@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { MIN_PLACES_FOR_PACK } from './constants';
 import {
   countGatePlaces,
@@ -7,17 +7,8 @@ import {
   resolveHasPlacesPack,
   resolvePackNotReadyReason,
 } from './resolveCityPackGate';
-import {
-  clearCityPackRegistry,
-  resolveHasPlacesPackFromRegistry,
-  setCityPackRegistry,
-} from './packRegistry';
 
 describe('city pack gate', () => {
-  beforeEach(() => {
-    clearCityPackRegistry();
-  });
-
   it('requires ready status and minimum places', () => {
     const content = {
       places: Array.from({ length: MIN_PLACES_FOR_PACK }, (_, index) => ({
@@ -43,32 +34,6 @@ describe('city pack gate', () => {
         packId: 'kotor',
       })
     ).toBe(true);
-  });
-
-  it('uses registry for tenant readiness when loaded', () => {
-    setCityPackRegistry([
-      {
-        id: 'sarajevo',
-        label: 'Sarajevo',
-        status: 'ready',
-        placesCount: 12,
-        routesGateMet: true,
-        readyForTenants: true,
-        notReadyReason: null,
-      },
-      {
-        id: 'kotor',
-        label: 'Kotor',
-        status: 'draft',
-        placesCount: 2,
-        routesGateMet: false,
-        readyForTenants: false,
-        notReadyReason: 'City pack is still draft — publish it in City packs admin.',
-      },
-    ]);
-
-    expect(resolveHasPlacesPackFromRegistry('sarajevo')).toBe(true);
-    expect(resolveHasPlacesPackFromRegistry('kotor')).toBe(false);
   });
 
   it('explains why a pack is not ready', () => {

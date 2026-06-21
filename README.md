@@ -171,7 +171,7 @@ See `.env.example`. Required for full flow:
 - Migration `015`: normalize tenant JSON — `arrivalAccess.accessPoints` only, `bedType` only on beds
 - Removed dual-write `doors`/`doorImages` sync from admin save and `buildHostelConfig`
 - Removed deprecated APIs: `resolveDoorAccessPlan`, `useDoorAccessPlan`, `INTEGRATIONS`, legacy `ArrivalAccessPlan` fields
-- Booking reads only `settings.booking`; settlement rules only from `activeRulesKeys`
+- Booking reads only `settings.booking`; settlement rules from `settings.houseRules` (legacy `activeRulesKeys` migrated on read)
 
 ### 2025-06 — Room map editor & guest stay
 

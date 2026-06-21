@@ -97,10 +97,7 @@ export function resolveEntranceLayout(
   }
 }
 
-/** @deprecated Use resolveRoomBounds() — kept for tests and fallbacks */
-export const ROOM_BOUNDS: RoomBounds = { x: 10, y: 10, width: 260, height: 220 };
-
-export const DEFAULT_ROOM_BOUNDS = ROOM_BOUNDS;
+export const DEFAULT_ROOM_BOUNDS: RoomBounds = { x: 10, y: 10, width: 260, height: 220 };
 
 export const ROOM_SIZE_LIMITS = {
   minWidth: 140,
@@ -156,9 +153,6 @@ function layoutPointToView(x: number, y: number): { x: number; y: number } {
     y: ISO_MATRIX.ty + ISO_MATRIX.b * x + ISO_MATRIX.d * y,
   };
 }
-
-/** @deprecated Kept for reference — use getRoomCenteringOffset() which accounts for isometric skew. */
-export const ROOM_LAYOUT_CENTER = { x: 140, y: 120 } as const;
 
 export function getRoomCenteringOffset(bounds: RoomBounds): { x: number; y: number } {
   const cx = bounds.x + bounds.width / 2;

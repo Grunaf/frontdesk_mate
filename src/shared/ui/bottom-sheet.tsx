@@ -126,17 +126,3 @@ export {
   BottomSheetTitle,
   BottomSheetDescription,
 };
-
-/** @deprecated Use BottomSheet* — kept for existing imports during migration */
-export {
-  BottomSheet as Drawer,
-  BottomSheetPortal as DrawerPortal,
-  BottomSheetOverlay as DrawerOverlay,
-  BottomSheetTrigger as DrawerTrigger,
-  BottomSheetClose as DrawerClose,
-  BottomSheetContent as DrawerContent,
-  BottomSheetHeader as DrawerHeader,
-  BottomSheetFooter as DrawerFooter,
-  BottomSheetTitle as DrawerTitle,
-  BottomSheetDescription as DrawerDescription,
-};
