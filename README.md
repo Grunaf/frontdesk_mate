@@ -24,6 +24,7 @@ npm run dev
 - Guest app: `/welcome`, `/concierge` (under `app-site/[locale]`)
 - Landing: `landing-site/[locale]`
 - Admin: `/admin` (password = `ADMIN_SECRET`)
+- Smoke tests: copy `e2e/env.example` → `e2e/env.local`, then `npm run smoke` (see `SMOKE.md`)
 
 Set tenant for local dev:
 

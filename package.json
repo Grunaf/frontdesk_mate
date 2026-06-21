@@ -18,6 +18,10 @@
     "sync-i18n": "node scripts/sync-i18n.js && node scripts/validate-i18n.js --strict",
     "start": "next start",
     "test": "vitest run",
+    "smoke": "node scripts/run-smoke.js",
+    "smoke:ui": "node scripts/run-smoke.js --ui",
+    "smoke:install": "playwright install chromium",
+    "smoke:report": "playwright show-report",
     "lint": "eslint",
     "lint:fsd": "steiger ./src",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css}\"",
@@ -48,6 +52,7 @@
   },
   "devDependencies": {
     "@feature-sliced/steiger-plugin": "^0.6.0",
+    "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
