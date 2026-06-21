@@ -1,3 +1,5 @@
 export { DoorAccessPanel } from './ui/DoorAccessPanel';
-export { ArrivalGuideBanner } from './ui/ArrivalGuideBanner';
-export { ArrivalVisuals } from './ui/ArrivalVisuals';
+export { FindHostelSection } from './ui/FindHostelSection';
+export { CheckInNowSection } from './ui/CheckInNowSection';
+export { NightReturnSection } from './ui/NightReturnSection';
+export { useArrivalAccessPlan } from './lib/useArrivalAccessPlan';

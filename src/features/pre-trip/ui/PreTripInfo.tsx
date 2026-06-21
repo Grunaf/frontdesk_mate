@@ -1,5 +1,7 @@
+'use client';
+
 import { useTranslations } from '@/shared/i18n';
-import { HOSTEL_CONFIG } from '@/shared/config';
+import { useHostelConfig, useTenant } from '@/entities/tenant';
 import { Icon, Separator } from '@/shared/ui';
 import { Banknote, Briefcase, Clock, Lock, type LucideIcon } from 'lucide-react';
 
@@ -25,16 +27,21 @@ function InfoRow({ icon, title, description }: InfoRowProps) {
 
 export function PreTripInfo() {
   const preparation = useTranslations('pages.arrivalJourney.preTrip');
-  const hostelInfo = useTranslations('domains.hostel');
+  const common = useTranslations('domains.hostel.common');
+  const { cityPack } = useTenant();
+  const paymentT = useTranslations(cityPack.locale.paymentNamespace);
+  const preTripT = useTranslations(cityPack.locale.preTripNamespace);
+  const hostel = useHostelConfig();
+  const showSundayTip = cityPack.preTripTips?.includes('sundayClosure');
 
   return (
     <div className="pt-4">
       <div className="box-border space-y-4 rounded-xl border bg-muted p-4">
         <InfoRow
           icon={Clock}
-          title={hostelInfo('timing.checkIn')}
-          description={hostelInfo('timing.checkInTime', {
-            time: HOSTEL_CONFIG.checkInTime ?? '',
+          title={common('timing.checkIn')}
+          description={common('timing.checkInTime', {
+            time: hostel.checkInTime ?? '',
           })}
         />
 
@@ -42,8 +49,8 @@ export function PreTripInfo() {
 
         <InfoRow
           icon={Banknote}
-          title={hostelInfo('payment.cashOnly')}
-          description={hostelInfo('payment.taxNote', { cost: HOSTEL_CONFIG.cityTax ?? '' })}
+          title={paymentT('cashOnly')}
+          description={common('payment.taxNote', { cost: hostel.cityTax ?? '' })}
         />
 
         <Separator />
@@ -51,16 +58,19 @@ export function PreTripInfo() {
         <InfoRow
           icon={Briefcase}
           title={preparation('luggage.title')}
-          description={preparation('luggage.description', { time: HOSTEL_CONFIG.checkInTime ?? '' })}
+          description={preparation('luggage.description', { time: hostel.checkInTime ?? '' })}
         />
 
-        <Separator />
-
-        <InfoRow
-          icon={Lock}
-          title={preparation('sundayClosure.title')}
-          description={preparation('sundayClosure.description')}
-        />
+        {showSundayTip && (
+          <>
+            <Separator />
+            <InfoRow
+              icon={Lock}
+              title={preTripT('sundayClosure.title')}
+              description={preTripT('sundayClosure.description')}
+            />
+          </>
+        )}
       </div>
     </div>
   );

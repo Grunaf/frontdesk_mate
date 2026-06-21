@@ -1,10 +1,23 @@
 'use client';
 
 import { useTranslations } from '@/shared/i18n';
-import { Button, Icon, Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui';
+import { useTenant } from '@/entities/tenant';
+import {
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetTitle,
+  Button,
+  Icon,
+} from '@/shared/ui';
 import { ExternalLink } from 'lucide-react';
 import { hasOfficialRouteSchedule, type RouteConfig } from '@/entities/hostel';
-import { getTransitIcon, PublicRouteItinerary } from './PublicRouteItinerary';
+import {
+  getRouteDisplayIcon,
+  PublicRouteItinerary,
+  resolveWalkToHostelText,
+} from './PublicRouteItinerary';
 
 export function PublicRouteDetailsSheet({
   open,
@@ -19,33 +32,46 @@ export function PublicRouteDetailsSheet({
   title: string;
   subtitle?: string;
 }) {
+  const { settings, hostel } = useTenant();
   const routes = useTranslations();
   const directions = useTranslations('pages.arrivalJourney.directions');
-  const TransitIcon = getTransitIcon(route.category);
+  const RouteIcon = getRouteDisplayIcon(route);
   const showOfficialSchedule = hasOfficialRouteSchedule(route);
+  const address = hostel.contacts.address.display ?? '';
+
+  const walkToHostel = resolveWalkToHostelText({
+    route,
+    routes,
+    settings,
+    address,
+  });
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl px-0 pb-6">
-        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-        <SheetHeader className="px-6 pt-4 pb-2">
+    <BottomSheet open={open} onOpenChange={onOpenChange}>
+      <BottomSheetContent className="overflow-y-auto px-0 pb-6">
+        <BottomSheetHeader className="px-6 pb-2">
           <div className="flex items-start gap-4">
             <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
-              <Icon icon={TransitIcon} className="h-5 w-5" />
+              <Icon icon={RouteIcon} className="h-5 w-5" />
             </div>
             <div className="min-w-0 space-y-1">
-              <SheetTitle className="text-base">{title}</SheetTitle>
+              <BottomSheetTitle className="text-base">{title}</BottomSheetTitle>
               {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
             </div>
           </div>
-        </SheetHeader>
+        </BottomSheetHeader>
 
         <div className="px-6">
-          <PublicRouteItinerary route={route} routes={routes} directions={directions} />
+          <PublicRouteItinerary
+            route={route}
+            routes={routes}
+            directions={directions}
+            walkToHostel={walkToHostel}
+          />
         </div>
 
         {showOfficialSchedule && (
-          <SheetFooter className="px-6 pt-4 sm:flex-row">
+          <BottomSheetFooter className="px-6 pt-4 sm:flex-row">
             <Button asChild variant="outline" size="sm" className="w-full">
               <a
                 href={route.metadata.publicTransport.officialRouteUrl}
@@ -56,9 +82,9 @@ export function PublicRouteDetailsSheet({
                 <Icon icon={ExternalLink} className="h-3.5 w-3.5" />
               </a>
             </Button>
-          </SheetFooter>
+          </BottomSheetFooter>
         )}
-      </SheetContent>
-    </Sheet>
+      </BottomSheetContent>
+    </BottomSheet>
   );
 }

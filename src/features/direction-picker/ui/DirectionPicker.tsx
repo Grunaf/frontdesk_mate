@@ -2,22 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from '@/shared/i18n';
-import { HOSTEL_CONFIG } from '@/shared/config';
-import { getWhatsappTaxiLink } from '../lib/getWhatsappTaxiLink';
-import { Button, Icon, Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, Tabs, TabsList, TabsTrigger } from '@/shared/ui';
-import { Car } from 'lucide-react';
-import {
-  ARRIVAL_ROUTES_CONFIG,
-  ROUTE_CATEGORIES,
-  type RouteId,
-} from '@/entities/hostel';
+import { useTenant } from '@/entities/tenant';
+import { getRouteFeedbackLink } from '../lib/getRouteFeedbackLink';
+import { Button, ExternalServiceTouchLink, Icon, Tabs, TabsList, TabsTrigger } from '@/shared/ui';
+import type { RouteId } from '@/entities/hostel';
+import { getActiveRoutes } from '@/entities/hostel';
 import { PublicRouteDetailsSheet } from './PublicRouteDetailsSheet';
 import { PublicRouteSummaryCard } from './PublicRouteSummaryCard';
-import { TaxiBackupCard, TaxiRouteSummary } from './TaxiBackupCard';
+import { TaxiBackupCard } from './TaxiBackupCard';
+import { TaxiBackupSheet } from './TaxiBackupSheet';
 
 export function DirectionPicker() {
+  const { hostel, routes: arrivalRoutes, routeCategories, contentKeys } = useTenant();
   const routes = useTranslations();
-  const taxiActions = useTranslations('components.taxi');
   const directions = useTranslations('pages.arrivalJourney.directions');
 
   const [activeRouteId, setActiveRouteId] = useState<RouteId>('airport');
@@ -31,38 +28,46 @@ export function DirectionPicker() {
     setTaxiSheetOpen(false);
   }, [activeRouteId]);
 
-  const currentRoute = ARRIVAL_ROUTES_CONFIG[activeRouteId];
+  useEffect(() => {
+    const defaultRouteId = routeCategories[0]?.defaultRouteId;
+    if (defaultRouteId) {
+      setActiveRouteId(defaultRouteId);
+    }
+  }, [routeCategories]);
+
+  const currentRoute = arrivalRoutes[activeRouteId];
   const activeCategory = currentRoute.category;
-  const sameCategoryRoutes = Object.values(ARRIVAL_ROUTES_CONFIG).filter(
-    (route) => route.category === activeCategory
-  );
+  const activeRoutesList = getActiveRoutes(arrivalRoutes);
+  const sameCategoryRoutes = activeRoutesList.filter((route) => route.category === activeCategory);
   const alternativeRoute = sameCategoryRoutes.find((route) => route.id !== currentRoute.id);
 
-  const subRoutes = Object.values(ARRIVAL_ROUTES_CONFIG).filter(
+  const subRoutes = activeRoutesList.filter(
     (route) => route.category === activeCategory && route.hintKey
   );
 
-  const taxiWhatsappLink = getWhatsappTaxiLink(
-    taxiActions('whatsappMessage', {
-      pickupPoint: routes(currentRoute.translationKeys.taxiPickupPoint),
-      address: HOSTEL_CONFIG.contacts.address.display ?? '',
+  const routeFeedbackLink = getRouteFeedbackLink(
+    hostel.contacts.feedbackPhone.raw ?? '',
+    directions('routeFeedbackMessage', {
+      route: routes(currentRoute.translationKeys.publicTitle),
     })
   );
 
   const handleCategoryChange = (categoryValue: string) => {
-    const targetCategory = ROUTE_CATEGORIES.find((cat) => cat.id === categoryValue);
+    const targetCategory = routeCategories.find((cat) => cat.id === categoryValue);
     if (targetCategory) {
       setActiveRouteId(targetCategory.defaultRouteId);
     }
   };
+
+  const tabGridClass = routeCategories.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
 
   return (
     <div className="space-y-4">
       <p className="text-sm font-medium text-muted-foreground">{directions('fromSubtitle')}</p>
 
       <Tabs value={activeCategory} onValueChange={handleCategoryChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          {ROUTE_CATEGORIES.map(({ id, icon, labelKey }) => (
+        <TabsList className={`grid w-full ${tabGridClass}`}>
+          {routeCategories.map(({ id, icon, labelKey }) => (
             <TabsTrigger key={id} value={id} className="gap-2">
               <Icon icon={icon} className="h-4 w-4" />
               <span className="sr-only sm:not-sr-only">{routes(labelKey)}</span>
@@ -71,10 +76,10 @@ export function DirectionPicker() {
         </TabsList>
       </Tabs>
 
-      {subRoutes.length > 0 && (
+      {subRoutes.length > 0 && contentKeys.busClarificationQuestion && (
         <div className="animate-fadeIn space-y-4 rounded-xl border bg-muted p-4">
           <p className="text-center text-xs font-medium text-muted-foreground">
-            {routes('domains.hostel.routes.bus.clarificationQuestion')}
+            {routes(contentKeys.busClarificationQuestion)}
           </p>
 
           <div className="grid grid-cols-2 gap-4">
@@ -118,6 +123,14 @@ export function DirectionPicker() {
           {directions('trustDisclaimer')}
         </p>
 
+        {hostel.contacts.feedbackPhone.raw && (
+          <p className="flex justify-center text-[11px] leading-relaxed text-muted-foreground">
+            <ExternalServiceTouchLink service="whatsapp" href={routeFeedbackLink}>
+              {directions('routeFeedbackLink')}
+            </ExternalServiceTouchLink>
+          </p>
+        )}
+
         <PublicRouteDetailsSheet
           open={primaryDetailsOpen}
           onOpenChange={setPrimaryDetailsOpen}
@@ -136,47 +149,7 @@ export function DirectionPicker() {
           />
         )}
 
-        <Sheet open={taxiSheetOpen} onOpenChange={setTaxiSheetOpen}>
-          <SheetContent side="bottom" className="max-h-[85vh] rounded-t-2xl px-0 pb-6">
-            <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-            <SheetHeader className="px-6 pt-4 pb-2 space-y-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {directions('backupTitle')}
-              </p>
-              <div className="flex items-start gap-4">
-                <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
-                  <Icon icon={Car} className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 space-y-1">
-                  <SheetTitle className="text-base">{directions('taxiTitle')}</SheetTitle>
-                  <TaxiRouteSummary route={currentRoute} directions={directions} />
-                </div>
-              </div>
-            </SheetHeader>
-
-            <div className="space-y-4 px-6">
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {routes('domains.hostel.routes.taxiService.standWarning')}
-              </p>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {routes('domains.hostel.routes.taxiService.meterWarning')}
-              </p>
-            </div>
-
-            <SheetFooter className="px-6 pt-4 sm:flex-row">
-              <Button asChild size="sm" variant="outline" className="flex-1">
-                <a href={taxiWhatsappLink} target="_blank" rel="noopener noreferrer">
-                  {taxiActions('writeWithWhatsapp')}
-                </a>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="flex-1">
-                <a href={HOSTEL_CONFIG.contacts.taxiPhone.href}>
-                  {taxiActions('callTaxi', { taxiName: 'Zuti Taxi' })}
-                </a>
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+        <TaxiBackupSheet open={taxiSheetOpen} onOpenChange={setTaxiSheetOpen} route={currentRoute} />
       </div>
     </div>
   );

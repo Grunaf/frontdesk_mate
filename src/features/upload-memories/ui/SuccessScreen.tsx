@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { SITE_CONFIG } from '@/shared/config';
 import { useTranslations } from '@/shared/i18n';
 import { Button, Card, CardContent, CardDescription, CardTitle } from '@/shared/ui';
 
@@ -10,7 +11,7 @@ interface SuccessScreenProps {
 
 export function SuccessScreen({ onReset }: SuccessScreenProps) {
   const t = useTranslations('features.uploadMemories.success');
-  const siteUrl = process.env.NEXT_PUBLIC_HOSTEL_SITE_URL || 'http://localhost:3000';
+  const siteUrl = SITE_CONFIG.publicSiteUrl;
 
   return (
     <Card className="min-h-[250px] text-center">

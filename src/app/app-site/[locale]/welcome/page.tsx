@@ -1,6 +1,5 @@
-// Импортируем главный компонент из слоя features
+import { setRequestLocale } from 'next-intl/server';
 import { ArrivalJourneyCoordinator } from '@/views/arrival-journey';
-import { setRequestLocale } from "next-intl/server";
 
 interface ArrivalJourneyPageProps {
   params: Promise<{ locale: string }>;

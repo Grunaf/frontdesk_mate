@@ -1,4 +1,42 @@
 export { RoomLayout } from './ui/RoomLayout';
 export { AmenityIcon } from './ui/AmenityIcon';
-export { ROOMS_DATA, type BedTypeData } from './config/roomsData';
-export { ROOM_LAYOUT_BEDS, type RoomLayoutBed } from './model/room-layout';
+export {
+  stayBedHasLayout,
+  toRoomLayoutBed,
+  getBedRenderWidth,
+  getBedRenderHeight,
+  clampBedToRoom,
+  clampRoomSize,
+  resolveRoomBounds,
+  getEntranceTransform,
+  getRoomCenteringOffset,
+  normalizeEntranceSide,
+  resolveEntranceLayout,
+  resolveEntranceSideFromPoint,
+  ROOM_ENTRANCE_SIDES,
+  type RoomEntranceSide,
+  normalizeBedRotation,
+  type RoomLayoutBed,
+  type RoomBounds,
+  type StayBedLayout,
+  ROOM_BOUNDS,
+  DEFAULT_ROOM_BOUNDS,
+  ROOM_SIZE_LIMITS,
+  ROOM_INNER_TRANSFORM,
+  ROOM_LAYOUT_VIEWBOX,
+  ROOM_LAYOUT_VIEW_TARGET,
+  ROOM_LAYOUT_CENTER,
+  BED_WIDTH,
+  BED_HEIGHT,
+  DOUBLE_BED_WIDTH,
+  DOUBLE_BED_HEIGHT,
+  LAYOUT_GRID_STEP,
+  BED_ROTATION_STEPS,
+} from './model/room-layout';
+export {
+  BED_UNIT_TYPES,
+  applyBedUnitType,
+  resolveBedUnitType,
+  isDoubleBed,
+  type BedUnitType,
+} from './model/bed-type';

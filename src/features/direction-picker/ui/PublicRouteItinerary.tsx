@@ -3,8 +3,12 @@
 import { useTranslations } from '@/shared/i18n';
 import { Icon } from '@/shared/ui';
 import { Bus, Clock3, Footprints, Route, Ticket, Train, type LucideIcon } from 'lucide-react';
-import { type RouteCategory, type RouteConfig } from '@/entities/hostel';
+import {
+  isWalkOnlyRoute,
+  type RouteConfig,
+} from '@/entities/hostel';
 import { cn } from '@/shared/lib/utils';
+import { resolveWalkToHostelText } from '../lib/resolveWalkToHostel';
 
 function RouteTimelineLeg({
   icon,
@@ -43,6 +47,7 @@ export function TransitLegMeta({
   directions: ReturnType<typeof useTranslations<'pages.arrivalJourney.directions'>>;
 }) {
   const { ticketPrice, stops, durationMin, fareLabelKey } = route.metadata.publicTransport;
+  const walkOnly = isWalkOnlyRoute(route);
   const showFareChip = Boolean(fareLabelKey || ticketPrice);
 
   return (
@@ -58,7 +63,7 @@ export function TransitLegMeta({
               })}
         </span>
       )}
-      {stops !== undefined && (
+      {!walkOnly && stops !== undefined && (
         <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] text-foreground/90">
           <Icon icon={Route} className="h-3 w-3 text-muted-foreground" />
           {directions('labels.stops', { count: stops })}
@@ -72,20 +77,46 @@ export function TransitLegMeta({
   );
 }
 
-export function getTransitIcon(category: RouteCategory): LucideIcon {
-  return category === 'train' ? Train : Bus;
+export function getRouteDisplayIcon(route: RouteConfig): LucideIcon {
+  if (isWalkOnlyRoute(route)) {
+    return Footprints;
+  }
+
+  return route.category === 'train' ? Train : Bus;
 }
 
 export function PublicRouteItinerary({
   route,
   routes,
   directions,
+  walkToHostel,
 }: {
   route: RouteConfig;
   routes: ReturnType<typeof useTranslations>;
   directions: ReturnType<typeof useTranslations<'pages.arrivalJourney.directions'>>;
+  walkToHostel: string;
 }) {
-  const TransitIcon = getTransitIcon(route.category);
+  const walkOnly = isWalkOnlyRoute(route);
+  const TransitIcon = getRouteDisplayIcon(route);
+
+  if (walkOnly) {
+    return (
+      <div className="pt-1">
+        <RouteTimelineLeg icon={Footprints} title={directions('legs.onFootRoute')}>
+          <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
+            <p className="text-xs leading-relaxed text-foreground/90">
+              {routes(route.translationKeys.publicText)}
+            </p>
+            <TransitLegMeta route={route} routes={routes} directions={directions} />
+          </div>
+        </RouteTimelineLeg>
+
+        <RouteTimelineLeg icon={Footprints} isLast title={directions('legs.walkToHostel')}>
+          <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
+        </RouteTimelineLeg>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-1">
@@ -108,10 +139,10 @@ export function PublicRouteItinerary({
       </RouteTimelineLeg>
 
       <RouteTimelineLeg icon={Footprints} isLast title={directions('legs.walkToHostel')}>
-        <p className="text-xs leading-relaxed text-foreground/90">
-          {routes(route.translationKeys.publicWalkToHostel)}
-        </p>
+        <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
       </RouteTimelineLeg>
     </div>
   );
 }
+
+export { resolveWalkToHostelText };

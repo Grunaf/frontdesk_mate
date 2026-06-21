@@ -64,17 +64,48 @@ function AccordionContent({
   children,
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Content>) {
+  const contentRef = React.useRef<HTMLDivElement>(null)
+  const innerRef = React.useRef<HTMLDivElement>(null)
+
+  React.useLayoutEffect(() => {
+    const contentEl = contentRef.current
+    const innerEl = innerRef.current
+    if (!contentEl || !innerEl) return
+
+    const syncHeight = () => {
+      if (contentEl.getAttribute("data-state") !== "open") return
+      const height = `${innerEl.scrollHeight}px`
+      contentEl.style.setProperty("--radix-accordion-content-height", height)
+      contentEl.style.height = height
+    }
+
+    syncHeight()
+
+    const observer = new ResizeObserver(syncHeight)
+    observer.observe(innerEl)
+
+    const stateObserver = new MutationObserver(syncHeight)
+    stateObserver.observe(contentEl, { attributes: true, attributeFilter: ["data-state"] })
+
+    return () => {
+      observer.disconnect()
+      stateObserver.disconnect()
+    }
+  }, [])
+
   return (
     <AccordionPrimitive.Content
+      ref={contentRef}
       data-slot="accordion-content"
-      className="overflow-hidden px-2 text-xs/relaxed data-open:animate-accordion-down data-closed:animate-accordion-up"
+      className={cn(
+        "overflow-hidden px-2 text-xs/relaxed data-open:animate-accordion-down data-closed:animate-accordion-up",
+        className
+      )}
       {...props}
     >
       <div
-        className={cn(
-          "h-(--radix-accordion-content-height) pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
-          className
-        )}
+        ref={innerRef}
+        className="pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4"
       >
         {children}
       </div>

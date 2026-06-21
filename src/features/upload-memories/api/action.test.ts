@@ -10,7 +10,8 @@ vi.mock('@/shared/lib/db', () => ({
   },
 }));
 
-import { createUploadMemoriesAction, UploadMemoriesError } from './action';
+import { createUploadMemoriesAction } from './uploadMemoriesCore';
+import { UploadMemoriesError } from './types';
 
 function createFormData(files: File[], instagram = '') {
   const formData = new FormData();

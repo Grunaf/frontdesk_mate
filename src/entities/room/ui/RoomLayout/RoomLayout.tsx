@@ -1,71 +1,82 @@
+'use client';
+
 import { Bed } from './Bed';
-import { ROOM_LAYOUT_BEDS } from '../../model/room-layout';
+import { RoomLayoutCanvas } from './RoomLayoutCanvas';
+import type { RoomLayoutBed, RoomBounds, RoomEntranceSide } from '../../model/room-layout';
+import { resolveRoomBounds } from '../../model/room-layout';
+import { resolveBedUnitType } from '../../model/bed-type';
+import type { GuestStayConfig } from '@/entities/tenant';
+import { resolveBedMapDisplayLabel } from '@/entities/tenant/lib/resolveBedDisplay';
+import { useTranslations } from '@/shared/i18n';
 
 interface RoomLayoutProps {
+  beds: RoomLayoutBed[];
+  roomBounds?: RoomBounds | null;
+  guestStay?: GuestStayConfig;
   highlightedBedId?: string;
+  entranceSide?: RoomEntranceSide;
   isNightMode?: boolean;
 }
 
-export function RoomLayout({ highlightedBedId, isNightMode = false }: RoomLayoutProps) {
+export function RoomLayout({
+  beds,
+  roomBounds,
+  guestStay,
+  highlightedBedId,
+  entranceSide,
+  isNightMode = false,
+}: RoomLayoutProps) {
+  const t = useTranslations('components.roomSchema');
+  const bounds = roomBounds ?? resolveRoomBounds(null);
+
+  if (beds.length === 0) return null;
+
   return (
-    <svg
-      viewBox="0 0 450 350" // Увеличили viewBox, так как изометрия требует больше места по высоте и ширине
-      className={`h-auto w-full rounded-lg transition-colors duration-300 ${
-        isNightMode ? 'bg-foreground/10' : 'bg-muted/40'
-      }`}
+    <RoomLayoutCanvas
+      roomBounds={bounds}
+      entranceLabel={t('entrance')}
+      entranceSide={entranceSide}
+      tone="guest"
     >
-      {/* Главный контейнер трансформации:
-        Сдвигаем в центр (translate) и применяем изометрическую матрицу.
-        Матрица [0.866, 0.5, -0.866, 0.5, 0, 0] — это классический куб под 30°
-      */}
-      <g transform="translate(180, 40) matrix(0.866 0.5 -0.866 0.5 0 0)">
-        {/* Стены комнаты (теперь это пол в изометрии) */}
-        <rect
-          x="10"
-          y="10"
-          width="260"
-          height="220"
-          rx="8"
-          fill="none"
-          className="stroke-border stroke-2"
+      {beds.map((bed, index) => {
+        const stayBed = guestStay?.beds?.find((entry) => entry.id === bed.id);
+        const bedType = stayBed ? resolveBedUnitType(stayBed) : resolveBedUnitType(bed);
+        const bottomLabel = stayBed
+          ? resolveBedMapDisplayLabel(guestStay, stayBed, 'bottom')
+          : undefined;
+        const topLabel =
+          stayBed && bedType === 'bunk'
+            ? resolveBedMapDisplayLabel(guestStay, stayBed, 'top')
+            : undefined;
+        const unitLabel =
+          stayBed && bedType !== 'bunk'
+            ? resolveBedMapDisplayLabel(guestStay, stayBed)
+            : undefined;
+
+        return (
+        <Bed
+          key={`${bed.id}-${index}`}
+          id={bed.id}
+          x={bed.x}
+          y={bed.y}
+          rotation={bed.rotation}
+          isNightMode={isNightMode}
+          bedType={bed.bedType}
+          isHighlighted={
+            bed.id === highlightedBedId ||
+            bed.topId === highlightedBedId ||
+            bed.bottomId === highlightedBedId
+          }
+          topId={bed.topId}
+          bottomId={bed.bottomId}
+          bottomLabel={bottomLabel}
+          topLabel={topLabel}
+          unitLabel={unitLabel}
+          highlightedBedId={highlightedBedId}
+          readableLabels
         />
-
-        {/* Обозначение двери */}
-        <g transform="translate(110, 230)">
-          <line x1="0" y1="0" x2="50" y2="0" className="stroke-primary stroke-4" />
-          <text
-            x="25"
-            y="18"
-            textAnchor="middle"
-            className="fill-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
-            /* Разворачиваем текст обратно, чтобы он оставался читаемым в 2D, либо убираем rotate */
-            transform="scale(1, 1)"
-          >
-            Вход
-          </text>
-        </g>
-
-        {/* Рендерим массив кроватей */}
-        {ROOM_LAYOUT_BEDS.map((bed) => (
-          <Bed
-            key={bed.id}
-            id={bed.id}
-            x={bed.x}
-            y={bed.y}
-            isNightMode={isNightMode}
-            // Измененная логика подсветки: подсвечиваем всю группу, если выбран один из ярусов
-            isHighlighted={
-              bed.id === highlightedBedId ||
-              bed.topId === highlightedBedId ||
-              bed.bottomId === highlightedBedId
-            }
-            isBunk={bed.isBunk}
-            topId={bed.topId}
-            bottomId={bed.bottomId}
-            highlightedBedId={highlightedBedId} // Передаем id для точечной подсветки конкретного яруса
-          />
-        ))}
-      </g>
-    </svg>
+        );
+      })}
+    </RoomLayoutCanvas>
   );
 }

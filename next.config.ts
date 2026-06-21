@@ -9,7 +9,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '100mb',
     },
   },
-  allowedDevOrigins: ['192.168.1.249'],
+  // Next.js allows *.localhost by default, but not nested tenant hosts like {slug}.app.localhost.
+  allowedDevOrigins: [
+    '192.168.1.249',
+    '*.app.localhost',
+    '*.reception.localhost',
+    '*.localhost',
+  ],
 };
 
 export default withNextIntl(nextConfig);

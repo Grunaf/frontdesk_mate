@@ -3,19 +3,43 @@ import { Geist, Geist_Mono, Inter } from 'next/font/google';
 import '@/shared/styles/globals.css';
 import { cn } from '@/shared/lib/utils';
 import { getMessages, setRequestLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
 import { BRAND_CONFIG } from '@/shared/config';
 import { getBrandCssVars } from '@/shared/lib';
 import { ThemeProvider } from '@/shared/ui';
+import { resolveTenantAccess } from '@/entities/tenant/server';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: 'Sarajevo Oasis Hostel',
-  description: 'Welcome to Sarajevo',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const landingAccess = await resolveTenantAccess('landing');
+
+  if (landingAccess.kind === 'active') {
+    const tenant = landingAccess.config;
+    return {
+      title: tenant.name,
+      description: tenant.hostel.contacts.address.display ?? tenant.name,
+    };
+  }
+
+  const appAccess = await resolveTenantAccess('app');
+
+  if (appAccess.kind === 'offline') {
+    const t = await getTranslations({ locale: 'en', namespace: 'pages.platform.offline' });
+    return {
+      title: appAccess.shell.name,
+      description: t('metaDescription'),
+    };
+  }
+
+  return {
+    title: 'Frontdesk Mate',
+    description: 'Guest app for hostels',
+  };
+}
 
 interface LayoutProps {
   children: React.ReactNode;

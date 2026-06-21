@@ -2,8 +2,8 @@
   "domains": {
     "hostel": {
       "meta": {
-        "title": "Sarajevo Oasis Hostel",
-        "subtitle": "Добро пожаловать в Сараево"
+        "title": "Приложение для гостей",
+        "subtitle": "Помощник во время проживания"
       },
       "features": {
         "wifi": {
@@ -12,11 +12,11 @@
         },
         "location": {
           "title": "In the Very Heart",
-          "description": "Located on Dalmatinska street, just a few steps from Sarajevo's main pedestrian zone."
+          "description": "Центральное расположение рядом с достопримечательностями и транспортом."
         },
         "garden": {
           "title": "Green Garden Lounge",
-          "description": "Our famous inner courtyard — the perfect place to relax, drink coffee, and meet people."
+          "description": "Общая зона для отдыха и знакомства с другими путешественниками."
         },
         "lockers": {
           "title": "Secure Storage",
@@ -40,6 +40,8 @@
         "bookAndUpgradeButton": "Book 2 beds, then upgrade",
         "upgradeNoticeHint": "Upgrade instructions will be provided after booking completion",
         "selectDatesButton": "View Availability",
+        "contactReceptionButton": "Contact reception",
+        "bookingUnavailableHint": "Online booking is not available — contact reception to reserve.",
         "singleBedDorm": {
           "title": "Single Bed in Shared Dorm",
           "description": "Perfect for solo travelers and backpackers. Features comfortable mattresses, personal lockers, and individual power sockets next to your bed."
@@ -92,86 +94,297 @@
           "content": "Услуга стирки и сушки одежды платная — 10 EUR. Обратитесь к администратору."
         }
       },
-      "routes": {
-        "showDetails": "Show details",
-        "from": {
-          "airport": "Airport",
-          "busStation": "Bus Station",
-          "train": "Train Station",
-          "busIstochno": "East Sarajevo (Istočno)",
-          "busMain": "Central Bus Station"
-        },
-        "bus": {
-          "clarificationQuestion": "Which direction or country did you arrive from?",
-          "istochnoHint": "Balkan routes: Serbia, Montenegro, etc.",
-          "centralHint": "EU routes, Croatia, Federation of BiH"
-        },
-        "taxiService": {
-          "title": "Official Taxi (Zuti Taxi)",
-          "noAppsInfo": "There is no Uber, Bolt, or Yandex in Sarajevo. Taxi can only be ordered via WhatsApp message or a regular phone call.",
-          "standWarning": "Take a taxi only from the official stands on the street. Never agree to fixed high prices offered by drivers waiting right by the bus platforms.",
-          "meterWarning": "Make sure the driver clears the meter and starts it at the official base rate (2.50 KM).",
-          "costTemplate": "The fair price from {location} to the hostel is around {minKM}–{maxKM} KM ({minEUR}–{maxEUR} €).",
-          "paymentInfo": "Pay in cash (KM or Euros)."
-        },
-        "airport": {
-          "locationGenitive": "the airport",
-          "public": {
-            "title": "Троллейбус №103",
-            "summary": "Самый дешёвый вариант — троллейбус 103 до Čobanija, затем короткая прогулка до Dalmatinska 6.",
-            "text": "Take trolleybus №103 directly to the city center. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver (cash only). Remember to validate your ticket inside!",
-            "walkToStop": "Walk about 14 minutes (1 km) out of the airport terminal to the 'Dobrinja škola' trolleybus stop.",
-            "getOffAt": "Get off at 'Čobanija' stop.",
-            "walkToHostel": "Cross the bridge over the river, turn left onto Main Street, and walk towards Dalmatinska 6."
+      "cityPacks": {
+        "sarajevo": {
+          "routes": {
+            "from": {
+              "airport": "Airport",
+              "busStation": "Bus Station",
+              "train": "Train Station",
+              "busIstochno": "East Sarajevo (Istočno)",
+              "busMain": "Central Bus Station"
+            },
+            "bus": {
+              "clarificationQuestion": "Which direction or country did you arrive from?",
+              "istochnoHint": "Balkan routes: Serbia, Montenegro, etc.",
+              "centralHint": "EU routes, Croatia, Federation of BiH"
+            },
+            "taxiService": {
+              "title": "Official Taxi (Zuti Taxi)",
+              "noAppsInfo": "There is no Uber, Bolt, or Yandex in Sarajevo. Taxi can only be ordered via WhatsApp message or a regular phone call.",
+              "standWarning": "Take a taxi only from the official stands on the street. Never agree to fixed high prices offered by drivers waiting right by the bus platforms.",
+              "meterWarning": "Make sure the driver clears the meter and starts it at the official base rate (2.50 KM).",
+              "costTemplate": "The fair price from {location} to the hostel is around {minKM}–{maxKM} KM ({minEUR}–{maxEUR} €).",
+              "paymentInfo": "Pay in cash (KM or Euros)."
+            },
+            "airport": {
+              "locationGenitive": "the airport",
+              "public": {
+                "title": "Троллейбус №103",
+                "summary": "Самый дешёвый вариант — троллейбус 103 до Čobanija, затем короткая прогулка до Dalmatinska 6.",
+                "text": "Take trolleybus №103 directly to the city center. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver (cash only). Remember to validate your ticket inside!",
+                "walkToStop": "Walk about 14 minutes (1 km) out of the airport terminal to the 'Dobrinja škola' trolleybus stop.",
+                "getOffAt": "Get off at 'Čobanija' stop.",
+                "walkToHostel": "Cross the bridge over the river, turn left onto Main Street, and walk towards Dalmatinska 6."
+              },
+              "taxi": {
+                "costEstimation": "The fair price from the airport to the hostel is around {minKM}–{maxKM} KM ({minEUR}–{maxEUR} €).",
+                "pickupPoint": "Sarajevo Airport (Terminal B)"
+              }
+            },
+            "busIstochno": {
+              "locationGenitive": "Istočno Sarajevo bus station",
+              "public": {
+                "title": "Троллейбус №103",
+                "summary": "Прямой маршрут через границу сущностей до Čobanija, затем пешком до хостела.",
+                "text": "Take trolleybus №103 towards 'Trg Austrije'. Tickets are 1.80 KM in the kiosk or 2.00 KM from the driver in cash. Please validate it immediately.",
+                "walkToStop": "Walk about 7 minutes (500 m) from the East Sarajevo station building to the 'Dobrinja' terminal trolleybus stop.",
+                "getOffAt": "Get off at 'Čobanija' stop.",
+                "walkToHostel": "Cross the bridge over the Miljacka river and walk straight towards Dalmatinska street."
+              },
+              "taxi": {
+                "costEstimation": "A convenient way to cross the entity border directly to the hostel door. Average cost is around 15 KM.",
+                "pickupPoint": "East Sarajevo Bus Station (Lukavica)"
+              }
+            },
+            "busMain": {
+              "locationGenitive": "the main bus station",
+              "public": {
+                "title": "Трамвай №1",
+                "summary": "Самый быстрый вариант — трамвай 1 до остановки Pošta, хостел за углом.",
+                "text": "Take Tram №1 directly to the hostel area. Tickets are 1.80 KM at the kiosk or 2.00 KM from the driver (cash only).",
+                "walkToStop": "Exit the bus station and walk 1 minute (78 m) forward to the 'Željezniчка stanica' tram loop right on the square.",
+                "getOffAt": "Get off at 'Pošta' stop. You will see a massive Post Office building.",
+                "walkToHostel": "Walk up towards Dalmatinska 6 — we are right around the corner."
+              },
+              "taxi": {
+                "costEstimation": "A short ride to the hostel. The price should not exceed 7–10 KM.",
+                "pickupPoint": "Central Bus Station"
+              }
+            },
+            "train": {
+              "locationGenitive": "the railway station",
+              "public": {
+                "title": "Трамвай №1",
+                "summary": "Прямой трамвай с площади до Pošta, ~3 мин пешком до входа.",
+                "text": "Take Tram №1 towards 'Baščaršija'. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver in cash.",
+                "walkToStop": "Exit the railway station building. The tram loop is right in front of you on the main square (1 min walk).",
+                "getOffAt": "Get off at 'Pošta' stop.",
+                "walkToHostel": "Walk towards Dalmatinska 6 (approx. 3 minutes)."
+              },
+              "taxi": {
+                "costEstimation": "The hostel is close, so the fair ride price on the taximeter is around 7–10 KM.",
+                "pickupPoint": "Main Railway/Bus Station"
+              }
+            }
           },
-          "taxi": {
-            "costEstimation": "The fair price from the airport to the hostel is around {minKM}–{maxKM} KM ({minEUR}–{maxEUR} €).",
-            "pickupPoint": "Sarajevo Airport (Terminal B)"
+          "payment": {
+            "cashOnly": "Только наличные (EUR / BAM)"
+          },
+          "guide": {
+            "title": "Локальный гид от хостела",
+            "subtitle": "Собрали для вас проверенные места в Сараево, чтобы вы не переплачивали как турист.",
+            "essentials": {
+              "title": "Essentials nearby",
+              "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
+              "expand": "Show",
+              "collapse": "Hide",
+              "atm": "ATM",
+              "shop": "Shop",
+              "pharmacy": "Pharmacy",
+              "lateFood": "Late food"
+            },
+            "exploreArrival": {
+              "title": "Explore the city",
+              "subtitle": "Our handpicked bars, cafes, food, and sights are ready when you are.",
+              "teaserTitle": "More recommendations waiting",
+              "teaserDescription": "Bars, coffee shops, and viewpoints are tucked away for now. Open the full city guide whenever you want.",
+              "showAllButton": "Show all recommendations"
+            },
+            "mapCard": {
+              "title": "{hostelName} Custom Google Map",
+              "description": "Opens directly in your Google Maps app with all our secret layers"
+            },
+            "tabs": {
+              "all": "All",
+              "essential": "Info",
+              "food": "Food",
+              "bars": "Bars",
+              "cafes": "Cafes",
+              "sights": "Sights"
+            },
+            "routeButton": "Route",
+            "openInMaps": "Открыть в Maps",
+            "showAllPlaces": "Показать все места ({count})",
+            "topPick": "Top pick",
+            "emptyCategory": "No places found in this category.",
+            "nearHostel": {
+              "title": "Рядом с хостелом",
+              "subtitle": "В пешей доступности",
+              "exploreCityTitle": "Исследуйте город",
+              "exploreCitySubtitle": "Подборка мест по городу"
+            },
+            "places": {
+              "atm": {
+                "desc": "Cash & ATMs — withdraw BAM (KM) at UniCredit or Raiffeisen ATMs on Dalmatinska, about a 2-minute walk from the hostel."
+              },
+              "konzum": {
+                "desc": "Grocery store — nearest Konzum for water, snacks, and basics. Open late on most days except Sunday."
+              },
+              "apoteka": {
+                "desc": "Pharmacy on Titova street for medicine, first aid, and travel essentials."
+              },
+              "u2": {
+                "desc": "Late-night food — U2 Pizza stays open late, a reliable option if you arrive hungry after reception hours."
+              },
+              "zeljo": {
+                "desc": "Traditional Bosnian food — legendary ćevapi at Baščaršija. The best local food experience in the heart of the old town."
+              },
+              "mahir": {
+                "desc": "Pizza & grill — popular local pizzeria with generous portions and fair prices, a short walk from the city center."
+              },
+              "edin": {
+                "desc": "Bakery — fresh burek, pastries, and coffee from one of Sarajevo's favourite neighbourhood bakeries."
+              },
+              "vucko": {
+                "desc": "Pub & grill — cosy gastro pub with local beer and hearty Balkan plates, great for a relaxed evening."
+              },
+              "ribica": {
+                "desc": "Hidden bar — tiny, quirky spot filled with vintage objects. A local favourite for an authentic Sarajevo night out."
+              },
+              "kinobosna": {
+                "desc": "Live music venue — legendary Monday jam sessions and concerts in an old cinema hall. Check the schedule before you go."
+              },
+              "fabrika": {
+                "desc": "Specialty coffee — third-wave roastery with excellent espresso and a calm workspace vibe."
+              },
+              "habitus": {
+                "desc": "Brunch & coffee — stylish spot with healthy bowls, great coffee, and a terrace when the weather is nice."
+              },
+              "yellowfort": {
+                "desc": "Viewpoint — stunning panoramic views. The perfect spot to watch the sunset over the entire city of Sarajevo."
+              },
+              "exchangeOffice": {
+                "name": "Обмен валюты Exclusive",
+                "description": "Честный курс обмена EUR на BAM (KM) без скрытых комиссий всего в 3 минутах пешком."
+              },
+              "supermarket": {
+                "name": "Супермаркет Bingo / Konzum",
+                "description": "Ближайший продуктовый магазин, чтобы купить воду, перекус или личные принадлежности по местным ценам."
+              },
+              "yellowBastion": {
+                "name": "Желтый бастион (Žuta Tabija)",
+                "description": "Потрясающая панорамная точка. Идеальное место для встречи заката с видом на все Сараево."
+              }
+            }
+          },
+          "preTrip": {
+            "sundayClosure": {
+              "title": "Закрыто по воскресеньям",
+              "description": "Воскресенье в Боснии — нерабочий день. Магазины и многие заведения закрыты. Запланируйте покупки заранее!"
+            }
+          },
+          "marketing": {
+            "heroSubtitle": "Ваш зелёный оазис в центре Сараево",
+            "heroImageAlt": "{hostelName} — фото хостела"
           }
         },
-        "busIstochno": {
-          "locationGenitive": "Istočno Sarajevo bus station",
-          "public": {
-            "title": "Троллейбус №103",
-            "summary": "Прямой маршрут через границу сущностей до Čobanija, затем пешком до хостела.",
-            "text": "Take trolleybus №103 towards 'Trg Austrije'. Tickets are 1.80 KM in the kiosk or 2.00 KM from the driver in cash. Please validate it immediately.",
-            "walkToStop": "Walk about 7 minutes (500 m) from the East Sarajevo station building to the 'Dobrinja' terminal trolleybus stop.",
-            "getOffAt": "Get off at 'Čobanija' stop.",
-            "walkToHostel": "Cross the bridge over the Miljacka river and walk straight towards Dalmatinska street."
+        "kotor": {
+          "routes": {
+            "from": {
+              "airport": "Аэропорт Тиват",
+              "busStation": "Автовокзал",
+              "busMain": "Автовокзал Котор"
+            },
+            "taxiService": {
+              "standWarning": "В терминале TIV нет официальной стоянки такси. Берите машину у стойки в зале прилёта или закажите через хостел. Не соглашайтесь на завышенные фиксированные цены у водителей на парковке.",
+              "meterWarning": "Договоритесь о фиксированной цене до старого города Котор (обычно €20–35) или убедитесь, что включён счётчик. В аэропорту чаще называют фикс, а не тариф по счётчику."
+            },
+            "airport": {
+              "locationGenitive": "аэропорта Тиват",
+              "public": {
+                "title": "Автобус через прибрежную дорогу",
+                "summary": "У терминала нет автобуса — дойдите до трассы или автовокзала Тиват, затем автобус до Котора.",
+                "fareLabel": "Автобус €3–4 (наличные водителю)",
+                "text": "Остановки у здания аэропорта нет. Дойдите до Adriatic highway (E65) и садитесь в автобус в сторону Котора или Будвы, либо идите ~20 минут до автовокзала Тиват на рейс по расписанию. Билет — у водителя, наличными.",
+                "walkToStop": "Выйдите из терминала, поверните налево и идите ~12 минут по подъездной дороге до прибрежной трассы и остановки.",
+                "getOffAt": "Выходите на автовокзале Котор (Autobuska stanica Kotor). В сезон часть рейсов останавливается ближе к старому городу — спросите водителя про Stari Grad.",
+                "walkToHostel": "От автовокзала спускайтесь к Stari Grad. Дальше — к нашему хостелу по адресу {address}."
+              },
+              "taxi": {
+                "costEstimation": "Прямое такси из аэропорта Тиват до Котора обычно {minEUR}–{maxEUR} € — зависит от сезона и того, заказали ли заранее.",
+                "pickupPoint": "Tivat Airport (TIV) — зал прилёта"
+              }
+            },
+            "busMain": {
+              "locationGenitive": "автовокзала Котор",
+              "public": {
+                "title": "Пешком в старый город",
+                "summary": "Междугородние автобусы приходят на автовокзал Котор — до старого города ~15 минут спуска пешком.",
+                "fareLabel": "Бесплатно (пешком)",
+                "text": "Междугородние автобусы из Дубровника, Подгорицы, Будвы и Тивата приходят на автовокзал Котор. Следуйте указателям Stari Grad вниз по главной дороге. Чемодан на колёсах нормально.",
+                "walkToStop": "Вы уже на автовокзале Котор после междугороднего рейса.",
+                "getOffAt": "Автовокзал Котор — конечная для большинства региональных маршрутов.",
+                "walkToHostel": "Идите к стенам старого города и морским воротам (Sea Gate), затем к нашему хостелу по адресу {address}."
+              },
+              "taxi": {
+                "costEstimation": "Короткое такси с автовокзала до старого города обычно {minEUR}–{maxEUR} € — удобно с тяжёлым багажом.",
+                "pickupPoint": "Kotor Bus Station (Autobuska stanica)"
+              }
+            }
           },
-          "taxi": {
-            "costEstimation": "A convenient way to cross the entity border directly to the hostel door. Average cost is around 15 KM.",
-            "pickupPoint": "East Sarajevo Bus Station (Lukavica)"
-          }
-        },
-        "busMain": {
-          "locationGenitive": "the main bus station",
-          "public": {
-            "title": "Трамвай №1",
-            "summary": "Самый быстрый вариант — трамвай 1 до остановки Pošta, хостел за углом.",
-            "text": "Take Tram №1 directly to the hostel area. Tickets are 1.80 KM at the kiosk or 2.00 KM from the driver (cash only).",
-            "walkToStop": "Exit the bus station and walk 1 minute (78 m) forward to the 'Željezniчка stanica' tram loop right on the square.",
-            "getOffAt": "Get off at 'Pošta' stop. You will see a massive Post Office building.",
-            "walkToHostel": "Walk up towards Dalmatinska 6 — we are right around the corner."
+          "payment": {
+            "cashOnly": "Только наличные (EUR)"
           },
-          "taxi": {
-            "costEstimation": "A short ride to the hostel. The price should not exceed 7–10 KM.",
-            "pickupPoint": "Central Bus Station"
-          }
-        },
-        "train": {
-          "locationGenitive": "the railway station",
-          "public": {
-            "title": "Трамвай №1",
-            "summary": "Прямой трамвай с площади до Pošta, ~3 мин пешком до входа.",
-            "text": "Take Tram №1 towards 'Baščaršija'. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver in cash.",
-            "walkToStop": "Exit the railway station building. The tram loop is right in front of you on the main square (1 min walk).",
-            "getOffAt": "Get off at 'Pošta' stop.",
-            "walkToHostel": "Walk towards Dalmatinska 6 (approx. 3 minutes)."
+          "guide": {
+            "title": "Гид от {hostelName}",
+            "subtitle": "Подборка мест вокруг Которской бухты — скоро.",
+            "essentials": {
+              "title": "Essentials nearby",
+              "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
+              "expand": "Show",
+              "collapse": "Hide",
+              "atm": "ATM",
+              "shop": "Shop",
+              "pharmacy": "Pharmacy",
+              "lateFood": "Late food"
+            },
+            "exploreArrival": {
+              "title": "Explore the city",
+              "subtitle": "Our handpicked bars, cafes, food, and sights are ready when you are.",
+              "teaserTitle": "More recommendations waiting",
+              "teaserDescription": "Bars, coffee shops, and viewpoints are tucked away for now. Open the full city guide whenever you want.",
+              "showAllButton": "Show all recommendations"
+            },
+            "mapCard": {
+              "title": "{hostelName} Custom Google Map",
+              "description": "Opens directly in your Google Maps app with all our secret layers"
+            },
+            "tabs": {
+              "all": "All",
+              "essential": "Info",
+              "food": "Food",
+              "bars": "Bars",
+              "cafes": "Cafes",
+              "sights": "Sights"
+            },
+            "routeButton": "Route",
+            "openInMaps": "Открыть в Maps",
+            "showAllPlaces": "Показать все места ({count})",
+            "topPick": "Top pick",
+            "emptyCategory": "No places found in this category.",
+            "nearHostel": {
+              "title": "Рядом с хостелом",
+              "subtitle": "В пешей доступности",
+              "exploreCityTitle": "Исследуйте город",
+              "exploreCitySubtitle": "Места вокруг Которской бухты"
+            },
+            "places": {}
           },
-          "taxi": {
-            "costEstimation": "The hostel is close, so the fair ride price on the taximeter is around 7–10 KM.",
-            "pickupPoint": "Main Railway/Bus Station"
+          "preTrip": {},
+          "marketing": {
+            "heroSubtitle": "Ваша база для исследования Которской бухты и Адриатики",
+            "heroImageAlt": "{hostelName} — фото хостела"
           }
         }
       },
@@ -191,121 +404,81 @@
             "title": "Видео-инструкция (Рум-тур)",
             "description": "Короткое видео: как найти комнату, где взять постельное белье и правила тишины."
           }
-        },
-        "guide": {
-          "title": "Локальный гид от хостела",
-          "subtitle": "Собрали для вас проверенные места в Сараево, чтобы вы не переплачивали как турист.",
-          "survivalKit": {
-            "title": "First Night Survival Kit",
-            "subtitle": "Tired from the road? Here is what you need right now near the hostel.",
-            "teaserTitle": "Looking for Nightlife or Sightseeing?",
-            "teaserDescription": "We hid bars, coffee shops, and viewpoints for tonight so you can get some rest. But if you're full of energy, you can unlock the full city guide right now.",
-            "showAllButton": "I am not tired, show everything"
-          },
-          "mapCard": {
-            "title": "{hostelName} Custom Google Map",
-            "description": "Opens directly in your Google Maps app with all our secret layers"
-          },
-          "tabs": {
-            "all": "All",
-            "essential": "Info",
-            "food": "Food",
-            "bars": "Bars",
-            "cafes": "Cafes",
-            "sights": "Sights"
-          },
-          "routeButton": "Route",
-          "recommendedBy": "By {name}",
-          "emptyCategory": "No places found in this category.",
-          "places": {
-            "atm": {
-              "sub": "Cash & ATMs",
-              "desc": "Withdraw BAM (KM) at UniCredit or Raiffeisen ATMs on Dalmatinska — about a 2-minute walk from the hostel."
-            },
-            "konzum": {
-              "sub": "Grocery store",
-              "desc": "Nearest Konzum for water, snacks, and basics. Open late on most days except Sunday."
-            },
-            "apoteka": {
-              "sub": "Pharmacy",
-              "desc": "Pharmacy on Titova street for medicine, first aid, and travel essentials."
-            },
-            "u2": {
-              "sub": "Late-night food",
-              "desc": "U2 Pizza stays open late — a reliable option if you arrive hungry after reception hours."
-            },
-            "zeljo": {
-              "sub": "Traditional Bosnian food",
-              "desc": "Легендарные боснийские чевапи на Баščaršija. Лучшая местная кухня, проверенная годами."
-            },
-            "mahir": {
-              "sub": "Pizza & grill",
-              "desc": "Popular local pizzeria with generous portions and fair prices, a short walk from the city center."
-            },
-            "edin": {
-              "sub": "Bakery",
-              "desc": "Fresh burek, pastries, and coffee from one of Sarajevo's favourite neighbourhood bakeries."
-            },
-            "vucko": {
-              "sub": "Pub & grill",
-              "desc": "Cosy gastro pub with local beer and hearty Balkan plates — great for a relaxed evening."
-            },
-            "ribica": {
-              "sub": "Hidden bar",
-              "desc": "Tiny, quirky bar filled with vintage objects. A local favourite for an authentic Sarajevo night out."
-            },
-            "kinobosna": {
-              "sub": "Live music venue",
-              "desc": "Legendary Monday jam sessions and concerts in an old cinema hall. Check the schedule before you go."
-            },
-            "fabrika": {
-              "sub": "Specialty coffee",
-              "desc": "Third-wave coffee roastery with excellent espresso and a calm workspace vibe."
-            },
-            "habitus": {
-              "sub": "Brunch & coffee",
-              "desc": "Stylish brunch spot with healthy bowls, great coffee, and a terrace when the weather is nice."
-            },
-            "yellowfort": {
-              "sub": "Viewpoint",
-              "desc": "Потрясающая панорамная точка. Идеальное место для встречи заката с видом на все Сараево."
-            },
-            "exchangeOffice": {
-              "name": "Обмен валюты Exclusive",
-              "description": "Честный курс обмена EUR на BAM (KM) без скрытых комиссий всего в 3 минутах пешком."
-            },
-            "supermarket": {
-              "name": "Супермаркет Bingo / Konzum",
-              "description": "Ближайший продуктовый магазин, чтобы купить воду, перекус или личные принадлежности по местным ценам."
-            },
-            "yellowBastion": {
-              "name": "Желтый бастион (Žuta Tabija)",
-              "description": "Потрясающая панорамная точка. Идеальное место для встречи заката с видом на все Сараево."
-            }
-          }
         }
       },
       "enter": {
+        "sections": {
+          "find": {
+            "title": "Узнайте хостел",
+            "banner": "Сравните фото с тем, что видите на улице — ночью вывески может не быть."
+          },
+          "nightPreview": {
+            "title": "На возвращение ночью (после {time})",
+            "banner": "Сохраните коды заранее. Когда reception закрыт, используйте их вместо звонка в домофон."
+          }
+        },
         "guide": {
           "day": {
             "title": "Ring the doorbell",
-            "banner": "The doorbell button is located to the right of the entrance and is labeled with the hostel's name."
+            "banner": "The doorbell button is located to the right of the entrance and is labeled with the hostel's name.",
+            "single": {
+              "title": "Позвоните в домофон",
+              "banner": "Нажмите кнопку у главного входа — reception откроет вам."
+            },
+            "standalone": {
+              "walkIn": {
+                "title": "Заходите сразу",
+                "banner": "Нет отдельного входа и домофона — найдите хостел по фото выше и зайдите в часы работы reception."
+              },
+              "doorbell": {
+                "title": "Позвоните в дверь хостела",
+                "banner": "Подойдите к двери хостела на фото и позвоните в домофон — reception откроет."
+              }
+            },
+            "reception": {
+              "title": "Идите на reception",
+              "banner": "Зайдите в здание и подойдите на reception в часы работы. Если не уверены — напишите нам в WhatsApp."
+            },
+            "hostelOnly": {
+              "title": "Найдите дверь хостела",
+              "banner": "Отдельного кода на здание нет — сразу идите к двери хостела на вашем этаже и позвоните в домофон."
+            }
           },
           "night": {
             "title": "Late Self Check-In (After {time})",
-            "banner": "The reception is closed. Please use the access codes below instead of the doorbell to avoid waking up other guests."
+            "banner": "The reception is closed. Please use the access codes below instead of the doorbell to avoid waking up other guests.",
+            "hostelOnly": {
+              "title": "Late Self Check-In (After {time})",
+              "banner": "Используйте код двери хостела ниже. Отдельного кода на вход в здание нет."
+            }
           }
         },
         "doors": {
+          "emptyState": "Доступ пока не настроен — позвоните в домофон или напишите reception.",
+          "photosOnlyHint": "Ориентируйтесь по фото. Код дадут на reception при заселении.",
+          "noCodeHint": "Код пока не указан — спросите reception или проверьте сообщение о бронировании.",
           "mainDoor": {
             "title": "Main Entrance Door",
             "codeLabel": "Entrance keypad code"
           },
           "subDoor": {
-            "title": "Basement Entrance",
-            "codeLabel": "Basement door code",
-            "guide": "Go down the stairs to the left of the main entrance, find the basement door, and enter the code."
+            "title": "Дверь хостела",
+            "codeLabel": "Код двери хостела",
+            "guide": "Go down the stairs to the left of the main entrance, find the basement door, and enter the code.",
+            "guideDirect": "Дверь хостела на вашем этаже — ориентируйтесь по фото и введите код на keypad."
           }
+        }
+      },
+      "common": {
+        "timing": {
+          "checkIn": "Заезд (Check-in)",
+          "checkInTime": "с {time}",
+          "checkOut": "Выезд (Check-out)",
+          "checkOutTime": "до {time}",
+          "luggageAlert": "Можно приехать раньше {time} или оставить вещи после выезда. Багаж бесплатно хранится на ресепшене!"
+        },
+        "payment": {
+          "taxNote": "Дополнительно оплачивается туристический сбор: {cost} KM (марки) за ночь."
         }
       }
     }
@@ -322,10 +495,6 @@
         "title": "Before Your Trip",
         "description": "Important information to prepare for your arrival and check-in process.",
         "actionButton": "View Directions",
-        "sundayClosure": {
-          "title": "Sunday Closure",
-          "description": "Sunday in Bosnia — a non-working day. Shops, supermarkets and most establishments are closed. Plan your purchases!"
-        },
         "luggage": {
           "title": "Luggage Storage",
           "description": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
@@ -345,6 +514,8 @@
         "trustDisclaimer": "Маршрут проверен хостелом. Используйте пошаговую инструкцию для остановок и билетов.",
         "backupTitle": "Запасной вариант",
         "taxiTitle": "Такси",
+        "routeFeedbackLink": "Маршрут не сработал? Напишите нам в WhatsApp",
+        "routeFeedbackMessage": "Здравствуйте! Я иду по вашему маршруту ({route}). Кажется, что-то не так: ",
         "officialRouteLink": "Официальный источник маршрута",
         "labels": {
           "ticket": "Билет: {kiosk} KM в киоске / {driver} KM у водителя",
@@ -363,14 +534,30 @@
         "legs": {
           "walkToStop": "До остановки",
           "boardAndRide": "Садитесь и едьте",
-          "walkToHostel": "До хостела"
+          "walkToHostel": "До хостела",
+          "onFootRoute": "Пешком"
         },
         "actionButton": "How to Enter"
       },
       "arrival": {
         "title": "Arrival Info",
         "visuals": "Visual landmarks:",
-        "actionButton": "Settling In"
+        "actionButton": "Settling In",
+        "sections": {
+          "find": {
+            "heading": "Найдите хостел",
+            "photosHiddenHint": "Используйте адрес из шага «Маршрут» и напишите reception, если не можете найти здание."
+          },
+          "checkIn": {
+            "heading": "Заселение сейчас"
+          },
+          "night": {
+            "heading": "Поздний заезд"
+          },
+          "nightPreview": {
+            "heading": "Возвращение ночью"
+          }
+        }
       },
       "settlement": {
         "title": "Welcome Inside!",
@@ -392,6 +579,188 @@
     },
     "concierge": {
       "arrivalGuideButton": "How to get to the hostel (Guide)"
+    },
+    "checkIn": {
+      "metaTitle": "Регистрация гостя",
+      "metaDescription": "Откройте персональную ссылку, QR от ресепшена или введите 6-значный PIN с бумажки.",
+      "activating": "Открываем ваше проживание…",
+      "backButton": "Назад",
+      "waiting": {
+        "eyebrow": "Регистрация гостя",
+        "title": "Откройте ссылку или введите PIN",
+        "description": "Ресепшен выдаёт ссылку, QR или 6-значный PIN на бумажке после назначения кровати. Введите PIN здесь, если нет сети — синхронизируем, когда появится интернет."
+      },
+      "pin": {
+        "label": "PIN для check-in",
+        "placeholder": "000 000",
+        "hint": "6 цифр с бумажки, которую дал ресепшен",
+        "submit": "Зарегистрироваться",
+        "activating": "Проверяем PIN…",
+        "queuedTitle": "Сохранено офлайн",
+        "queuedDescription": "PIN сохранён на этом телефоне. Check-in завершится автоматически, когда появится интернет.",
+        "errors": {
+          "invalid_pin": {
+            "title": "PIN не распознан",
+            "description": "Проверьте 6 цифр на бумажке или попросите новый код на ресепшене."
+          },
+          "expired": {
+            "title": "Проживание завершено",
+            "description": "Срок действия PIN истёк. Обратитесь на ресепшен, если вы ещё живёте у нас."
+          },
+          "revoked": {
+            "title": "Доступ отменён",
+            "description": "Ресепшен отменил этот PIN. Попросите новый на стойке."
+          },
+          "db_unavailable": {
+            "title": "Временная ошибка",
+            "description": "Не удалось проверить PIN. Попробуйте снова через минуту."
+          }
+        }
+      },
+      "registrationPrompt": {
+        "eyebrow": "Нужна регистрация",
+        "title": "Получите ссылку для check-in",
+        "description": "Concierge, карта комнаты и коды открываются после того, как ресепшен назначит кровать и вы откроете персональную ссылку.",
+        "welcomeDescription": "Коды дверей и шаги заселения откроются после того, как вы откроете персональную ссылку от ресепшена.",
+        "openWelcomeButton": "Посмотреть Welcome",
+        "footerLocked": "Откройте ссылку для check-in, чтобы продолжить",
+        "backToRoute": "Назад к маршруту",
+        "backToInfo": "Назад к информации"
+      },
+      "crossHostel": {
+        "title": "Регистрация в другом хостеле",
+        "description": "Вы зарегистрированы в {registeredHostel} (кровать {bed}). Сейчас открыт {currentHostel}.",
+        "stripSummary": "Регистрация в {registeredHostel} (кровать {bed}) · сейчас {currentHostel}",
+        "routesHint": "Маршруты ниже — для {currentHostel}.",
+        "stayHereHint": "Чтобы пользоваться guest app этого хостела, получите новую ссылку у ресепшена.",
+        "sheetHint": "Остаётесь здесь? Пройдите check-in ниже.",
+        "goToRegisteredHostel": "Перейти в мой хостел",
+        "dismiss": "Скрыть"
+      },
+      "checkInRequired": {
+        "eyebrow": "Регистрация гостя",
+        "title": "Как получить ссылку для check-in",
+        "description": "Ресепшен высылает персональную ссылку или QR после назначения кровати. Часто можно получить заранее — не только на стойке.",
+        "step1": "Свяжитесь с ресепшеном, когда кровать назначена",
+        "step2": "Попросите ссылку, QR или 6-значный PIN, когда кровать назначена",
+        "step3": "Откройте ссылку или введите PIN на этом телефоне — откроются коды и concierge",
+        "whatsappReception": "Написать на ресепшен в WhatsApp",
+        "callReception": "Позвонить на ресепшен",
+        "whatsappMessage": "Здравствуйте, мне нужна ссылка для check-in в {hostelName}",
+        "noContact": "Свяжитесь с ресепшеном, когда назначат кровать, чтобы получить ссылку для check-in.",
+        "openSheetButton": "Как получить ссылку для check-in"
+      },
+      "wrongHostel": {
+        "title": "Ссылка от другого хостела",
+        "description": "Эта ссылка относится к {hostel}. Откройте её в guest app правильного хостела.",
+        "goToHostel": "Перейти в мой хостел"
+      },
+      "errors": {
+        "invalid_token": {
+          "title": "Ссылка не распознана",
+          "description": "Ссылка недействительна или уже заменена. Попросите новый QR на ресепшене."
+        },
+        "expired": {
+          "title": "Проживание завершено",
+          "description": "Ссылка больше не действует. Обратитесь на ресепшен, если вы ещё живёте у нас."
+        },
+        "revoked": {
+          "title": "Доступ отменён",
+          "description": "Ресепшен отменил эту ссылку. Попросите новую на стойке."
+        },
+        "wrong_hostel": {
+          "title": "Другой хостел",
+          "description": "Эта ссылка от другого хостела. Нажмите кнопку ниже, чтобы открыть правильный guest app."
+        },
+        "db_unavailable": {
+          "title": "Временная ошибка",
+          "description": "Не удалось проверить ссылку. Попробуйте снова или обратитесь на ресепшен."
+        },
+        "no_tenant": {
+          "title": "Хостел не найден",
+          "description": "Откройте guest app по ссылке из бронирования или поддомену вашего хостела."
+        }
+      }
+    },
+    "landing": {
+      "header": {
+        "guestAppLink": "Guest app"
+      },
+      "postWhatsapp": {
+        "title": "Уже договорились с ресепшеном?",
+        "description": "Откройте гид заезда — маршрут и check-in. WiFi и коды дверей после регистрации.",
+        "openGuestApp": "Открыть гид заезда",
+        "keepBrowsing": "Смотреть номера",
+        "dismiss": "Закрыть"
+      },
+      "arrivalCallout": {
+        "arrivalTitle": "Скоро заезд?",
+        "arrivalDescription": "Как добраться и что ждать при check-in.",
+        "arrivalCta": "Как добраться",
+        "exploreTitle": "Планируете заранее?",
+        "exploreDescription": "Загляните в guest app — подсказки по городу до приезда.",
+        "exploreCta": "Открыть guest app"
+      },
+      "comingSoon": {
+        "title": "Скоро",
+        "description": "Прямое бронирование для этого хостела настраивается. Свяжитесь с нами или используйте гид заезда в приложении.",
+        "contactButton": "Связаться с хостелом"
+      },
+      "subscriptionNotice": {
+        "expired": "Онлайн-гид временно недоступен. Контакты и доступность — ниже.",
+        "scheduled": "Guest app скоро откроется. До этого свяжитесь с хостелом для уточнения заезда.",
+        "scheduledWithDate": "Guest app ожидается с {date}. До этого свяжитесь с хостелом для уточнения заезда."
+      }
+    },
+    "platform": {
+      "recovery": {
+        "metaTitle": "Найдите свой хостел",
+        "metaDescription": "Откройте ссылку из подтверждения бронирования или выберите хостел, чтобы продолжить.",
+        "eyebrowLanding": "Сайт хостела",
+        "eyebrowApp": "Guest app",
+        "title": "Найдите свой хостел",
+        "primaryHint": "Используйте ссылку из письма о бронировании, email или QR-кода в хостеле — она уже ведёт на нужное место.",
+        "lookupTitle": "Знаете код хостела?",
+        "slugPlaceholder": "например, balkanhan",
+        "slugRequired": "Введите код хостела, чтобы продолжить.",
+        "openSiteButton": "Открыть сайт хостела",
+        "openAppButton": "Открыть guest app",
+        "lookupHint": "Код обычно есть в ссылке бронирования — перед именем домена.",
+        "directoryTitle": "Или выберите из списка",
+        "supportHint": "Не получается? Напишите в хостел напрямую — они пришлют правильную ссылку."
+      },
+      "notFound": {
+        "title": "Хостел не найден",
+        "description": "Эта ссылка не соответствует активному хостелу. Проверьте адрес или вернитесь на главную.",
+        "backButton": "Найти свой хостел"
+      },
+      "offline": {
+        "metaDescription": "Онлайн-инструкции по заезду недоступны. Свяжитесь с хостелом для уточнения деталей.",
+        "eyebrowApp": "Guest app",
+        "eyebrowLanding": "Сайт хостела",
+        "whatsappReception": "Написать на ресепшен",
+        "callReception": "Позвонить на ресепшен",
+        "emailHostel": "Написать на email",
+        "noContact": "Контакты недоступны онлайн. Если у вас есть бронирование, попробуйте номер из письма-подтверждения.",
+        "staleLinkHint": "Если вы сохранили эту ссылку из прошлого бронирования, она могла устареть.",
+        "directoryTitle": "Другие хостелы, доступные сейчас",
+        "whatsappMessage": "Здравствуйте, у меня есть бронирование, но ссылка на guest app не работает — что делать при заезде?",
+        "whatsappMessageScheduled": "Здравствуйте, у меня есть бронирование — guest app ещё не запущен. Что делать при заезде?",
+        "whatsappMessageArchived": "Здравствуйте, у меня вопрос по проживанию в вашем хостеле.",
+        "expired": {
+          "title": "Онлайн-гид недоступен",
+          "description": "Инструкции по заезду здесь больше не доступны. Свяжитесь с хостелом, чтобы уточнить заезд и дальнейшие шаги."
+        },
+        "scheduled": {
+          "title": "Скоро откроется",
+          "description": "Guest app ещё не запущен. До этого свяжитесь с хостелом для уточнения заезда.",
+          "dateLabel": "Ожидается с {date}"
+        },
+        "archived": {
+          "title": "Больше недоступно онлайн",
+          "description": "Этот объект больше не представлен здесь. Если у вас есть бронирование, свяжитесь с хостелом напрямую."
+        }
+      }
     }
   },
   "features": {
@@ -431,32 +800,53 @@
   },
   "components": {
     "hero": {
-      "bgImageAlt": "Balkan Han Hostel Garden & Lounge",
-      "searchPlaceholder": "Get 10% Off for Direct Booking",
-      "title": "Balkan Han Hostel",
-      "subtitle": "Your green oasis in the very heart of Sarajevo",
-      "checkIn": "Check-In",
-      "checkOut": "Check-Out",
-      "guests": "Guests",
-      "guestSingle": "Guest",
-      "guestPlural": "Guests",
-      "bookButton": "Book Now",
-      "selectDates": "Select dates"
+      "searchPlaceholder": "Скидка 10% при прямом бронировании",
+      "checkIn": "Заезд",
+      "checkOut": "Выезд",
+      "guests": "Гости",
+      "guestSingle": "Гость",
+      "guestPlural": "Гости",
+      "bookButton": "Забронировать",
+      "whatsappSendDatesButton": "Отправить даты в WhatsApp",
+      "whatsappDatesHint": "Ресепшен ответит в чате — даты уже в сообщении.",
+      "selectDates": "Выберите даты"
     },
     "nightAccess": {
       "title": "Night return access codes",
-      "description": "If you go out at night, use these codes to get back in. Do not ring the doorbell."
-    },
-    "rules": {
-      "title": "House Rules"
+      "description": "If you go out at night, use these codes to get back in. Do not ring the doorbell.",
+      "descriptionHostelOnly": "If you go out at night, use the hostel door code below. There is no building entrance code."
     },
     "roomSchema": {
-      "title": "Your bed"
+      "title": "Your bed",
+      "entrance": "Вход"
+    },
+    "findYourBed": {
+      "title": "Где ваша кровать",
+      "bedLabel": "Кровать {bed}",
+      "roomLabel": "Комната {room}",
+      "floorLabel": "Этаж {floor}",
+      "bedWithTier": "{slot} · {tier}",
+      "bedTierUpper": "верхняя",
+      "bedTierLower": "нижняя",
+      "insideRoom": "Внутри комнаты",
+      "directionsToRoom": "Как дойти до комнаты",
+      "fallback": "Кровать ещё не назначена. Спросите на ресепшене или напишите нам в WhatsApp.",
+      "viewFullGuide": "Схема комнаты и маршрут"
     },
     "taxi": {
-      "writeWithWhatsapp": "Message on WhatsApp",
-      "callTaxi": "Call {taxiName}",
-      "whatsappMessage": "Hello! Please send a taxi to {pickupPoint}. Destination: {address}."
+      "bookTaxiTitle": "Заказать такси",
+      "needHelpTitle": "Нужна помощь?",
+      "callTaxi": "Позвонить {taxiName}",
+      "whatsappTaxi": "Написать {taxiName} в WhatsApp",
+      "whatsappTaxiMessage": "Здравствуйте! Нужно такси до {pickupPoint}. Адрес: {address}.",
+      "messageReception": "WhatsApp reception {hostelName}",
+      "messageReceptionCall": "Позвонить reception {hostelName}",
+      "askReceptionHoursHint": "Reception: {open}–{close}.",
+      "askReceptionOpensHint": "Reception открывается в {open}.",
+      "safetyTipsTitle": "Перед звонком — советы по безопасности",
+      "receptionTaxiMessage": "Здравствуйте, {hostelName}! Я на {pickupPoint}, нужно такси до {address}. Можете помочь заказать?",
+      "noTaxiNumber": "Номер такси не настроен — напишите reception в WhatsApp.",
+      "noContactFallback": "Контакты пока не настроены."
     },
     "wifi": {
       "title": "Wi-Fi Connection",
@@ -469,7 +859,29 @@
     },
     "hostelFeatures": {
       "title": "Why Travelers Choose Us",
-      "subtitle": "All the essentials and extra comforts designed for the perfect stay in Sarajevo."
+      "subtitle": "Всё необходимое для комфортного проживания в хостеле."
+    },
+    "rules": {
+      "title": "Правила хостела"
+    },
+    "featureGate": {
+      "previewBadge": "Превью"
+    }
+  },
+  "admin": {
+    "guestCheckIn": {
+      "magicLink": {
+        "title": "Check-in готов",
+        "subtitle": "Кровать {bed} · покажите QR на ресепшене или отправьте ссылку",
+        "subtitleNamed": "{name} · кровать {bed}",
+        "qrAlt": "QR-код регистрации гостя",
+        "linkLabel": "Magic link",
+        "pinLabel": "PIN на бумажке",
+        "pinHint": "Запишите на бумажку гостю — работает офлайн, синхронизируется при появлении сети",
+        "copy": "Скопировать ссылку",
+        "copied": "Скопировано",
+        "done": "Выдать ещё одну"
+      }
     }
   }
 }

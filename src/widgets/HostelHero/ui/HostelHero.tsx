@@ -2,19 +2,22 @@
 
 import Image from 'next/image';
 import { useTranslations } from '@/shared/i18n';
-import { HOSTEL_CONFIG } from '@/shared/config';
+import { useHostelConfig, useTenant } from '@/entities/tenant';
 import { BookingForm } from '@/features/booking';
 
 export function HostelHero() {
   const t = useTranslations('components.hero');
-  const heroBgUrl = HOSTEL_CONFIG.heroBgUrl || '/logo.svg';
+  const { name, cityPack } = useTenant();
+  const marketingT = useTranslations(cityPack.locale.marketingNamespace);
+  const hostel = useHostelConfig();
+  const heroBgUrl = hostel.heroBgUrl || '/logo.svg';
 
   return (
     <section className="relative flex h-[85vh] min-h-[650px] w-full items-center justify-center overflow-hidden bg-foreground">
       <div className="absolute inset-0 z-0">
         <Image
           src={heroBgUrl}
-          alt={t('bgImageAlt')}
+          alt={marketingT('heroImageAlt', { hostelName: name })}
           fill
           priority
           className="object-cover object-center brightness-[0.4]"
@@ -28,11 +31,11 @@ export function HostelHero() {
         </span>
 
         <h1 className="max-w-3xl text-4xl font-black tracking-tight text-background drop-shadow-sm sm:text-5xl md:text-6xl md:leading-[1.15]">
-          {t('title')}
+          {name}
         </h1>
 
         <p className="mt-4 max-w-2xl text-base font-light text-background/80 sm:text-xl">
-          {t('subtitle')}
+          {marketingT('heroSubtitle')}
         </p>
 
         <BookingForm />

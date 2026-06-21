@@ -1,12 +1,13 @@
-import { HOSTEL_CONFIG } from '@/shared/config';
 import { createWhatsappLink } from '@/shared/lib';
 
 export interface GetMessengerUpgradeLinkArgs {
-  checkin: string | null | undefined;
-  checkout: string | null | undefined;
+  phoneRaw: string | null | undefined;
+  checkin?: string | null;
+  checkout?: string | null;
 }
 
 export const getMessengerUpgradeLink = ({
+  phoneRaw,
   checkin,
   checkout,
 }: GetMessengerUpgradeLinkArgs): string => {
@@ -17,5 +18,5 @@ export const getMessengerUpgradeLink = ({
     message += ` Dates: from ${checkin} to ${checkout}.`;
   }
 
-  return createWhatsappLink(HOSTEL_CONFIG.contacts.phone.raw ?? '', message);
+  return createWhatsappLink(phoneRaw ?? '', message);
 };

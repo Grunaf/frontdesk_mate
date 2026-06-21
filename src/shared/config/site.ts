@@ -9,18 +9,45 @@ export interface RouteInfo {
   titleKey: string;
 }
 
+const baseDomain = (process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000')
+  .replace(/^https?:\/\//, '')
+  .replace(/\/$/, '');
+
+function stripPort(hostname: string): string {
+  return hostname.split(':')[0] ?? hostname;
+}
+
+/** Local dev hosts never use TLS, even under `next start` (NODE_ENV=production). */
+export function isLocalBaseDomain(baseDomainValue = baseDomain): boolean {
+  const host = stripPort(baseDomainValue).toLowerCase();
+  return host === 'localhost' || host.endsWith('.localhost') || host === '127.0.0.1';
+}
+
+export function getPublicProtocol(baseDomainValue = baseDomain): string {
+  if (isLocalBaseDomain(baseDomainValue)) {
+    return 'http://';
+  }
+
+  return isProd ? 'https://' : 'http://';
+}
+
 export const SITE_CONFIG = {
-  baseDomain: (process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000')
-    .replace(/^https?:\/\//, '')
-    .replace(/\/$/, ''),
+  baseDomain,
+  /** Public site URL for share links (memories upload success, etc.). */
+  publicSiteUrl:
+    process.env.NEXT_PUBLIC_SITE_URL ?? `${getPublicProtocol()}${baseDomain}`,
+  googleMapsViewerPrefix: 'https://www.google.com/maps/d/viewer?mid=',
   isAnalyticsEnabled: isProd,
   subdomains: {
     app: 'app',
     landing: 'landing',
+    reception: 'reception',
   },
   internalFolders: {
     app: 'app-site',
     landing: 'landing-site',
+    platform: 'platform-site',
+    reception: 'reception-site',
   },
   routes: {
     landing: {
@@ -34,10 +61,10 @@ export const SITE_CONFIG = {
   },
 };
 
-const getProtocol = () => (process.env.NODE_ENV === 'production' ? 'https://' : 'http://');
+const getProtocol = () => getPublicProtocol();
 
 export function getSubdomainUrl(
-  subdomain: keyof typeof SITE_CONFIG.subdomains,
+  subdomain: 'app' | 'landing',
   routeKey: string,
   locale: string
 ): string {

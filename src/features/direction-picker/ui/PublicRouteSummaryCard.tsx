@@ -1,10 +1,15 @@
 'use client';
 
 import { useTranslations } from '@/shared/i18n';
+import { useTenant } from '@/entities/tenant';
 import { Button, CardTitle, Icon } from '@/shared/ui';
 import { ChevronRight, ExternalLink } from 'lucide-react';
-import { hasOfficialRouteSchedule, type RouteConfig } from '@/entities/hostel';
-import { getTransitIcon, TransitLegMeta } from './PublicRouteItinerary';
+import { hasOfficialRouteSchedule, isWalkOnlyRoute, type RouteConfig } from '@/entities/hostel';
+import {
+  getRouteDisplayIcon,
+  resolveWalkToHostelText,
+  TransitLegMeta,
+} from './PublicRouteItinerary';
 
 export function PublicRouteSummaryCard({
   route,
@@ -17,11 +22,21 @@ export function PublicRouteSummaryCard({
   onStepByStepClick: () => void;
   onAlternativeRouteClick?: () => void;
 }) {
+  const { settings, hostel } = useTenant();
   const routes = useTranslations();
   const directions = useTranslations('pages.arrivalJourney.directions');
-  const TransitIcon = getTransitIcon(route.category);
-  const AlternativeTransitIcon = alternativeRoute ? getTransitIcon(alternativeRoute.category) : null;
+  const RouteIcon = getRouteDisplayIcon(route);
+  const AlternativeRouteIcon = alternativeRoute ? getRouteDisplayIcon(alternativeRoute) : null;
   const showOfficialSchedule = hasOfficialRouteSchedule(route);
+  const walkOnly = isWalkOnlyRoute(route);
+  const address = hostel.contacts.address.display ?? '';
+
+  const walkToHostel = resolveWalkToHostelText({
+    route,
+    routes,
+    settings,
+    address,
+  });
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
@@ -32,7 +47,7 @@ export function PublicRouteSummaryCard({
 
         <div className="flex items-start gap-4">
           <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
-            <Icon icon={TransitIcon} className="h-5 w-5" />
+            <Icon icon={RouteIcon} className="h-5 w-5" />
           </div>
           <div className="min-w-0 space-y-2">
             <CardTitle className="text-foreground">{routes(route.translationKeys.publicTitle)}</CardTitle>
@@ -44,7 +59,13 @@ export function PublicRouteSummaryCard({
 
         <TransitLegMeta route={route} routes={routes} directions={directions} />
 
-        <p className="text-xs font-medium text-foreground">{routes(route.translationKeys.publicGetOffAt)}</p>
+        {!walkOnly && (
+          <p className="text-xs font-medium text-foreground">{routes(route.translationKeys.publicGetOffAt)}</p>
+        )}
+
+        {walkOnly && (
+          <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
+        )}
 
         <div className="flex gap-2">
           <Button type="button" variant="default" size="sm" className="flex-1" onClick={onStepByStepClick}>
@@ -65,7 +86,7 @@ export function PublicRouteSummaryCard({
         </div>
       </div>
 
-      {alternativeRoute && onAlternativeRouteClick && AlternativeTransitIcon && (
+      {alternativeRoute && onAlternativeRouteClick && AlternativeRouteIcon && (
         <button
           type="button"
           onClick={onAlternativeRouteClick}
@@ -76,7 +97,7 @@ export function PublicRouteSummaryCard({
           </p>
           <div className="flex w-full items-start gap-4">
             <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
-              <Icon icon={AlternativeTransitIcon} className="h-5 w-5" />
+              <Icon icon={AlternativeRouteIcon} className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               <CardTitle className="text-sm text-foreground">

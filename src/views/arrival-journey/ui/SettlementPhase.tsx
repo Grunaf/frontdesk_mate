@@ -1,31 +1,32 @@
 'use client';
 
-import { RoomLayout } from '@/entities/room';
+import { getHouseRules } from '@/entities/house-rules';
+import { FindYourBedPanel } from '@/features/find-your-bed';
 import { HostelRules } from '@/features/hostel-rules';
 import { RegistrationAlert } from '@/features/registration-alert';
 import { WifiCard } from '@/features/wifi-connect';
 import { useNightMode } from '@/shared/lib';
-import { HOSTEL_CONFIG } from '@/shared/config';
-import { useTranslations } from '@/shared/i18n';
+import { useHostelConfig, useTenant } from '@/entities/tenant';
+import { FeatureGate } from '@/shared/ui';
 
 export function SettlementPhase() {
-  const componentsT = useTranslations('components');
   const isNight = useNightMode();
+  const hostel = useHostelConfig();
+  const { settings } = useTenant();
+
+  const hasRules = getHouseRules(settings).some((rule) => rule.enabled);
 
   return (
     <div className="space-y-6 pt-5">
       {isNight && <RegistrationAlert />}
       <WifiCard
-        wifiName={HOSTEL_CONFIG.wifi.name ?? ''}
-        wifiPassword={HOSTEL_CONFIG.wifi.password ?? ''}
+        wifiName={hostel.wifi.name ?? ''}
+        wifiPassword={hostel.wifi.password ?? ''}
       />
-      <HostelRules activeRulesKeys={['quietHours', 'alcohol']} />
-      <section>
-        <h3 className="mb-3 text-xs font-bold tracking-wider text-muted-foreground uppercase">
-          {componentsT('roomSchema.title')}
-        </h3>
-        <RoomLayout highlightedBedId="4B" isNightMode={isNight} />
-      </section>
+      {hasRules ? <HostelRules settings={settings} /> : null}
+      <FeatureGate module="roomMap">
+        <FindYourBedPanel />
+      </FeatureGate>
     </div>
   );
 }

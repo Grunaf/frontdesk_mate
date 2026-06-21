@@ -1,12 +1,20 @@
 export type IconLibrary = 'hugeicons' | 'lucide';
 
-export const BRAND_CONFIG = {
+export interface BrandConfig {
   colors: {
-    primary: process.env.NEXT_PUBLIC_COLOR_PRIMARY || '#FF6B00',
-    foreground: process.env.NEXT_PUBLIC_COLOR_DARK || '#1A1A1A',
-  },
-  radius: process.env.NEXT_PUBLIC_BRAND_RADIUS || '0.625rem',
-  iconLibrary: (process.env.NEXT_PUBLIC_ICON_LIBRARY || 'hugeicons') as IconLibrary,
-} as const;
+    primary: string;
+    foreground: string;
+  };
+  radius: string;
+  iconLibrary: IconLibrary;
+}
 
-export type BrandConfig = typeof BRAND_CONFIG;
+/** Platform defaults; per-tenant brand overrides can be added via tenant.settings.brand. */
+export const BRAND_CONFIG: BrandConfig = {
+  colors: {
+    primary: '#FF6B00',
+    foreground: '#1A1A1A',
+  },
+  radius: '0.625rem',
+  iconLibrary: 'hugeicons',
+};

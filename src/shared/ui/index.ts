@@ -1,4 +1,10 @@
+export {
+  ExternalServiceButton,
+  ExternalServiceTouchLink,
+  TouchLink,
+} from './external-service';
 export { Button, buttonVariants } from './Button';
+export { SegmentedChipBar, type SegmentedChipBarProps, type SegmentedChipItem } from './SegmentedChipBar';
 export { BaseHeader } from './BaseHeader/BaseHeader';
 export { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card';
 export { Alert, AlertTitle, AlertDescription, AlertAction } from './alert';
@@ -20,6 +26,29 @@ export {
 } from './select';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './Accordion';
+export { FeatureGate } from './FeatureGate';
+export {
+  BottomSheet,
+  BottomSheetPortal,
+  BottomSheetOverlay,
+  BottomSheetTrigger,
+  BottomSheetClose,
+  BottomSheetContent,
+  BottomSheetHeader,
+  BottomSheetFooter,
+  BottomSheetTitle,
+  BottomSheetDescription,
+  Drawer,
+  DrawerPortal,
+  DrawerOverlay,
+  DrawerTrigger,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerFooter,
+  DrawerTitle,
+  DrawerDescription,
+} from './bottom-sheet';
 export {
   Sheet,
   SheetTrigger,

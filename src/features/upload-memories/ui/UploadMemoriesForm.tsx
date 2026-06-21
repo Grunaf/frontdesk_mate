@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from '@/shared/i18n';
 import { Alert, AlertDescription, Button } from '@/shared/ui';
-import type { UploadMemoriesErrorKey } from '../api/action';
+import type { UploadMemoriesErrorKey } from '../api/types';
 import { uploadMemoriesAction } from '../api/action';
 import { FileZone } from './FileZone';
 import { InstagramInput } from './InstagramInput';
