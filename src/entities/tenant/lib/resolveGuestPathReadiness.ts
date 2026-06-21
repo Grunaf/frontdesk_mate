@@ -4,7 +4,7 @@ import {
   resolveCityPackNotReadyReasonForTenant,
 } from '@/entities/city-pack/lib/resolveCityPackGateForTenant';
 import { resolveHouseRulesReady, resolveHouseRulesReadyDetail } from '@/entities/house-rules';
-import { hasPlacesPack, type CityPackId } from '@/entities/hostel';
+import type { CityPackId } from '@/entities/hostel';
 import { hasArrivalDayPath } from './hasArrivalDayPath';
 import { resolveArrivalLandmark } from './normalizeAccessPoints';
 import { readBookingSettings } from './resolveBookingConfig';
@@ -64,7 +64,7 @@ function isCityPackPlacesReady(
     return isCityPackReadyForTenant(cityPackId, input.cityPackGateSnapshot);
   }
 
-  return hasPlacesPack(cityPackId);
+  return false;
 }
 
 export function inferLaunchBookingPath(

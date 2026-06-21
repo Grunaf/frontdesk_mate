@@ -239,8 +239,9 @@ function TenantFormAccordionInner({
       cityPackId: identity.cityPackId,
       settings: mergedSettings,
       lifecycleStatus,
+      cityPackGateSnapshot,
     }),
-    [identity.slug, identity.name, identity.cityPackId, mergedSettings, lifecycleStatus]
+    [identity.slug, identity.name, identity.cityPackId, mergedSettings, lifecycleStatus, cityPackGateSnapshot]
   );
 
   const setupSummaries = useMemo(

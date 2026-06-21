@@ -1,4 +1,3 @@
-import { getPlacesPack, isCityPackId } from '@/entities/hostel';
 import { MIN_PLACES_FOR_PACK } from './constants';
 import type { CityPackSelectOption } from '../model/types';
 
@@ -32,25 +31,13 @@ export function getCityPackRegistryEntry(cityPackId: string): CityPackRegistryEn
 
 export function resolveHasPlacesPackFromRegistry(cityPackId: string): boolean {
   const entry = getCityPackRegistryEntry(cityPackId);
-  if (entry) {
-    return entry.readyForTenants;
-  }
-
-  if (isCityPackId(cityPackId)) {
-    return getPlacesPack(cityPackId).length >= MIN_PLACES_FOR_PACK;
-  }
-
-  return false;
+  return entry?.readyForTenants ?? false;
 }
 
 export function resolvePackNotReadyReasonFromRegistry(cityPackId: string): string | null {
   const entry = getCityPackRegistryEntry(cityPackId);
   if (entry) {
     return entry.notReadyReason;
-  }
-
-  if (isCityPackId(cityPackId) && getPlacesPack(cityPackId).length >= MIN_PLACES_FOR_PACK) {
-    return null;
   }
 
   return 'Choose a ready city pack or finish it in City packs admin.';

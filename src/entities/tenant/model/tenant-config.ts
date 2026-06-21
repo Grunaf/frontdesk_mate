@@ -19,7 +19,7 @@ export interface TenantConfig {
   capabilities: TenantCapabilities;
   settings: TenantSettings;
   source: 'database' | 'env';
-  /** DB-resolved places override code pack when present. */
+  /** DB-resolved places for guest runtime (empty when pack is not ready). */
   cityPackPlaces?: Place[];
   /** Server-resolved gate for local guide module. */
   cityPackHasPlaces?: boolean;
@@ -28,9 +28,6 @@ export interface TenantConfig {
 export function useTenantCityPack(cityPackId: CityPackId, cityPackPlaces?: Place[]) {
   return useMemo(() => {
     const base = getCityPack(cityPackId);
-    if (!cityPackPlaces?.length) {
-      return base;
-    }
-    return { ...base, places: cityPackPlaces };
+    return { ...base, places: cityPackPlaces ?? [] };
   }, [cityPackId, cityPackPlaces]);
 }

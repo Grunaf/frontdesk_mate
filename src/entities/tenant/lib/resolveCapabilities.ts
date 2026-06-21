@@ -1,4 +1,4 @@
-import { hasPlacesPack, type CityPackId } from '@/entities/hostel';
+import type { CityPackId } from '@/entities/hostel';
 import type { ModuleStatus, TenantCapabilities } from '../model/capabilities';
 import { resolveHouseRulesReady } from '@/entities/house-rules';
 import type { TenantSettings } from '../model/settings';
@@ -37,9 +37,8 @@ function resolveHouseRulesStatus(settings: TenantSettings): ModuleStatus {
   return resolveHouseRulesReady(settings).ready ? 'ready' : 'preview';
 }
 
-function resolveLocalGuideStatus(cityPackId: CityPackId, cityPackHasPlaces?: boolean): ModuleStatus {
-  const ready = cityPackHasPlaces ?? hasPlacesPack(cityPackId);
-  return ready ? 'ready' : 'hidden';
+function resolveLocalGuideStatus(cityPackHasPlaces?: boolean): ModuleStatus {
+  return cityPackHasPlaces === true ? 'ready' : 'hidden';
 }
 
 export function resolveCapabilities(input: {
@@ -48,7 +47,7 @@ export function resolveCapabilities(input: {
   lifecycleStatus?: TenantLifecycleStatus;
   cityPackHasPlaces?: boolean;
 }): TenantCapabilities {
-  const { cityPackId, settings, lifecycleStatus = 'active', cityPackHasPlaces } = input;
+  const { settings, lifecycleStatus = 'active', cityPackHasPlaces } = input;
   const bookingReady = hasBooking(settings) && !isTenantLeadGenLanding(lifecycleStatus);
 
   return {
@@ -62,7 +61,7 @@ export function resolveCapabilities(input: {
         ? 'ready'
         : 'hidden',
     roomMap: resolveRoomMapStatus(settings),
-    localGuide: resolveLocalGuideStatus(cityPackId, cityPackHasPlaces),
+    localGuide: resolveLocalGuideStatus(cityPackHasPlaces),
     nightAccess: hasNightDoorCodes(settings) ? 'ready' : 'hidden',
     faq: resolveHouseRulesStatus(settings),
     memories: 'ready',

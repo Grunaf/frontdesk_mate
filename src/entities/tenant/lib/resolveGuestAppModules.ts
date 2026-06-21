@@ -5,7 +5,7 @@ import {
   resolveCityPackNotReadyReasonForTenant,
 } from '@/entities/city-pack/lib/resolveCityPackGateForTenant';
 import { resolveHouseRulesReadyDetail } from '@/entities/house-rules';
-import { hasPlacesPack, type CityPackId } from '@/entities/hostel';
+import type { CityPackId } from '@/entities/hostel';
 import type { ModuleStatus } from '../model/capabilities';
 import type { TenantSettings } from '../model/settings';
 import { isRoomMapModuleEnabled } from './resolveGuestModuleToggles';
@@ -101,5 +101,6 @@ export function hasGuestAppPlacesPack(
   if (gateSnapshot) {
     return resolveCityPackHasPlacesForTenant(cityPackId, gateSnapshot);
   }
-  return hasPlacesPack(cityPackId);
+
+  return false;
 }

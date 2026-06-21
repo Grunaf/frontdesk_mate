@@ -1,4 +1,6 @@
 import { resolveHouseRulesReady, resolveHouseRulesReadyDetail } from '@/entities/house-rules';
+import type { CityPackGateSnapshot } from '@/entities/city-pack';
+import { resolveCityPackHasPlacesForTenant } from '@/entities/city-pack/lib/resolveCityPackGateForTenant';
 import type { CityPackId } from '@/entities/hostel';
 import { isRoomMapModuleEnabled } from './resolveGuestModuleToggles';
 import { hasDoorAccessConfigured } from './resolveArrivalAccessPlan';
@@ -63,6 +65,29 @@ export interface TenantReadinessInput {
   cityPackId: CityPackId;
   settings: TenantSettings;
   lifecycleStatus: TenantLifecycleStatus;
+  cityPackHasPlaces?: boolean;
+  cityPackGateSnapshot?: CityPackGateSnapshot;
+}
+
+function resolveReadinessCityPackHasPlaces(input: TenantReadinessInput): boolean | undefined {
+  if (input.cityPackHasPlaces != null) {
+    return input.cityPackHasPlaces;
+  }
+
+  if (input.cityPackGateSnapshot) {
+    return resolveCityPackHasPlacesForTenant(input.cityPackId, input.cityPackGateSnapshot);
+  }
+
+  return undefined;
+}
+
+function buildGuestAppModuleInput(input: TenantReadinessInput) {
+  return {
+    cityPackId: input.cityPackId,
+    settings: input.settings,
+    cityPackHasPlaces: resolveReadinessCityPackHasPlaces(input),
+    cityPackGateSnapshot: input.cityPackGateSnapshot,
+  };
 }
 
 function item(
@@ -118,7 +143,13 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
   const { settings, lifecycleStatus, cityPackId } = input;
   const slug = input.slug?.trim() ?? '';
   const name = input.name?.trim() ?? '';
-  const capabilities = resolveCapabilities({ cityPackId, settings, lifecycleStatus });
+  const guestAppModuleInput = buildGuestAppModuleInput(input);
+  const capabilities = resolveCapabilities({
+    cityPackId,
+    settings,
+    lifecycleStatus,
+    cityPackHasPlaces: guestAppModuleInput.cityPackHasPlaces,
+  });
 
   const subscriptionItem =
     lifecycleStatus === 'active'
@@ -199,7 +230,7 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
       label: 'Guest app — room map',
       tier: 'recommended',
       complete: capabilities.roomMap === 'ready',
-      detail: isGuestAppModuleReady('roomMap', { cityPackId, settings })
+      detail: isGuestAppModuleReady('roomMap', guestAppModuleInput)
         ? undefined
         : 'Choose preview bed and add wayfinding content',
       surface: 'section',
@@ -249,10 +280,7 @@ export interface TenantModuleSummary {
 }
 
 export function getTenantModuleSummary(input: TenantReadinessInput): TenantModuleSummary {
-  const guestModules = resolveGuestAppModules({
-    cityPackId: input.cityPackId,
-    settings: input.settings,
-  });
+  const guestModules = resolveGuestAppModules(buildGuestAppModuleInput(input));
   const tracked = guestModules.filter((module) => module.status !== 'hidden');
   const liveCount = tracked.filter((module) => module.status === 'ready').length;
   const trackedItemIds = new Set(tracked.map((module) => GUEST_MODULE_ITEM_IDS[module.id]));
@@ -320,6 +348,8 @@ export function buildTenantReadinessInput(input: {
   subscription_starts_at?: string | null;
   subscription_ends_at?: string | null;
   is_active?: boolean;
+  cityPackHasPlaces?: boolean;
+  cityPackGateSnapshot?: CityPackGateSnapshot;
 }): TenantReadinessInput {
   const lifecycleStatus = resolveTenantLifecycleStatus({
     archived_at: input.archived_at ?? null,
@@ -334,6 +364,8 @@ export function buildTenantReadinessInput(input: {
     cityPackId: input.cityPackId,
     settings: input.settings,
     lifecycleStatus,
+    cityPackHasPlaces: input.cityPackHasPlaces,
+    cityPackGateSnapshot: input.cityPackGateSnapshot,
   };
 }
 

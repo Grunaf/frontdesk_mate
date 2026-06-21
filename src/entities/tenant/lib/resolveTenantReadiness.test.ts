@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { sarajevoReadyGateSnapshot } from '@/entities/city-pack/lib/testFixtures/cityPackGateSnapshot';
 import {
   buildTenantReadinessInput,
   getTenantModuleSummary,
@@ -14,6 +15,7 @@ const activeLifecycle = {
   subscription_starts_at: '2026-01-01T00:00:00.000Z',
   subscription_ends_at: '2027-01-01T23:59:59.999Z',
   is_active: true,
+  cityPackGateSnapshot: sarajevoReadyGateSnapshot,
 };
 
 const baseSettings: TenantSettings = {

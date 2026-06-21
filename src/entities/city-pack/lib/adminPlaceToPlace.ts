@@ -12,24 +12,21 @@ export function resolvePlaceMapsUrl(place: CityPackAdminPlace): string {
   );
 }
 
-export function adminPlaceToPlace(place: CityPackAdminPlace, codeFallback?: Place): Place {
-  const googleMapsUrl =
-    resolvePlaceMapsUrl(place) || codeFallback?.googleMapsUrl || '';
-
+export function adminPlaceToPlace(place: CityPackAdminPlace): Place {
   return {
     id: place.id,
     name: place.name.trim(),
     category: place.category,
-    descriptionKey: codeFallback?.descriptionKey ?? '',
-    description: place.description?.trim() || codeFallback?.description,
-    googleMapsUrl,
-    isTopPick: place.isTopPick ?? codeFallback?.isTopPick ?? false,
-    needNow: place.needNow ?? codeFallback?.needNow ?? false,
-    walkHint: place.walkHint?.trim() || codeFallback?.walkHint,
+    descriptionKey: '',
+    description: place.description?.trim() || undefined,
+    googleMapsUrl: resolvePlaceMapsUrl(place),
+    isTopPick: place.isTopPick ?? false,
+    needNow: place.needNow ?? false,
+    walkHint: place.walkHint?.trim() || undefined,
     iconId:
       place.iconId != null && place.iconId.trim() !== ''
         ? normalizePlaceIconId(place.iconId)
-        : codeFallback?.iconId,
+        : undefined,
   };
 }
 
@@ -37,19 +34,14 @@ export function sortMergedPlaces(places: Place[]): Place[] {
   return sortByTopPickThenName(places);
 }
 
-export function mergeCityPackPlaces(
-  codePlaces: Place[],
-  adminPlaces: CityPackAdminPlace[] | undefined
-): Place[] {
+export function adminPlacesToPlaces(adminPlaces: CityPackAdminPlace[] | undefined): Place[] {
   if (!adminPlaces?.length) {
-    return sortMergedPlaces(codePlaces);
+    return [];
   }
 
-  const codeById = new Map(codePlaces.map((place) => [place.id, place]));
-
-  const merged = adminPlaces
-    .filter((place) => place.name.trim() && place.category)
-    .map((place) => adminPlaceToPlace(place, codeById.get(place.id)));
-
-  return sortMergedPlaces(merged);
+  return sortMergedPlaces(
+    adminPlaces
+      .filter((place) => place.name.trim() && place.category)
+      .map(adminPlaceToPlace)
+  );
 }

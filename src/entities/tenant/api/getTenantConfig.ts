@@ -4,11 +4,11 @@ import { headers } from 'next/headers';
 import { supabase } from '@/shared/lib/db';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import type { TenantConfig } from '../model/tenant-config';
-import { isCityPackId, type CityPackId } from '@/entities/hostel';
-import { mergeCityPackPlaces } from '@/entities/city-pack/lib/adminPlaceToPlace';
-import { getPlacesPack } from '@/entities/hostel';
+import { MIN_PLACES_FOR_PACK } from '@/entities/city-pack/lib/constants';
+import { adminPlacesToPlaces } from '@/entities/city-pack/lib/adminPlaceToPlace';
 import { resolveHasPlacesPack } from '@/entities/city-pack/lib/resolveCityPackGate';
 import { getCityPackForAdmin } from '@/entities/city-pack/server';
+import { getPlacesPack, isCityPackId, type CityPackId } from '@/entities/hostel';
 import type { TenantRecord, TenantSettings } from '../model/settings';
 import { buildHostelConfig } from '../lib/buildHostelConfig';
 import { getEnvTenantSettings } from '../lib/getEnvTenantSettings';
@@ -95,12 +95,17 @@ function buildTenantConfig(input: {
 
 /** Dev-only path when Supabase is not configured (single-hostel .env.local workflow). */
 function buildEnvFallbackConfig(slug: string): TenantConfig {
+  const cityPackId = resolveFallbackCityPackId();
+  const codePlaces = getPlacesPack(cityPackId);
+
   return buildTenantConfig({
     slug,
     name: slug,
-    cityPackId: resolveFallbackCityPackId(),
+    cityPackId,
     settings: getEnvTenantSettings(),
     source: 'env',
+    cityPackPlaces: codePlaces,
+    cityPackHasPlaces: codePlaces.length >= MIN_PLACES_FOR_PACK,
   });
 }
 
@@ -129,11 +134,11 @@ function mapTenantRow(row: TenantRecord): TenantConfig {
 
 async function resolveCityPackRuntime(cityPackId: CityPackId): Promise<{
   cityPackPlaces?: TenantConfig['cityPackPlaces'];
-  cityPackHasPlaces?: boolean;
+  cityPackHasPlaces: boolean;
 }> {
   const { pack } = await getCityPackForAdmin(cityPackId);
   if (!pack) {
-    return {};
+    return { cityPackHasPlaces: false };
   }
 
   const cityPackHasPlaces = resolveHasPlacesPack({
@@ -142,18 +147,16 @@ async function resolveCityPackRuntime(cityPackId: CityPackId): Promise<{
     packId: pack.id,
   });
 
-  const cityPackPlaces = pack.content.places?.length
-    ? mergeCityPackPlaces(getPlacesPack(cityPackId), pack.content.places)
-    : undefined;
+  const cityPackPlaces =
+    pack.status === 'ready' && pack.content.places?.length
+      ? adminPlacesToPlaces(pack.content.places)
+      : undefined;
 
   return { cityPackPlaces, cityPackHasPlaces };
 }
 
 async function enrichTenantConfig(config: TenantConfig): Promise<TenantConfig> {
   const packRuntime = await resolveCityPackRuntime(config.cityPackId);
-  if (!packRuntime.cityPackPlaces && packRuntime.cityPackHasPlaces == null) {
-    return config;
-  }
 
   return buildTenantConfig({
     slug: config.slug,

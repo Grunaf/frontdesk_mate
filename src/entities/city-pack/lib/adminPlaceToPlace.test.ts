@@ -1,111 +1,74 @@
 import { describe, expect, it } from 'vitest';
-import { SARAJEVO_PLACES } from '@/entities/hostel/model/city-packs/sarajevo.places';
-import {
-  adminPlaceToPlace,
-  mergeCityPackPlaces,
-} from '@/entities/city-pack/lib/adminPlaceToPlace';
+import { adminPlaceToPlace, adminPlacesToPlaces } from '@/entities/city-pack/lib/adminPlaceToPlace';
 
-describe('mergeCityPackPlaces', () => {
-  const codePlace = SARAJEVO_PLACES.find((place) => place.id === 'zeljo-cevapi')!;
+describe('adminPlaceToPlace', () => {
+  it('maps admin fields to runtime place', () => {
+    const place = adminPlaceToPlace({
+      id: 'zeljo-cevapi',
+      name: 'Željo',
+      category: 'food',
+      description: 'Traditional Bosnian food',
+      googleMapsUrl: 'https://maps.example/zeljo',
+      isTopPick: true,
+      needNow: false,
+      walkHint: '5 min walk',
+      iconId: 'restaurant',
+    });
 
-  it('returns code places when admin list is empty', () => {
-    const merged = mergeCityPackPlaces(SARAJEVO_PLACES, undefined);
-    expect(merged).toHaveLength(SARAJEVO_PLACES.length);
-    expect(merged.find((place) => place.id === 'zeljo-cevapi')?.descriptionKey).toBe(
-      'places.zeljo.desc'
-    );
+    expect(place).toMatchObject({
+      name: 'Željo',
+      description: 'Traditional Bosnian food',
+      descriptionKey: '',
+      googleMapsUrl: 'https://maps.example/zeljo',
+      isTopPick: true,
+      needNow: false,
+      walkHint: '5 min walk',
+      iconId: 'restaurant',
+    });
   });
 
-  it('keeps i18n keys when admin overrides name only', () => {
-    const merged = mergeCityPackPlaces(SARAJEVO_PLACES, [
-      {
-        id: 'zeljo-cevapi',
-        name: 'Željo (updated)',
-        category: 'food',
-        isTopPick: true,
-        googleMapsUrl: 'https://maps.example/zeljo',
-      },
+  it('builds maps url from coordinates when googleMapsUrl is missing', () => {
+    const place = adminPlaceToPlace({
+      id: 'atm',
+      name: 'ATM',
+      category: 'essential',
+      lat: 43.85,
+      lng: 18.39,
+    });
+
+    expect(place.googleMapsUrl).toBe('https://maps.google.com/?q=43.85,18.39');
+  });
+
+  it('clears default icon id', () => {
+    const place = adminPlaceToPlace({
+      id: 'shop',
+      name: 'Shop',
+      category: 'essential',
+      iconId: 'default',
+    });
+
+    expect(place.iconId).toBeUndefined();
+  });
+});
+
+describe('adminPlacesToPlaces', () => {
+  it('returns empty list when admin places are missing', () => {
+    expect(adminPlacesToPlaces(undefined)).toEqual([]);
+    expect(adminPlacesToPlaces([])).toEqual([]);
+  });
+
+  it('filters unnamed or uncategorized places', () => {
+    const places = adminPlacesToPlaces([
+      { id: 'a', name: 'ATM', category: 'essential' },
+      { id: 'b', name: ' ', category: 'food' },
+      { id: 'c', name: 'Cafe', category: 'cafes' },
     ]);
 
-    const place = merged.find((entry) => entry.id === 'zeljo-cevapi');
-    expect(place?.name).toBe('Željo (updated)');
-    expect(place?.descriptionKey).toBe('places.zeljo.desc');
-    expect(place?.isTopPick).toBe(true);
-  });
-
-  it('uses admin description override', () => {
-    const merged = mergeCityPackPlaces(SARAJEVO_PLACES, [
-      {
-        id: 'atm-dalmatinska',
-        name: 'ATM UniCredit / Raiffeisen',
-        category: 'essential',
-        needNow: true,
-        description: 'Custom ATM note',
-        googleMapsUrl: 'https://maps.example/atm',
-      },
-    ]);
-
-    const place = merged.find((entry) => entry.id === 'atm-dalmatinska');
-    expect(place?.description).toBe('Custom ATM note');
-    expect(place?.descriptionKey).toBe('places.atm.desc');
-    expect(place?.needNow).toBe(true);
-  });
-
-  it('falls back to code maps url and flags', () => {
-    const place = adminPlaceToPlace(
-      {
-        id: codePlace.id,
-        name: codePlace.name,
-        category: codePlace.category,
-      },
-      codePlace
-    );
-
-    expect(place.googleMapsUrl).toBe(codePlace.googleMapsUrl);
-    expect(place.needNow).toBe(false);
-    expect(place.isTopPick).toBe(true);
-    expect(place.descriptionKey).toBe(codePlace.descriptionKey);
-  });
-
-  it('merges iconId from admin with code fallback', () => {
-    const fromAdmin = adminPlaceToPlace(
-      {
-        id: codePlace.id,
-        name: codePlace.name,
-        category: codePlace.category,
-        iconId: 'pizza',
-      },
-      codePlace
-    );
-
-    expect(fromAdmin.iconId).toBe('pizza');
-
-    const fromCode = adminPlaceToPlace(
-      {
-        id: codePlace.id,
-        name: codePlace.name,
-        category: codePlace.category,
-      },
-      { ...codePlace, iconId: 'pub' }
-    );
-
-    expect(fromCode.iconId).toBe('pub');
-
-    const cleared = adminPlaceToPlace(
-      {
-        id: codePlace.id,
-        name: codePlace.name,
-        category: codePlace.category,
-        iconId: 'default',
-      },
-      { ...codePlace, iconId: 'pub' }
-    );
-
-    expect(cleared.iconId).toBeUndefined();
+    expect(places.map((place) => place.id)).toEqual(['a', 'c']);
   });
 
   it('sorts top picks before other places', () => {
-    const merged = mergeCityPackPlaces([], [
+    const places = adminPlacesToPlaces([
       {
         id: 'b',
         name: 'Beta Bar',
@@ -120,6 +83,6 @@ describe('mergeCityPackPlaces', () => {
       },
     ]);
 
-    expect(merged.map((place) => place.id)).toEqual(['a', 'b']);
+    expect(places.map((place) => place.id)).toEqual(['a', 'b']);
   });
 });

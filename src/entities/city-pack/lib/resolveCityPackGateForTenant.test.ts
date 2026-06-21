@@ -43,7 +43,8 @@ describe('resolveCityPackGateForTenant', () => {
     expect(isCityPackReadyForTenant('unknown', sarajevoReady)).toBe(false);
   });
 
-  it('falls back to code registry when snapshot is empty', () => {
-    expect(isCityPackReadyForTenant('sarajevo', {})).toBe(true);
+  it('returns false when snapshot is empty', () => {
+    expect(isCityPackReadyForTenant('sarajevo', {})).toBe(false);
+    expect(resolveCityPackNotReadyReasonForTenant('sarajevo', {})).toMatch(/ready city pack/i);
   });
 });

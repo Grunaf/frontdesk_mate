@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { sarajevoReadyGateSnapshot, kotorDraftGateSnapshot } from '@/entities/city-pack/lib/testFixtures/cityPackGateSnapshot';
 import {
   inferLaunchBookingPath,
   resolveFirstIncompleteLaunchStep,
@@ -53,6 +54,7 @@ const baseInput = {
   cityPackId: 'sarajevo' as const,
   settings: baseSettings,
   lifecycleStatus: 'active' as const,
+  cityPackGateSnapshot: sarajevoReadyGateSnapshot,
 };
 
 describe('resolveGuestPathGate', () => {
@@ -132,15 +134,7 @@ describe('resolveGuestPathGate', () => {
 
     expect(gate.incompleteMust.some((item) => item.id === 'identity-city-pack-places')).toBe(false);
 
-    const draftSnapshot = {
-      kotor: {
-        readyForTenants: false,
-        notReadyReason: 'Publish the city pack when content is complete.',
-        placesCount: 2,
-        routesGateMet: false,
-        status: 'draft' as const,
-      },
-    };
+    const draftSnapshot = kotorDraftGateSnapshot;
 
     const blocked = resolveGuestPathGate({
       ...baseInput,

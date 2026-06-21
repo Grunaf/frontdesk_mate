@@ -74,8 +74,13 @@ describe('resolveCapabilities', () => {
     expect(caps.faq).toBe('ready');
   });
 
-  it('marks local guide ready only when city pack has places', () => {
-    expect(resolveCapabilities({ cityPackId: 'sarajevo', settings: {} }).localGuide).toBe('ready');
+  it('marks local guide ready only when city pack gate is true', () => {
+    expect(
+      resolveCapabilities({ cityPackId: 'sarajevo', settings: {}, cityPackHasPlaces: true }).localGuide
+    ).toBe('ready');
+    expect(
+      resolveCapabilities({ cityPackId: 'sarajevo', settings: {}, cityPackHasPlaces: false }).localGuide
+    ).toBe('hidden');
     expect(resolveCapabilities({ cityPackId: 'kotor', settings: {} }).localGuide).toBe('hidden');
   });
 

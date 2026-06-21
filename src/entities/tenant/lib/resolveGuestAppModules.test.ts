@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { sarajevoReadyGateSnapshot, kotorDraftGateSnapshot } from '@/entities/city-pack/lib/testFixtures/cityPackGateSnapshot';
 import { resolveGuestAppModules } from './resolveGuestAppModules';
 import type { TenantSettings } from '../model/settings';
 
@@ -40,10 +41,11 @@ describe('resolveGuestAppModules', () => {
     expect(modules.find((entry) => entry.id === 'houseRules')?.status).toBe('preview');
   });
 
-  it('marks local guide live for sarajevo pack', () => {
+  it('marks local guide live for ready city pack snapshot', () => {
     const modules = resolveGuestAppModules({
       cityPackId: 'sarajevo',
       settings: {},
+      cityPackGateSnapshot: sarajevoReadyGateSnapshot,
     });
 
     expect(modules.find((entry) => entry.id === 'localGuide')?.status).toBe('ready');
@@ -53,6 +55,7 @@ describe('resolveGuestAppModules', () => {
     const modules = resolveGuestAppModules({
       cityPackId: 'kotor',
       settings: {},
+      cityPackGateSnapshot: kotorDraftGateSnapshot,
     });
 
     const localGuide = modules.find((entry) => entry.id === 'localGuide');
