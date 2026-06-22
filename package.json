@@ -22,6 +22,7 @@
     "smoke:ui": "node scripts/run-smoke.js --ui",
     "smoke:install": "playwright install chromium",
     "smoke:report": "playwright show-report",
+    "snapshot": "node scripts/generate-snapshot.js",
     "lint": "eslint",
     "lint:fsd": "steiger ./src",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css}\"",

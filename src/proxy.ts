@@ -23,6 +23,15 @@ function resolveAdminPath(pathname: string): string | null {
   return match ? match[2] : null;
 }
 
+/** Dev panel lives outside i18n at /dev-panel/* */
+function resolveDevPanelPath(pathname: string): string | null {
+  if (pathname === '/dev-panel' || pathname.startsWith('/dev-panel/')) {
+    return pathname;
+  }
+
+  return null;
+}
+
 function shouldUsePlatformSite(tenantSlug: string | null, site: string): boolean {
   return isProd && !tenantSlug && site !== 'reception';
 }
@@ -48,6 +57,14 @@ export function proxy(request: NextRequest) {
   if (adminPath) {
     if (pathname !== adminPath) {
       return NextResponse.redirect(new URL(adminPath, request.url));
+    }
+    return NextResponse.next();
+  }
+
+  const devPanelPath = resolveDevPanelPath(pathname);
+  if (devPanelPath) {
+    if (pathname !== devPanelPath) {
+      return NextResponse.redirect(new URL(devPanelPath, request.url));
     }
     return NextResponse.next();
   }

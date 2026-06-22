@@ -10,6 +10,7 @@
 | Variable | Where to get it |
 |----------|-----------------|
 | `E2E_TENANT_SLUG` | Same as `NEXT_PUBLIC_TENANT_SLUG` or tenant slug in admin |
+| `E2E_CITY_PACK_ID` | City pack on that tenant (admin → tenant → Identity), e.g. `kotor` |
 | `E2E_ADMIN_PASSWORD` | Same as `ADMIN_SECRET` in `.env.local` |
 | `E2E_GUEST_PIN` | Create a stay in reception desk → copy 6-digit PIN |
 | `E2E_GUEST_MAGIC_LINK` | Optional — copy full URL from reception instead of PIN |

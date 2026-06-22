@@ -40,9 +40,40 @@ jobs:
       - name: Build
         run: npm run build
 
-  # Playwright smoke needs e2e/env.local secrets — run locally: npm run smoke
+  # Enable after GitHub secrets + repo variable ENABLE_SMOKE_CI=true (see SMOKE.md)
   smoke:
-    if: false
+    if: vars.ENABLE_SMOKE_CI == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.51.1-noble
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      ADMIN_SECRET: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      NEXT_PUBLIC_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_GUEST_PIN: ${{ secrets.E2E_GUEST_PIN }}
+      E2E_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
+      E2E_CITY_PACK_ID: ${{ secrets.E2E_CITY_PACK_ID }}
+      CI: true
     steps:
-      - run: echo "Enable when GitHub secrets for E2E_* are configured"
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm install -g npm@11
+          npm ci
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Smoke tests
+        run: npm run smoke

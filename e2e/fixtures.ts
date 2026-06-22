@@ -83,13 +83,16 @@ function readUrlMode(fileEnv: Record<string, string>): E2eUrlMode {
 /** Loaded once per test run from e2e/env.local + process.env. */
 export function loadE2eConfig(): E2eConfig {
   const fileEnv = loadEnvLocal();
+  const inCi = process.env.CI === 'true';
 
   return {
     baseDomain: readEnv('E2E_BASE_DOMAIN', fileEnv) ?? 'localhost:3000',
     urlMode: readUrlMode(fileEnv),
     tenantSlug: requireEnv('E2E_TENANT_SLUG', fileEnv),
     locale: readEnv('E2E_LOCALE', fileEnv) ?? 'en',
-    cityPackId: readEnv('E2E_CITY_PACK_ID', fileEnv) ?? 'sarajevo',
+    cityPackId: inCi
+      ? requireEnv('E2E_CITY_PACK_ID', fileEnv)
+      : (readEnv('E2E_CITY_PACK_ID', fileEnv) ?? 'sarajevo'),
     adminPassword: requireEnv('E2E_ADMIN_PASSWORD', fileEnv),
     guestPin: requireEnv('E2E_GUEST_PIN', fileEnv),
     guestMagicLink: optionalEnv('E2E_GUEST_MAGIC_LINK', fileEnv),

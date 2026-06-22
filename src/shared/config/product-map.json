@@ -1,0 +1,114 @@
+[
+  {
+    "id": "admin-login",
+    "useCase": "Admin sign-in",
+    "area": "Admin",
+    "status": "smoke_ok",
+    "smokeSpec": "e2e/smoke/admin.spec.ts",
+    "notes": ""
+  },
+  {
+    "id": "admin-tenant-edit",
+    "useCase": "Tenant settings authoring",
+    "area": "Admin",
+    "status": "smoke_ok",
+    "smokeSpec": "e2e/smoke/admin.spec.ts",
+    "notes": "Full form at /admin/tenants/[slug]"
+  },
+  {
+    "id": "city-pack-ready",
+    "useCase": "City pack gate (places + routes)",
+    "area": "City pack",
+    "status": "smoke_ok",
+    "smokeSpec": "e2e/smoke/city-packs.spec.ts",
+    "notes": ""
+  },
+  {
+    "id": "guest-check-in-pin",
+    "useCase": "Guest check-in with PIN",
+    "area": "Guest",
+    "status": "smoke_ok",
+    "smokeSpec": "e2e/smoke/guest-journey.spec.ts",
+    "notes": ""
+  },
+  {
+    "id": "guest-arrival-routes",
+    "useCase": "Arrival guide route picker",
+    "area": "Guest",
+    "status": "smoke_ok",
+    "smokeSpec": "e2e/smoke/guest-journey.spec.ts",
+    "notes": "enabledRoutes from DB"
+  },
+  {
+    "id": "local-guide-essentials",
+    "useCase": "Local Guide essentials",
+    "area": "Guest",
+    "status": "smoke_ok",
+    "smokeSpec": "e2e/smoke/guest-journey.spec.ts",
+    "notes": ""
+  },
+  {
+    "id": "guest-wrong-pin",
+    "useCase": "Wrong PIN error handling",
+    "area": "Guest",
+    "status": "smoke_ok",
+    "smokeSpec": "e2e/smoke/guest-journey.spec.ts",
+    "notes": ""
+  },
+  {
+    "id": "reception-desk",
+    "useCase": "Reception desk PIN flow",
+    "area": "Reception",
+    "status": "implemented",
+    "smokeSpec": "",
+    "notes": "No smoke yet — needs E2E_RECEPTION_DESK_PIN"
+  },
+  {
+    "id": "guest-magic-link",
+    "useCase": "Guest magic-link check-in",
+    "area": "Guest",
+    "status": "implemented",
+    "smokeSpec": "",
+    "notes": "Optional E2E_GUEST_MAGIC_LINK"
+  },
+  {
+    "id": "landing-booking",
+    "useCase": "Landing booking engine",
+    "area": "Landing",
+    "status": "implemented",
+    "smokeSpec": "",
+    "notes": ""
+  },
+  {
+    "id": "house-rules",
+    "useCase": "House rules templates + custom",
+    "area": "Guest",
+    "status": "implemented",
+    "smokeSpec": "",
+    "notes": "Admin HouseRulesFields"
+  },
+  {
+    "id": "room-map",
+    "useCase": "Find your bed / room map",
+    "area": "Guest",
+    "status": "implemented",
+    "smokeSpec": "",
+    "notes": ""
+  },
+  {
+    "id": "platform-recovery",
+    "useCase": "Platform guest recovery (no tenant host)",
+    "area": "Platform",
+    "status": "implemented",
+    "smokeSpec": "",
+    "notes": "prod bare domain"
+  },
+  {
+    "id": "multi-tenant-hosts",
+    "useCase": "Subdomain tenant routing",
+    "area": "Platform",
+    "status": "prod_ready",
+    "smokeSpec": "",
+    "notes": "E2E_URL_MODE=subdomain optional"
+  }
+]
