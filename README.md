@@ -24,7 +24,9 @@ npm run dev
 - Guest app: `/welcome`, `/concierge` (under `app-site/[locale]`)
 - Landing: `landing-site/[locale]`
 - Admin: `/admin` (password = `ADMIN_SECRET`)
+- Dev panel (local only): `/dev-panel` (password = `ADMIN_SECRET` or `DEV_PANEL_SECRET`)
 - Smoke tests: copy `e2e/env.example` → `e2e/env.local`, then `npm run smoke` (see `SMOKE.md`)
+- AI context: `npm run snapshot` → `CONTEXT_SNAPSHOT.md` (gitignored, attach in Cursor chats)
 
 Set tenant for local dev:
 
@@ -140,12 +142,25 @@ Recent migrations:
 | `015_normalize_legacy_settings.sql` | Strip legacy `doors`/`doorImages`/`isBunk`; accessPoints-only arrival |
 | `016_landing_rooms.sql` | Per-tenant landing room types in `settings.landing` |
 
+## Dev tooling
+
+| Tool | Command / URL | Purpose |
+|------|---------------|---------|
+| Snapshot | `npm run snapshot` | Writes `CONTEXT_SNAPSHOT.md` — compact project map for AI chats |
+| Dev panel | `http://localhost:3000/dev-panel` | Env checks, module status, product map (dev only, 404 in production) |
+| Smoke | `npm run smoke` | Playwright P0 tests — see `SMOKE.md` |
+| CI smoke | GitHub Actions | Set secrets + repo variable `ENABLE_SMOKE_CI=true` (`SMOKE.md`) |
+
+Tenant settings are edited in **admin** (`/admin/tenants/[slug]`), not on the dev panel.
+
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | migrate (quiet) + Next dev |
 | `npm test` | Vitest |
+| `npm run smoke` | Playwright smoke suite (`e2e/env.local`) |
+| `npm run snapshot` | Regenerate `CONTEXT_SNAPSHOT.md` |
 | `npm run lint:fsd` | Steiger FSD boundaries |
 | `npm run validate-i18n` | JSON key parity EN/RU |
 
