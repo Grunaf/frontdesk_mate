@@ -37,7 +37,7 @@ export function ConciergeReceptionStrip() {
   }
 
   return (
-    <div className={conciergeReceptionStripFixedClass}>
+    <div className={conciergeReceptionStripFixedClass} data-slot="concierge-reception-strip">
       <ExternalServiceTouchLink
         service="whatsapp"
         href={contact.whatsappHref}
