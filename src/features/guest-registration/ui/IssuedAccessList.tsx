@@ -1,6 +1,9 @@
 'use client';
 
+import { type FormEvent, useState } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import { findStayByReference } from '@/entities/guest-stay/lib/findStayByReference';
+import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
 import {
   guestAccessStatusLabel,
   resolveGuestAccessStatus,
@@ -20,6 +23,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Input,
   SegmentedChipBar,
 } from '@/shared/ui';
 
@@ -31,6 +35,7 @@ interface IssuedAccessListProps {
   onToggleExpanded: (stayId: string) => void;
   onRevoke: (stayId: string) => void;
   onChangeDates: (stay: GuestStayRecordWithLink) => void;
+  onFocusStay: (stayId: string) => void;
   stayPins: Record<string, string>;
   isPending: boolean;
   revokeError: string | null;
@@ -68,6 +73,7 @@ function StayRow({
 }) {
   const status = resolveGuestAccessStatus(stay);
   const isExpanded = expandedStayId === stay.id;
+  const stayRef = formatStayReference(stay.id);
 
   return (
     <li id={`stay-${stay.id}`} className="space-y-2 rounded-lg border bg-background px-3 py-2.5">
@@ -76,6 +82,7 @@ function StayRow({
           <p className="truncate text-sm font-medium">
             {stay.guest_name ? `${stay.guest_name} · ` : ''}
             {stay.bed_id}
+            {stayRef ? <span className="font-mono text-muted-foreground"> · #{stayRef}</span> : null}
           </p>
           <p className="text-xs text-muted-foreground">
             {new Date(stay.check_in_at).toLocaleDateString()} →{' '}
@@ -148,10 +155,13 @@ export function IssuedAccessList({
   onToggleExpanded,
   onRevoke,
   onChangeDates,
+  onFocusStay,
   stayPins,
   isPending,
   revokeError,
 }: IssuedAccessListProps) {
+  const [refQuery, setRefQuery] = useState('');
+  const [refError, setRefError] = useState<string | null>(null);
   const filteredStays = filterIssuedAccess(stays, filter);
   const grouped = groupIssuedAccess(filteredStays);
   const hasAny = SECTIONS.some(({ key }) => grouped[key].length > 0);
@@ -163,8 +173,40 @@ export function IssuedAccessList({
     return <p className="text-xs text-muted-foreground">No issued access yet.</p>;
   }
 
+  const handleRefSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const match = findStayByReference(stays, refQuery);
+
+    if (!match) {
+      setRefError('No stay for this ref.');
+      return;
+    }
+
+    setRefError(null);
+    onFocusStay(match.id);
+  };
+
   return (
     <div className="space-y-3">
+      <form className="flex items-center gap-2" onSubmit={handleRefSearch}>
+        <Input
+          aria-label="Find stay by ref"
+          className="h-9 font-mono text-sm"
+          placeholder="Ref #XXXXXX"
+          value={refQuery}
+          onChange={(event) => {
+            setRefQuery(event.target.value);
+            if (refError) {
+              setRefError(null);
+            }
+          }}
+        />
+        <Button type="submit" size="sm" variant="outline" className="shrink-0">
+          Find
+        </Button>
+      </form>
+      {refError ? <p className="text-xs text-destructive">{refError}</p> : null}
+
       <SegmentedChipBar
         ariaLabel="Filter issued access"
         items={[...FILTER_ITEMS]}

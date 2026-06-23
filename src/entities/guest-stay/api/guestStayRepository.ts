@@ -413,6 +413,8 @@ export async function resolveGuestSessionFromCookies(
     bedId: stay.bed_id,
     exp: raw.exp,
     checkInAt: stay.check_in_at,
+    checkOutAt: stay.check_out_at,
+    guestName: stay.guest_name,
   };
 }
 

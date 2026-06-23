@@ -903,6 +903,8 @@
     },
     "wifi": {
       "title": "Wi-Fi Connection",
+      "compactTitle": "Wi‑Fi",
+      "compactCopy": "Скопировать пароль",
       "copyLabel": "Copy Password",
       "copiedLabel": "Password Copied!"
     },
@@ -915,7 +917,78 @@
       "subtitle": "Всё необходимое для комфортного проживания в хостеле."
     },
     "rules": {
-      "title": "Правила хостела"
+      "title": "Правила хостела",
+      "tapHint": "Нажмите на правило, чтобы прочитать подробности",
+      "openDetail": "{rule} — открыть подробности"
+    },
+    "guestStayChip": {
+      "chipLabel": "Проживание",
+      "sheetTitle": "Ваше проживание",
+      "openDetail": "{summary} — подробности проживания",
+      "receptionHeading": "Для ресепшена",
+      "receptionHint": "Покажите этот экран, если на стойке спрашивают, кто вы.",
+      "stayRefLabel": "Ref",
+      "registeredAsLabel": "В системе",
+      "copyForReception": "Скопировать для ресепшена",
+      "copiedForReception": "Скопировано",
+      "copyLineHostel": "{hostelName}",
+      "copyLineBed": "Кровать: {bedLine}",
+      "copyLineDates": "Срок: {dateRange}",
+      "copyLineRef": "Ref: #{stayRef}",
+      "copyLineName": "Имя: {guestName}",
+      "showRoomMapLink": "Карта комнаты и маршрут",
+      "extendStayHeading": "Нужны ещё ночи?",
+      "extendStayNotice": "Продление — на стойке. Доступ в приложении привязан к ночам: после продления попросите ресепшен обновить access, если коды перестанут работать.",
+      "extendStayWhatsapp": "Написать о продлении",
+      "extendStayMessage": "Здравствуйте! Хочу продлить проживание в {hostelName}. Кровать {bedLabel}, сейчас до {checkoutDate}. Ref #{stayRef}. На сколько ночей можно продлить?",
+      "extendStayMessageNamed": "Здравствуйте! Хочу продлить проживание в {hostelName}. Кровать {bedLabel}, сейчас до {checkoutDate}. Ref #{stayRef}. В системе: {guestName}. На сколько ночей можно продлить?"
+    },
+    "conciergeContact": {
+      "receptionStripLabel": "Написать ресепшену {hostelName}",
+      "receptionStripLabelCompact": "Написать ресепшену",
+      "receptionStripHint": "Вопросы о проживании, прачке или выезде",
+      "whatsappMessage": "Здравствуйте, вопрос по проживанию в {hostelName}"
+    },
+    "guestIssue": {
+      "cardTitle": "Что-то не работает?",
+      "cardDescription": "Душ, дверь, кровать, Wi‑Fi… Ресепшен увидит на экране.",
+      "cardButton": "Сообщить о поломке",
+      "sheetTitle": "Сообщить о поломке",
+      "sheetDescription": "Расскажите, что нужно починить в вашей комнате.",
+      "sendPreviewHeading": "Отправим",
+      "stayRefLabel": "Ref",
+      "privacyNotice": "Видит только ресепшен. Чтобы починить в вашей комнате — никому больше не показываем.",
+      "categoryLabel": "Что случилось?",
+      "noteLabel": "Подробности",
+      "notePlaceholder": "Необязательно — например, нет горячей воды",
+      "noteOptional": "Необязательно",
+      "submitButton": "Отправить",
+      "submitting": "Отправка…",
+      "successTitle": "Отправлено ресепшену",
+      "successBody": "Сообщение отправлено. Ref #{stayRef} включён.",
+      "successUrgent": "Если срочно — напишите ресепшену в WhatsApp.",
+      "successWhatsappButton": "Написать ресепшену",
+      "successWhatsappMessage": "Здравствуйте, сообщил о поломке в комнате в {hostelName}. Можете помочь?",
+      "successClose": "Готово",
+      "myStayPrompt": "Что-то сломалось в комнате?",
+      "myStayLink": "Сообщить о поломке",
+      "categories": {
+        "shower": "Душ",
+        "toilet": "Туалет",
+        "door_lock": "Дверь",
+        "bed": "Кровать",
+        "wifi": "Wi‑Fi",
+        "other": "Другое"
+      },
+      "errors": {
+        "categoryRequired": "Выберите категорию.",
+        "unauthorized": "Войдите снова, чтобы отправить сообщение.",
+        "tooManyOpen": "У вас уже есть открытые сообщения. Если срочно — на стойке.",
+        "noteTooLong": "Слишком длинный текст.",
+        "invalidCategory": "Выберите категорию из списка.",
+        "dbUnavailable": "Сейчас не отправилось. Попробуйте снова или напишите ресепшену.",
+        "generic": "Что-то пошло не так. Попробуйте снова."
+      }
     },
     "featureGate": {
       "previewBadge": "Превью"

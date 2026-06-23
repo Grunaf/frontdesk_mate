@@ -6,8 +6,21 @@ import { X } from 'lucide-react';
 
 import { cn } from '@/shared/lib/utils';
 import { Button } from './button';
+import { useRegisterBottomSheetOpen } from './bottom-sheet-open-context';
 
-type BottomSheetSize = 'compact' | 'large';
+type BottomSheetSize = 'small' | 'compact' | 'large';
+
+function bottomSheetSizeClassName(size: BottomSheetSize): string {
+  switch (size) {
+    case 'large':
+      return 'h-[min(94dvh,94vh)] max-h-[min(94dvh,94vh)]';
+    case 'small':
+      return 'h-[min(38dvh,280px)] max-h-[min(38dvh,280px)]';
+    case 'compact':
+    default:
+      return 'h-[min(56dvh,480px)] max-h-[min(56dvh,480px)]';
+  }
+}
 
 const BottomSheetSizeContext = React.createContext<BottomSheetSize>('compact');
 
@@ -16,13 +29,26 @@ type BottomSheetProps = React.ComponentProps<typeof DrawerPrimitive.Root>;
 function BottomSheet({
   shouldScaleBackground = false,
   noBodyStyles = true,
+  open,
+  onOpenChange,
   ...props
 }: BottomSheetProps) {
+  useRegisterBottomSheetOpen(open);
+
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      onOpenChange?.(next);
+    },
+    [onOpenChange]
+  );
+
   return (
     <DrawerPrimitive.Root
       data-slot="bottom-sheet"
       shouldScaleBackground={shouldScaleBackground}
       noBodyStyles={noBodyStyles}
+      open={open}
+      onOpenChange={handleOpenChange}
       {...props}
     />
   );
@@ -75,9 +101,7 @@ function BottomSheetContent({
           data-size={size}
           className={cn(
             'fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl border bg-popover text-popover-foreground shadow-lg outline-none',
-            size === 'large'
-              ? 'h-[min(94dvh,94vh)] max-h-[min(94dvh,94vh)]'
-              : 'h-[min(56dvh,480px)] max-h-[min(56dvh,480px)]',
+            bottomSheetSizeClassName(size),
             className
           )}
           {...props}

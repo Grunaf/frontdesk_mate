@@ -11,6 +11,7 @@ import {
 export interface GuestSessionContextValue {
   session: ResolvedGuestSession | null;
   checkInAt: string | null;
+  checkOutAt: string | null;
   currentTenantSlug: string | null;
   foreignRegistration: GuestRegistrationIndex | null;
   isRegistered: boolean;
@@ -19,6 +20,7 @@ export interface GuestSessionContextValue {
 const GuestSessionContext = createContext<GuestSessionContextValue>({
   session: null,
   checkInAt: null,
+  checkOutAt: null,
   currentTenantSlug: null,
   foreignRegistration: null,
   isRegistered: false,
@@ -55,16 +57,18 @@ export function GuestSessionProvider({
   }, [session, currentTenantSlug]);
 
   const checkInAt = session?.checkInAt ?? null;
+  const checkOutAt = session?.checkOutAt ?? null;
 
   const value = useMemo(
     () => ({
       session,
       checkInAt,
+      checkOutAt,
       currentTenantSlug,
       foreignRegistration,
       isRegistered: Boolean(session),
     }),
-    [session, checkInAt, currentTenantSlug, foreignRegistration]
+    [session, checkInAt, checkOutAt, currentTenantSlug, foreignRegistration]
   );
 
   return <GuestSessionContext.Provider value={value}>{children}</GuestSessionContext.Provider>;

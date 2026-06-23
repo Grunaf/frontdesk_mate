@@ -1,16 +1,20 @@
 'use client';
 
 import { useNightMode } from '@/shared/lib';
-import { FindYourBedCard } from '@/features/find-your-bed';
 import { FAQAccordion } from '@/features/faq';
 import { LocalGuide } from '@/features/welcome';
 import { NightAccessCard } from '@/features/night-access';
 import { GuestAccessPanel, useIsGuestRegistered } from '@/features/guest-check-in';
+import { GuestIssueReportCard } from '@/features/guest-issue-report';
+import { ConciergeReceptionStrip } from '@/features/reception-contact';
+import { conciergeContentStripOffsetClass } from '@/features/reception-contact/lib/conciergeStripLayout';
+import { WifiCompactRow } from '@/features/wifi-connect';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/shared/i18n';
 import { Button, FeatureGate, Icon } from '@/shared/ui';
 import { SITE_CONFIG } from '@/shared/config';
 import { setInAppReturnTo } from '@/shared/lib';
+import { cn } from '@/shared/lib/utils';
 import { ArrowRight } from 'lucide-react';
 
 function ArrivalGuideButton() {
@@ -38,32 +42,39 @@ export function ConciergeContent() {
   const isRegistered = useIsGuestRegistered();
 
   return (
-    <div className="space-y-4 px-4 py-6">
-      {!isRegistered ? <GuestAccessPanel /> : null}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        className={cn(
+          'min-h-0 flex-1 space-y-4 overflow-x-hidden px-4 py-6',
+          isRegistered && conciergeContentStripOffsetClass
+        )}
+      >
+        {!isRegistered ? <GuestAccessPanel /> : null}
 
-      <ArrivalGuideButton />
+        <ArrivalGuideButton />
 
-      {isRegistered ? (
-        <FeatureGate module="roomMap">
-          <FindYourBedCard />
+        {isRegistered ? <WifiCompactRow /> : null}
+
+        {isRegistered ? <GuestIssueReportCard /> : null}
+
+        <FeatureGate module="localGuide">
+          <div className="border-t border-border pt-4">
+            <LocalGuide />
+          </div>
         </FeatureGate>
-      ) : null}
 
-      <FeatureGate module="localGuide">
-        <div className="border-t border-border pt-4">
-          <LocalGuide />
-        </div>
-      </FeatureGate>
+        {isRegistered ? (
+          <FeatureGate module="nightAccess">
+            {isNightMode ? <NightAccessCard /> : null}
+          </FeatureGate>
+        ) : null}
 
-      {isRegistered ? (
-        <FeatureGate module="nightAccess">
-          {isNightMode ? <NightAccessCard /> : null}
+        <FeatureGate module="faq">
+          <FAQAccordion />
         </FeatureGate>
-      ) : null}
+      </div>
 
-      <FeatureGate module="faq">
-        <FAQAccordion />
-      </FeatureGate>
+      {isRegistered ? <ConciergeReceptionStrip /> : null}
     </div>
   );
 }

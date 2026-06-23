@@ -24,6 +24,8 @@ export interface GuestSessionPayload {
 
 export interface ResolvedGuestSession extends GuestSessionPayload {
   checkInAt: string;
+  checkOutAt: string;
+  guestName: string | null;
 }
 
 export type CreateGuestStayInput = {
