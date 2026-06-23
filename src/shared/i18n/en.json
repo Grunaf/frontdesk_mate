@@ -662,6 +662,7 @@
         "step3": "Open the link or enter the PIN on this phone to unlock door codes and concierge",
         "whatsappReception": "Message reception on WhatsApp",
         "callReception": "Call reception",
+        "signIn": "Sign in",
         "whatsappMessage": "Hi, I need my check-in link for {hostelName}",
         "noContact": "Contact reception when your bed is assigned to get your check-in link.",
         "openSheetButton": "How to get your check-in link"

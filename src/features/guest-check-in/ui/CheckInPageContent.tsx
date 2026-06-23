@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { activateGuestStayAction } from '../actions/activateGuestStay';
+import { parseGuestEntryParam, resolveGuestWelcomePath } from '../lib/resolveGuestWelcomePath';
 import { CheckInPinForm } from './CheckInPinForm';
 import { useGuestSession } from './GuestSessionProvider';
 import { useTranslations } from '@/shared/i18n';
@@ -25,12 +26,21 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
   const [isPending, startTransition] = useTransition();
 
   const token = searchParams.get('t')?.trim() ?? '';
+  const entry = parseGuestEntryParam(searchParams.get('entry'));
+  const modeOnsite = searchParams.get('mode') === 'onsite';
+  const welcomePath = resolveGuestWelcomePath({ locale, entry, modeOnsite });
 
   useEffect(() => {
     if (isRegistered && !token) {
-      router.replace(`/${locale}`);
+      router.replace(welcomePath);
     }
-  }, [isRegistered, token, locale, router]);
+  }, [isRegistered, token, welcomePath, router]);
+
+  useEffect(() => {
+    if (!isRegistered || !token) return;
+
+    router.replace(welcomePath);
+  }, [isRegistered, token, welcomePath, router]);
 
   useEffect(() => {
     if (!token || isRegistered) return;
@@ -44,16 +54,20 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
           exp: result.registration.exp,
         });
         router.refresh();
-        router.replace(`/${locale}/welcome?step=settlement`);
+        router.replace(welcomePath);
         return;
       }
 
       setCorrectTenantSlug(result.correctTenantSlug ?? null);
       setErrorKey(result.error);
     });
-  }, [token, isRegistered, locale, router]);
+  }, [token, isRegistered, locale, router, welcomePath]);
 
   if (token) {
+    if (isRegistered) {
+      return null;
+    }
+
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
         {isPending ? (

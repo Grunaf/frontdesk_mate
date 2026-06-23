@@ -662,6 +662,7 @@
         "step3": "Откройте ссылку или введите PIN на этом телефоне — откроются коды и concierge",
         "whatsappReception": "Написать на ресепшен в WhatsApp",
         "callReception": "Позвонить на ресепшен",
+        "signIn": "Войти",
         "whatsappMessage": "Здравствуйте, мне нужна ссылка для check-in в {hostelName}",
         "noContact": "Свяжитесь с ресепшеном, когда назначат кровать, чтобы получить ссылку для check-in.",
         "openSheetButton": "Как получить ссылку для check-in"
