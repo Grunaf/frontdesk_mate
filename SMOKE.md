@@ -16,13 +16,13 @@ npm run smoke
 
 ## Manual pass (after `npm run smoke` is green)
 
-Automated smoke covers admin login, city packs, guest PIN, arrival routes, Local Guide essentials, and reception desk (when `E2E_RECEPTION_DESK_PIN` is set).
+Automated smoke covers admin login, city packs, guest PIN, arrival routes, Local Guide essentials, guest concierge (stay chip, ref, strip), and reception desk + ref search (when `E2E_RECEPTION_DESK_PIN` is set).
 
-**Arrival guide (P0):** [docs/qa/arrival-guide-pass.md](docs/qa/arrival-guide-pass.md) — 7 scenarios, 375px, ~15 min.
+**Guest flow (full manual pass):** [docs/qa/guest-flow-pass.md](docs/qa/guest-flow-pass.md) — check-in, intent, `entry=` links, locked sheet, Preparation, Settlement copy, optional reception (~30–40 min, 375px).
 
 These items still need a quick human pass:
 
-- [ ] **Arrival guide** — [arrival-guide-pass.md](docs/qa/arrival-guide-pass.md) (bottom sheets, locked steps, route tab)
+- [ ] **Guest flow** — [guest-flow-pass.md](docs/qa/guest-flow-pass.md) (P0 A–E; stay chip S1–S7; reception R1–R6 if desk PIN set)
 - [ ] **Mobile width** — reception desk: issue form without scrolling, Plan calendar, Access ··· menu on touch
 - [ ] **RU locale** — switch to `/ru/welcome`, key labels not broken
 - [ ] **Images** — door/facade/hero load (no broken placeholders)
