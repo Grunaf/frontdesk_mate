@@ -30,9 +30,9 @@
 | 2   | On welcome, tap **Route** chip                                                                               | “From which location are you arriving?” (or equivalent); category tabs visible and tappable                                 | ☐    | ☐    |       |
 | 3   | Route tab → tap **Step by step** (primary route)                                                             | Large bottom sheet (~full screen) with grabber; title stays fixed; scroll body to end; official link/button sticky at bottom if route has one; no horizontal page shift on open/close | ☐    | ☐    |       |
 | 4   | Close route sheet → open **Taxi backup** (if card shown)                                                     | Compact sheet (content-height, not full screen); WA/tel actions tappable; close returns to route tab without page shifted left/right | ☐    | ☐    |       |
-| 5   | **Without** PIN (incognito): open `/en/welcome?step=arrival` or tap locked **Arrival** / **Settlement** chip | Redirect to `/en/check-in` (not reception call sheet)                                                                       | ☐    | ☐    |       |
+| 5   | **Without** PIN (incognito): open `/en/welcome?step=arrival` or tap locked **Arrival** / **Settlement** chip | Check-in required sheet opens on welcome (no redirect to `/check-in`); primary **Sign in** works; close sheet stays on guide | ☐    | ☐    |       |
 | 6   | After PIN check-in: **Arrival** tab                                                                          | Door/access content visible; images load; bottom **Continue** CTA visible without scrolling the whole page off-screen       | ☐    | ☐    |       |
-| 7   | Route tab → primary CTA at page bottom                                                                       | Button full width, not clipped; tap advances to next step (or redirects to check-in if still locked)                          | ☐    | ☐    |       |
+| 7   | Route tab → primary CTA at page bottom                                                                       | Button full width, not clipped; tap advances to next step (or opens check-in sheet if still locked)                           | ☐    | ☐    |       |
 
 
 **Release rule:** all P0 rows **Pass**. Any **Fail** → log in Notes, fix or defer with explicit P1 ticket.
