@@ -1,11 +1,12 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { DirectionPicker } from '@/features/direction-picker';
 import { DoorAccessPanel } from '@/features/door-access';
 import { PreTripInfo } from '@/features/pre-trip';
 import {
+  CheckInRequiredSheet,
   CrossHostelStrip,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
@@ -36,14 +37,12 @@ function isRegistrationLockedStep(step: Step, isRegistered: boolean): boolean {
 export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinatorProps) {
   const t = useTranslations('pages.arrivalJourney');
   const router = useRouter();
-  const params = useParams<{ locale: string }>();
-  const locale = params.locale ?? 'en';
-  const checkInPath = `/${locale}/check-in`;
   const isRegistered = useIsGuestRegistered();
   const { currentStep, setCurrentStep } = useCheckInState(isOnsite);
+  const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
 
-  const navigateToCheckIn = () => {
-    router.push(checkInPath);
+  const openCheckInSheet = () => {
+    setCheckInSheetOpen(true);
   };
 
   useEffect(() => {
@@ -54,12 +53,13 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
     }
 
     if (isRegistrationLockedStep(step, isRegistered)) {
-      router.replace(checkInPath);
+      setCurrentStep('route');
+      setCheckInSheetOpen(true);
       return;
     }
 
     setCurrentStep(step);
-  }, [checkInPath, isRegistered, router, setCurrentStep]);
+  }, [isRegistered, setCurrentStep]);
 
   const stepsConfig: StepItem[] = [
     {
@@ -98,7 +98,7 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   const handleStepChange = (value: string) => {
     const step = value as Step;
     if (isRegistrationLockedStep(step, isRegistered)) {
-      navigateToCheckIn();
+      openCheckInSheet();
       return;
     }
     setCurrentStep(step);
@@ -112,12 +112,12 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
 
   const handlePrimaryAction = () => {
     if (!isRegistered && activeStep.id === 'route') {
-      navigateToCheckIn();
+      openCheckInSheet();
       return;
     }
 
     if (isRegistrationLockedStep(activeStep.id, isRegistered)) {
-      navigateToCheckIn();
+      openCheckInSheet();
       return;
     }
 
@@ -132,7 +132,7 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
         items={chipItems}
         value={currentStep}
         onValueChange={handleStepChange}
-        onLockedClick={navigateToCheckIn}
+        onLockedClick={openCheckInSheet}
         ariaLabel="Arrival guide steps"
       />
 
@@ -144,6 +144,8 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
           {t(activeStep.buttonKey)}
         </Button>
       </main>
+
+      <CheckInRequiredSheet open={checkInSheetOpen} onOpenChange={setCheckInSheetOpen} />
     </div>
   );
 }
