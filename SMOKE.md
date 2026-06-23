@@ -22,7 +22,7 @@ These items still need a quick human pass:
 - [ ] **Mobile width** — guest app readable on phone (375px)
 - [ ] **RU locale** — switch to `/ru/welcome`, key labels not broken
 - [ ] **Images** — door/facade/hero load (no broken placeholders)
-- [ ] **Reception flow** — open `{slug}.reception.localhost:3000/login` (prod: `{slug}.reception.domain`), sign in with desk PIN, land on desk (not landing). Create new PIN, old PIN from `e2e/env.local` still works
+- [ ] **Reception flow** — open `{slug}.reception.localhost:3000/login` (prod: `{slug}.reception.domain`), sign in with desk PIN, land on desk (not landing). Issue access for today, then issue access for a future valid-from on the same bed after turnover (no overlap). Old PIN from `e2e/env.local` still works
 - [ ] **Visual polish** — spacing, chips, bottom sheets feel OK
 
 When something fails in automation, open the HTML report:

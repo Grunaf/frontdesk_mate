@@ -12,6 +12,7 @@ import { generateGuestPin, hashGuestPin, isGuestPinFormatValid, verifyGuestPin }
 import { resolveGuestPinActivationError } from '../lib/resolveGuestPinActivationError';
 import { buildGuestMagicLinkUrl } from '../lib/buildMagicLinkUrl';
 import { buildGuestSessionPayload, readGuestSessionFromCookies } from '../lib/guestSession';
+import { guestAccessBedNightsOverlap } from '../lib/guestAccessIntervals';
 import { bedExistsInGuestStay } from '../lib/validateBedForTenant';
 import type {
   ActivateGuestStayByPinResult,
@@ -59,26 +60,35 @@ function isStayActive(row: Pick<GuestStayRecord, 'revoked_at' | 'check_out_at'>)
   return new Date(row.check_out_at).getTime() > Date.now();
 }
 
-async function findActiveStayOnBed(tenantId: string, bedId: string): Promise<boolean> {
+async function findOverlappingAccessOnBed(
+  tenantId: string,
+  bedId: string,
+  checkInAt: string,
+  checkOutAt: string
+): Promise<boolean> {
   const admin = getSupabaseAdmin();
   if (!admin) return false;
 
-  const nowIso = new Date().toISOString();
   const { data, error } = await admin
     .from('guest_stays')
-    .select('id')
+    .select('check_in_at, check_out_at')
     .eq('tenant_id', tenantId)
     .eq('bed_id', bedId)
-    .is('revoked_at', null)
-    .gt('check_out_at', nowIso)
-    .limit(1);
+    .is('revoked_at', null);
 
   if (error) {
-    console.error('findActiveStayOnBed:', error.message);
+    console.error('findOverlappingAccessOnBed:', error.message);
     return false;
   }
 
-  return (data?.length ?? 0) > 0;
+  return (data ?? []).some((row) =>
+    guestAccessBedNightsOverlap(
+      String(row.check_in_at),
+      String(row.check_out_at),
+      checkInAt,
+      checkOutAt
+    )
+  );
 }
 
 export async function createGuestStay(
@@ -100,10 +110,6 @@ export async function createGuestStay(
     return { ok: false, error: 'bed_not_found' };
   }
 
-  if (await findActiveStayOnBed(tenant.id, bedId)) {
-    return { ok: false, error: 'bed_occupied' };
-  }
-
   const accessToken = generateAccessToken();
   const guestPin = generateGuestPin();
   const checkInAt = new Date(input.checkInAt);
@@ -116,14 +122,21 @@ export async function createGuestStay(
     return { ok: false, error: 'bed_not_found' };
   }
 
+  const checkInIso = checkInAt.toISOString();
+  const checkOutIso = checkOutAt.toISOString();
+
+  if (await findOverlappingAccessOnBed(tenant.id, bedId, checkInIso, checkOutIso)) {
+    return { ok: false, error: 'access_overlap' };
+  }
+
   const { data, error } = await admin
     .from('guest_stays')
     .insert({
       tenant_id: tenant.id,
       bed_id: bedId,
       guest_name: input.guestName?.trim() || null,
-      check_in_at: checkInAt.toISOString(),
-      check_out_at: checkOutAt.toISOString(),
+      check_in_at: checkInIso,
+      check_out_at: checkOutIso,
       access_token_hash: hashAccessToken(accessToken),
       access_token_encrypted: encryptAccessToken(accessToken),
       pin_hash: hashGuestPin(tenant.slug, guestPin),

@@ -36,7 +36,7 @@ export type CreateGuestStayInput = {
 
 export type CreateGuestStayResult =
   | { ok: true; stay: GuestStayRecord; accessToken: string; magicLinkUrl: string; guestPin: string }
-  | { ok: false; error: 'tenant_not_found' | 'bed_not_found' | 'bed_occupied' | 'db_unavailable' };
+  | { ok: false; error: 'tenant_not_found' | 'bed_not_found' | 'access_overlap' | 'db_unavailable' };
 
 export type ActivateGuestStayResult =
   | { ok: true; session: GuestSessionPayload }

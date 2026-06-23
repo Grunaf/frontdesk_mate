@@ -1,7 +1,12 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import {
+  guestAccessStatusLabel,
+  resolveGuestAccessStatus,
+  stayOverlapsBedNightRange,
+} from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
 import {
@@ -9,8 +14,10 @@ import {
   listActiveGuestStaysAction,
   revokeGuestStayAction,
 } from '../actions/receptionActions';
-import { resolveBedInventory } from '../lib/resolveBedInventory';
+import { flattenBedInventory, resolveBedInventory } from '../lib/resolveBedInventory';
+import { resolveGuestAccessPeriod } from '../lib/resolveGuestAccessPeriod';
 import { BedInventoryGrid } from './BedInventoryGrid';
+import { RevokeAccessDialog } from './RevokeAccessDialog';
 import { MagicLinkCard } from './MagicLinkCard';
 import { Button, Input, Label } from '@/shared/ui';
 
@@ -30,8 +37,12 @@ function defaultCheckOutDate(): string {
   return date.toISOString().slice(0, 10);
 }
 
-function pickDefaultBedId(bedOptions: string[], occupiedBedIds: Set<string>): string {
-  return bedOptions.find((id) => !occupiedBedIds.has(id)) ?? bedOptions[0] ?? '';
+function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
+  return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
+}
+
+function isArrivingToday(checkInAt: string, now = new Date()): boolean {
+  return checkInAt.slice(0, 10) === now.toISOString().slice(0, 10);
 }
 
 export function ReceptionCheckInPanel({
@@ -40,6 +51,7 @@ export function ReceptionCheckInPanel({
   initialStays,
 }: ReceptionCheckInPanelProps) {
   const bedOptions = useMemo(() => listGuestStayBedIds(settings ?? {}), [settings]);
+  const checkInTime = settings?.checkInTime ?? '14:00';
   const [stays, setStays] = useState(initialStays);
   const [guestName, setGuestName] = useState('');
   const [checkInDate, setCheckInDate] = useState(defaultCheckInDate);
@@ -48,21 +60,47 @@ export function ReceptionCheckInPanel({
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [expandedStayId, setExpandedStayId] = useState<string | null>(null);
   const [stayPins, setStayPins] = useState<Record<string, string>>({});
+  const [pendingRevokeStayId, setPendingRevokeStayId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const accessPeriod = useMemo(
+    () => resolveGuestAccessPeriod(checkInDate, checkOutDate, checkInTime),
+    [checkInDate, checkOutDate, checkInTime]
+  );
 
   const inventory = useMemo(() => resolveBedInventory(settings ?? {}, stays), [settings, stays]);
 
-  const occupiedBedIds = useMemo(
-    () => new Set(inventory.beds.filter((entry) => entry.status === 'occupied').map((entry) => entry.bedId)),
-    [inventory.beds]
+  const overlappingBedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const bedId of bedOptions) {
+      const overlaps = stays.some((stay) =>
+        stayOverlapsBedNightRange(stay, bedId, accessPeriod.checkInAt, accessPeriod.checkOutAt)
+      );
+      if (overlaps) ids.add(bedId);
+    }
+    return ids;
+  }, [accessPeriod.checkInAt, accessPeriod.checkOutAt, bedOptions, stays]);
+
+  const bedsByRoom = useMemo(() => {
+    return inventory.roomGroups
+      .map((group) => ({
+        ...group,
+        beds: group.beds.filter((entry) => !overlappingBedIds.has(entry.bedId)),
+      }))
+      .filter((group) => group.beds.length > 0);
+  }, [inventory.roomGroups, overlappingBedIds]);
+
+  const availableBedIds = useMemo(
+    () => bedOptions.filter((id) => !overlappingBedIds.has(id)),
+    [bedOptions, overlappingBedIds]
   );
 
-  const availableBeds = useMemo(
-    () => inventory.beds.filter((entry) => entry.status === 'free').map((entry) => entry.bedId),
-    [inventory.beds]
-  );
+  const [bedId, setBedId] = useState(() => pickDefaultBedId(bedOptions, overlappingBedIds));
 
-  const [bedId, setBedId] = useState(() => pickDefaultBedId(bedOptions, occupiedBedIds));
+  useEffect(() => {
+    if (bedId && !overlappingBedIds.has(bedId)) return;
+    setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
+  }, [bedId, bedOptions, overlappingBedIds]);
 
   const refreshStays = useCallback(async () => {
     const updated = await listActiveGuestStaysAction(tenantSlug);
@@ -70,12 +108,30 @@ export function ReceptionCheckInPanel({
     return updated;
   }, [tenantSlug]);
 
+  const sortedStays = useMemo(() => {
+    const now = new Date();
+    const statusOrder = { in_app: 0, valid_unused: 1, scheduled: 2, ended: 3, revoked: 4 };
+
+    return [...stays].sort((a, b) => {
+      const aStatus = resolveGuestAccessStatus(a, now);
+      const bStatus = resolveGuestAccessStatus(b, now);
+      const aArriving = aStatus === 'valid_unused' && isArrivingToday(a.check_in_at, now);
+      const bArriving = bStatus === 'valid_unused' && isArrivingToday(b.check_in_at, now);
+
+      if (aArriving !== bArriving) return aArriving ? -1 : 1;
+      if (statusOrder[aStatus] !== statusOrder[bStatus]) {
+        return statusOrder[aStatus] - statusOrder[bStatus];
+      }
+      return new Date(a.check_in_at).getTime() - new Date(b.check_in_at).getTime();
+    });
+  }, [stays]);
+
   const createErrorMessage = (code: string): string => {
     switch (code) {
       case 'unauthorized':
         return 'Session expired — sign in again at reception desk.';
-      case 'bed_occupied':
-        return 'This bed already has an active stay.';
+      case 'access_overlap':
+        return 'Another guest access overlaps these dates on this bed.';
       case 'bed_not_found':
         return 'Bed not found in room map configuration.';
       case 'tenant_not_found':
@@ -109,14 +165,8 @@ export function ReceptionCheckInPanel({
 
         if (!result.ok) {
           setError(createErrorMessage(result.error));
-          if (result.error === 'bed_occupied') {
-            const updated = await refreshStays();
-            const nextOccupied = new Set(
-              resolveBedInventory(settings ?? {}, updated)
-                .beds.filter((entry) => entry.status === 'occupied')
-                .map((entry) => entry.bedId)
-            );
-            setBedId(pickDefaultBedId(bedOptions, nextOccupied));
+          if (result.error === 'access_overlap') {
+            await refreshStays();
           }
           return;
         }
@@ -131,7 +181,7 @@ export function ReceptionCheckInPanel({
         setStayPins((current) => ({ ...current, [result.stay.id]: result.guestPin }));
         setGuestName('');
 
-        const nextAvailable = availableBeds.filter((id) => id !== bedId);
+        const nextAvailable = availableBedIds.filter((id) => id !== bedId);
         setBedId(nextAvailable[0] ?? '');
       } catch {
         setError('Something went wrong. Try again or check the server logs.');
@@ -158,12 +208,8 @@ export function ReceptionCheckInPanel({
       if (expandedStayId === stayId) {
         setExpandedStayId(null);
       }
+      setPendingRevokeStayId(null);
     });
-  };
-
-  const handleSelectFreeBed = (nextBedId: string) => {
-    setBedId(nextBedId);
-    setError(null);
   };
 
   const handleViewOccupiedStay = (stayId: string) => {
@@ -174,28 +220,34 @@ export function ReceptionCheckInPanel({
   if (bedOptions.length === 0) {
     return (
       <p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
-        Configure beds in Guest app modules before issuing check-in links.
+        Configure beds in Guest app modules before issuing guest access.
       </p>
     );
   }
 
   return (
     <div className="space-y-6">
+      <RevokeAccessDialog
+        open={pendingRevokeStayId !== null}
+        isPending={isPending}
+        onKeep={() => setPendingRevokeStayId(null)}
+        onConfirm={() => {
+          if (pendingRevokeStayId) {
+            handleRevoke(pendingRevokeStayId);
+          }
+        }}
+      />
+
       <div className="rounded-xl border bg-card p-4">
-        <BedInventoryGrid
-          beds={inventory.beds}
-          selectedBedId={bedId}
-          onSelectFreeBed={handleSelectFreeBed}
-          onViewOccupiedStay={handleViewOccupiedStay}
-        />
+        <BedInventoryGrid roomGroups={inventory.roomGroups} onViewOccupiedStay={handleViewOccupiedStay} />
       </div>
 
       {inventory.orphanStays.length > 0 ? (
         <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <p className="font-medium">Stays on unknown beds</p>
+          <p className="font-medium">Access on unknown beds</p>
           <p className="text-xs">
-            These active stays reference bed IDs missing from the room map. Fix the map in admin or revoke
-            and re-issue access.
+            These issued access records reference bed IDs missing from the room map. Fix the map in
+            admin or revoke access and issue again.
           </p>
           <ul className="space-y-1 text-xs">
             {inventory.orphanStays.map((stay) => (
@@ -212,7 +264,8 @@ export function ReceptionCheckInPanel({
         <div>
           <h3 className="text-sm font-semibold">Issue guest access</h3>
           <p className="text-xs text-muted-foreground">
-            Assign a bed and generate a QR link plus a 6-digit PIN for a paper slip.
+            Creates app access for the guest: QR link and 6-digit PIN. Does not replace your booking
+            system.
           </p>
         </div>
 
@@ -229,7 +282,7 @@ export function ReceptionCheckInPanel({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="check-in-date">Check-in date</Label>
+            <Label htmlFor="check-in-date">Valid from</Label>
             <Input
               id="check-in-date"
               type="date"
@@ -239,7 +292,7 @@ export function ReceptionCheckInPanel({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="check-out-date">Check-out date</Label>
+            <Label htmlFor="check-out-date">Valid until</Label>
             <Input
               id="check-out-date"
               type="date"
@@ -256,13 +309,17 @@ export function ReceptionCheckInPanel({
               onChange={(event) => setBedId(event.target.value)}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             >
-              {availableBeds.length === 0 ? (
-                <option value="">No free beds</option>
+              {bedsByRoom.length === 0 ? (
+                <option value="">No beds for these dates</option>
               ) : (
-                availableBeds.map((id) => (
-                  <option key={id} value={id}>
-                    {id}
-                  </option>
+                bedsByRoom.map((group) => (
+                  <optgroup key={group.roomId} label={group.roomLabel}>
+                    {group.beds.map((entry) => (
+                      <option key={entry.bedId} value={entry.bedId}>
+                        {entry.displayLabel} ({entry.bedId})
+                      </option>
+                    ))}
+                  </optgroup>
                 ))
               )}
             </select>
@@ -271,80 +328,84 @@ export function ReceptionCheckInPanel({
 
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
-        <Button type="button" onClick={handleCreate} disabled={isPending || availableBeds.length === 0}>
-          {isPending ? 'Generating…' : 'Generate QR, link & PIN'}
+        <Button type="button" onClick={handleCreate} disabled={isPending || availableBedIds.length === 0}>
+          {isPending ? 'Issuing…' : 'Issue access'}
         </Button>
       </div>
 
-      {stays.length > 0 ? (
+      {sortedStays.length > 0 ? (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold">Active stays</h3>
+          <h3 className="text-sm font-semibold">Issued access</h3>
           {revokeError ? (
             <p className="text-xs text-destructive">
               {revokeError === 'not_found'
-                ? 'Stay not found or already revoked.'
-                : 'Could not revoke stay. Check database connection.'}
+                ? 'Access not found or already revoked.'
+                : 'Could not revoke access. Check database connection.'}
             </p>
           ) : null}
           <ul className="space-y-3">
-            {stays.map((stay) => (
-              <li
-                key={stay.id}
-                id={`stay-${stay.id}`}
-                className="space-y-3 rounded-lg border bg-background p-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium">
-                      {stay.guest_name ? `${stay.guest_name} · ` : ''}
-                      {stay.bed_id}
-                    </p>
+            {sortedStays.map((stay) => {
+              const status = resolveGuestAccessStatus(stay);
+              return (
+                <li
+                  key={stay.id}
+                  id={`stay-${stay.id}`}
+                  className="space-y-3 rounded-lg border bg-background p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">
+                        {stay.guest_name ? `${stay.guest_name} · ` : ''}
+                        {stay.bed_id}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(stay.check_in_at).toLocaleDateString()} →{' '}
+                        {new Date(stay.check_out_at).toLocaleDateString()}
+                        {' · '}
+                        {guestAccessStatusLabel(status)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={!stay.magicLinkUrl}
+                        onClick={() =>
+                          setExpandedStayId((current) => (current === stay.id ? null : stay.id))
+                        }
+                      >
+                        {expandedStayId === stay.id ? 'Hide link' : 'Show link'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isPending}
+                        onClick={() => setPendingRevokeStayId(stay.id)}
+                      >
+                        Revoke access
+                      </Button>
+                    </div>
+                  </div>
+
+                  {!stay.magicLinkUrl ? (
                     <p className="text-xs text-muted-foreground">
-                      {new Date(stay.check_in_at).toLocaleDateString()} →{' '}
-                      {new Date(stay.check_out_at).toLocaleDateString()}
-                      {stay.activated_at ? ' · activated' : ' · pending scan'}
+                      Link unavailable — revoke access and issue again.
                     </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={!stay.magicLinkUrl}
-                      onClick={() =>
-                        setExpandedStayId((current) => (current === stay.id ? null : stay.id))
-                      }
-                    >
-                      {expandedStayId === stay.id ? 'Hide link' : 'Show link'}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={isPending}
-                      onClick={() => handleRevoke(stay.id)}
-                    >
-                      Revoke
-                    </Button>
-                  </div>
-                </div>
+                  ) : null}
 
-                {!stay.magicLinkUrl ? (
-                  <p className="text-xs text-muted-foreground">
-                    Link unavailable for this stay — revoke and issue a new one.
-                  </p>
-                ) : null}
-
-                {expandedStayId === stay.id && stay.magicLinkUrl ? (
-                  <MagicLinkCard
-                    magicLinkUrl={stay.magicLinkUrl}
-                    bedId={stay.bed_id}
-                    guestName={stay.guest_name ?? undefined}
-                    guestPin={stayPins[stay.id]}
-                  />
-                ) : null}
-              </li>
-            ))}
+                  {expandedStayId === stay.id && stay.magicLinkUrl ? (
+                    <MagicLinkCard
+                      magicLinkUrl={stay.magicLinkUrl}
+                      bedId={stay.bed_id}
+                      guestName={stay.guest_name ?? undefined}
+                      guestPin={stayPins[stay.id]}
+                    />
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

@@ -1,81 +1,84 @@
 'use client';
 
-import type { BedInventoryEntry } from '../lib/resolveBedInventory';
+import type { BedInventoryRoomGroup } from '../lib/resolveBedInventory';
 import { Badge } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 
 interface BedInventoryGridProps {
-  beds: BedInventoryEntry[];
-  selectedBedId?: string;
-  onSelectFreeBed: (bedId: string) => void;
+  roomGroups: BedInventoryRoomGroup[];
   onViewOccupiedStay: (stayId: string) => void;
 }
 
-export function BedInventoryGrid({
-  beds,
-  selectedBedId,
-  onSelectFreeBed,
-  onViewOccupiedStay,
-}: BedInventoryGridProps) {
-  if (beds.length === 0) {
+function formatAccessFrom(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+export function BedInventoryGrid({ roomGroups, onViewOccupiedStay }: BedInventoryGridProps) {
+  const allBeds = roomGroups.flatMap((group) => group.beds);
+  if (allBeds.length === 0) {
     return null;
   }
 
-  const freeCount = beds.filter((entry) => entry.status === 'free').length;
-  const occupiedCount = beds.length - freeCount;
+  const freeCount = allBeds.filter((entry) => entry.status === 'free').length;
+  const occupiedCount = allBeds.length - freeCount;
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold">Bed inventory</h3>
-          <p className="text-xs text-muted-foreground">
-            {freeCount} free · {occupiedCount} occupied
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold">Bed inventory</h3>
+        <p className="text-xs text-muted-foreground">
+          Who is in the hostel now. Future access does not block a bed until valid from. {freeCount}{' '}
+          free · {occupiedCount} in use
+        </p>
       </div>
 
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {beds.map((entry) => {
-          const isSelected = entry.bedId === selectedBedId;
-          const isFree = entry.status === 'free';
+      {roomGroups.map((group) => (
+        <section key={group.roomId} className="space-y-2">
+          <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {group.roomLabel}
+          </h4>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {group.beds.map((entry) => {
+              const isFree = entry.status === 'free';
 
-          return (
-            <li key={entry.bedId}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (isFree) {
-                    onSelectFreeBed(entry.bedId);
-                    return;
-                  }
-                  if (entry.stay) {
-                    onViewOccupiedStay(entry.stay.id);
-                  }
-                }}
-                className={cn(
-                  'flex w-full flex-col items-start gap-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors',
-                  isFree && 'hover:border-primary/40 hover:bg-muted/40',
-                  isSelected && 'border-primary bg-primary/5',
-                  !isFree && 'cursor-pointer hover:bg-muted/30'
-                )}
-              >
-                <span className="font-medium">{entry.bedId}</span>
-                {isFree ? (
-                  <Badge variant="outline">Free</Badge>
-                ) : (
-                  <>
-                    <Badge variant="secondary">Occupied</Badge>
-                    {entry.stay?.guest_name ? (
-                      <span className="truncate text-xs text-muted-foreground">{entry.stay.guest_name}</span>
-                    ) : null}
-                  </>
-                )}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+              return (
+                <li key={entry.bedId}>
+                  {isFree ? (
+                    <div className="flex w-full flex-col items-start gap-1 rounded-lg border bg-muted/10 px-3 py-2 text-sm">
+                      <span className="font-medium">{entry.displayLabel}</span>
+                      <Badge variant="outline">Free</Badge>
+                      {entry.nextAccess ? (
+                        <span className="text-xs text-muted-foreground">
+                          Access from {formatAccessFrom(entry.nextAccess.check_in_at)}
+                        </span>
+                      ) : (
+                        <span className="truncate text-xs text-muted-foreground">{entry.bedId}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => entry.stay && onViewOccupiedStay(entry.stay.id)}
+                      className={cn(
+                        'flex w-full flex-col items-start gap-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                        'cursor-pointer hover:bg-muted/30'
+                      )}
+                    >
+                      <span className="font-medium">{entry.displayLabel}</span>
+                      <Badge variant="secondary">In use</Badge>
+                      {entry.stay?.guest_name ? (
+                        <span className="truncate text-xs text-muted-foreground">{entry.stay.guest_name}</span>
+                      ) : (
+                        <span className="truncate text-xs text-muted-foreground">{entry.bedId}</span>
+                      )}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
