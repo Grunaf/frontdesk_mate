@@ -110,7 +110,7 @@ describe('resolveBedInventory', () => {
     const snapshot = resolveBedInventory(
       {
         guestStay: {
-          beds: [{ id: 'solo-bed' }],
+          beds: [{ id: 'solo-bed', roomId: '' }],
         },
       },
       [],
