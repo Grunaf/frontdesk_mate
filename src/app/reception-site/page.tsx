@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 import { notFound } from 'next/navigation';
-import { getTenantConfig, resolveTenantSlug } from '@/entities/tenant/server';
+import { getTenantRecord, resolveTenantSlug } from '@/entities/tenant/server';
 import { isReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
-import { logoutReceptionAction } from '@/app/reception/actions';
 import { listActiveGuestStays } from '@/entities/guest-stay/server';
 import { ReceptionCheckInPanel } from '@/features/guest-registration';
 
@@ -24,7 +23,7 @@ export default async function ReceptionDeskPage() {
     redirect('/login');
   }
 
-  const tenant = await getTenantConfig();
+  const tenant = await getTenantRecord(tenantSlug);
   if (!tenant) {
     notFound();
   }
@@ -38,7 +37,7 @@ export default async function ReceptionDeskPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Guest check-in</p>
           <h1 className="text-xl font-semibold">{tenant.name}</h1>
         </div>
-        <form action={logoutReceptionAction}>
+        <form method="POST" action="/api/reception/logout">
           <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
             Sign out
           </button>

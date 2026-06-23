@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
-import { getTenantConfig, resolveTenantSlug } from '@/entities/tenant/server';
+import { getTenantRecord, resolveTenantSlug } from '@/entities/tenant/server';
 import { isReceptionAuthenticated, isReceptionSessionSecretConfigured } from '@/app/reception/lib/receptionSession';
 import { isDeskPinConfigured } from '@/app/reception/lib/deskPin';
-import { loginReceptionAction } from '@/app/reception/actions';
 
 interface ReceptionLoginPageProps {
   searchParams: Promise<{ error?: string }>;
@@ -28,9 +27,10 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
     redirect('/');
   }
 
-  const tenant = await getTenantConfig();
+  const tenant = await getTenantRecord(tenantSlug);
   const pinConfigured = isDeskPinConfigured(tenant?.settings.reception?.deskPinHash);
   const secretConfigured = isReceptionSessionSecretConfigured();
+  const formDisabled = !secretConfigured || !pinConfigured;
 
   return (
     <div className="mx-auto max-w-sm space-y-6 pt-8">
@@ -64,7 +64,17 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
         </p>
       )}
 
-      <form action={loginReceptionAction} className="space-y-4 rounded-xl border bg-background p-6">
+      {error === 'no_tenant' && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          Hostel not found for this reception URL.
+        </p>
+      )}
+
+      <form
+        method="POST"
+        action="/api/reception/login"
+        className="space-y-4 rounded-xl border bg-background p-6"
+      >
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Desk PIN</span>
           <input
@@ -73,13 +83,13 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
             inputMode="numeric"
             autoComplete="one-time-code"
             required
-            disabled={!secretConfigured || !pinConfigured}
+            disabled={formDisabled}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
           />
         </label>
         <button
           type="submit"
-          disabled={!secretConfigured || !pinConfigured}
+          disabled={formDisabled}
           className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
           Sign in

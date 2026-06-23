@@ -4,6 +4,9 @@ import { cookies } from 'next/headers';
 const COOKIE_NAME = 'fdm_reception_session';
 const SESSION_MAX_AGE_SEC = 60 * 60 * 12;
 
+export const RECEPTION_SESSION_COOKIE_NAME = COOKIE_NAME;
+export const RECEPTION_SESSION_MAX_AGE_SEC = SESSION_MAX_AGE_SEC;
+
 export interface ReceptionSessionPayload {
   tenantSlug: string;
   exp: number;
@@ -71,18 +74,31 @@ export async function readReceptionSessionFromCookies(): Promise<ReceptionSessio
   return parseSignedValue(cookieStore.get(COOKIE_NAME)?.value);
 }
 
-export async function setReceptionSession(tenantSlug: string): Promise<void> {
-  const cookieStore = await cookies();
-  const exp = Date.now() + SESSION_MAX_AGE_SEC * 1000;
-  const payload: ReceptionSessionPayload = { tenantSlug, exp };
-
-  cookieStore.set(COOKIE_NAME, signPayload(payload), {
+export function getReceptionSessionCookieOptions(): {
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'lax';
+  path: string;
+  maxAge: number;
+} {
+  return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: SESSION_MAX_AGE_SEC,
-  });
+  };
+}
+
+export function buildReceptionSessionCookieValue(tenantSlug: string): string {
+  const exp = Date.now() + SESSION_MAX_AGE_SEC * 1000;
+  return signPayload({ tenantSlug, exp });
+}
+
+export async function setReceptionSession(tenantSlug: string): Promise<void> {
+  const cookieStore = await cookies();
+
+  cookieStore.set(COOKIE_NAME, buildReceptionSessionCookieValue(tenantSlug), getReceptionSessionCookieOptions());
 }
 
 export async function clearReceptionSession(): Promise<void> {

@@ -1,10 +1,16 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
-import { createGuestStayAction, revokeGuestStayAction } from '../actions/receptionActions';
+import {
+  createGuestStayAction,
+  listActiveGuestStaysAction,
+  revokeGuestStayAction,
+} from '../actions/receptionActions';
+import { resolveBedInventory } from '../lib/resolveBedInventory';
+import { BedInventoryGrid } from './BedInventoryGrid';
 import { MagicLinkCard } from './MagicLinkCard';
 import { Button, Input, Label } from '@/shared/ui';
 
@@ -24,6 +30,10 @@ function defaultCheckOutDate(): string {
   return date.toISOString().slice(0, 10);
 }
 
+function pickDefaultBedId(bedOptions: string[], occupiedBedIds: Set<string>): string {
+  return bedOptions.find((id) => !occupiedBedIds.has(id)) ?? bedOptions[0] ?? '';
+}
+
 export function ReceptionCheckInPanel({
   tenantSlug,
   settings,
@@ -31,7 +41,6 @@ export function ReceptionCheckInPanel({
 }: ReceptionCheckInPanelProps) {
   const bedOptions = useMemo(() => listGuestStayBedIds(settings ?? {}), [settings]);
   const [stays, setStays] = useState(initialStays);
-  const [bedId, setBedId] = useState(bedOptions[0] ?? '');
   const [guestName, setGuestName] = useState('');
   const [checkInDate, setCheckInDate] = useState(defaultCheckInDate);
   const [checkOutDate, setCheckOutDate] = useState(defaultCheckOutDate);
@@ -41,12 +50,25 @@ export function ReceptionCheckInPanel({
   const [stayPins, setStayPins] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
 
+  const inventory = useMemo(() => resolveBedInventory(settings ?? {}, stays), [settings, stays]);
+
   const occupiedBedIds = useMemo(
-    () => new Set(stays.filter((stay) => !stay.revoked_at).map((stay) => stay.bed_id)),
-    [stays]
+    () => new Set(inventory.beds.filter((entry) => entry.status === 'occupied').map((entry) => entry.bedId)),
+    [inventory.beds]
   );
 
-  const availableBeds = bedOptions.filter((id) => !occupiedBedIds.has(id));
+  const availableBeds = useMemo(
+    () => inventory.beds.filter((entry) => entry.status === 'free').map((entry) => entry.bedId),
+    [inventory.beds]
+  );
+
+  const [bedId, setBedId] = useState(() => pickDefaultBedId(bedOptions, occupiedBedIds));
+
+  const refreshStays = useCallback(async () => {
+    const updated = await listActiveGuestStaysAction(tenantSlug);
+    setStays(updated);
+    return updated;
+  }, [tenantSlug]);
 
   const createErrorMessage = (code: string): string => {
     switch (code) {
@@ -87,6 +109,15 @@ export function ReceptionCheckInPanel({
 
         if (!result.ok) {
           setError(createErrorMessage(result.error));
+          if (result.error === 'bed_occupied') {
+            const updated = await refreshStays();
+            const nextOccupied = new Set(
+              resolveBedInventory(settings ?? {}, updated)
+                .beds.filter((entry) => entry.status === 'occupied')
+                .map((entry) => entry.bedId)
+            );
+            setBedId(pickDefaultBedId(bedOptions, nextOccupied));
+          }
           return;
         }
 
@@ -100,10 +131,8 @@ export function ReceptionCheckInPanel({
         setStayPins((current) => ({ ...current, [result.stay.id]: result.guestPin }));
         setGuestName('');
 
-        if (availableBeds.length > 1) {
-          const nextBed = availableBeds.find((id) => id !== bedId) ?? '';
-          setBedId(nextBed);
-        }
+        const nextAvailable = availableBeds.filter((id) => id !== bedId);
+        setBedId(nextAvailable[0] ?? '');
       } catch {
         setError('Something went wrong. Try again or check the server logs.');
       }
@@ -132,6 +161,16 @@ export function ReceptionCheckInPanel({
     });
   };
 
+  const handleSelectFreeBed = (nextBedId: string) => {
+    setBedId(nextBedId);
+    setError(null);
+  };
+
+  const handleViewOccupiedStay = (stayId: string) => {
+    setExpandedStayId(stayId);
+    document.getElementById(`stay-${stayId}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
   if (bedOptions.length === 0) {
     return (
       <p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
@@ -142,6 +181,33 @@ export function ReceptionCheckInPanel({
 
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border bg-card p-4">
+        <BedInventoryGrid
+          beds={inventory.beds}
+          selectedBedId={bedId}
+          onSelectFreeBed={handleSelectFreeBed}
+          onViewOccupiedStay={handleViewOccupiedStay}
+        />
+      </div>
+
+      {inventory.orphanStays.length > 0 ? (
+        <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-medium">Stays on unknown beds</p>
+          <p className="text-xs">
+            These active stays reference bed IDs missing from the room map. Fix the map in admin or revoke
+            and re-issue access.
+          </p>
+          <ul className="space-y-1 text-xs">
+            {inventory.orphanStays.map((stay) => (
+              <li key={stay.id}>
+                {stay.guest_name ? `${stay.guest_name} · ` : ''}
+                {stay.bed_id}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="space-y-4 rounded-xl border bg-card p-4">
         <div>
           <h3 className="text-sm font-semibold">Issue guest access</h3>
@@ -222,7 +288,11 @@ export function ReceptionCheckInPanel({
           ) : null}
           <ul className="space-y-3">
             {stays.map((stay) => (
-              <li key={stay.id} className="space-y-3 rounded-lg border bg-background p-3">
+              <li
+                key={stay.id}
+                id={`stay-${stay.id}`}
+                className="space-y-3 rounded-lg border bg-background p-3"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium">
