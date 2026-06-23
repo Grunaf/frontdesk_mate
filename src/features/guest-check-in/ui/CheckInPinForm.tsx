@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { activateGuestStayByPinAction } from '../actions/activateGuestStayByPin';
-import { parseGuestEntryParam, resolveGuestWelcomePath } from '../lib/resolveGuestWelcomePath';
+import { parseGuestEntryParam } from '../lib/resolveGuestWelcomePath';
+import { readGuestIntent } from '../lib/guestIntent';
+import { resolvePostCheckInPath } from '../lib/resolveGuestLanding';
 import {
   normalizePinActivationError,
   shouldQueuePinActivationError,
@@ -36,6 +38,7 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
   const { currentTenantSlug, isRegistered } = useGuestSession();
   const entry = parseGuestEntryParam(searchParams.get('entry'));
   const modeOnsite = searchParams.get('mode') === 'onsite';
+  const storedIntent = currentTenantSlug ? readGuestIntent(currentTenantSlug) : null;
   const [pin, setPin] = useState('');
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isQueued, setIsQueued] = useState(false);
@@ -47,9 +50,11 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
       clearPendingGuestPinActivation();
       writeGuestRegistrationIndex(registration);
       router.refresh();
-      router.replace(resolveGuestWelcomePath({ locale, entry, modeOnsite }));
+      router.replace(
+        resolvePostCheckInPath({ locale, urlEntry: entry, modeOnsite, storedIntent })
+      );
     },
-    [entry, locale, modeOnsite, router]
+    [entry, locale, modeOnsite, router, storedIntent]
   );
 
   const activatePin = useCallback(
