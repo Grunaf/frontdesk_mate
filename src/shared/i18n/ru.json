@@ -511,6 +511,18 @@
         "title": "Before Your Trip",
         "description": "Important information to prepare for your arrival and check-in process.",
         "actionButton": "View Directions",
+        "sections": {
+          "beforeTravel": {
+            "heading": "Перед поездкой"
+          },
+          "onArrival": {
+            "heading": "По приезде"
+          }
+        },
+        "checkInReady": {
+          "title": "Ссылка или PIN для check-in",
+          "description": "Ресепшен высылает персональную ссылку, QR или 6-значный PIN после назначения кровати. Держите их на этом телефоне для кодов дверей и concierge."
+        },
         "luggage": {
           "title": "Luggage Storage",
           "description": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
@@ -576,8 +588,20 @@
         }
       },
       "settlement": {
-        "title": "Welcome Inside!",
-        "description": "You have checked in automatically. Please visit the reception in the morning from 08:00 to complete your payment and provide your passport for mandatory tourist registration.",
+        "copy": {
+          "planning": {
+            "title": "Когда вы внутри",
+            "description": "После входа подключитесь к Wi-Fi ниже и прочитайте правила. Зайдите на ресепшен в часы работы, чтобы оплатить и зарегистрировать паспорт."
+          },
+          "atDoor": {
+            "title": "Вы внутри!",
+            "description": "Используйте коды дверей во вкладке «Двери и коды». Утром зайдите на ресепшен для оплаты и регистрации паспорта."
+          },
+          "atDesk": {
+            "title": "Добро пожаловать на ресепшен",
+            "description": "Завершите оплату и предъявите паспорт для обязательной туристической регистрации. Wi-Fi и правила ниже."
+          }
+        },
         "actionButton": "Explore Your Stay"
       }
     },
