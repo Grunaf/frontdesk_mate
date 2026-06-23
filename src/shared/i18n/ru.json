@@ -949,6 +949,47 @@
       "receptionStripHint": "Вопросы о проживании, прачке или выезде",
       "whatsappMessage": "Здравствуйте, вопрос по проживанию в {hostelName}"
     },
+    "guestIssue": {
+      "cardTitle": "Что-то не работает?",
+      "cardDescription": "Душ, дверь, кровать, Wi‑Fi… Ресепшен увидит на экране.",
+      "cardButton": "Сообщить о поломке",
+      "sheetTitle": "Сообщить о поломке",
+      "sheetDescription": "Расскажите, что нужно починить в вашей комнате.",
+      "sendPreviewHeading": "Отправим",
+      "stayRefLabel": "Ref",
+      "privacyNotice": "Видит только ресепшен. Чтобы починить в вашей комнате — никому больше не показываем.",
+      "categoryLabel": "Что случилось?",
+      "noteLabel": "Подробности",
+      "notePlaceholder": "Необязательно — например, нет горячей воды",
+      "noteOptional": "Необязательно",
+      "submitButton": "Отправить",
+      "submitting": "Отправка…",
+      "successTitle": "Отправлено ресепшену",
+      "successBody": "Сообщение отправлено. Ref #{stayRef} включён.",
+      "successUrgent": "Если срочно — напишите ресепшену в WhatsApp.",
+      "successWhatsappButton": "Написать ресепшену",
+      "successWhatsappMessage": "Здравствуйте, сообщил о поломке в комнате в {hostelName}. Можете помочь?",
+      "successClose": "Готово",
+      "myStayPrompt": "Что-то сломалось в комнате?",
+      "myStayLink": "Сообщить о поломке",
+      "categories": {
+        "shower": "Душ",
+        "toilet": "Туалет",
+        "door_lock": "Дверь",
+        "bed": "Кровать",
+        "wifi": "Wi‑Fi",
+        "other": "Другое"
+      },
+      "errors": {
+        "categoryRequired": "Выберите категорию.",
+        "unauthorized": "Войдите снова, чтобы отправить сообщение.",
+        "tooManyOpen": "У вас уже есть открытые сообщения. Если срочно — на стойке.",
+        "noteTooLong": "Слишком длинный текст.",
+        "invalidCategory": "Выберите категорию из списка.",
+        "dbUnavailable": "Сейчас не отправилось. Попробуйте снова или напишите ресепшену.",
+        "generic": "Что-то пошло не так. Попробуйте снова."
+      }
+    },
     "featureGate": {
       "previewBadge": "Превью"
     }

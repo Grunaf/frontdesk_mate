@@ -61,7 +61,8 @@ http://{slug}.app.localhost:3000/en/check-in?t=TOKEN&mode=onsite     # legacy �
 | Admin + city packs | `e2e/smoke/admin.spec.ts`, `city-packs.spec.ts` | — |
 | Guest PIN → welcome route | `e2e/smoke/guest-journey.spec.ts` | Intent screen handled in helper if shown |
 | Guest concierge stay chip + strip | `e2e/smoke/guest-concierge.spec.ts` | My stay sheet, ref, strip hide on sheet |
-| Reception desk | `e2e/smoke/reception-desk.spec.ts` | **Skipped** unless `E2E_RECEPTION_DESK_PIN` is set; includes ref search |
+| Guest issue report | `e2e/smoke/guest-issue.spec.ts` | Card, privacy notice, send, My stay link, desk Issues |
+| Reception desk | `e2e/smoke/reception-desk.spec.ts` | **Skipped** unless `E2E_RECEPTION_DESK_PIN` is set; includes ref search + Issues tab |
 
 Everything below is **manual**.
 
@@ -161,6 +162,19 @@ After check-in on Concierge (not on Arrival guide).
 | S6 | Tap **copy icon** in For reception header | Clipboard has hostel, bed line, dates, Ref; icon briefly shows check | ☐ | ☐ | |
 | S7 | My stay or rules sheet open on Concierge | Reception strip **hidden** until sheet closes | ☐ | ☐ | |
 
+### Issues (report a problem)
+
+After check-in on Concierge.
+
+| # | Steps | Expected | Pass | Fail | Notes |
+|---|-------|----------|------|------|-------|
+| I1 | Concierge → **Report issue** card | Sheet opens; **privacy notice** visible; bed + Ref preview (no name emphasis) | ☐ | ☐ | |
+| I2 | Choose category + optional note → **Send report** | Success screen with Ref; optional WA link | ☐ | ☐ | |
+| I3 | My stay sheet → **Report issue** link | Same form as I1 | ☐ | ☐ | |
+| I4 | Reception desk → **Issues** tab | New report with category, bed, ref; guest name secondary | ☐ | ☐ | Needs `E2E_RECEPTION_DESK_PIN` |
+| I5 | **Mark done** on desk | Row leaves Open filter | ☐ | ☐ | |
+| I6 | Arrival guide Settlement / Access tabs | **No** Report card or link | ☐ | ☐ | |
+
 ---
 
 ## 6. P1 — locale & polish (not release blockers)
@@ -206,3 +220,4 @@ Do not expand this pass into:
 | [`docs/tz/guest-stay-header-chip-v1.md`](../tz/guest-stay-header-chip-v1.md) | Stay chip in header spec |
 | [`docs/tz/guest-stay-sheet-and-concierge-contact-v1.md`](../tz/guest-stay-sheet-and-concierge-contact-v1.md) | My stay sheet + Concierge contact |
 | [`docs/tz/guest-stay-reception-reference-v1.md`](../tz/guest-stay-reception-reference-v1.md) | Reception ref block in My stay |
+| [`docs/tz/guest-issues-v1.md`](../tz/guest-issues-v1.md) | Guest issue report + desk Issues tab |

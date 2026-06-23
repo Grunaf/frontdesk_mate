@@ -15,6 +15,7 @@ test.describe('reception desk smoke', () => {
     await expect(page.getByRole('tab', { name: 'Now' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Plan' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Access' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Issues' })).toBeVisible();
   });
 
   test('issues tonight access and shows PIN once', async ({ page }) => {

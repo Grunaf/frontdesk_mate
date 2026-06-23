@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import type { GuestIssueRecord } from '@/entities/guest-issue';
 import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
@@ -29,6 +30,7 @@ import { BedAccessCalendar } from './BedAccessCalendar';
 import { BedInventoryGrid } from './BedInventoryGrid';
 import { IssueGuestAccessForm } from './IssueGuestAccessForm';
 import { IssuedAccessList } from './IssuedAccessList';
+import { IssuesList } from './IssuesList';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
@@ -38,6 +40,7 @@ interface ReceptionCheckInPanelProps {
   tenantName: string;
   settings?: TenantSettings;
   initialStays: GuestStayRecordWithLink[];
+  initialOpenIssues: GuestIssueRecord[];
 }
 
 interface ReissueDraft {
@@ -48,7 +51,7 @@ interface ReissueDraft {
   checkOutDate: string;
 }
 
-type DeskTab = 'now' | 'plan' | 'access';
+type DeskTab = 'now' | 'plan' | 'access' | 'issues';
 
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
@@ -63,6 +66,7 @@ export function ReceptionCheckInPanel({
   tenantName,
   settings,
   initialStays,
+  initialOpenIssues,
 }: ReceptionCheckInPanelProps) {
   const bedOptions = useMemo(() => listGuestStayBedIds(settings ?? {}), [settings]);
   const checkInTime = settings?.checkInTime ?? '14:00';
@@ -71,6 +75,7 @@ export function ReceptionCheckInPanel({
 
   const [stays, setStays] = useState(initialStays);
   const [deskTab, setDeskTab] = useState<DeskTab>('now');
+  const [openIssueCount, setOpenIssueCount] = useState(initialOpenIssues.length);
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
   const [checkInDate, setCheckInDate] = useState(walkInDefaults.checkInDate);
@@ -415,6 +420,9 @@ export function ReceptionCheckInPanel({
               <TabsTrigger value="now">Now</TabsTrigger>
               <TabsTrigger value="plan">Plan</TabsTrigger>
               <TabsTrigger value="access">Access</TabsTrigger>
+              <TabsTrigger value="issues">
+                Issues{openIssueCount > 0 ? ` (${openIssueCount})` : ''}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="now" className="space-y-3">
@@ -456,6 +464,16 @@ export function ReceptionCheckInPanel({
                 stayPins={stayPins}
                 isPending={isPending}
                 revokeError={revokeError}
+              />
+            </TabsContent>
+
+            <TabsContent value="issues">
+              <IssuesList
+                tenantSlug={tenantSlug}
+                initialIssues={initialOpenIssues}
+                onFocusStay={focusStay}
+                isActive={deskTab === 'issues'}
+                onOpenCountChange={setOpenIssueCount}
               />
             </TabsContent>
           </Tabs>
