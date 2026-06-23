@@ -16,7 +16,7 @@ npm run smoke
 
 ## Manual pass (after `npm run smoke` is green)
 
-Automated smoke covers admin login, city packs, guest PIN, arrival routes, Local Guide essentials, guest concierge (stay chip, ref, strip), guest issue report, and reception desk + ref search (when `E2E_RECEPTION_DESK_PIN` is set).
+Automated smoke covers admin login, city packs, guest PIN, arrival routes, Local Guide essentials, guest concierge (stay chip, ref, strip), guest issue report, guest services (laundry card), and reception desk + ref search (when `E2E_RECEPTION_DESK_PIN` is set).
 
 **Guest flow (full manual pass):** [docs/qa/guest-flow-pass.md](docs/qa/guest-flow-pass.md) — check-in, intent, `entry=` links, locked sheet, Preparation, Settlement copy, optional reception (~30–40 min, 375px).
 

@@ -990,6 +990,23 @@
         "generic": "Что-то пошло не так. Попробуйте снова."
       }
     },
+    "guestServices": {
+      "sectionTitle": "Услуги",
+      "priceLabel": "{price}",
+      "priceAskReception": "Цену уточните на ресепшене",
+      "laundryMessage": "Здравствуйте! Хочу воспользоваться прачкой в {hostelName}. Кровать {bedLabel}. Ref #{stayRef}.",
+      "lateCheckoutMessage": "Здравствуйте! Хочу попросить поздний выезд из {hostelName}. Кровать {bedLabel}. Ref #{stayRef}. Обычный выезд до {checkoutTime}.",
+      "laundry": {
+        "title": "Прачка",
+        "description": "Стиралка и сушилка на месте. Ресепшен подскажет, как начать.",
+        "whatsappButton": "Заказать прачку"
+      },
+      "lateCheckout": {
+        "title": "Поздний выезд",
+        "description": "Нужно ещё несколько часов? Напишите ресепшену до времени выезда.",
+        "whatsappButton": "Запросить поздний выезд"
+      }
+    },
     "featureGate": {
       "previewBadge": "Превью"
     }

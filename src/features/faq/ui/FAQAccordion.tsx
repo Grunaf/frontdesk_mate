@@ -1,6 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
 import { getHouseRules, resolveHouseRulesForDisplay } from '@/entities/house-rules';
+import { shouldHideLaundryHouseRule } from '@/features/guest-services';
 import { useTenant } from '@/entities/tenant';
 import { useTranslations } from '@/shared/i18n';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shared/ui';
@@ -8,9 +10,16 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 export function FAQAccordion() {
   const { settings } = useTenant();
   const tTitle = useTranslations('components.rules');
-  const displays = resolveHouseRulesForDisplay(getHouseRules(settings), {
-    laundryCost: settings.laundryCost,
-  });
+  const displays = useMemo(() => {
+    const rules = getHouseRules(settings);
+    const filteredRules = shouldHideLaundryHouseRule(settings)
+      ? rules.filter((rule) => rule.templateId !== 'laundry')
+      : rules;
+
+    return resolveHouseRulesForDisplay(filteredRules, {
+      laundryCost: settings.laundryCost,
+    });
+  }, [settings]);
 
   if (displays.length === 0) {
     return null;
