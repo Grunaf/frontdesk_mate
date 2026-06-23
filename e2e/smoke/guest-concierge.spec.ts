@@ -35,7 +35,12 @@ test.describe('guest concierge stay chip', () => {
 
   test('room map link opens settlement tab in arrival guide', async ({ page }) => {
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
-    await page.getByRole('link', { name: /room map|карта комнаты/i }).click();
+    await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
+
+    const roomMapLink = page.locator('a[href*="step=settlement"]');
+    await roomMapLink.scrollIntoViewIfNeeded();
+    await roomMapLink.click();
+
     await expect(page).toHaveURL(/\/welcome\?.*step=settlement/);
     await expect(page.getByRole('tab', { name: /Settlement|Заселение/i })).toBeVisible();
   });
