@@ -1,9 +1,10 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useTranslations } from '@/shared/i18n';
 import { useHostelConfig, useTenant } from '@/entities/tenant';
 import { Icon, Separator } from '@/shared/ui';
-import { Banknote, Briefcase, Clock, Lock, type LucideIcon } from 'lucide-react';
+import { Banknote, Briefcase, Clock, KeyRound, Lock, type LucideIcon } from 'lucide-react';
 
 interface InfoRowProps {
   icon: LucideIcon;
@@ -25,6 +26,20 @@ function InfoRow({ icon, title, description }: InfoRowProps) {
   );
 }
 
+interface PreparationSectionProps {
+  heading: string;
+  children: ReactNode;
+}
+
+function PreparationSection({ heading, children }: PreparationSectionProps) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold tracking-wide text-foreground uppercase">{heading}</h2>
+      <div className="box-border space-y-4 rounded-xl border bg-muted p-4">{children}</div>
+    </section>
+  );
+}
+
 export function PreTripInfo() {
   const preparation = useTranslations('pages.arrivalJourney.preTrip');
   const common = useTranslations('domains.hostel.common');
@@ -35,8 +50,8 @@ export function PreTripInfo() {
   const showSundayTip = cityPack.preTripTips?.includes('sundayClosure');
 
   return (
-    <div className="pt-4">
-      <div className="box-border space-y-4 rounded-xl border bg-muted p-4">
+    <div className="space-y-6 pt-4">
+      <PreparationSection heading={preparation('sections.beforeTravel.heading')}>
         <InfoRow
           icon={Clock}
           title={common('timing.checkIn')}
@@ -53,14 +68,6 @@ export function PreTripInfo() {
           description={common('payment.taxNote', { cost: hostel.cityTax ?? '' })}
         />
 
-        <Separator />
-
-        <InfoRow
-          icon={Briefcase}
-          title={preparation('luggage.title')}
-          description={preparation('luggage.description', { time: hostel.checkInTime ?? '' })}
-        />
-
         {showSundayTip && (
           <>
             <Separator />
@@ -71,7 +78,23 @@ export function PreTripInfo() {
             />
           </>
         )}
-      </div>
+      </PreparationSection>
+
+      <PreparationSection heading={preparation('sections.onArrival.heading')}>
+        <InfoRow
+          icon={KeyRound}
+          title={preparation('checkInReady.title')}
+          description={preparation('checkInReady.description')}
+        />
+
+        <Separator />
+
+        <InfoRow
+          icon={Briefcase}
+          title={preparation('luggage.title')}
+          description={preparation('luggage.description', { time: hostel.checkInTime ?? '' })}
+        />
+      </PreparationSection>
     </div>
   );
 }

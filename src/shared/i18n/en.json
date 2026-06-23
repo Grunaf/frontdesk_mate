@@ -511,6 +511,18 @@
         "title": "Before Your Trip",
         "description": "Important information to prepare for your arrival and check-in process.",
         "actionButton": "View Directions",
+        "sections": {
+          "beforeTravel": {
+            "heading": "Before you travel"
+          },
+          "onArrival": {
+            "heading": "When you arrive"
+          }
+        },
+        "checkInReady": {
+          "title": "Check-in link or PIN",
+          "description": "Reception sends a personal link, QR, or 6-digit PIN after your bed is assigned. Keep it on this phone for door codes and concierge."
+        },
         "luggage": {
           "title": "Luggage Storage",
           "description": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
@@ -576,8 +588,20 @@
         }
       },
       "settlement": {
-        "title": "Welcome Inside!",
-        "description": "You have checked in automatically. Please visit the reception in the morning from 08:00 to complete your payment and provide your passport for mandatory tourist registration.",
+        "copy": {
+          "planning": {
+            "title": "When you're inside",
+            "description": "After you enter, connect to Wi-Fi below and read the house rules. Visit reception during opening hours to pay and register your passport."
+          },
+          "atDoor": {
+            "title": "You're in!",
+            "description": "Use the door codes from the Access tab. Visit reception in the morning to pay and register your passport."
+          },
+          "atDesk": {
+            "title": "Welcome at reception",
+            "description": "Complete your payment and show your passport for mandatory tourist registration. Wi-Fi and house rules are below."
+          }
+        },
         "actionButton": "Explore Your Stay"
       }
     },
