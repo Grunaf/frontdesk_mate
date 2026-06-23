@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 
 import { cn } from '@/shared/lib/utils';
 import { Button } from './button';
-import { useBottomSheetOpenNotifier } from './bottom-sheet-open-context';
+import { useRegisterBottomSheetOpen } from './bottom-sheet-open-context';
 
 type BottomSheetSize = 'small' | 'compact' | 'large';
 
@@ -33,30 +33,13 @@ function BottomSheet({
   onOpenChange,
   ...props
 }: BottomSheetProps) {
-  const notifyOpenChange = useBottomSheetOpenNotifier();
-
-  React.useEffect(() => {
-    if (open === undefined) {
-      return;
-    }
-
-    if (!open) {
-      return;
-    }
-
-    notifyOpenChange(true);
-    return () => notifyOpenChange(false);
-  }, [notifyOpenChange, open]);
+  useRegisterBottomSheetOpen(open);
 
   const handleOpenChange = React.useCallback(
     (next: boolean) => {
-      if (open === undefined) {
-        notifyOpenChange(next);
-      }
-
       onOpenChange?.(next);
     },
-    [notifyOpenChange, onOpenChange, open]
+    [onOpenChange]
   );
 
   return (

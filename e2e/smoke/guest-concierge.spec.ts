@@ -26,9 +26,10 @@ test.describe('guest concierge stay chip', () => {
   });
 
   test('hides reception strip while stay sheet is open', async ({ page }) => {
-    const strip = page.getByRole('link', { name: /Message .* reception|Написать ресепшену/i });
+    const strip = page.locator('[data-slot="concierge-reception-strip"]');
     await expect(strip).toBeVisible();
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
+    await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
     await expect(strip).toBeHidden();
   });
 

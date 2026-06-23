@@ -4,40 +4,54 @@ import {
   createContext,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
+  useId,
   type ReactNode,
 } from 'react';
 
 interface BottomSheetOpenContextValue {
   openCount: number;
-  notifyOpenChange: (open: boolean) => void;
+  registerOpen: (id: string, open: boolean) => void;
 }
 
 const BottomSheetOpenContext = createContext<BottomSheetOpenContextValue>({
   openCount: 0,
-  notifyOpenChange: () => {},
+  registerOpen: () => {},
 });
 
 export function BottomSheetOpenProvider({ children }: { children: ReactNode }) {
-  const [openCount, setOpenCount] = useState(0);
+  const openIdsRef = useRef(new Set<string>());
+  const [version, setVersion] = useState(0);
 
-  const notifyOpenChange = useCallback((open: boolean) => {
-    setOpenCount((current) => {
-      if (open) {
-        return current + 1;
+  const registerOpen = useCallback((id: string, open: boolean) => {
+    const current = openIdsRef.current;
+
+    if (open) {
+      if (current.has(id)) {
+        return;
       }
 
-      return Math.max(0, current - 1);
-    });
+      current.add(id);
+    } else {
+      if (!current.has(id)) {
+        return;
+      }
+
+      current.delete(id);
+    }
+
+    setVersion((currentVersion) => currentVersion + 1);
   }, []);
 
   const value = useMemo(
     () => ({
-      openCount,
-      notifyOpenChange,
+      openCount: openIdsRef.current.size,
+      registerOpen,
     }),
-    [notifyOpenChange, openCount]
+    [registerOpen, version]
   );
 
   return (
@@ -49,6 +63,16 @@ export function useBottomSheetOpenCount(): number {
   return useContext(BottomSheetOpenContext).openCount;
 }
 
-export function useBottomSheetOpenNotifier(): (open: boolean) => void {
-  return useContext(BottomSheetOpenContext).notifyOpenChange;
+export function useRegisterBottomSheetOpen(open: boolean | undefined): void {
+  const id = useId();
+  const { registerOpen } = useContext(BottomSheetOpenContext);
+
+  useLayoutEffect(() => {
+    if (open !== true) {
+      return;
+    }
+
+    registerOpen(id, true);
+    return () => registerOpen(id, false);
+  }, [id, open, registerOpen]);
 }
