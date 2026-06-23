@@ -24,6 +24,7 @@ import {
   Icon,
 } from '@/shared/ui';
 import { BedDouble, Check, Copy } from 'lucide-react';
+import { useGuestIssueReport } from '@/features/guest-issue-report';
 import { buildReceptionCopyText } from '../lib/buildReceptionCopyText';
 import {
   buildExtendStayWhatsappMessage,
@@ -58,6 +59,8 @@ export function GuestStaySheet({
   const t = useTranslations('components.guestStayChip');
   const tBed = useTranslations('components.findYourBed');
   const tReception = useTranslations('components.taxi');
+  const tIssue = useTranslations('components.guestIssue');
+  const { openReportSheet } = useGuestIssueReport();
   const [copied, setCopied] = useState(false);
 
   const dateRange = formatGuestStayDateRange(checkInAt, checkOutAt, locale);
@@ -201,6 +204,20 @@ export function GuestStaySheet({
             </p>
             <p className="text-sm leading-relaxed text-muted-foreground">{t('extendStayNotice')}</p>
           </div>
+
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {tIssue('myStayPrompt')}{' '}
+            <button
+              type="button"
+              className="font-medium text-primary underline decoration-primary/35 underline-offset-[3px] hover:decoration-primary/70"
+              onClick={() => {
+                onOpenChange(false);
+                openReportSheet();
+              }}
+            >
+              {tIssue('myStayLink')}
+            </button>
+          </p>
         </BottomSheetBody>
 
         {extendContact ? (

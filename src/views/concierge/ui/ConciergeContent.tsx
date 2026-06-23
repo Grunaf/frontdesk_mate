@@ -5,6 +5,7 @@ import { FAQAccordion } from '@/features/faq';
 import { LocalGuide } from '@/features/welcome';
 import { NightAccessCard } from '@/features/night-access';
 import { GuestAccessPanel, useIsGuestRegistered } from '@/features/guest-check-in';
+import { GuestIssueReportCard } from '@/features/guest-issue-report';
 import { ConciergeReceptionStrip } from '@/features/reception-contact';
 import { conciergeContentStripOffsetClass } from '@/features/reception-contact/lib/conciergeStripLayout';
 import { WifiCompactRow } from '@/features/wifi-connect';
@@ -53,6 +54,8 @@ export function ConciergeContent() {
         <ArrivalGuideButton />
 
         {isRegistered ? <WifiCompactRow /> : null}
+
+        {isRegistered ? <GuestIssueReportCard /> : null}
 
         <FeatureGate module="localGuide">
           <div className="border-t border-border pt-4">
