@@ -14,7 +14,7 @@ test.describe('guest journey smoke', () => {
   test('check-in with PIN opens welcome flow', async ({ page }) => {
     await page.context().clearCookies();
     await checkInWithPin(page, config);
-    await expect(page).toHaveURL(/\/welcome/);
+    await expect(page).toHaveURL(/\/welcome\?.*step=route/);
   });
 
   test('arrival guide shows route picker', async ({ page }) => {

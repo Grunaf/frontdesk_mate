@@ -3,9 +3,13 @@ import type { E2eConfig } from '../fixtures';
 import { e2eGuestAppUrl, e2eGuestCheckInUrl } from '../fixtures';
 
 export async function checkInWithPin(page: Page, config: E2eConfig): Promise<void> {
+  if (!config.guestPin) {
+    throw new Error('Guest PIN is missing. global-setup should provision a smoke stay before tests run.');
+  }
+
   await page.goto(e2eGuestCheckInUrl(config));
   await page.getByLabel('Check-in PIN').fill(config.guestPin);
-  await page.waitForURL(/\/welcome/, { timeout: config.navTimeoutMs * 2 });
+  await page.waitForURL(/\/welcome\?.*step=route/, { timeout: config.navTimeoutMs * 2 });
 }
 
 export async function openGuestRouteStep(page: Page, config: E2eConfig): Promise<void> {

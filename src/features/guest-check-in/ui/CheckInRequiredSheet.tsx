@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useTenant } from '@/entities/tenant';
@@ -36,6 +37,7 @@ export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredShee
   const tReception = useTranslations('components.taxi');
   const params = useParams<{ locale: string }>();
   const locale = params.locale ?? 'en';
+  const checkInPath = `/${locale}/check-in`;
 
   const receptionContact = useMemo(() => {
     const whatsappPhone = hostel.reception.whatsapp.raw;
@@ -125,12 +127,19 @@ export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredShee
         </BottomSheetBody>
 
         <BottomSheetFooter>
+          <Button asChild size="lg" className="w-full">
+            <Link href={checkInPath}>{t('signIn')}</Link>
+          </Button>
           {receptionContact?.whatsappHref ? (
-            <ExternalServiceButton service="whatsapp" href={receptionContact.whatsappHref}>
+            <ExternalServiceButton
+              service="whatsapp"
+              href={receptionContact.whatsappHref}
+              className="w-full border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+            >
               {t('whatsappReception')}
             </ExternalServiceButton>
           ) : receptionContact?.telHref ? (
-            <Button asChild size="lg" className="w-full">
+            <Button asChild size="lg" variant="outline" className="w-full">
               <a href={receptionContact.telHref} className="flex items-center justify-center gap-2">
                 <Icon icon={Phone} className="size-4" />
                 {t('callReception')}

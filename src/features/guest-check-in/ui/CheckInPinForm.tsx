@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { activateGuestStayByPinAction } from '../actions/activateGuestStayByPin';
+import { parseGuestEntryParam, resolveGuestWelcomePath } from '../lib/resolveGuestWelcomePath';
 import {
   normalizePinActivationError,
   shouldQueuePinActivationError,
@@ -31,7 +32,10 @@ function formatPinDisplay(pin: string): string {
 export function CheckInPinForm({ locale }: CheckInPinFormProps) {
   const t = useTranslations('pages.checkIn.pin');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentTenantSlug, isRegistered } = useGuestSession();
+  const entry = parseGuestEntryParam(searchParams.get('entry'));
+  const modeOnsite = searchParams.get('mode') === 'onsite';
   const [pin, setPin] = useState('');
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isQueued, setIsQueued] = useState(false);
@@ -43,9 +47,9 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
       clearPendingGuestPinActivation();
       writeGuestRegistrationIndex(registration);
       router.refresh();
-      router.replace(`/${locale}/welcome?step=settlement`);
+      router.replace(resolveGuestWelcomePath({ locale, entry, modeOnsite }));
     },
-    [locale, router]
+    [entry, locale, modeOnsite, router]
   );
 
   const activatePin = useCallback(
