@@ -606,6 +606,18 @@
         "title": "Open your link or enter your PIN",
         "description": "Reception sends a personal link, QR, or a 6-digit PIN on paper after your bed is assigned. Enter the PIN here if you are offline — we sync when you are back online."
       },
+      "intent": {
+        "metaTitle": "Where are you now?",
+        "metaDescription": "Choose where you are so we open the right part of your arrival guide.",
+        "eyebrow": "Almost there",
+        "title": "Where are you now?",
+        "description": "We'll open the right part of your arrival guide.",
+        "options": {
+          "planning": "Still on my way",
+          "at_door": "At the door",
+          "at_desk": "At reception"
+        }
+      },
       "pin": {
         "label": "Check-in PIN",
         "placeholder": "000 000",

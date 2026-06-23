@@ -1,7 +1,8 @@
 'use client';
 
 import QRCode from 'qrcode';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { appendGuestEntryToMagicLink } from '@/entities/guest-stay/lib/buildMagicLinkUrl';
 import { Button } from '@/shared/ui';
 
 interface MagicLinkCardProps {
@@ -27,7 +28,11 @@ function resolveSubtitle(guestName: string | undefined, bedId: string): string {
 
 export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDismiss }: MagicLinkCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'link' | 'send' | null>(null);
+  const sendMagicLinkUrl = useMemo(
+    () => appendGuestEntryToMagicLink(magicLinkUrl, 'remote'),
+    [magicLinkUrl]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -45,13 +50,13 @@ export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDism
     };
   }, [magicLinkUrl]);
 
-  const copyLink = async () => {
+  const copyLink = async (value: string, kind: 'link' | 'send') => {
     try {
-      await navigator.clipboard.writeText(magicLinkUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(value);
+      setCopied(kind);
+      window.setTimeout(() => setCopied(null), 2000);
     } catch {
-      setCopied(false);
+      setCopied(null);
     }
   };
 
@@ -94,16 +99,25 @@ export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDism
 
       <div className="space-y-2">
         <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-          Guest link
+          Guest link (QR / on-site)
         </p>
         <code className="block break-all rounded-md border bg-background px-2 py-2 text-[11px]">
           {magicLinkUrl}
         </code>
+        <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          Send link (opens route tab)
+        </p>
+        <code className="block break-all rounded-md border bg-background px-2 py-2 text-[11px]">
+          {sendMagicLinkUrl}
+        </code>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" onClick={copyLink}>
-          {copied ? 'Copied' : 'Copy link'}
+        <Button type="button" size="sm" onClick={() => copyLink(magicLinkUrl, 'link')}>
+          {copied === 'link' ? 'Copied' : 'Copy QR link'}
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => copyLink(sendMagicLinkUrl, 'send')}>
+          {copied === 'send' ? 'Copied' : 'Copy send link'}
         </Button>
         {onDismiss ? (
           <Button type="button" size="sm" variant="outline" onClick={onDismiss}>

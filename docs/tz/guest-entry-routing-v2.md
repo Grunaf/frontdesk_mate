@@ -1,8 +1,8 @@
 # TZ v2: Guest entry routing, intent и arrival guide flow
 
 **Версия:** 2.0  
-**Статус:** In progress (PR1)  
-**Ветка:** `feat/guest-entry-routing`
+**Статус:** In progress (PR2)  
+**Ветка:** `feat/guest-intent-screen`
 
 ---
 
@@ -88,7 +88,7 @@
 ## 6. Out of scope
 
 - Геолокация, 4 разных физических URL
-- Intent screen (PR2)
+- Intent screen (PR2) — done in `feat/guest-intent-screen`
 - Preparation / Settlement copy split (PR3)
 
 ---

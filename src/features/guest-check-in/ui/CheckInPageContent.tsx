@@ -3,7 +3,9 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { activateGuestStayAction } from '../actions/activateGuestStay';
-import { parseGuestEntryParam, resolveGuestWelcomePath } from '../lib/resolveGuestWelcomePath';
+import { parseGuestEntryParam } from '../lib/resolveGuestWelcomePath';
+import { readGuestIntent } from '../lib/guestIntent';
+import { resolvePostCheckInPath } from '../lib/resolveGuestLanding';
 import { CheckInPinForm } from './CheckInPinForm';
 import { useGuestSession } from './GuestSessionProvider';
 import { useTranslations } from '@/shared/i18n';
@@ -20,7 +22,7 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
   const t = useTranslations('pages.checkIn');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isRegistered } = useGuestSession();
+  const { isRegistered, currentTenantSlug } = useGuestSession();
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [correctTenantSlug, setCorrectTenantSlug] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -28,19 +30,25 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
   const token = searchParams.get('t')?.trim() ?? '';
   const entry = parseGuestEntryParam(searchParams.get('entry'));
   const modeOnsite = searchParams.get('mode') === 'onsite';
-  const welcomePath = resolveGuestWelcomePath({ locale, entry, modeOnsite });
+  const storedIntent = currentTenantSlug ? readGuestIntent(currentTenantSlug) : null;
+  const landingPath = resolvePostCheckInPath({
+    locale,
+    urlEntry: entry,
+    modeOnsite,
+    storedIntent,
+  });
 
   useEffect(() => {
     if (isRegistered && !token) {
-      router.replace(welcomePath);
+      router.replace(landingPath);
     }
-  }, [isRegistered, token, welcomePath, router]);
+  }, [isRegistered, token, landingPath, router]);
 
   useEffect(() => {
     if (!isRegistered || !token) return;
 
-    router.replace(welcomePath);
-  }, [isRegistered, token, welcomePath, router]);
+    router.replace(landingPath);
+  }, [isRegistered, token, landingPath, router]);
 
   useEffect(() => {
     if (!token || isRegistered) return;
@@ -54,14 +62,14 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
           exp: result.registration.exp,
         });
         router.refresh();
-        router.replace(welcomePath);
+        router.replace(landingPath);
         return;
       }
 
       setCorrectTenantSlug(result.correctTenantSlug ?? null);
       setErrorKey(result.error);
     });
-  }, [token, isRegistered, locale, router, welcomePath]);
+  }, [token, isRegistered, locale, router, landingPath]);
 
   if (token) {
     if (isRegistered) {
