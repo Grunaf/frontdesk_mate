@@ -2,7 +2,6 @@
 
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
-import { useTranslations } from '@/shared/i18n';
 import { Button } from '@/shared/ui';
 
 interface MagicLinkCardProps {
@@ -19,8 +18,14 @@ function formatGuestPin(pin: string): string {
   return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
+function resolveSubtitle(guestName: string | undefined, bedId: string): string {
+  if (guestName) {
+    return `${guestName} · bed ${bedId}`;
+  }
+  return `Bed ${bedId} · show QR or send the guest link`;
+}
+
 export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDismiss }: MagicLinkCardProps) {
-  const t = useTranslations('admin.guestCheckIn.magicLink');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -53,41 +58,56 @@ export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDism
   return (
     <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
       <div>
-        <p className="text-sm font-semibold text-foreground">{t('title')}</p>
-        <p className="text-xs text-muted-foreground">
-          {guestName ? t('subtitleNamed', { name: guestName, bed: bedId }) : t('subtitle', { bed: bedId })}
-        </p>
+        <p className="text-sm font-semibold text-foreground">Guest access ready</p>
+        <p className="text-xs text-muted-foreground">{resolveSubtitle(guestName, bedId)}</p>
       </div>
 
       {guestPin ? (
         <div className="rounded-lg border bg-background p-4 text-center">
-          <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{t('pinLabel')}</p>
+          <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            Paper PIN
+          </p>
           <p className="mt-2 font-mono text-3xl font-bold tracking-[0.2em] text-foreground">
             {formatGuestPin(guestPin)}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">{t('pinHint')}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Write this on the guest slip — works offline, syncs when they go online. Shown once.
+          </p>
         </div>
-      ) : null}
+      ) : (
+        <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+          PIN was shown once when access was issued. Use the QR or link below, or re-issue for a new
+          PIN.
+        </p>
+      )}
 
       {qrDataUrl ? (
         <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrDataUrl} alt={t('qrAlt')} className="rounded-lg border bg-white p-2" />
+          <img
+            src={qrDataUrl}
+            alt="Guest access QR code"
+            className="rounded-lg border bg-white p-2"
+          />
         </div>
       ) : null}
 
       <div className="space-y-2">
-        <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{t('linkLabel')}</p>
-        <code className="block break-all rounded-md border bg-background px-2 py-2 text-[11px]">{magicLinkUrl}</code>
+        <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          Guest link
+        </p>
+        <code className="block break-all rounded-md border bg-background px-2 py-2 text-[11px]">
+          {magicLinkUrl}
+        </code>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" onClick={copyLink}>
-          {copied ? t('copied') : t('copy')}
+          {copied ? 'Copied' : 'Copy link'}
         </Button>
         {onDismiss ? (
           <Button type="button" size="sm" variant="outline" onClick={onDismiss}>
-            {t('done')}
+            Done
           </Button>
         ) : null}
       </div>

@@ -70,11 +70,18 @@ export function DirectionPicker() {
       <p className="text-sm font-medium text-muted-foreground">{directions('fromSubtitle')}</p>
 
       <Tabs value={activeCategory} onValueChange={handleCategoryChange} className="w-full">
-        <TabsList className={`grid w-full ${tabGridClass}`}>
+        <TabsList
+          variant="category"
+          className={`grid w-full items-stretch gap-1 p-1 ${tabGridClass}`}
+        >
           {routeCategories.map(({ id, icon, labelKey }) => (
-            <TabsTrigger key={id} value={id} className="gap-2">
-              <Icon icon={icon} className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only">{routes(labelKey)}</span>
+            <TabsTrigger
+              key={id}
+              value={id}
+              className="flex-col gap-1 px-2 py-2 text-[11px] leading-snug sm:flex-row sm:gap-2 sm:py-1.5 sm:text-xs sm:whitespace-nowrap"
+            >
+              <Icon icon={icon} className="h-4 w-4 shrink-0" />
+              <span className="max-w-full text-center leading-snug">{routes(labelKey)}</span>
             </TabsTrigger>
           ))}
         </TabsList>

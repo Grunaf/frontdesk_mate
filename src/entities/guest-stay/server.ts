@@ -5,6 +5,7 @@ export {
   activateGuestStayByPin,
   createGuestStay,
   listActiveGuestStays,
+  reissueGuestStay,
   resolveGuestSessionFromCookies,
   revokeGuestStay,
 } from './api/guestStayRepository';
@@ -20,5 +21,6 @@ export type {
   GuestSessionPayload,
   GuestStayRecord,
   GuestStayRecordWithLink,
+  ReissueGuestStayResult,
   ResolvedGuestSession,
 } from './model/types';

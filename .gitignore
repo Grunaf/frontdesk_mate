@@ -35,7 +35,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-e2e/env.local
+/e2e/env.local
+/e2e/.runtime/
 
 # vercel
 .vercel

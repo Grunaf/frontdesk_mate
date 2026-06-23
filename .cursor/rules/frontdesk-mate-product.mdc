@@ -1,0 +1,33 @@
+---
+description: Продуктовый контекст frontdesk_mate — сайты, reception, tenant
+alwaysApply: true
+---
+
+# Frontdesk Mate — продукт
+
+## Контекст
+- `CONTEXT_SNAPSHOT.md` — карта проекта (генерировать: `npm run snapshot`).
+- Smoke: `SMOKE.md`, `npm run smoke`.
+
+## Сайты (не смешивать)
+| Site | Папка | Host (prod) |
+|------|-------|-------------|
+| Landing | `landing-site` | `{slug}.domain` + `/en` |
+| Guest app | `app-site` | `{slug}.app.domain` |
+| Reception | `reception-site` | `{slug}.reception.domain` — **без `/en`** |
+| Admin | `admin` | `/admin` |
+
+## Reception desk
+- Dev URL: `{slug}.reception.localhost:3000/login` — не `localhost/reception-site/...`.
+- Auth: **POST route handler** (`/api/reception/login|logout`) → **303** + redirect URL из **Host header**, не из `request.url`.
+- Нет booking engine: reception = **выдача guest access** (QR/PIN), инвентарь кроватей из `settings.guestStay.beds`.
+- **UI только EN** — не добавлять `next-intl` / `useTranslations` в `reception-site` и `guest-registration` UI.
+- `getTenantConfig()` — для guest/landing; reception/admin → **`getTenantRecord`**.
+
+## Новые продуктовые области (HR и т.д.)
+- **Новый module** (`modules/*` или пакет), не рефакторить весь репо.
+- Плоский FSD сейчас ок; не мигрировать на модульный FSD без новой фичи.
+
+## Код
+- FSD: не раздувать `app/` бизнес-логикой; минимальный diff; стиль окружающего кода.
+- `entities/tenant` — тяжёлый slice; новое не сваливать туда без причины.

@@ -6,9 +6,10 @@ import { getTenantRecord } from '@/entities/tenant/server';
 import {
   createGuestStay,
   listActiveGuestStays,
+  reissueGuestStay,
   revokeGuestStay,
 } from '@/entities/guest-stay/server';
-import type { CreateGuestStayResult } from '@/entities/guest-stay/server';
+import type { CreateGuestStayResult, ReissueGuestStayResult } from '@/entities/guest-stay/server';
 
 export type CreateGuestStayActionResult =
   | CreateGuestStayResult
@@ -87,4 +88,50 @@ export async function revokeGuestStayAction(input: { tenantSlug: string; stayId:
 export async function listActiveGuestStaysAction(tenantSlug: string, locale = 'en') {
   await assertReceptionAuthenticated(tenantSlug);
   return listActiveGuestStays(tenantSlug, locale);
+}
+
+export type ReissueGuestStayActionResult =
+  | ReissueGuestStayResult
+  | { ok: false; error: 'unauthorized' | 'unknown' };
+
+export async function reissueGuestStayAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  bedId: string;
+  guestName?: string;
+  checkInDate: string;
+  checkOutDate: string;
+  locale?: string;
+}): Promise<ReissueGuestStayActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const tenant = await getTenantRecord(input.tenantSlug);
+    const checkInAt = resolveCheckInIso(input.checkInDate, tenant?.settings.checkInTime);
+
+    const result = await reissueGuestStay(
+      {
+        tenantSlug: input.tenantSlug,
+        stayId: input.stayId,
+        bedId: input.bedId,
+        guestName: input.guestName,
+        checkInAt,
+        checkOutAt: `${input.checkOutDate.trim()}T23:59:59.999Z`,
+      },
+      input.locale ?? 'en'
+    );
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('reissueGuestStayAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
 }

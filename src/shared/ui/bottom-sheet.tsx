@@ -7,8 +7,25 @@ import { X } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from './button';
 
-function BottomSheet({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="bottom-sheet" {...props} />;
+type BottomSheetSize = 'compact' | 'large';
+
+const BottomSheetSizeContext = React.createContext<BottomSheetSize>('compact');
+
+type BottomSheetProps = React.ComponentProps<typeof DrawerPrimitive.Root>;
+
+function BottomSheet({
+  shouldScaleBackground = false,
+  noBodyStyles = true,
+  ...props
+}: BottomSheetProps) {
+  return (
+    <DrawerPrimitive.Root
+      data-slot="bottom-sheet"
+      shouldScaleBackground={shouldScaleBackground}
+      noBodyStyles={noBodyStyles}
+      {...props}
+    />
+  );
 }
 
 function BottomSheetTrigger({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Trigger>) {
@@ -43,41 +60,66 @@ function BottomSheetContent({
   className,
   children,
   showCloseButton = true,
+  size = 'compact',
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content> & {
   showCloseButton?: boolean;
+  size?: BottomSheetSize;
 }) {
   return (
-    <BottomSheetPortal>
-      <BottomSheetOverlay />
-      <DrawerPrimitive.Content
-        data-slot="bottom-sheet-content"
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto max-h-[85vh] flex-col rounded-t-2xl border bg-popover text-popover-foreground shadow-lg outline-none',
-          className
-        )}
-        {...props}
-      >
-        <DrawerPrimitive.Handle className="mx-auto mt-3 flex w-full shrink-0 cursor-grab justify-center py-1 active:cursor-grabbing">
-          <span className="h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden="true" />
-        </DrawerPrimitive.Handle>
-        {children}
-        {showCloseButton ? (
-          <BottomSheetClose asChild>
-            <Button variant="ghost" className="absolute top-3 right-3" size="icon-sm">
-              <X />
-              <span className="sr-only">Close</span>
-            </Button>
-          </BottomSheetClose>
-        ) : null}
-      </DrawerPrimitive.Content>
-    </BottomSheetPortal>
+    <BottomSheetSizeContext.Provider value={size}>
+      <BottomSheetPortal>
+        <BottomSheetOverlay />
+        <DrawerPrimitive.Content
+          data-slot="bottom-sheet-content"
+          data-size={size}
+          className={cn(
+            'fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl border bg-popover text-popover-foreground shadow-lg outline-none',
+            size === 'large'
+              ? 'h-[min(94dvh,94vh)] max-h-[min(94dvh,94vh)]'
+              : 'h-[min(56dvh,480px)] max-h-[min(56dvh,480px)]',
+            className
+          )}
+          {...props}
+        >
+          <DrawerPrimitive.Handle className="mx-auto mt-3 flex w-full shrink-0 cursor-grab justify-center py-1 active:cursor-grabbing">
+            <span className="h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden="true" />
+          </DrawerPrimitive.Handle>
+          {children}
+          {showCloseButton ? (
+            <BottomSheetClose asChild>
+              <Button variant="ghost" className="absolute top-3 right-3" size="icon-sm">
+                <X />
+                <span className="sr-only">Close</span>
+              </Button>
+            </BottomSheetClose>
+          ) : null}
+        </DrawerPrimitive.Content>
+      </BottomSheetPortal>
+    </BottomSheetSizeContext.Provider>
   );
 }
 
 function BottomSheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div data-slot="bottom-sheet-header" className={cn('flex flex-col gap-1.5 px-6 pt-2', className)} {...props} />
+    <div
+      data-slot="bottom-sheet-header"
+      className={cn('flex shrink-0 flex-col gap-1.5 px-6 pt-2', className)}
+      {...props}
+    />
+  );
+}
+
+function BottomSheetBody({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="bottom-sheet-body"
+      className={cn(
+        'min-h-0 flex-1 overflow-y-auto overscroll-contain px-6',
+        className
+      )}
+      {...props}
+    />
   );
 }
 
@@ -85,7 +127,7 @@ function BottomSheetFooter({ className, ...props }: React.ComponentProps<'div'>)
   return (
     <div
       data-slot="bottom-sheet-footer"
-      className={cn('mt-4 flex shrink-0 flex-col gap-2 px-6 pb-6 pt-4', className)}
+      className={cn('mt-0 flex shrink-0 flex-col gap-2 px-6 pb-6 pt-4', className)}
       {...props}
     />
   );
@@ -122,6 +164,7 @@ export {
   BottomSheetClose,
   BottomSheetContent,
   BottomSheetHeader,
+  BottomSheetBody,
   BottomSheetFooter,
   BottomSheetTitle,
   BottomSheetDescription,

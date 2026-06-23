@@ -35,6 +35,7 @@ export {
   BottomSheetClose,
   BottomSheetContent,
   BottomSheetHeader,
+  BottomSheetBody,
   BottomSheetFooter,
   BottomSheetTitle,
   BottomSheetDescription,

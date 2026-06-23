@@ -4,6 +4,7 @@ import { useTranslations } from '@/shared/i18n';
 import { useTenant } from '@/entities/tenant';
 import {
   BottomSheet,
+  BottomSheetBody,
   BottomSheetContent,
   BottomSheetFooter,
   BottomSheetHeader,
@@ -48,30 +49,30 @@ export function PublicRouteDetailsSheet({
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
-      <BottomSheetContent className="overflow-y-auto px-0 pb-6">
-        <BottomSheetHeader className="px-6 pb-2">
+      <BottomSheetContent size="large" className="px-0 pb-0">
+        <BottomSheetHeader className="px-6 pb-3">
           <div className="flex items-start gap-4">
             <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
               <Icon icon={RouteIcon} className="h-5 w-5" />
             </div>
-            <div className="min-w-0 space-y-1">
+            <div className="min-w-0 space-y-1 pr-8">
               <BottomSheetTitle className="text-base">{title}</BottomSheetTitle>
-              {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+              {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
             </div>
           </div>
         </BottomSheetHeader>
 
-        <div className="px-6">
+        <BottomSheetBody className="pb-4">
           <PublicRouteItinerary
             route={route}
             routes={routes}
             directions={directions}
             walkToHostel={walkToHostel}
           />
-        </div>
+        </BottomSheetBody>
 
-        {showOfficialSchedule && (
-          <BottomSheetFooter className="px-6 pt-4 sm:flex-row">
+        {showOfficialSchedule ? (
+          <BottomSheetFooter className="border-t border-border/60 sm:flex-row">
             <Button asChild variant="outline" size="sm" className="w-full">
               <a
                 href={route.metadata.publicTransport.officialRouteUrl}
@@ -83,7 +84,7 @@ export function PublicRouteDetailsSheet({
               </a>
             </Button>
           </BottomSheetFooter>
-        )}
+        ) : null}
       </BottomSheetContent>
     </BottomSheet>
   );

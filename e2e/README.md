@@ -12,8 +12,12 @@
 | `E2E_TENANT_SLUG` | Same as `NEXT_PUBLIC_TENANT_SLUG` or tenant slug in admin |
 | `E2E_CITY_PACK_ID` | City pack on that tenant (admin → tenant → Identity), e.g. `kotor` |
 | `E2E_ADMIN_PASSWORD` | Same as `ADMIN_SECRET` in `.env.local` |
-| `E2E_GUEST_PIN` | Create a stay in reception desk → copy 6-digit PIN |
+| `E2E_GUEST_PIN` | **Optional** — auto-provision creates a smoke stay before tests (guest name `__e2e_smoke__`) |
 | `E2E_GUEST_MAGIC_LINK` | Optional — copy full URL from reception instead of PIN |
+
+Auto-provision needs the same Supabase keys as dev (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`) plus `ADMIN_SECRET` (or `GUEST_SESSION_SECRET`) in `.env.local`. Use a **dev/test tenant**, not production.
+
+Set `E2E_PROVISION_GUEST_STAY=false` and `E2E_GUEST_PIN` to pin a manual stay instead.
 
 `e2e/env.local` is gitignored — never commit real passwords.
 
@@ -22,7 +26,7 @@
 - Admin login + tenants list
 - Tenant edit page for `E2E_TENANT_SLUG`
 - City pack `E2E_CITY_PACK_ID` marked Ready
-- Guest PIN check-in → welcome
+- Guest PIN check-in → welcome (PIN from auto-provision or `E2E_GUEST_PIN`)
 - Arrival route picker on welcome
 - Local Guide essentials on concierge
 - Wrong PIN error message
