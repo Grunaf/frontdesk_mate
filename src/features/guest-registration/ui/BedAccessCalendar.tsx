@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
 import {
@@ -10,7 +10,7 @@ import {
   type BedDayCalendarView,
 } from '../lib/resolveBedDayCalendar';
 import { todayUtcDate } from '../lib/guestAccessDates';
-import { Badge, Button, SegmentedChipBar } from '@/shared/ui';
+import { Button, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 
 interface BedAccessCalendarProps {
@@ -18,6 +18,7 @@ interface BedAccessCalendarProps {
   stays: GuestStayRecordWithLink[];
   onViewStay: (stayId: string) => void;
   onSelectFreeNight: (bedId: string, nightDate: string) => void;
+  embedded?: boolean;
 }
 
 const VIEW_ITEMS = [
@@ -30,79 +31,95 @@ function formatDayHeader(nightDate: string): string {
   return date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
 }
 
+function useIsMobileCalendar(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 639px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return isMobile;
+}
+
 export function BedAccessCalendar({
   settings,
   stays,
   onViewStay,
   onSelectFreeNight,
+  embedded = false,
 }: BedAccessCalendarProps) {
+  const isMobile = useIsMobileCalendar();
   const [view, setView] = useState<BedDayCalendarView>('week');
   const [anchorDate, setAnchorDate] = useState(todayUtcDate());
 
+  const effectiveView = isMobile && view === 'month' ? 'week' : view;
+
   const snapshot = useMemo(
-    () => resolveBedDayCalendar(settings, stays, view, anchorDate),
-    [anchorDate, settings, stays, view]
+    () => resolveBedDayCalendar(settings, stays, effectiveView, anchorDate),
+    [anchorDate, effectiveView, settings, stays]
   );
 
   if (snapshot.roomGroups.length === 0) {
-    return null;
+    return <p className="text-xs text-muted-foreground">No beds to show on the calendar.</p>;
   }
 
   const rangeLabel = formatCalendarRangeLabel(snapshot.rangeStart, snapshot.rangeEnd);
+  const viewItems = isMobile ? VIEW_ITEMS.filter((item) => item.id === 'week') : [...VIEW_ITEMS];
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold">Access calendar</h3>
-          <p className="text-xs text-muted-foreground">
-            Bed-by-night plan for issued access. Click a guest cell to jump to their access card.
-          </p>
-        </div>
-
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
         <SegmentedChipBar
           ariaLabel="Calendar view"
-          items={[...VIEW_ITEMS]}
-          value={view}
+          items={viewItems}
+          value={effectiveView}
           onValueChange={(id) => {
             setView(id as BedDayCalendarView);
             setAnchorDate(todayUtcDate());
           }}
+          className="min-w-0"
         />
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, view, -1))}
-          >
-            Prev
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => setAnchorDate(todayUtcDate())}>
-            Today
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, view, 1))}
-          >
-            Next
-          </Button>
-          <span className="text-xs text-muted-foreground">{rangeLabel}</span>
-        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, -1))}
+        >
+          Prev
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => setAnchorDate(todayUtcDate())}>
+          Today
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, 1))}
+        >
+          Next
+        </Button>
+        <span className="text-xs text-muted-foreground">{rangeLabel}</span>
       </div>
+
+      {!embedded ? (
+        <p className="text-xs text-muted-foreground">
+          Click a guest cell to open their access card. Click a free cell to prefill the issue form.
+        </p>
+      ) : null}
 
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 border bg-background px-2 py-2 text-left font-medium">
+              <th className="sticky left-0 z-10 border bg-background px-2 py-1.5 text-left font-medium">
                 Bed
               </th>
               {snapshot.days.map((nightDate) => (
-                <th key={nightDate} className="min-w-20 border px-2 py-2 text-left font-medium">
+                <th key={nightDate} className="min-w-16 border px-1.5 py-1.5 text-left font-medium">
                   {formatDayHeader(nightDate)}
                 </th>
               ))}
@@ -121,52 +138,37 @@ export function BedAccessCalendar({
                 </tr>
                 {group.rows.map((row) => (
                   <tr key={row.bedId}>
-                    <td className="sticky left-0 z-10 border bg-background px-2 py-2 font-medium">
+                    <td className="sticky left-0 z-10 border bg-background px-2 py-1.5 font-medium">
                       {row.displayLabel}
                     </td>
-                    {row.cells.map((cell) => {
-                      const isInteractive = cell.status !== 'free';
-                      const label =
-                        cell.status === 'free'
-                          ? 'Free'
-                          : cell.status === 'scheduled'
-                            ? 'Scheduled'
-                            : 'In use';
-
-                      return (
-                        <td key={`${row.bedId}-${cell.nightDate}`} className="border p-1 align-top">
-                          {cell.status === 'free' ? (
-                            <button
-                              type="button"
-                              onClick={() => onSelectFreeNight(row.bedId, cell.nightDate)}
-                              className="flex min-h-14 w-full flex-col items-start gap-1 rounded-md bg-muted/10 px-2 py-1 text-left hover:bg-muted/30"
-                            >
-                              <Badge variant="outline">{label}</Badge>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={!isInteractive || !cell.stay}
-                              onClick={() => cell.stay && onViewStay(cell.stay.id)}
-                              className={cn(
-                                'flex min-h-14 w-full flex-col items-start gap-1 rounded-md px-2 py-1 text-left',
-                                cell.status === 'scheduled' ? 'bg-amber-50' : 'bg-secondary/40',
-                                cell.stay && 'hover:bg-muted/40'
-                              )}
-                            >
-                              <Badge variant={cell.status === 'scheduled' ? 'outline' : 'secondary'}>
-                                {label}
-                              </Badge>
-                              {cell.stay?.guest_name ? (
-                                <span className="truncate text-[11px] text-muted-foreground">
-                                  {cell.stay.guest_name}
-                                </span>
-                              ) : null}
-                            </button>
-                          )}
-                        </td>
-                      );
-                    })}
+                    {row.cells.map((cell) => (
+                      <td key={`${row.bedId}-${cell.nightDate}`} className="border p-0.5 align-top">
+                        {cell.status === 'free' ? (
+                          <button
+                            type="button"
+                            onClick={() => onSelectFreeNight(row.bedId, cell.nightDate)}
+                            className="flex min-h-10 w-full items-center justify-center rounded bg-muted/10 px-1 text-[10px] text-muted-foreground hover:bg-muted/30"
+                          >
+                            ·
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!cell.stay}
+                            onClick={() => cell.stay && onViewStay(cell.stay.id)}
+                            className={cn(
+                              'flex min-h-10 w-full flex-col items-start justify-center rounded px-1 py-0.5 text-left text-[10px]',
+                              cell.status === 'scheduled' ? 'bg-amber-50' : 'bg-primary/10',
+                              cell.stay && 'hover:bg-muted/40'
+                            )}
+                          >
+                            <span className="truncate font-medium">
+                              {cell.stay?.guest_name || (cell.status === 'scheduled' ? 'Soon' : 'Guest')}
+                            </span>
+                          </button>
+                        )}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </Fragment>

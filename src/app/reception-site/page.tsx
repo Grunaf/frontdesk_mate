@@ -31,19 +31,11 @@ export default async function ReceptionDeskPage() {
   const stays = await listActiveGuestStays(tenantSlug);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Guest check-in</p>
-          <h1 className="text-xl font-semibold">{tenant.name}</h1>
-        </div>
-        <form method="POST" action="/api/reception/logout">
-          <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
-            Sign out
-          </button>
-        </form>
-      </div>
-      <ReceptionCheckInPanel tenantSlug={tenantSlug} settings={tenant.settings} initialStays={stays} />
-    </div>
+    <ReceptionCheckInPanel
+      tenantSlug={tenantSlug}
+      tenantName={tenant.name}
+      settings={tenant.settings}
+      initialStays={stays}
+    />
   );
 }

@@ -7,6 +7,7 @@ import {
   defaultWalkInDates,
   filterIssuedAccess,
   formatAccessNightsLabel,
+  formatAccessPeriodSummary,
   groupIssuedAccess,
   isValidAccessRange,
 } from './guestAccessDates';
@@ -57,6 +58,18 @@ describe('guestAccessDates', () => {
       checkInDate: '2026-06-22',
       checkOutDate: '2026-06-23',
     });
+  });
+
+  it('summarizes tonight walk-in access', () => {
+    expect(formatAccessPeriodSummary('2026-06-22', '2026-06-23', now)).toBe(
+      'Tonight · 1 night (Jun 22 → Jun 23)'
+    );
+  });
+
+  it('summarizes custom access periods', () => {
+    expect(formatAccessPeriodSummary('2026-06-28', '2026-06-30', now)).toBe(
+      'Jun 28 → Jun 30 · 2 nights'
+    );
   });
 });
 

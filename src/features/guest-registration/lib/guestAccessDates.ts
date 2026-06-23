@@ -66,6 +66,28 @@ export function formatDisplayDate(isoDate: string): string {
   return parseUtcDate(isoDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+export function formatAccessPeriodSummary(
+  checkInDate: string,
+  checkOutDate: string,
+  now: Date = new Date()
+): string {
+  if (!isValidAccessRange(checkInDate, checkOutDate)) {
+    return 'Invalid date range';
+  }
+
+  const nightsLabel = formatAccessNightsLabel(countAccessNights(checkInDate, checkOutDate));
+  const datesLabel = `${formatDisplayDate(checkInDate)} → ${formatDisplayDate(checkOutDate)}`;
+  const walkIn = defaultWalkInDates(now);
+  const isTonight =
+    checkInDate === walkIn.checkInDate && checkOutDate === walkIn.checkOutDate;
+
+  if (isTonight) {
+    return `Tonight · ${nightsLabel} (${datesLabel})`;
+  }
+
+  return `${datesLabel} · ${nightsLabel}`;
+}
+
 function sortByCheckIn(stays: GuestStayRecordWithLink[]): GuestStayRecordWithLink[] {
   return [...stays].sort(
     (a, b) => new Date(a.check_in_at).getTime() - new Date(b.check_in_at).getTime()

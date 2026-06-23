@@ -14,12 +14,14 @@ interface GuestAccessDateRangeProps {
   checkInDate: string;
   checkOutDate: string;
   onChange: (next: { checkInDate: string; checkOutDate: string }) => void;
+  compact?: boolean;
 }
 
 export function GuestAccessDateRange({
   checkInDate,
   checkOutDate,
   onChange,
+  compact = false,
 }: GuestAccessDateRangeProps) {
   const nights = countAccessNights(checkInDate, checkOutDate);
   const rangeValid = isValidAccessRange(checkInDate, checkOutDate);
@@ -52,8 +54,8 @@ export function GuestAccessDateRange({
   };
 
   return (
-    <div className="space-y-3 sm:col-span-2">
-      <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <div className="space-y-1.5">
           <Label htmlFor="check-in-date">Valid from</Label>
           <Input
@@ -93,7 +95,7 @@ export function GuestAccessDateRange({
 
       {!rangeValid ? (
         <p className="text-xs text-destructive">Valid until must be on or after valid from.</p>
-      ) : (
+      ) : compact ? null : (
         <p className="text-xs text-muted-foreground">
           Valid until is the guest&apos;s last night — app access works through checkout day.
         </p>

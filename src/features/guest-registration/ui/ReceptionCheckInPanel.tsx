@@ -21,16 +21,21 @@ import {
 } from '../lib/guestAccessDates';
 import { resolveBedInventory } from '../lib/resolveBedInventory';
 import { resolveGuestAccessPeriod } from '../lib/resolveGuestAccessPeriod';
+import {
+  formatReceptionDeskStats,
+  resolveReceptionDeskStats,
+} from '../lib/resolveReceptionDeskStats';
 import { BedAccessCalendar } from './BedAccessCalendar';
 import { BedInventoryGrid } from './BedInventoryGrid';
-import { GuestAccessDateRange } from './GuestAccessDateRange';
+import { IssueGuestAccessForm } from './IssueGuestAccessForm';
 import { IssuedAccessList } from './IssuedAccessList';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
-import { Button, Input, Label, SegmentedChipBar } from '@/shared/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 
 interface ReceptionCheckInPanelProps {
   tenantSlug: string;
+  tenantName: string;
   settings?: TenantSettings;
   initialStays: GuestStayRecordWithLink[];
 }
@@ -43,10 +48,7 @@ interface ReissueDraft {
   checkOutDate: string;
 }
 
-const MODE_ITEMS = [
-  { id: 'walk-in', label: 'Walk-in' },
-  { id: 'custom', label: 'Custom dates' },
-] as const;
+type DeskTab = 'now' | 'plan' | 'access';
 
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
@@ -58,6 +60,7 @@ function toDateInput(iso: string): string {
 
 export function ReceptionCheckInPanel({
   tenantSlug,
+  tenantName,
   settings,
   initialStays,
 }: ReceptionCheckInPanelProps) {
@@ -67,11 +70,12 @@ export function ReceptionCheckInPanel({
   const issueFormRef = useRef<HTMLDivElement>(null);
 
   const [stays, setStays] = useState(initialStays);
+  const [deskTab, setDeskTab] = useState<DeskTab>('now');
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
   const [checkInDate, setCheckInDate] = useState(walkInDefaults.checkInDate);
   const [checkOutDate, setCheckOutDate] = useState(walkInDefaults.checkOutDate);
-  const [issuedAccessFilter, setIssuedAccessFilter] = useState<IssuedAccessFilter>('all');
+  const [issuedAccessFilter, setIssuedAccessFilter] = useState<IssuedAccessFilter>('today');
   const [error, setError] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [expandedStayId, setExpandedStayId] = useState<string | null>(null);
@@ -90,6 +94,10 @@ export function ReceptionCheckInPanel({
   );
 
   const inventory = useMemo(() => resolveBedInventory(tenantSettings, stays), [tenantSettings, stays]);
+  const deskStats = useMemo(
+    () => formatReceptionDeskStats(resolveReceptionDeskStats(inventory, stays)),
+    [inventory, stays]
+  );
 
   const overlappingBedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -103,14 +111,19 @@ export function ReceptionCheckInPanel({
     return ids;
   }, [accessPeriod.checkInAt, accessPeriod.checkOutAt, bedOptions, reissueDraft?.stayId, stays]);
 
-  const bedsByRoom = useMemo(() => {
-    return inventory.roomGroups
-      .map((group) => ({
-        ...group,
-        beds: group.beds.filter((entry) => !overlappingBedIds.has(entry.bedId)),
-      }))
-      .filter((group) => group.beds.length > 0);
-  }, [inventory.roomGroups, overlappingBedIds]);
+  const bedsByRoom = useMemo(
+    () =>
+      inventory.roomGroups
+        .map((group) => ({
+          roomId: group.roomId,
+          roomLabel: group.roomLabel,
+          beds: group.beds
+            .filter((entry) => !overlappingBedIds.has(entry.bedId))
+            .map((entry) => ({ bedId: entry.bedId, displayLabel: entry.displayLabel })),
+        }))
+        .filter((group) => group.beds.length > 0),
+    [inventory.roomGroups, overlappingBedIds]
+  );
 
   const availableBedIds = useMemo(
     () => bedOptions.filter((id) => !overlappingBedIds.has(id)),
@@ -124,11 +137,10 @@ export function ReceptionCheckInPanel({
     setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
   }, [bedId, bedOptions, overlappingBedIds]);
 
-  const handleModeChange = (nextMode: string) => {
+  const handleModeChange = (nextMode: GuestAccessFormMode) => {
     if (reissueDraft) return;
-    const resolvedMode = nextMode as GuestAccessFormMode;
-    setMode(resolvedMode);
-    if (resolvedMode === 'walk-in') {
+    setMode(nextMode);
+    if (nextMode === 'walk-in') {
       const nextDates = defaultWalkInDates();
       setCheckInDate(nextDates.checkInDate);
       setCheckOutDate(nextDates.checkOutDate);
@@ -242,6 +254,7 @@ export function ReceptionCheckInPanel({
           return [stayWithLink, ...withoutOld];
         });
         setExpandedStayId(result.stay.id);
+        setDeskTab('access');
         setStayPins((current) => {
           const next = { ...current, [result.stay.id]: result.guestPin };
           if (reissueDraft) {
@@ -289,9 +302,12 @@ export function ReceptionCheckInPanel({
     });
   };
 
-  const handleViewOccupiedStay = (stayId: string) => {
+  const focusStay = (stayId: string) => {
+    setDeskTab('access');
     setExpandedStayId(stayId);
-    document.getElementById(`stay-${stayId}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    requestAnimationFrame(() => {
+      document.getElementById(`stay-${stayId}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   };
 
   const handleSelectFreeNight = (nextBedId: string, nightDate: string) => {
@@ -303,6 +319,12 @@ export function ReceptionCheckInPanel({
     issueFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  const bedsAvailabilityHint = rangeValid
+    ? availableBedIds.length === 0
+      ? `No beds for ${formatDisplayDate(checkInDate)} – ${formatDisplayDate(checkOutDate)}`
+      : `${availableBedIds.length} bed${availableBedIds.length === 1 ? '' : 's'} available for ${formatDisplayDate(checkInDate)} – ${formatDisplayDate(checkOutDate)}`
+    : null;
+
   if (bedOptions.length === 0) {
     return (
       <p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
@@ -311,17 +333,21 @@ export function ReceptionCheckInPanel({
     );
   }
 
-  const bedsAvailabilityHint =
-    mode === 'custom' && rangeValid
-      ? availableBedIds.length === 0
-        ? `No beds for ${formatDisplayDate(checkInDate)} – ${formatDisplayDate(checkOutDate)}`
-        : `${availableBedIds.length} beds available for ${formatDisplayDate(checkInDate)} – ${formatDisplayDate(checkOutDate)}`
-      : null;
-
-  const reissueGuestLabel = reissueDraft?.guestName || pendingReissueStay?.guest_name || undefined;
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reception desk</p>
+          <h1 className="truncate text-xl font-semibold">{tenantName}</h1>
+          <p className="text-xs text-muted-foreground">{deskStats}</p>
+        </div>
+        <form method="POST" action="/api/reception/logout">
+          <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
+            Sign out
+          </button>
+        </form>
+      </header>
+
       <RevokeAccessDialog
         open={pendingRevokeStayId !== null}
         isPending={isPending}
@@ -346,152 +372,89 @@ export function ReceptionCheckInPanel({
         }}
       />
 
-      <div className="rounded-xl border bg-card p-4">
-        <BedInventoryGrid roomGroups={inventory.roomGroups} onViewOccupiedStay={handleViewOccupiedStay} />
-      </div>
-
-      <div className="rounded-xl border bg-card p-4">
-        <BedAccessCalendar
-          settings={tenantSettings}
-          stays={stays}
-          onViewStay={handleViewOccupiedStay}
-          onSelectFreeNight={handleSelectFreeNight}
-        />
-      </div>
-
-      {inventory.orphanStays.length > 0 ? (
-        <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <p className="font-medium">Access on unknown beds</p>
-          <p className="text-xs">
-            These issued access records reference bed IDs missing from the room map. Fix the map in
-            admin or revoke access and issue again.
-          </p>
-          <ul className="space-y-1 text-xs">
-            {inventory.orphanStays.map((stay) => (
-              <li key={stay.id}>
-                {stay.guest_name ? `${stay.guest_name} · ` : ''}
-                {stay.bed_id}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <div ref={issueFormRef} className="space-y-4 rounded-xl border bg-card p-4">
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-sm font-semibold">Issue guest access</h3>
-            <p className="text-xs text-muted-foreground">
-              Creates app access for the guest: QR link and 6-digit PIN. Does not replace your booking
-              system.
-            </p>
-          </div>
-
-          {reissueDraft ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2">
-              <p className="text-xs text-muted-foreground">
-                Re-issuing access for {reissueGuestLabel || 'guest'} — they will get a new PIN and link.
-              </p>
-              <Button type="button" size="sm" variant="outline" onClick={clearReissueDraft}>
-                Cancel re-issue
-              </Button>
-            </div>
-          ) : null}
-
-          <SegmentedChipBar
-            ariaLabel="Issue access mode"
-            items={[...MODE_ITEMS]}
-            value={mode}
-            onValueChange={handleModeChange}
-          />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="guest-name">Guest name (optional)</Label>
-            <Input
-              id="guest-name"
-              value={guestName}
-              onChange={(event) => setGuestName(event.target.value)}
-              placeholder="Alex"
-              autoComplete="off"
-            />
-          </div>
-
-          {mode === 'custom' ? (
-            <GuestAccessDateRange
-              checkInDate={checkInDate}
-              checkOutDate={checkOutDate}
-              onChange={({ checkInDate: nextFrom, checkOutDate: nextUntil }) => {
-                setCheckInDate(nextFrom);
-                setCheckOutDate(nextUntil);
-              }}
-            />
-          ) : (
-            <p className="text-xs text-muted-foreground sm:col-span-2">
-              Walk-in: access from today through tomorrow. Switch to Custom dates for a longer stay.
-            </p>
-          )}
-
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="bed-id">Bed</Label>
-            <select
-              id="bed-id"
-              value={bedId}
-              onChange={(event) => setBedId(event.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            >
-              {bedsByRoom.length === 0 ? (
-                <option value="">No beds for these dates</option>
-              ) : (
-                bedsByRoom.map((group) => (
-                  <optgroup key={group.roomId} label={group.roomLabel}>
-                    {group.beds.map((entry) => (
-                      <option key={entry.bedId} value={entry.bedId}>
-                        {entry.displayLabel} ({entry.bedId})
-                      </option>
-                    ))}
-                  </optgroup>
-                ))
-              )}
-            </select>
-            {bedsAvailabilityHint ? (
-              <p className="text-xs text-muted-foreground">{bedsAvailabilityHint}</p>
-            ) : null}
-          </div>
-        </div>
-
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
-
-        <Button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isPending || !rangeValid || availableBedIds.length === 0}
+      <div className="grid gap-4 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] lg:items-start">
+        <aside
+          ref={issueFormRef}
+          className="rounded-xl border bg-card p-4 lg:sticky lg:top-4"
         >
-          {isPending
-            ? reissueDraft
-              ? 'Re-issuing…'
-              : 'Issuing…'
-            : reissueDraft
-              ? 'Save new access'
-              : 'Issue access'}
-        </Button>
-      </div>
+          <IssueGuestAccessForm
+            mode={mode}
+            onModeChange={handleModeChange}
+            modeLocked={Boolean(reissueDraft)}
+            guestName={guestName}
+            onGuestNameChange={setGuestName}
+            bedId={bedId}
+            onBedIdChange={setBedId}
+            bedsByRoom={bedsByRoom}
+            checkInDate={checkInDate}
+            checkOutDate={checkOutDate}
+            onDatesChange={({ checkInDate: nextFrom, checkOutDate: nextUntil }) => {
+              setCheckInDate(nextFrom);
+              setCheckOutDate(nextUntil);
+            }}
+            reissueGuestLabel={reissueDraft?.guestName}
+            onCancelReissue={reissueDraft ? clearReissueDraft : undefined}
+            bedsAvailabilityHint={bedsAvailabilityHint}
+            error={error}
+            isPending={isPending}
+            rangeValid={rangeValid}
+            canSubmit={rangeValid && availableBedIds.length > 0 && Boolean(bedId)}
+            isReissue={Boolean(reissueDraft)}
+            onSubmit={handleSubmit}
+          />
+        </aside>
 
-      <IssuedAccessList
-        stays={stays}
-        filter={issuedAccessFilter}
-        onFilterChange={setIssuedAccessFilter}
-        expandedStayId={expandedStayId}
-        onToggleExpanded={(stayId) =>
-          setExpandedStayId((current) => (current === stayId ? null : stayId))
-        }
-        onRevoke={(stayId) => setPendingRevokeStayId(stayId)}
-        onChangeDates={(stay) => setPendingReissueStay(stay)}
-        stayPins={stayPins}
-        isPending={isPending}
-        revokeError={revokeError}
-      />
+        <section className="min-w-0 rounded-xl border bg-card p-4">
+          <Tabs value={deskTab} onValueChange={(value) => setDeskTab(value as DeskTab)}>
+            <TabsList variant="line" className="mb-4 w-full justify-start">
+              <TabsTrigger value="now">Now</TabsTrigger>
+              <TabsTrigger value="plan">Plan</TabsTrigger>
+              <TabsTrigger value="access">Access</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="now" className="space-y-3">
+              <BedInventoryGrid
+                compact
+                roomGroups={inventory.roomGroups}
+                onViewOccupiedStay={focusStay}
+              />
+              {inventory.orphanStays.length > 0 ? (
+                <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                  {inventory.orphanStays.length} access record(s) on unknown beds — fix the room map in
+                  admin.
+                </p>
+              ) : null}
+            </TabsContent>
+
+            <TabsContent value="plan">
+              <BedAccessCalendar
+                embedded
+                settings={tenantSettings}
+                stays={stays}
+                onViewStay={focusStay}
+                onSelectFreeNight={handleSelectFreeNight}
+              />
+            </TabsContent>
+
+            <TabsContent value="access">
+              <IssuedAccessList
+                stays={stays}
+                filter={issuedAccessFilter}
+                onFilterChange={setIssuedAccessFilter}
+                expandedStayId={expandedStayId}
+                onToggleExpanded={(stayId) =>
+                  setExpandedStayId((current) => (current === stayId ? null : stayId))
+                }
+                onRevoke={(stayId) => setPendingRevokeStayId(stayId)}
+                onChangeDates={(stay) => setPendingReissueStay(stay)}
+                stayPins={stayPins}
+                isPending={isPending}
+                revokeError={revokeError}
+              />
+            </TabsContent>
+          </Tabs>
+        </section>
+      </div>
     </div>
   );
 }
