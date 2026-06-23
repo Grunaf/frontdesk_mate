@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { e2eGuestAppUrl, loadE2eConfig } from './e2e/fixtures';
 
-const config = loadE2eConfig();
+const config = loadE2eConfig({ allowMissingGuestPin: true });
 const guestOrigin = e2eGuestAppUrl(config, '/').replace(/\/en\/?$/, '');
 
 export default defineConfig({

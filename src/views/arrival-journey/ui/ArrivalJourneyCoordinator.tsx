@@ -125,8 +125,9 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   };
 
   return (
-    <div className="flex min-h-screen max-w-md flex-col bg-background">
+    <div className="flex min-h-screen w-full max-w-md flex-col bg-background">
       <SegmentedChipBar
+        bleed={false}
         className="mt-4"
         items={chipItems}
         value={currentStep}

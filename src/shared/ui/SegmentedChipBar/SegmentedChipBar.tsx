@@ -18,6 +18,8 @@ export interface SegmentedChipBarProps {
   onValueChange: (id: string) => void;
   onLockedClick?: (id: string) => void;
   ariaLabel: string;
+  /** Bleed into horizontal padding of a px-4 parent (default). Use false at page edge. */
+  bleed?: boolean;
   className?: string;
 }
 
@@ -27,6 +29,7 @@ export function SegmentedChipBar({
   onValueChange,
   onLockedClick,
   ariaLabel,
+  bleed = true,
   className,
 }: SegmentedChipBarProps) {
   return (
@@ -34,7 +37,8 @@ export function SegmentedChipBar({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        'no-scrollbar -mx-4 flex items-center justify-start gap-2 overflow-x-auto px-4 py-1.5 sm:mx-0 sm:px-0',
+        'no-scrollbar flex items-center justify-start gap-2 overflow-x-auto py-1.5',
+        bleed ? '-mx-4 px-4 sm:mx-0 sm:px-0' : 'px-4',
         className
       )}
     >

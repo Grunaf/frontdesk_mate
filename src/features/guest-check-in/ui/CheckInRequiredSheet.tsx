@@ -10,6 +10,7 @@ import { getTenantPublicUrl } from '@/shared/config';
 import { createWhatsappLink } from '@/shared/lib';
 import {
   BottomSheet,
+  BottomSheetBody,
   BottomSheetContent,
   BottomSheetDescription,
   BottomSheetFooter,
@@ -76,7 +77,7 @@ export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredShee
           <BottomSheetDescription>{t('description')}</BottomSheetDescription>
         </BottomSheetHeader>
 
-        <div className="space-y-4 px-6 pb-2">
+        <BottomSheetBody className="pb-2">
           <ol className="space-y-3 text-sm text-foreground">
             <li className="flex gap-3">
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -99,7 +100,7 @@ export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredShee
           </ol>
 
           {foreignRegistration && currentTenantSlug ? (
-            <div className="flex gap-2.5 border-l-4 border-amber-500 bg-amber-50/95 py-2 pl-3 pr-2">
+            <div className="mt-4 flex gap-2.5 border-l-4 border-amber-500 bg-amber-50/95 py-2 pl-3 pr-2">
               <Icon icon={ArrowLeftRight} className="mt-0.5 size-4 shrink-0 text-amber-700" />
               <div className="min-w-0 space-y-1">
                 <p className="text-xs font-semibold leading-snug text-amber-950">
@@ -121,7 +122,7 @@ export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredShee
               </div>
             </div>
           ) : null}
-        </div>
+        </BottomSheetBody>
 
         <BottomSheetFooter>
           {receptionContact?.whatsappHref ? (

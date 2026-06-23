@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { readSmokeSession } from './lib/smokeRuntime';
 
 export type E2eUrlMode = 'flat' | 'subdomain';
 
@@ -14,6 +15,10 @@ export interface E2eConfig {
   guestMagicLink?: string;
   receptionDeskPin?: string;
   navTimeoutMs: number;
+}
+
+interface LoadE2eConfigOptions {
+  allowMissingGuestPin?: boolean;
 }
 
 const ENV_LOCAL_PATH = path.join(__dirname, 'env.local');
@@ -80,10 +85,51 @@ function readUrlMode(fileEnv: Record<string, string>): E2eUrlMode {
   return raw === 'subdomain' ? 'subdomain' : 'flat';
 }
 
+export function isSupabaseConfiguredForProvision(): boolean {
+  const secret =
+    process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const pinSecret =
+    process.env.GUEST_SESSION_SECRET?.trim() ||
+    process.env.RECEPTION_SESSION_SECRET?.trim() ||
+    process.env.ADMIN_SECRET?.trim();
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() && secret && pinSecret);
+}
+
+export function shouldProvisionGuestStay(fileEnv: Record<string, string> = loadEnvLocal()): boolean {
+  if (readEnv('E2E_PROVISION_GUEST_STAY', fileEnv)?.toLowerCase() === 'false') {
+    return false;
+  }
+  return isSupabaseConfiguredForProvision();
+}
+
+function resolveGuestPin(
+  fileEnv: Record<string, string>,
+  allowMissingGuestPin: boolean
+): string {
+  const runtimePin = readSmokeSession()?.guestPin;
+  if (runtimePin) {
+    return runtimePin;
+  }
+
+  const envPin = optionalEnv('E2E_GUEST_PIN', fileEnv);
+  if (envPin) {
+    return envPin;
+  }
+
+  if (allowMissingGuestPin && shouldProvisionGuestStay(fileEnv)) {
+    return '';
+  }
+
+  throw new Error(
+    'Missing E2E_GUEST_PIN. Enable auto-provision (Supabase keys + ADMIN_SECRET in .env.local) or set E2E_GUEST_PIN in e2e/env.local.'
+  );
+}
+
 /** Loaded once per test run from e2e/env.local + process.env. */
-export function loadE2eConfig(): E2eConfig {
+export function loadE2eConfig(options: LoadE2eConfigOptions = {}): E2eConfig {
   const fileEnv = loadEnvLocal();
   const inCi = process.env.CI === 'true';
+  const guestPin = resolveGuestPin(fileEnv, Boolean(options.allowMissingGuestPin));
 
   return {
     baseDomain: readEnv('E2E_BASE_DOMAIN', fileEnv) ?? 'localhost:3000',
@@ -94,7 +140,7 @@ export function loadE2eConfig(): E2eConfig {
       ? requireEnv('E2E_CITY_PACK_ID', fileEnv)
       : (readEnv('E2E_CITY_PACK_ID', fileEnv) ?? 'sarajevo'),
     adminPassword: requireEnv('E2E_ADMIN_PASSWORD', fileEnv),
-    guestPin: requireEnv('E2E_GUEST_PIN', fileEnv),
+    guestPin,
     guestMagicLink: optionalEnv('E2E_GUEST_MAGIC_LINK', fileEnv),
     receptionDeskPin: optionalEnv('E2E_RECEPTION_DESK_PIN', fileEnv),
     navTimeoutMs: Number(readEnv('E2E_NAV_TIMEOUT', fileEnv) ?? '15000'),
