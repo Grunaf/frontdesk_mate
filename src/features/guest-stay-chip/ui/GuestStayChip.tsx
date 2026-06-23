@@ -21,7 +21,10 @@ export function GuestStayChip() {
   const t = useTranslations('components.guestStayChip');
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const plan = useMemo(() => resolveGuestStayPlan(settings), [settings]);
+  const plan = useMemo(
+    () => resolveGuestStayPlan(settings, session?.bedId),
+    [settings, session?.bedId]
+  );
   const chipLabel = t('chipLabel');
 
   if (!isRegistered || foreignRegistration || !checkInAt || !checkOutAt || !session?.stayId) {
