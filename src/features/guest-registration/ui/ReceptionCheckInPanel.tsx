@@ -310,6 +310,11 @@ export function ReceptionCheckInPanel({
     });
   };
 
+  const focusStayFromAccessList = (stayId: string) => {
+    setIssuedAccessFilter('all');
+    focusStay(stayId);
+  };
+
   const handleSelectFreeNight = (nextBedId: string, nightDate: string) => {
     if (reissueDraft) return;
     setMode('custom');
@@ -447,6 +452,7 @@ export function ReceptionCheckInPanel({
                 }
                 onRevoke={(stayId) => setPendingRevokeStayId(stayId)}
                 onChangeDates={(stay) => setPendingReissueStay(stay)}
+                onFocusStay={focusStayFromAccessList}
                 stayPins={stayPins}
                 isPending={isPending}
                 revokeError={revokeError}

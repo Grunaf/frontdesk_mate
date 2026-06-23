@@ -903,6 +903,8 @@
     },
     "wifi": {
       "title": "Wi-Fi Connection",
+      "compactTitle": "Wi‑Fi",
+      "compactCopy": "Copy password",
       "copyLabel": "Copy Password",
       "copiedLabel": "Password Copied!"
     },
@@ -915,7 +917,37 @@
       "subtitle": "Essentials and comforts for a smooth hostel stay."
     },
     "rules": {
-      "title": "House rules"
+      "title": "House rules",
+      "tapHint": "Tap a rule for details",
+      "openDetail": "{rule} — open details"
+    },
+    "guestStayChip": {
+      "chipLabel": "My stay",
+      "sheetTitle": "Your stay",
+      "openDetail": "{summary} — open stay details",
+      "receptionHeading": "For reception",
+      "receptionHint": "Show this screen if reception asks who you are.",
+      "stayRefLabel": "Ref",
+      "registeredAsLabel": "Registered as",
+      "copyForReception": "Copy for reception",
+      "copiedForReception": "Copied",
+      "copyLineHostel": "{hostelName}",
+      "copyLineBed": "Bed: {bedLine}",
+      "copyLineDates": "Stay: {dateRange}",
+      "copyLineRef": "Ref: #{stayRef}",
+      "copyLineName": "Name: {guestName}",
+      "showRoomMapLink": "Show room map & directions",
+      "extendStayHeading": "Need more nights?",
+      "extendStayNotice": "Extensions are handled at reception. Your app access matches your booked nights — after extending, ask reception to refresh your access if door codes stop working.",
+      "extendStayWhatsapp": "Request to extend stay",
+      "extendStayMessage": "Hi! I'd like to extend my stay at {hostelName}. I'm in bed {bedLabel}, currently until {checkoutDate}. Ref #{stayRef}. How many nights can I add?",
+      "extendStayMessageNamed": "Hi! I'd like to extend my stay at {hostelName}. I'm in bed {bedLabel}, currently until {checkoutDate}. Ref #{stayRef}. Registered as {guestName}. How many nights can I add?"
+    },
+    "conciergeContact": {
+      "receptionStripLabel": "Message {hostelName} reception",
+      "receptionStripLabelCompact": "Message reception",
+      "receptionStripHint": "Questions about your stay, laundry, or checkout",
+      "whatsappMessage": "Hi, I have a question about my stay at {hostelName}"
     },
     "featureGate": {
       "previewBadge": "Preview"

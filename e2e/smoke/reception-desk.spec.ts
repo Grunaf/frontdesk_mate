@@ -28,4 +28,23 @@ test.describe('reception desk smoke', () => {
     await expect(page.getByText(/\d{3}\s\d{3}/)).toBeVisible();
     await expect(page.getByText('Shown once')).toBeVisible();
   });
+
+  test('finds issued stay by guest ref on access tab', async ({ page }) => {
+    await loginToReceptionDesk(page, config);
+
+    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
+    await issueButton.click();
+    await expect(page.getByText('Paper PIN')).toBeVisible({ timeout: config.navTimeoutMs });
+
+    await page.getByRole('tab', { name: 'Access' }).click();
+    const refLine = page.locator('li[id^="stay-"]').first().getByText(/#\w{6}/);
+    await expect(refLine).toBeVisible({ timeout: config.navTimeoutMs });
+    const refText = (await refLine.textContent())?.match(/#([A-Z0-9]{6})/)?.[1];
+    expect(refText).toBeTruthy();
+
+    await page.getByRole('textbox', { name: 'Find stay by ref' }).fill(refText!);
+    await page.getByRole('button', { name: 'Find' }).click();
+    await expect(page.locator(`#stay-`)).toBeVisible();
+  });
 });

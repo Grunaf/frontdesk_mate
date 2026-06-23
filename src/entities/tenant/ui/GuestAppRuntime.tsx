@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import type { ResolvedGuestSession } from '@/entities/guest-stay';
 import { GuestSessionProvider } from '@/features/guest-check-in';
+import { BottomSheetOpenProvider } from '@/shared/ui/bottom-sheet-open-context';
 import { GuestRuntimeProvider } from './GuestRuntimeProvider';
 
 interface GuestAppRuntimeProps {
@@ -20,9 +21,11 @@ export function GuestAppRuntime({
 }: GuestAppRuntimeProps) {
   return (
     <GuestSessionProvider session={session} currentTenantSlug={currentTenantSlug}>
-      <Suspense fallback={children}>
-        <GuestRuntimeProvider sessionBedId={sessionBedId}>{children}</GuestRuntimeProvider>
-      </Suspense>
+      <BottomSheetOpenProvider>
+        <Suspense fallback={children}>
+          <GuestRuntimeProvider sessionBedId={sessionBedId}>{children}</GuestRuntimeProvider>
+        </Suspense>
+      </BottomSheetOpenProvider>
     </GuestSessionProvider>
   );
 }
