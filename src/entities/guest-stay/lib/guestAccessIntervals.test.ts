@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   guestAccessBedNightsOverlap,
+  guestAccessCoversNight,
   isGuestAccessInWindow,
   resolveGuestAccessStatus,
+  resolveNightCellStatus,
   stayOverlapsBedNightRange,
 } from './guestAccessIntervals';
 
@@ -98,6 +100,36 @@ describe('resolveGuestAccessStatus', () => {
         now
       )
     ).toBe('in_app');
+  });
+});
+
+describe('guestAccessCoversNight', () => {
+  const stay = {
+    check_in_at: '2026-06-22T14:00:00.000Z',
+    check_out_at: '2026-06-25T23:59:59.999Z',
+    revoked_at: null,
+  };
+
+  it('covers nights inside the bed-night range', () => {
+    expect(guestAccessCoversNight(stay, '2026-06-22')).toBe(true);
+    expect(guestAccessCoversNight(stay, '2026-06-24')).toBe(true);
+    expect(guestAccessCoversNight(stay, '2026-06-25')).toBe(false);
+  });
+});
+
+describe('resolveNightCellStatus', () => {
+  it('returns scheduled before valid from', () => {
+    expect(
+      resolveNightCellStatus(
+        {
+          check_in_at: '2026-06-28T14:00:00.000Z',
+          check_out_at: '2026-06-30T23:59:59.999Z',
+          revoked_at: null,
+        },
+        '2026-06-28',
+        new Date('2026-06-22T12:00:00.000Z')
+      )
+    ).toBe('scheduled');
   });
 });
 

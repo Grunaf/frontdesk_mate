@@ -27,7 +27,7 @@ export function BedInventoryGrid({ roomGroups, onViewOccupiedStay }: BedInventor
       <div>
         <h3 className="text-sm font-semibold">Bed inventory</h3>
         <p className="text-xs text-muted-foreground">
-          Who is in the hostel now. Future access does not block a bed until valid from. {freeCount}{' '}
+          Who is in the hostel now. Use the form below to issue access for any date range. {freeCount}{' '}
           free · {occupiedCount} in use
         </p>
       </div>

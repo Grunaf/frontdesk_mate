@@ -65,3 +65,25 @@ export function stayOverlapsBedNightRange(
   if (stay.revoked_at || stay.bed_id !== bedId) return false;
   return guestAccessBedNightsOverlap(stay.check_in_at, stay.check_out_at, checkInAt, checkOutAt);
 }
+
+export function guestAccessCoversNight(
+  stay: Pick<GuestStayRecord, 'check_in_at' | 'check_out_at' | 'revoked_at'>,
+  nightDate: string
+): boolean {
+  if (stay.revoked_at) return false;
+  const start = stay.check_in_at.slice(0, 10);
+  const end = stay.check_out_at.slice(0, 10);
+  return start <= nightDate && nightDate < end;
+}
+
+export type BedNightCellStatus = 'occupied' | 'scheduled';
+
+export function resolveNightCellStatus(
+  stay: Pick<GuestStayRecord, 'check_in_at' | 'check_out_at' | 'revoked_at'>,
+  nightDate: string,
+  now: Date = new Date()
+): BedNightCellStatus | null {
+  if (!guestAccessCoversNight(stay, nightDate)) return null;
+  if (now.getTime() < new Date(stay.check_in_at).getTime()) return 'scheduled';
+  return 'occupied';
+}

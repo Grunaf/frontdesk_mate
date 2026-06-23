@@ -22,6 +22,8 @@ import type {
   GuestSessionPayload,
   GuestStayRecord,
   GuestStayRecordWithLink,
+  ReissueGuestStayInput,
+  ReissueGuestStayResult,
   ResolvedGuestSession,
 } from '../model/types';
 
@@ -58,6 +60,10 @@ function buildMagicLinkFromRow(
 function isStayActive(row: Pick<GuestStayRecord, 'revoked_at' | 'check_out_at'>): boolean {
   if (row.revoked_at) return false;
   return new Date(row.check_out_at).getTime() > Date.now();
+}
+
+function isAccessOverlapDbError(error: { code?: string } | null | undefined): boolean {
+  return error?.code === '23P01';
 }
 
 async function findOverlappingAccessOnBed(
@@ -145,6 +151,9 @@ export async function createGuestStay(
     .single();
 
   if (error || !data) {
+    if (isAccessOverlapDbError(error)) {
+      return { ok: false, error: 'access_overlap' };
+    }
     console.error('createGuestStay:', error?.message);
     return { ok: false, error: 'db_unavailable' };
   }
@@ -153,6 +162,64 @@ export async function createGuestStay(
   const magicLinkUrl = buildGuestMagicLinkUrl(tenant.slug, locale, accessToken);
 
   return { ok: true, stay, accessToken, magicLinkUrl, guestPin };
+}
+
+export async function reissueGuestStay(
+  input: ReissueGuestStayInput,
+  locale = 'en'
+): Promise<ReissueGuestStayResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'tenant_not_found' };
+  }
+
+  const { data: existingRow, error: loadError } = await admin
+    .from('guest_stays')
+    .select(GUEST_STAY_COLUMNS)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .is('revoked_at', null)
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('reissueGuestStay load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!existingRow) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const revokeStatus = await revokeGuestStay({
+    tenantSlug: input.tenantSlug,
+    stayId: input.stayId,
+  });
+
+  if (revokeStatus !== 'ok') {
+    return { ok: false, error: revokeStatus === 'not_found' ? 'not_found' : 'db_unavailable' };
+  }
+
+  const createResult = await createGuestStay(
+    {
+      tenantSlug: input.tenantSlug,
+      bedId: input.bedId,
+      guestName: input.guestName,
+      checkInAt: input.checkInAt,
+      checkOutAt: input.checkOutAt,
+    },
+    locale
+  );
+
+  if (!createResult.ok) {
+    return createResult;
+  }
+
+  return createResult;
 }
 
 export async function activateGuestStay(input: {

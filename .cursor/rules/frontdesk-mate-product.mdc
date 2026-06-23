@@ -20,7 +20,8 @@ alwaysApply: true
 ## Reception desk
 - Dev URL: `{slug}.reception.localhost:3000/login` — не `localhost/reception-site/...`.
 - Auth: **POST route handler** (`/api/reception/login|logout`) → **303** + redirect URL из **Host header**, не из `request.url`.
-- Нет booking engine: reception = **ручная выдача stay** (QR/PIN), инвентарь кроватей из `settings.guestStay.beds`.
+- Нет booking engine: reception = **выдача guest access** (QR/PIN), инвентарь кроватей из `settings.guestStay.beds`.
+- **UI только EN** — не добавлять `next-intl` / `useTranslations` в `reception-site` и `guest-registration` UI.
 - `getTenantConfig()` — для guest/landing; reception/admin → **`getTenantRecord`**.
 
 ## Новые продуктовые области (HR и т.д.)
