@@ -1,8 +1,6 @@
 'use client';
 
 import { useNightMode } from '@/shared/lib';
-import { FAQAccordion } from '@/features/faq';
-import { LocalGuide } from '@/features/welcome';
 import { NightAccessCard } from '@/features/night-access';
 import { GuestAccessPanel, useIsGuestRegistered } from '@/features/guest-check-in';
 import { GuestIssueReportCard } from '@/features/guest-issue-report';
@@ -12,7 +10,7 @@ import { conciergeContentStripOffsetClass } from '@/features/reception-contact/l
 import { WifiCompactRow } from '@/features/wifi-connect';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/shared/i18n';
-import { Button, FeatureGate, Icon } from '@/shared/ui';
+import { Button, ConciergeModuleSection, FeatureGate, Icon } from '@/shared/ui';
 import { SITE_CONFIG } from '@/shared/config';
 import { setInAppReturnTo } from '@/shared/lib';
 import { cn } from '@/shared/lib/utils';
@@ -50,30 +48,45 @@ export function ConciergeContent() {
           isRegistered && conciergeContentStripOffsetClass
         )}
       >
+        {/* Zone: guest access */}
         {!isRegistered ? <GuestAccessPanel /> : null}
 
+        {/* Zone: arrival essentials */}
         <ArrivalGuideButton />
-
         {isRegistered ? <WifiCompactRow /> : null}
 
-        <GuestExtrasBlock />
+        {/* Zone: services */}
+        <ConciergeModuleSection
+          title="Services"
+          seeAllHref={SITE_CONFIG.routes.app.services.path}
+        >
+          <GuestExtrasBlock />
+        </ConciergeModuleSection>
 
+        {/* Zone: support */}
         {isRegistered ? <GuestIssueReportCard /> : null}
 
+        {/* Zone: local guide — compact stub until Chat 2 */}
         <FeatureGate module="localGuide">
-          <div className="border-t border-border pt-4">
-            <LocalGuide />
-          </div>
+          <ConciergeModuleSection
+            title="Local guide"
+            seeAllHref={SITE_CONFIG.routes.app.guide.path}
+          />
         </FeatureGate>
 
+        {/* Zone: night access */}
         {isRegistered ? (
           <FeatureGate module="nightAccess">
             {isNightMode ? <NightAccessCard /> : null}
           </FeatureGate>
         ) : null}
 
+        {/* Zone: FAQ — compact stub until Chat 4 */}
         <FeatureGate module="faq">
-          <FAQAccordion />
+          <ConciergeModuleSection
+            title="FAQ"
+            seeAllHref={SITE_CONFIG.routes.app.faq.path}
+          />
         </FeatureGate>
       </div>
 
