@@ -36,4 +36,4 @@
 | 3b | Time rows |
 | 3c | AdminMoneyField |
 | 3d | Phone UX + launch |
-| 3e | LandingRoomCard preview |
+| 3e | LandingRoomCard preview → **v1.4** (launch wizard + nav progress) |

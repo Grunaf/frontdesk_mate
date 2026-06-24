@@ -93,4 +93,4 @@ Use `AdminFieldRow` for pairs (check-in/out, reception hours).
 2. Guest runtime fixes (PreTrip, RoomsGallery, resolveLandingRooms)  
 3. AdminField width/row, AdminPhoneField collapse  
 4. Landing + Booking + Contacts copy and wiring  
-5. Section progress in nav (follow-up)
+5. Section progress in nav → **v1.4**
