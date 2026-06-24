@@ -3,6 +3,7 @@ import type { HostelBookingConfig } from './booking';
 export interface HostelContactLink {
   raw?: string;
   mask?: string;
+  formatPreset?: string;
   href: string;
 }
 

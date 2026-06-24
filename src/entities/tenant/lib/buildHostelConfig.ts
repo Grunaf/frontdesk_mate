@@ -1,7 +1,21 @@
+import { formatMoneyAmount, isCurrencyCode } from '@/shared/lib/currency';
 import { resolvePhoneDisplay } from '@/shared/lib/phoneDisplay';
+import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
 import type { HostelConfig } from '../model/hostel-config';
 import type { TenantSettings } from '../model/settings';
 import { resolveBookingConfig } from './resolveBookingConfig';
+
+function resolveCityTaxDisplay(settings: TenantSettings): string {
+  const structured = settings.hostel?.cityTax;
+  if (structured && typeof structured.amount === 'number') {
+    const primary = settings.hostel?.currency?.primary;
+    const currency =
+      structured.currency ?? (primary && isCurrencyCode(primary) ? primary : 'EUR');
+    return formatMoneyAmount(structured.amount, currency);
+  }
+
+  return settings.cityTax?.trim() ?? '';
+}
 
 function telHref(raw?: string): string {
   return raw ? `tel:+${raw}` : '';
@@ -19,7 +33,7 @@ export function buildHostelConfig(settings: TenantSettings): HostelConfig {
   return {
     checkInTime: settings.checkInTime,
     checkOutTime: settings.checkOutTime,
-    cityTax: settings.cityTax,
+    cityTax: resolveCityTaxDisplay(settings) || settings.cityTax,
     selfCheckInTimeAfter: settings.selfCheckInTimeAfter,
     laundryCost: settings.laundryCost,
     booking: resolveBookingConfig(settings),
@@ -32,7 +46,12 @@ export function buildHostelConfig(settings: TenantSettings): HostelConfig {
       },
       whatsapp: {
         raw: receptionWhatsappRaw,
-        mask: resolvePhoneDisplay(receptionWhatsappRaw, contacts.phoneMask),
+        mask: resolvePhoneDisplay(
+          receptionWhatsappRaw,
+          contacts.phoneMask,
+          normalizePhoneDisplayPreset(contacts.phoneFormatPreset)
+        ),
+        formatPreset: contacts.phoneFormatPreset,
         href: telHref(receptionWhatsappRaw),
       },
       whatsappEnabled:
@@ -53,12 +72,22 @@ export function buildHostelConfig(settings: TenantSettings): HostelConfig {
     contacts: {
       phone: {
         raw: contacts.phoneRaw,
-        mask: resolvePhoneDisplay(contacts.phoneRaw, contacts.phoneMask),
+        mask: resolvePhoneDisplay(
+          contacts.phoneRaw,
+          contacts.phoneMask,
+          normalizePhoneDisplayPreset(contacts.phoneFormatPreset)
+        ),
+        formatPreset: contacts.phoneFormatPreset,
         href: telHref(contacts.phoneRaw),
       },
       taxiPhone: {
         raw: contacts.taxiPhoneRaw,
-        mask: resolvePhoneDisplay(contacts.taxiPhoneRaw, contacts.taxiPhoneMask),
+        mask: resolvePhoneDisplay(
+          contacts.taxiPhoneRaw,
+          contacts.taxiPhoneMask,
+          normalizePhoneDisplayPreset(contacts.taxiPhoneFormatPreset)
+        ),
+        formatPreset: contacts.taxiPhoneFormatPreset,
         href: telHref(contacts.taxiPhoneRaw),
       },
       email: {
@@ -77,8 +106,10 @@ export function buildHostelConfig(settings: TenantSettings): HostelConfig {
         raw: contacts.feedbackPhoneRaw ?? contacts.phoneRaw,
         mask: resolvePhoneDisplay(
           contacts.feedbackPhoneRaw ?? contacts.phoneRaw,
-          contacts.phoneMask
+          contacts.phoneMask,
+          normalizePhoneDisplayPreset(contacts.phoneFormatPreset)
         ),
+        formatPreset: contacts.phoneFormatPreset,
         href: telHref(contacts.feedbackPhoneRaw ?? contacts.phoneRaw),
       },
     },

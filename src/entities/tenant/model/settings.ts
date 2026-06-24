@@ -8,8 +8,10 @@ export type { ArrivalAccessConfig, AccessPoint, ArrivalLayoutKind } from './acce
 export type { GuestStayConfig, StayBed, StayFloor, StayRoom } from './guestStay';
 
 import type { TenantLandingSettings } from './landing';
+import type { TenantHostelSettings } from './hostelSettings';
 
 export type { LandingRoomType, TenantLandingSettings } from './landing';
+export type { TenantHostelSettings } from './hostelSettings';
 export type { CityPackId } from '@/entities/hostel';
 
 import type { HostelPlace } from './hostelPlaces';
@@ -59,8 +61,10 @@ export interface TenantSettings {
     /** WhatsApp for landing hero / room booking; falls back to phoneRaw */
     bookingWhatsappPhoneRaw?: string;
     phoneMask?: string;
+    phoneFormatPreset?: string;
     taxiPhoneRaw?: string;
     taxiPhoneMask?: string;
+    taxiPhoneFormatPreset?: string;
     email?: string;
     address?: string;
     mapsUrl?: string;
@@ -76,6 +80,8 @@ export interface TenantSettings {
   logoUrl?: string;
   highlightedBedId?: string;
   landing?: TenantLandingSettings;
+  /** Check-in policy, currency, and structured city tax. */
+  hostel?: TenantHostelSettings;
   /** Rooms, beds, and optional floor path hints for "find your bed". */
   guestStay?: GuestStayConfig;
   arrivalAccess?: ArrivalAccessConfig;

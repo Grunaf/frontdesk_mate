@@ -1,3 +1,11 @@
+import {
+  detectPhoneCountryPresetId,
+  formatPhoneWithCountryPreset,
+  normalizePhoneDisplayPreset,
+  type PhoneCountryPresetId,
+  type PhoneDisplayPresetId,
+} from './phone-display-presets';
+
 /** Input-mask templates (e.g. "+### ## ### ###") are not display labels. */
 export function isInputMaskPattern(value?: string): boolean {
   return Boolean(value?.includes('#'));
@@ -5,24 +13,86 @@ export function isInputMaskPattern(value?: string): boolean {
 
 export function formatPhoneDisplay(raw: string): string {
   const digits = raw.replace(/\D/g, '');
-  if (!digits) return raw;
+  if (!digits) {
+    return raw;
+  }
 
-  if (digits.length === 11 && (digits.startsWith('387') || digits.startsWith('382'))) {
-    return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
+  const detected = detectPhoneCountryPresetId(digits);
+  if (detected) {
+    return formatPhoneWithCountryPreset(digits, detected);
   }
 
   return `+${digits}`;
 }
 
-/** Pick the first human-readable label; fall back to formatting `raw`. */
-export function resolvePhoneDisplay(raw: string | undefined, ...candidates: (string | undefined)[]): string {
-  if (!raw) return '';
+export function formatPhoneWithPreset(
+  raw: string,
+  preset: PhoneDisplayPresetId
+): string {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) {
+    return raw;
+  }
 
-  for (const candidate of candidates) {
-    if (candidate && !isInputMaskPattern(candidate)) {
-      return candidate;
+  if (preset === 'auto') {
+    return formatPhoneDisplay(raw);
+  }
+
+  if (preset === 'custom') {
+    return formatPhoneDisplay(raw);
+  }
+
+  return formatPhoneWithCountryPreset(digits, preset);
+}
+
+/** Pick the first human-readable label; fall back to preset formatting or auto-detect. */
+export function resolvePhoneDisplay(
+  raw: string | undefined,
+  mask?: string,
+  preset?: PhoneDisplayPresetId
+): string {
+  if (!raw) {
+    return '';
+  }
+
+  const normalizedPreset = normalizePhoneDisplayPreset(preset);
+  const trimmedMask = mask?.trim();
+
+  if (normalizedPreset === 'custom') {
+    if (trimmedMask && !isInputMaskPattern(trimmedMask)) {
+      return trimmedMask;
     }
+
+    return formatPhoneDisplay(raw);
+  }
+
+  if (normalizedPreset && normalizedPreset !== 'auto') {
+    return formatPhoneWithPreset(raw, normalizedPreset);
+  }
+
+  if (trimmedMask && !isInputMaskPattern(trimmedMask)) {
+    return trimmedMask;
   }
 
   return formatPhoneDisplay(raw);
 }
+
+export function resolveStoredPhoneMask(
+  raw: string | undefined,
+  mask: string | undefined,
+  preset: PhoneDisplayPresetId | undefined
+): string | undefined {
+  if (!raw?.trim()) {
+    return undefined;
+  }
+
+  const normalizedPreset = normalizePhoneDisplayPreset(preset) ?? 'auto';
+
+  if (normalizedPreset === 'custom') {
+    return mask?.trim() || undefined;
+  }
+
+  return resolvePhoneDisplay(raw, undefined, normalizedPreset);
+}
+
+export type { PhoneCountryPresetId, PhoneDisplayPresetId };
