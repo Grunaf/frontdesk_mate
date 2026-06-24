@@ -6,8 +6,9 @@ const LEGACY_KEY_TO_TEMPLATE: Record<string, Exclude<RuleTemplateId, 'custom'>> 
   smoking: 'smoking',
   alcohol: 'alcohol',
   registration: 'registration',
-  laundry: 'laundry',
 };
+
+const DEPRECATED_RULE_TEMPLATE_IDS = new Set(['laundry']);
 
 const DEFAULT_QUIET_HOURS = { from: '22:00', to: '08:00' };
 
@@ -37,17 +38,23 @@ export function migrateActiveRulesKeys(keys: string[]): HouseRule[] {
     .filter((rule): rule is HouseRule => rule !== null);
 }
 
+function stripDeprecatedHouseRules(rules: HouseRule[]): HouseRule[] {
+  return rules.filter(
+    (rule) => !DEPRECATED_RULE_TEMPLATE_IDS.has(rule.templateId as string)
+  );
+}
+
 export function getHouseRules(settings: TenantSettings | undefined): HouseRule[] {
   if (!settings) {
     return [];
   }
 
   if (settings.houseRules !== undefined) {
-    return settings.houseRules;
+    return stripDeprecatedHouseRules(settings.houseRules);
   }
 
   if (settings.activeRulesKeys?.length) {
-    return migrateActiveRulesKeys(settings.activeRulesKeys);
+    return stripDeprecatedHouseRules(migrateActiveRulesKeys(settings.activeRulesKeys));
   }
 
   return [];

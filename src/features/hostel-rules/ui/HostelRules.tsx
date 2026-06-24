@@ -7,7 +7,6 @@ import {
   type ResolvedHouseRuleDisplay,
 } from '@/entities/house-rules';
 import type { TenantSettings } from '@/entities/tenant';
-import { shouldHideLaundryHouseRule } from '@/features/guest-services';
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 import { Badge, badgeVariants, Icon } from '@/shared/ui';
@@ -24,14 +23,7 @@ function hasRuleDetail(rule: ResolvedHouseRuleDisplay): boolean {
 export function HostelRules({ settings }: HostelRulesProps) {
   const rulesComponent = useTranslations('components.rules');
   const displays = useMemo(() => {
-    const rules = getHouseRules(settings);
-    const filteredRules = shouldHideLaundryHouseRule(settings)
-      ? rules.filter((rule) => rule.templateId !== 'laundry')
-      : rules;
-
-    return resolveHouseRulesForDisplay(filteredRules, {
-      laundryCost: settings.laundryCost,
-    });
+    return resolveHouseRulesForDisplay(getHouseRules(settings));
   }, [settings]);
   const [selectedRule, setSelectedRule] = useState<ResolvedHouseRuleDisplay | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);

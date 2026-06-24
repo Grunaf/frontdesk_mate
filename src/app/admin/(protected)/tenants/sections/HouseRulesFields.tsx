@@ -84,10 +84,7 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
   const [customIcon, setCustomIcon] = useState<RuleIconId | ''>('');
 
   const readyState = resolveHouseRulesReady({ ...mergedSettings, houseRules: rules });
-  const previewRules = resolveHouseRulesForDisplay(
-    rules.filter((rule) => rule.enabled),
-    { laundryCost: mergedSettings.laundryCost }
-  );
+  const previewRules = resolveHouseRulesForDisplay(rules.filter((rule) => rule.enabled));
 
   const customSummaryTooLong = customSummary.length > HOUSE_RULE_SUMMARY_MAX;
   const customDetailTooLong = customDetail.length > HOUSE_RULE_DETAIL_MAX;
@@ -295,20 +292,6 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
                   </div>
                 ) : null}
 
-                {rule.templateId === 'laundry' ? (
-                  <label className="mt-3 block space-y-1 text-xs">
-                    <span>Cost override (optional)</span>
-                    <input
-                      value={rule.params?.cost ?? ''}
-                      onChange={(event) =>
-                        updateRule(rule.id, { params: { ...rule.params, cost: event.target.value } })
-                      }
-                      placeholder={mergedSettings.laundryCost ?? 'Uses tenant laundry cost'}
-                      className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
-                    />
-                  </label>
-                ) : null}
-
                 {rule.templateId === 'custom' ? (
                   <div className="mt-3 space-y-2 text-xs text-muted-foreground">
                     <p>{rule.summary}</p>
@@ -386,18 +369,6 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
                 />
               </label>
             </div>
-          ) : null}
-          {pendingTemplate === 'laundry' ? (
-            <label className="block space-y-1 text-xs">
-              <span>Cost override (optional)</span>
-              <input
-                value={pendingParams.cost ?? ''}
-                onChange={(event) =>
-                  setPendingParams((current) => ({ ...current, cost: event.target.value }))
-                }
-                className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
-              />
-            </label>
           ) : null}
           <div className="flex gap-2">
             <button

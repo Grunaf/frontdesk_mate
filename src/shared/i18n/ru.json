@@ -990,21 +990,50 @@
         "generic": "Что-то пошло не так. Попробуйте снова."
       }
     },
-    "guestServices": {
-      "sectionTitle": "Услуги",
+    "guestExtras": {
+      "sectionTitle": "Дополнительно",
+      "featuredLabel": "Рекомендуем",
       "priceLabel": "{price}",
+      "highlightPriceFrom": "от {amount} {currency}",
       "priceAskReception": "Цену уточните на ресепшене",
+      "scheduleLabel": "{schedule}",
+      "receptionButton": "Подойти на ресепшен",
+      "externalLinkButton": "Открыть страницу партнёра",
       "laundryMessage": "Здравствуйте! Хочу воспользоваться прачкой в {hostelName}. Кровать {bedLabel}. Ref #{stayRef}.",
+      "earlyCheckinMessage": "Здравствуйте! Хочу ранний заезд в {hostelName}. Кровать {bedLabel}. Ref #{stayRef}.",
       "lateCheckoutMessage": "Здравствуйте! Хочу попросить поздний выезд из {hostelName}. Кровать {bedLabel}. Ref #{stayRef}. Обычный выезд до {checkoutTime}.",
+      "partnerTransferMessage": "Здравствуйте! Хочу заказать трансфер из {hostelName}. Кровать {bedLabel}. Ref #{stayRef}.",
+      "partnerTourMessage": "Здравствуйте! Интересует экскурсия от {hostelName}. Кровать {bedLabel}. Ref #{stayRef}.",
+      "partnerGuideMessage": "Здравствуйте! Интересует гид от {hostelName}. Кровать {bedLabel}. Ref #{stayRef}.",
       "laundry": {
         "title": "Прачка",
         "description": "Стиралка и сушилка на месте. Ресепшен подскажет, как начать.",
-        "whatsappButton": "Заказать прачку"
+        "whatsappButton": "Написать на ресепшен"
+      },
+      "earlyCheckin": {
+        "title": "Ранний заезд",
+        "description": "Приезжаете раньше стандартного заезда? Спросите на ресепшене о раннем заселении.",
+        "whatsappButton": "Написать на ресепшен"
       },
       "lateCheckout": {
         "title": "Поздний выезд",
         "description": "Нужно ещё несколько часов? Напишите ресепшену до времени выезда.",
-        "whatsappButton": "Запросить поздний выезд"
+        "whatsappButton": "Написать на ресепшен"
+      },
+      "partnerTransfer": {
+        "title": "Трансфер",
+        "description": "Поездка по вызову с нашим партнёром. Заказ через WhatsApp или на сайте.",
+        "whatsappButton": "Заказать в WhatsApp"
+      },
+      "partnerTour": {
+        "title": "Экскурсия",
+        "description": "Групповая экскурсия с местным партнёром.",
+        "whatsappButton": "Спросить в WhatsApp"
+      },
+      "partnerGuide": {
+        "title": "Гид",
+        "description": "Платный гид на день — бронирование у партнёра.",
+        "whatsappButton": "Спросить в WhatsApp"
       }
     },
     "featureGate": {

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import type { GuestExtraConfig } from '@/entities/guest-extra';
 import type { HouseRule } from '@/entities/house-rules';
 import type { GuestStayConfig, TenantSettings } from '@/entities/tenant';
 import type { RouteId } from '@/entities/hostel';
@@ -11,6 +12,7 @@ import { getHouseRules, migrateActiveRulesKeys } from '@/entities/house-rules';
 export interface TenantFormDraft {
   highlightedBedId?: string;
   houseRules?: HouseRule[];
+  guestExtras?: GuestExtraConfig[];
   guestStay?: GuestStayConfig;
   hostelPlaces?: HostelPlace[];
   roomMapEnabled?: boolean;
@@ -31,6 +33,7 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
     ...base,
     ...(draft.highlightedBedId !== undefined ? { highlightedBedId: draft.highlightedBedId } : {}),
     ...(draft.houseRules !== undefined ? { houseRules: draft.houseRules } : {}),
+    ...(draft.guestExtras !== undefined ? { guestExtras: draft.guestExtras } : {}),
     ...(draft.guestStay !== undefined ? { guestStay: draft.guestStay } : {}),
     ...(draft.hostelPlaces !== undefined ? { hostelPlaces: draft.hostelPlaces } : {}),
     ...(draft.arrivalWalkToHostel !== undefined

@@ -990,21 +990,50 @@
         "generic": "Something went wrong. Try again."
       }
     },
-    "guestServices": {
-      "sectionTitle": "Services",
+    "guestExtras": {
+      "sectionTitle": "Extras",
+      "featuredLabel": "Featured",
       "priceLabel": "{price}",
+      "highlightPriceFrom": "from {amount} {currency}",
       "priceAskReception": "Ask reception for price",
+      "scheduleLabel": "{schedule}",
+      "receptionButton": "Come to reception",
+      "externalLinkButton": "Open partner page",
       "laundryMessage": "Hi! I'd like to use the laundry at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "earlyCheckinMessage": "Hi! I'd like to request an early check-in at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
       "lateCheckoutMessage": "Hi! I'd like to request a late checkout at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}. Standard checkout is {checkoutTime}.",
+      "partnerTransferMessage": "Hi! I'd like to book a transfer from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "partnerTourMessage": "Hi! I'm interested in the tour from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "partnerGuideMessage": "Hi! I'm interested in the local guide from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
       "laundry": {
         "title": "Laundry",
         "description": "Washing and drying on site. Reception will help you get started.",
-        "whatsappButton": "Request laundry"
+        "whatsappButton": "Message reception"
+      },
+      "earlyCheckin": {
+        "title": "Early check-in",
+        "description": "Arriving before standard check-in? Ask reception if an early room is available.",
+        "whatsappButton": "Message reception"
       },
       "lateCheckout": {
         "title": "Late checkout",
         "description": "Need a few extra hours? Message reception before checkout time.",
-        "whatsappButton": "Request late checkout"
+        "whatsappButton": "Message reception"
+      },
+      "partnerTransfer": {
+        "title": "Airport transfer",
+        "description": "On-demand ride with our partner. Book via WhatsApp or their page.",
+        "whatsappButton": "Book via WhatsApp"
+      },
+      "partnerTour": {
+        "title": "City tour",
+        "description": "Join a guided tour with our local partner.",
+        "whatsappButton": "Ask on WhatsApp"
+      },
+      "partnerGuide": {
+        "title": "Local guide",
+        "description": "A paid guide for your day — book with our partner.",
+        "whatsappButton": "Ask on WhatsApp"
       }
     },
     "featureGate": {
