@@ -1,21 +1,25 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { LandingRoomType, TenantSettings } from '@/entities/tenant';
+import type { LandingRoomType, TenantLandingSettings, TenantSettings } from '@/entities/tenant';
 import { needsLandingBookingEngine } from '@/entities/tenant/lib/resolveLandingBookingGap';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { resolveLandingRooms } from '@/entities/tenant/lib/resolveLandingRooms';
+import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
+import type { CurrencyCode } from '@/shared/lib/currency';
 import type { AdminSectionId } from '../lib/adminSections';
-import { AdminField } from '../ui/AdminField';
+import { AdminField, AdminFieldRow } from '../ui/AdminField';
+import { AdminMoneyField } from '../ui/AdminField';
 import { AdminSectionAlert } from '../ui/AdminSectionAlert';
+import { LandingRoomCardPreview } from '../ui/LandingRoomCardPreview';
+import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
+import { shouldShowEngineRoomTypeId } from '../lib/tenantAdminFieldSpecs';
 
 interface LandingFieldsProps {
   settings?: TenantSettings;
   readinessInput: TenantReadinessInput;
   onJumpToSection?: (sectionId: AdminSectionId) => void;
   scope?: 'full' | 'launch-hero' | 'launch-rooms';
-  /** When false, launch-hero omits landingJson (WA path uses launch-rooms instead). */
-  includeLandingJson?: boolean;
 }
 
 function emptyRoom(index: number): LandingRoomType {
@@ -28,24 +32,155 @@ function emptyRoom(index: number): LandingRoomType {
   };
 }
 
+function RoomTypeEditor({
+  room,
+  index,
+  onChange,
+  onRemove,
+  showEngineId = true,
+  showDescription = true,
+  settings,
+  primaryCurrency,
+}: {
+  room: LandingRoomType;
+  index: number;
+  onChange: (next: LandingRoomType) => void;
+  onRemove: () => void;
+  showEngineId?: boolean;
+  showDescription?: boolean;
+  settings?: TenantSettings;
+  primaryCurrency: CurrencyCode;
+}) {
+  return (
+    <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Room {index + 1}
+        </p>
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:text-destructive"
+          onClick={onRemove}
+        >
+          Remove
+        </button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block space-y-1.5 sm:col-span-2">
+          <span className="text-sm font-medium">Title</span>
+          <input
+            value={room.title}
+            onChange={(event) => onChange({ ...room, title: event.target.value })}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          />
+        </label>
+        {showEngineId ? (
+          <label className="block space-y-1.5 sm:col-span-2">
+            <span className="text-sm font-medium">Booking engine room type ID</span>
+            <input
+              value={room.engineRoomTypeId}
+              onChange={(event) => onChange({ ...room, engineRoomTypeId: event.target.value })}
+              placeholder="DORM8"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            />
+          </label>
+        ) : null}
+        {showDescription ? (
+          <label className="block space-y-1.5 sm:col-span-2">
+            <span className="text-sm font-medium">Description</span>
+            <span className="block text-xs text-muted-foreground">
+              Leave empty to show photo, title, and book button only on the landing.
+            </span>
+            <textarea
+              value={room.description}
+              onChange={(event) => onChange({ ...room, description: event.target.value })}
+              rows={2}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            />
+          </label>
+        ) : null}
+        <div className="sm:col-span-2">
+          <AdminFieldRow>
+            <AdminMoneyField
+              label="Price from (per night)"
+              value={room.priceFromEur ?? ''}
+              onChange={(value) =>
+                onChange({
+                  ...room,
+                  priceFromEur: value ? Number(value) : undefined,
+                })
+              }
+              currencyCode={primaryCurrency}
+              amountHint="Shown on the room card price badge."
+            />
+            <label className="block min-w-0 flex-1 space-y-1.5">
+              <span className="text-sm font-medium">Image URL</span>
+              <input
+                value={room.imageUrl}
+                onChange={(event) => onChange({ ...room, imageUrl: event.target.value })}
+                placeholder="/images/rooms/single-dorm.jpg"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </label>
+          </AdminFieldRow>
+        </div>
+        <label className="block space-y-1.5 sm:col-span-2 sm:max-w-[12rem]">
+          <span className="text-sm font-medium">Internal ID</span>
+          <input
+            value={room.id}
+            onChange={(event) => onChange({ ...room, id: event.target.value })}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          />
+        </label>
+        {showDescription ? (
+          <label className="flex items-center gap-2 sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={room.requiresChatUpgrade === true}
+              onChange={(event) =>
+                onChange({ ...room, requiresChatUpgrade: event.target.checked })
+              }
+            />
+            <span className="text-sm">Requires chat upgrade flow (dorm beds)</span>
+          </label>
+        ) : null}
+      </div>
+      <LandingRoomCardPreview room={room} settings={settings} />
+    </div>
+  );
+}
+
 export function LandingFields({
   settings,
   readinessInput,
   onJumpToSection,
   scope = 'full',
-  includeLandingJson = true,
 }: LandingFieldsProps) {
-  const initial = useMemo(() => resolveLandingRooms(settings ?? {}), [settings]);
+  const { draft, updateDraft } = useTenantFormDraft();
+  const mergedSettings = useMemo(
+    () => mergeDraftSettings(settings ?? {}, draft),
+    [settings, draft]
+  );
+  const primaryCurrency = useMemo(
+    () => resolveTenantCurrency(mergedSettings).primary,
+    [mergedSettings]
+  );
+  const initial = useMemo(() => resolveLandingRooms(mergedSettings), [mergedSettings]);
+  const showEngineId = shouldShowEngineRoomTypeId(settings ?? {});
   const [roomTypes, setRoomTypes] = useState<LandingRoomType[]>(
-    initial.roomTypes.length > 0 ? initial.roomTypes : []
+    draft.landing?.roomTypes ?? (initial.roomTypes.length > 0 ? initial.roomTypes : [])
   );
   const showBookingGap = needsLandingBookingEngine(settings ?? {});
 
-  const landingJson = JSON.stringify({
-    roomsSectionTitle: settings?.landing?.roomsSectionTitle,
-    roomsSectionSubtitle: settings?.landing?.roomsSectionSubtitle,
-    roomTypes,
-  });
+  const syncLanding = (nextRooms: LandingRoomType[]) => {
+    setRoomTypes(nextRooms);
+    const landing: TenantLandingSettings = {
+      roomsSectionTitle: settings?.landing?.roomsSectionTitle,
+      roomsSectionSubtitle: settings?.landing?.roomsSectionSubtitle,
+      roomTypes: nextRooms,
+    };
+    updateDraft({ landing });
+  };
 
   if (scope === 'launch-hero') {
     return (
@@ -58,105 +193,54 @@ export function LandingFields({
           hint="Background on the public landing page."
           missing={isTenantFieldMissing('heroBgUrl', readinessInput)}
         />
-        <AdminField
-          label="Check-in time"
-          name="checkInTime"
-          defaultValue={settings?.checkInTime}
-          placeholder="14:00"
-          missing={isTenantFieldMissing('checkInTime', readinessInput)}
-        />
-        {includeLandingJson ? <input type="hidden" name="landingJson" value={landingJson} /> : null}
       </div>
     );
   }
+
+  const roomList = (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Room types</p>
+        <button
+          type="button"
+          className="text-xs text-primary hover:underline"
+          onClick={() => syncLanding([...roomTypes, emptyRoom(roomTypes.length)])}
+        >
+          Add room type
+        </button>
+      </div>
+      {roomTypes.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Add room cards for the public landing. Fill title, image URL, and internal ID at minimum.
+        </p>
+      ) : null}
+      {roomTypes.map((room, index) => (
+        <RoomTypeEditor
+          key={`${room.id}-${index}`}
+          room={room}
+          index={index}
+          settings={mergedSettings}
+          primaryCurrency={primaryCurrency}
+          showEngineId={showEngineId}
+          showDescription={scope === 'full'}
+          onChange={(next) =>
+            syncLanding(roomTypes.map((item, i) => (i === index ? next : item)))
+          }
+          onRemove={() => syncLanding(roomTypes.filter((_, i) => i !== index))}
+        />
+      ))}
+    </div>
+  );
 
   if (scope === 'launch-rooms') {
     return (
       <div className="space-y-4">
         {showBookingGap ? (
           <AdminSectionAlert>
-            Room cards use WhatsApp booking — reception phone from step 2 is the default contact.
+            Room cards use WhatsApp booking — reception phone is in Reception & hostel.
           </AdminSectionAlert>
         ) : null}
-        <input type="hidden" name="landingJson" value={landingJson} />
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium">Room types</p>
-            <button
-              type="button"
-              className="text-xs text-primary hover:underline"
-              onClick={() => setRoomTypes((current) => [...current, emptyRoom(current.length)])}
-            >
-              Add room type
-            </button>
-          </div>
-          {roomTypes.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              Add at least one room card so guests can pick a stay before WhatsApp.
-            </p>
-          )}
-          {roomTypes.map((room, index) => (
-            <div key={`${room.id}-${index}`} className="space-y-3 rounded-lg border bg-muted/20 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Room {index + 1}
-                </p>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground hover:text-destructive"
-                  onClick={() => setRoomTypes((current) => current.filter((_, i) => i !== index))}
-                >
-                  Remove
-                </button>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block space-y-1.5 sm:col-span-2">
-                  <span className="text-sm font-medium">Title</span>
-                  <input
-                    value={room.title}
-                    onChange={(event) =>
-                      setRoomTypes((current) =>
-                        current.map((item, i) =>
-                          i === index ? { ...item, title: event.target.value } : item
-                        )
-                      )
-                    }
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-sm font-medium">Image URL</span>
-                  <input
-                    value={room.imageUrl}
-                    onChange={(event) =>
-                      setRoomTypes((current) =>
-                        current.map((item, i) =>
-                          i === index ? { ...item, imageUrl: event.target.value } : item
-                        )
-                      )
-                    }
-                    placeholder="/images/rooms/single-dorm.jpg"
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-sm font-medium">Internal ID</span>
-                  <input
-                    value={room.id}
-                    onChange={(event) =>
-                      setRoomTypes((current) =>
-                        current.map((item, i) =>
-                          i === index ? { ...item, id: event.target.value } : item
-                        )
-                      )
-                    }
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  />
-                </label>
-              </div>
-            </div>
-          ))}
-        </div>
+        {roomList}
       </div>
     );
   }
@@ -165,10 +249,10 @@ export function LandingFields({
     <div className="space-y-4">
       {showBookingGap ? (
         <AdminSectionAlert
-          actionLabel="Open Booking engine"
+          actionLabel="Open Booking"
           onAction={onJumpToSection ? () => onJumpToSection('booking') : undefined}
         >
-          Room cards are visible, but Book buttons need Booking engine (provider + property ID).
+          Room cards are visible, but Book buttons need a booking provider and property ID.
         </AdminSectionAlert>
       ) : null}
       <AdminField
@@ -176,7 +260,7 @@ export function LandingFields({
         name="heroBgUrl"
         defaultValue={settings?.heroBgUrl}
         placeholder="images/room.jpg"
-        hint="Background on the public landing page. Required with room types or hero to show the landing instead of «coming soon»."
+        hint="Required with room types to show the landing instead of «coming soon»."
         missing={isTenantFieldMissing('heroBgUrl', readinessInput)}
       />
       <AdminField
@@ -191,176 +275,7 @@ export function LandingFields({
         defaultValue={settings?.landing?.roomsSectionSubtitle}
         placeholder="Select between dorm beds and private rooms"
       />
-
-      <input type="hidden" name="landingJson" value={landingJson} />
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium">Room types</p>
-          <button
-            type="button"
-            className="text-xs text-primary hover:underline"
-            onClick={() => setRoomTypes((current) => [...current, emptyRoom(current.length)])}
-          >
-            Add room type
-          </button>
-        </div>
-
-        {roomTypes.length === 0 && (
-          <p className="text-xs text-muted-foreground">
-            No room cards on the landing yet. Add types with booking engine room IDs (e.g. Cloudbeds
-            DORM8).
-          </p>
-        )}
-
-        {roomTypes.map((room, index) => (
-          <div key={`${room.id}-${index}`} className="space-y-3 rounded-lg border bg-muted/20 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Room {index + 1}
-              </p>
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-destructive"
-                onClick={() => setRoomTypes((current) => current.filter((_, i) => i !== index))}
-              >
-                Remove
-              </button>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1.5 sm:col-span-2">
-                <span className="text-sm font-medium">Internal ID</span>
-                <input
-                  value={room.id}
-                  onChange={(event) =>
-                    setRoomTypes((current) =>
-                      current.map((item, i) =>
-                        i === index ? { ...item, id: event.target.value } : item
-                      )
-                    )
-                  }
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="block space-y-1.5 sm:col-span-2">
-                <span className="text-sm font-medium">Booking engine room type ID</span>
-                <input
-                  value={room.engineRoomTypeId}
-                  onChange={(event) =>
-                    setRoomTypes((current) =>
-                      current.map((item, i) =>
-                        i === index ? { ...item, engineRoomTypeId: event.target.value } : item
-                      )
-                    )
-                  }
-                  placeholder="DORM8"
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="block space-y-1.5 sm:col-span-2">
-                <span className="text-sm font-medium">Title</span>
-                <input
-                  value={room.title}
-                  onChange={(event) =>
-                    setRoomTypes((current) =>
-                      current.map((item, i) =>
-                        i === index ? { ...item, title: event.target.value } : item
-                      )
-                    )
-                  }
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="block space-y-1.5 sm:col-span-2">
-                <span className="text-sm font-medium">Description</span>
-                <textarea
-                  value={room.description}
-                  onChange={(event) =>
-                    setRoomTypes((current) =>
-                      current.map((item, i) =>
-                        i === index ? { ...item, description: event.target.value } : item
-                      )
-                    )
-                  }
-                  rows={3}
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">Price from (EUR)</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={room.priceFromEur ?? ''}
-                  onChange={(event) =>
-                    setRoomTypes((current) =>
-                      current.map((item, i) =>
-                        i === index
-                          ? {
-                              ...item,
-                              priceFromEur: event.target.value
-                                ? Number(event.target.value)
-                                : undefined,
-                            }
-                          : item
-                      )
-                    )
-                  }
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">Image URL</span>
-                <input
-                  value={room.imageUrl}
-                  onChange={(event) =>
-                    setRoomTypes((current) =>
-                      current.map((item, i) =>
-                        i === index ? { ...item, imageUrl: event.target.value } : item
-                      )
-                    )
-                  }
-                  placeholder="/images/rooms/single-dorm.jpg"
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="flex items-center gap-2 sm:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={room.requiresChatUpgrade === true}
-                  onChange={(event) =>
-                    setRoomTypes((current) =>
-                      current.map((item, i) =>
-                        i === index
-                          ? { ...item, requiresChatUpgrade: event.target.checked }
-                          : item
-                      )
-                    )
-                  }
-                />
-                <span className="text-sm">Requires chat upgrade flow (dorm beds)</span>
-              </label>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <AdminField
-        label="Check-in time"
-        name="checkInTime"
-        defaultValue={settings?.checkInTime}
-        placeholder="14:00"
-        missing={isTenantFieldMissing('checkInTime', readinessInput)}
-      />
-      <AdminField label="Check-out time" name="checkOutTime" defaultValue={settings?.checkOutTime} placeholder="10:00" />
-      <AdminField label="City tax" name="cityTax" defaultValue={settings?.cityTax} placeholder="10.00" />
-      <AdminField
-        label="Self check-in after"
-        name="selfCheckInTimeAfter"
-        defaultValue={settings?.selfCheckInTimeAfter}
-        placeholder="23:00"
-      />
+      {roomList}
     </div>
   );
 }

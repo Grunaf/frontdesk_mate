@@ -97,8 +97,6 @@ export function GuestExtrasFields({ settings }: GuestExtrasFieldsProps) {
         </p>
       </div>
 
-      <input type="hidden" name="guestExtrasJson" value={JSON.stringify(extras)} />
-
       <div className="space-y-3">
         {extras.map((extra) => {
           const supportsSchedule = guestExtraSupportsSchedule(extra.presetId);
@@ -212,7 +210,7 @@ export function GuestExtrasFields({ settings }: GuestExtrasFieldsProps) {
                           updateExtra(extra.presetId, { whatsappEnabled: event.target.checked })
                         }
                       />
-                      <span>Show optional WhatsApp button</span>
+                      <span>Show WhatsApp button</span>
                     </label>
                   )}
                 </div>

@@ -6,6 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import { saveTenantAction, setTenantArchiveAction } from '../../actions';
 import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import type { CityPackId, TenantSettings } from '@/entities/tenant';
+import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import {
   getTenantSetupSummaries,
   type TenantReadinessInput,
@@ -27,7 +28,6 @@ import {
 import { LAUNCH_STEP_ORDER } from './launch/launchSteps';
 import { LaunchSetupWizard } from './launch/LaunchSetupWizard';
 import { cn } from '@/shared/lib/utils';
-import { ArrivalAccessFields } from './ArrivalAccessFields';
 import { BookingEngineFields } from './BookingEngineFields';
 import {
   ADMIN_SECTIONS,
@@ -36,8 +36,12 @@ import {
   getDefaultOpenSections,
   type AdminSectionId,
 } from './lib/adminSections';
+import {
+  formatAdminSectionGuestProgress,
+  getAdminSectionGuestProgress,
+} from './lib/resolveAdminSectionProgress';
+import { ArrivalJourneyFields } from './sections/ArrivalJourneyFields';
 import { ContactsFields } from './sections/ContactsFields';
-import { ArrivalTransportFields } from './sections/ArrivalTransportFields';
 import { GuestAppFields } from './sections/GuestAppFields';
 import { IdentityFields } from './sections/IdentityFields';
 import { LandingFields } from './sections/LandingFields';
@@ -124,6 +128,7 @@ function SectionPanel({
           settings={s}
           readinessInput={readinessInput}
           onChange={onIdentityChange}
+          cityPackContent={cityPackContentsById[identity.cityPackId]}
         />
       );
     case 'subscription':
@@ -144,8 +149,17 @@ function SectionPanel({
       );
     case 'booking':
       return <BookingEngineFields settings={s} readinessInput={readinessInput} />;
-    case 'arrival':
-      return <ArrivalAccessFields settings={s} />;
+    case 'arrival-journey':
+      return (
+        <ArrivalJourneyFields
+          settings={s}
+          cityPackId={identity.cityPackId}
+          cityPackLabel={cityPackOptions.find((pack) => pack.id === identity.cityPackId)?.label}
+          cityPackGateSnapshot={cityPackGateSnapshot}
+          cityPackContent={cityPackContentsById[identity.cityPackId]}
+          readinessInput={readinessInput}
+        />
+      );
     case 'guest-app':
       return (
         <GuestAppFields
@@ -159,21 +173,7 @@ function SectionPanel({
     case 'wifi':
       return <WifiFields settings={s} readinessInput={readinessInput} />;
     case 'contacts':
-      return (
-        <div className="space-y-8">
-          <ContactsFields settings={s} readinessInput={readinessInput} />
-          <div className="border-t pt-8">
-            <p className="mb-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Arrival transport (last mile)
-            </p>
-            <ArrivalTransportFields
-              settings={s}
-              cityPackId={identity.cityPackId}
-              cityPackContent={cityPackContentsById[identity.cityPackId]}
-            />
-          </div>
-        </div>
-      );
+      return <ContactsFields settings={s} readinessInput={readinessInput} />;
   }
 }
 
@@ -208,7 +208,7 @@ function TenantFormAccordionInner({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { draft, updateDraft } = useTenantFormDraft();
+  const { draft, updateDraft, isDirty, markDirty, resetDirty } = useTenantFormDraft();
 
   const formRef = useRef<HTMLFormElement>(null);
   const archiveFormRef = useRef<HTMLFormElement>(null);
@@ -432,6 +432,7 @@ function TenantFormAccordionInner({
     }
 
     saveToastHandledRef.current = true;
+    resetDirty();
     router.replace(pathname);
 
     const gate = resolveGuestPathGate(guestPathInput);
@@ -486,7 +487,7 @@ function TenantFormAccordionInner({
     setActiveNav('guest-app');
     pendingScrollRef.current = 'guest-app';
     setOpenSections(['guest-app']);
-  }, [justSaved, pathname, readinessInput, guestPathInput, adminMode, router]);
+  }, [justSaved, pathname, readinessInput, guestPathInput, adminMode, router, resetDirty]);
 
   const handleArchiveToggle = useCallback(() => {
     if (initial.archived) {
@@ -542,7 +543,13 @@ function TenantFormAccordionInner({
         <input type="hidden" name="archived" defaultValue="true" ref={archiveValueRef} />
       </form>
 
-      <form ref={formRef} action={saveTenantAction} className="relative" onSubmit={handleFormSubmit}>
+      <form
+        ref={formRef}
+        action={saveTenantAction}
+        className="relative"
+        onSubmit={handleFormSubmit}
+        onInput={markDirty}
+      >
       <input type="hidden" name="originalSlug" value={originalSlug} />
       <input type="hidden" name="slug" value={identity.slug} />
       <input type="hidden" name="name" value={identity.name} />
@@ -551,6 +558,7 @@ function TenantFormAccordionInner({
         subscriptionStartsAt={subscription.subscriptionStartsAt}
         subscriptionEndsAt={subscription.subscriptionEndsAt}
         mergedSettings={mergedSettings}
+        roomMapEnabled={draft.roomMapEnabled ?? isRoomMapModuleEnabled(mergedSettings)}
       />
 
       {toast ? (
@@ -610,6 +618,7 @@ function TenantFormAccordionInner({
           }
         }}
         onArchiveToggle={handleArchiveToggle}
+        isDirty={isDirty}
       />
 
       {adminMode === 'advanced' ? (
@@ -631,13 +640,20 @@ function TenantFormAccordionInner({
           identity={identity}
           originalSlug={originalSlug}
           subscription={subscription}
-          onSubscriptionChange={(patch) => setSubscription((current) => ({ ...current, ...patch }))}
-          onIdentityChange={setIdentity}
+          onSubscriptionChange={(patch) => {
+            markDirty();
+            setSubscription((current) => ({ ...current, ...patch }));
+          }}
+          onIdentityChange={(next) => {
+            markDirty();
+            setIdentity(next);
+          }}
           onJumpToAdvancedSection={handleJumpToAdvancedSection}
           settings={initial.settings}
           lifecycleStatus={lifecycleStatus}
           cityPackOptions={cityPackOptions}
           cityPackGateSnapshot={cityPackGateSnapshot}
+          cityPackContentsById={cityPackContentsById}
         />
       ) : (
       <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -649,6 +665,8 @@ function TenantFormAccordionInner({
             {ADMIN_SECTIONS.map((section) => {
               const status = getAdminSectionStatus(section.id, navInputLive);
               const hint = getAdminSectionHint(section.id, navInputLive);
+              const progress = getAdminSectionGuestProgress(section.id, readinessInput);
+              const progressLabel = progress ? formatAdminSectionGuestProgress(progress) : null;
 
               return (
                 <button
@@ -662,7 +680,12 @@ function TenantFormAccordionInner({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium">{section.label}</span>
-                    <AdminSectionStatusBadge status={status} />
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {progressLabel ? (
+                        <span className="text-[10px] font-medium text-muted-foreground">{progressLabel}</span>
+                      ) : null}
+                      <AdminSectionStatusBadge status={status} />
+                    </div>
                   </div>
                   {hint ? (
                     <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">{hint}</p>
@@ -677,6 +700,8 @@ function TenantFormAccordionInner({
           {ADMIN_SECTIONS.map((section) => {
             const isOpen = openSections.includes(section.id);
             const status = getAdminSectionStatus(section.id, navInputLive);
+            const progress = getAdminSectionGuestProgress(section.id, readinessInput);
+            const progressLabel = progress ? formatAdminSectionGuestProgress(progress) : null;
 
             return (
               <div
@@ -703,7 +728,12 @@ function TenantFormAccordionInner({
                   <span className="flex flex-1 flex-col items-start gap-0.5 pr-2">
                     <span className="flex w-full items-center justify-between gap-3 text-sm font-semibold">
                       <span>{section.label}</span>
-                      <AdminSectionStatusBadge status={status} />
+                      <span className="flex items-center gap-2">
+                        {progressLabel ? (
+                          <span className="text-[10px] font-medium text-muted-foreground">{progressLabel}</span>
+                        ) : null}
+                        <AdminSectionStatusBadge status={status} />
+                      </span>
                     </span>
                     <span className="text-xs font-normal text-muted-foreground">{section.description}</span>
                   </span>
@@ -730,11 +760,15 @@ function TenantFormAccordionInner({
                         identity={identity}
                         originalSlug={originalSlug}
                         subscription={subscription}
-                        onSubscriptionChange={(patch) =>
-                          setSubscription((current) => ({ ...current, ...patch }))
-                        }
+                        onSubscriptionChange={(patch) => {
+                          markDirty();
+                          setSubscription((current) => ({ ...current, ...patch }));
+                        }}
                         readinessInput={readinessInput}
-                        onIdentityChange={setIdentity}
+                        onIdentityChange={(next) => {
+                          markDirty();
+                          setIdentity(next);
+                        }}
                         onJumpToSection={jumpToSection}
                         cityPackOptions={cityPackOptions}
                         cityPackGateSnapshot={cityPackGateSnapshot}

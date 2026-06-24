@@ -17,8 +17,8 @@ export const LAUNCH_STEPS: LaunchStepDefinition[] = [
   },
   {
     id: 'contacts-landing',
-    title: 'Contacts & landing',
-    description: 'How guests reach you and what they see on the public landing page.',
+    title: 'Reception & landing',
+    description: 'Reception phone, stay policy, hero image, and public landing.',
     sectionIds: ['contacts', 'landing'],
   },
   {
@@ -29,9 +29,9 @@ export const LAUNCH_STEPS: LaunchStepDefinition[] = [
   },
   {
     id: 'arrival',
-    title: 'Arrival basics',
-    description: 'Help guests find the building and enter during the day.',
-    sectionIds: ['arrival'],
+    title: 'Arrival journey',
+    description: 'Address, walk to the door, and building access for guests.',
+    sectionIds: ['arrival-journey'],
   },
   {
     id: 'room-map',

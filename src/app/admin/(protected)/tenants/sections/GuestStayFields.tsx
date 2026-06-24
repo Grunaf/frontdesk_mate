@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { GuestStayConfig, StayBed, StayFloor, StayRoom, TenantSettings } from '@/entities/tenant';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import { dedupeGuestStayBedIds, normalizeGuestStayLabels, remapHighlightedBedIdAfterDedupe, resolveBedPickerOptions } from '@/entities/tenant/lib/resolveBedDisplay';
@@ -159,7 +159,7 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
   );
   const [beds, setBeds] = useState<StayBed[]>(initialGuestStay.beds.length ? initialGuestStay.beds : []);
   const [highlightedBedId, setHighlightedBedId] = useState(initialGuestStay.highlightedBedId);
-  const [floorsOpen, setFloorsOpen] = useState(false);
+  const [floorsOpen, setFloorsOpen] = useState(true);
 
   const guestStayStateRef = useRef<GuestStayFormState>({
     roomMapEnabled: initialEnabled,
@@ -199,10 +199,6 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
   const applyGuestStayState = (updater: (current: GuestStayFormState) => GuestStayFormState) => {
     commitGuestStayState(updater(guestStayStateRef.current));
   };
-
-  useEffect(() => {
-    commitGuestStayState(guestStayStateRef.current);
-  }, []);
 
   const guestStay = useMemo<GuestStayConfig | undefined>(
     () => buildGuestStayConfig(readGuestStayState()),
@@ -262,14 +258,6 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
 
   return (
     <div className="space-y-6">
-      <input type="hidden" name="roomMapEnabled" value={roomMapEnabled ? 'true' : 'false'} />
-      <input
-        type="hidden"
-        name="guestStayJson"
-        value={roomMapEnabled ? JSON.stringify({ floors, rooms, beds }) : ''}
-      />
-      <input type="hidden" name="highlightedBedId" value={roomMapEnabled ? highlightedBedId : ''} />
-
       <label className="flex items-start gap-3 rounded-xl border bg-muted/20 px-4 py-3">
         <input
           type="checkbox"
@@ -292,9 +280,68 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
       ) : (
         <>
           <section className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setFloorsOpen((open) => !open)}
+              className="flex w-full items-center justify-between rounded-xl border bg-muted/15 px-4 py-3 text-left"
+            >
+              <div>
+                <p className="text-sm font-medium">1 · Building floors</p>
+                <p className="text-xs text-muted-foreground">
+                  Define floors before placing rooms. {floors.length} floor(s).
+                </p>
+              </div>
+              <ChevronDown
+                className={cn('size-4 shrink-0 transition-transform', floorsOpen && 'rotate-180')}
+              />
+            </button>
+
+            {floorsOpen ? (
+              <div className="space-y-3 pl-1">
+                {floors.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Add at least one floor, then create rooms below.
+                  </p>
+                ) : null}
+                {floors.map((floor, index) => (
+                  <FloorEditor
+                    key={`floor-${index}`}
+                    floor={floor}
+                    canRemove={floors.length > 1}
+                    onChange={(next) =>
+                      applyGuestStayState((current) => ({
+                        ...current,
+                        floors: current.floors.map((item, i) => (i === index ? next : item)),
+                      }))
+                    }
+                    onRemove={() =>
+                      applyGuestStayState((current) => ({
+                        ...current,
+                        floors: current.floors.filter((_, i) => i !== index),
+                      }))
+                    }
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    applyGuestStayState((current) => ({
+                      ...current,
+                      floors: [...current.floors, emptyFloor(current.floors.length)],
+                    }))
+                  }
+                  className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                >
+                  Add floor
+                </button>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="space-y-3">
             <div className="flex items-center justify-between gap-2 px-1">
               <div>
-                <p className="text-sm font-medium">1 · Rooms & bed maps</p>
+                <p className="text-sm font-medium">2 · Rooms & bed maps</p>
                 <p className="text-xs text-muted-foreground">
                   Place beds on the map or add floor path / door photos in room details.
                 </p>
@@ -363,7 +410,7 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
 
           <section className="rounded-xl border border-primary/15 bg-primary/5 p-4">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
-              2 · Preview guest bed
+              3 · Preview guest bed
             </p>
             <p className="mb-3 text-xs text-muted-foreground">
               Which bed is highlighted in the app until booking sync is connected. Select on the map
@@ -405,60 +452,6 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
                 Place beds on the map above, then choose one here.
               </p>
             )}
-          </section>
-
-          <section className="space-y-3">
-            <button
-              type="button"
-              onClick={() => setFloorsOpen((open) => !open)}
-              className="flex w-full items-center justify-between rounded-xl border bg-muted/15 px-4 py-3 text-left"
-            >
-              <div>
-                <p className="text-sm font-medium">3 · Wayfinding — floors (optional)</p>
-                <p className="text-xs text-muted-foreground">
-                  Corridor hints after entering a floor. {floors.length} floor(s).
-                </p>
-              </div>
-              <ChevronDown
-                className={cn('size-4 shrink-0 transition-transform', floorsOpen && 'rotate-180')}
-              />
-            </button>
-
-            {floorsOpen ? (
-              <div className="space-y-3 pl-1">
-                {floors.map((floor, index) => (
-                  <FloorEditor
-                    key={`floor-${index}`}
-                    floor={floor}
-                    canRemove={floors.length > 1}
-                    onChange={(next) =>
-                      applyGuestStayState((current) => ({
-                        ...current,
-                        floors: current.floors.map((item, i) => (i === index ? next : item)),
-                      }))
-                    }
-                    onRemove={() =>
-                      applyGuestStayState((current) => ({
-                        ...current,
-                        floors: current.floors.filter((_, i) => i !== index),
-                      }))
-                    }
-                  />
-                ))}
-                <button
-                  type="button"
-                  onClick={() =>
-                    applyGuestStayState((current) => ({
-                      ...current,
-                      floors: [...current.floors, emptyFloor(current.floors.length)],
-                    }))
-                  }
-                  className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
-                >
-                  Add floor
-                </button>
-              </div>
-            ) : null}
           </section>
 
           <RoomMapReadinessChecklist

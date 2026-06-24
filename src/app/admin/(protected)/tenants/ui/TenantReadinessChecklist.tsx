@@ -148,7 +148,7 @@ export function TenantReadinessChecklist({
                     : item.stepId === 'booking'
                       ? 'booking'
                       : item.stepId === 'arrival'
-                        ? 'arrival'
+                        ? 'arrival-journey'
                         : item.stepId === 'room-map' || item.stepId === 'rules-wifi'
                           ? 'guest-app'
                           : 'identity',

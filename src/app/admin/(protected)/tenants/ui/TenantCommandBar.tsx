@@ -84,6 +84,7 @@ interface TenantCommandBarProps {
   onScrollToChecklist: () => void;
   onJumpToGuestModules: () => void;
   onArchiveToggle: () => void;
+  isDirty?: boolean;
 }
 
 function SetupMetricPopover({
@@ -181,6 +182,7 @@ export function TenantCommandBar({
   onScrollToChecklist,
   onJumpToGuestModules,
   onArchiveToggle,
+  isDirty = false,
 }: TenantCommandBarProps) {
   const configGaps = configTotal - configComplete;
   const guestPathGate = useMemo(() => resolveGuestPathGate(guestPathInput), [guestPathInput]);
@@ -339,9 +341,12 @@ export function TenantCommandBar({
 
           <button
             type="submit"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground sm:px-5"
+            className={cn(
+              'rounded-md px-4 py-2 text-sm font-medium text-primary-foreground sm:px-5',
+              isDirty ? 'bg-amber-600 hover:bg-amber-700' : 'bg-primary'
+            )}
           >
-            Save changes
+            {isDirty ? 'Save changes · unsaved' : 'Save changes'}
           </button>
         </div>
       </div>

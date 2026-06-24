@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
+import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import {
   isCityPackReadyForTenant,
   resolveCityPackNotReadyReasonForTenant,
@@ -15,8 +15,9 @@ import {
 } from '@/entities/tenant/lib/resolveGuestPathReadiness';
 import type { TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import type { AdminSectionId } from '../lib/adminSections';
-import { ArrivalAccessFields } from '../ArrivalAccessFields';
+import { ADMIN_SECTIONS } from '../lib/adminSections';
 import { BookingEngineFields } from '../BookingEngineFields';
+import { ArrivalJourneyFields } from '../sections/ArrivalJourneyFields';
 import { ContactsFields } from '../sections/ContactsFields';
 import { GuestAppFields } from '../sections/GuestAppFields';
 import { GuestStayFields } from '../sections/GuestStayFields';
@@ -59,6 +60,7 @@ interface LaunchSetupWizardProps {
   lifecycleStatus: GuestPathReadinessInput['lifecycleStatus'];
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
+  cityPackContentsById: Record<string, CityPackContent>;
 }
 
 export function LaunchSetupWizard({
@@ -78,6 +80,7 @@ export function LaunchSetupWizard({
   lifecycleStatus,
   cityPackOptions,
   cityPackGateSnapshot,
+  cityPackContentsById,
 }: LaunchSetupWizardProps) {
   const step = getLaunchStepDefinition(stepId);
   const stepIndex = LAUNCH_STEPS.findIndex((entry) => entry.id === stepId);
@@ -100,6 +103,7 @@ export function LaunchSetupWizard({
               cityPackId={identity.cityPackId}
               cityPackOptions={cityPackOptions}
               cityPackGateSnapshot={cityPackGateSnapshot}
+              cityPackContent={cityPackContentsById[identity.cityPackId]}
               settings={settings}
               readinessInput={readinessInput}
               onChange={onIdentityChange}
@@ -122,7 +126,6 @@ export function LaunchSetupWizard({
                 settings={settings}
                 readinessInput={readinessInput}
                 scope="launch-hero"
-                includeLandingJson={bookingPath === 'engine'}
               />
             </div>
           </>
@@ -137,14 +140,19 @@ export function LaunchSetupWizard({
               ) : (
                 <>
                   <input type="hidden" name="bookingProvider" value="none" />
-                  <p className="text-sm text-muted-foreground">
-                    Guests book via the same WhatsApp as reception unless you set another number below.
-                  </p>
-                  <ContactsFields
-                    settings={settings}
-                    readinessInput={readinessInput}
-                    scope="launch-booking-override"
-                  />
+                  <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm">
+                    <p className="text-muted-foreground">
+                      Guests book via your reception WhatsApp. Room cards use the same number unless
+                      you set a separate booking WhatsApp in Reception &amp; hostel.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onJumpToAdvancedSection('contacts')}
+                      className="mt-3 text-sm font-medium text-primary hover:underline"
+                    >
+                      Open Reception &amp; hostel
+                    </button>
+                  </div>
                   <LandingFields
                     settings={settings}
                     readinessInput={readinessInput}
@@ -156,7 +164,17 @@ export function LaunchSetupWizard({
           </>
         );
       case 'arrival':
-        return <ArrivalAccessFields settings={settings} />;
+        return (
+          <ArrivalJourneyFields
+            settings={settings}
+            cityPackId={identity.cityPackId}
+            cityPackLabel={cityPack?.label}
+            cityPackGateSnapshot={cityPackGateSnapshot}
+            cityPackContent={cityPackContentsById[identity.cityPackId]}
+            readinessInput={readinessInput}
+            scope="launch-core"
+          />
+        );
       case 'room-map':
         return <GuestStayFields settings={settings} readinessInput={readinessInput} />;
       case 'rules-wifi':
@@ -259,16 +277,20 @@ export function LaunchSetupWizard({
 
       {step.sectionIds.length > 0 ? (
         <div className="flex flex-wrap gap-2 border-t pt-4">
-          {step.sectionIds.map((sectionId) => (
+          {step.sectionIds.map((sectionId) => {
+            const sectionLabel =
+              ADMIN_SECTIONS.find((entry) => entry.id === sectionId)?.label ?? sectionId;
+            return (
             <button
               key={sectionId}
               type="button"
               onClick={() => onJumpToAdvancedSection(sectionId)}
               className="text-xs font-medium text-primary hover:underline"
             >
-              Open full {sectionId} section →
+              Open full {sectionLabel} section →
             </button>
-          ))}
+            );
+          })}
         </div>
       ) : null}
 

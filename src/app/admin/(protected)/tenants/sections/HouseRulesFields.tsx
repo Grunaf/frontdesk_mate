@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import {
   CUSTOM_RULE_ICON_OPTIONS,
@@ -69,10 +69,6 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
     }
     syncRules(next);
   };
-
-  useEffect(() => {
-    updateDraft({ houseRules: rulesRef.current });
-  }, [updateDraft]);
 
   const [pendingTemplate, setPendingTemplate] = useState<Exclude<RuleTemplateId, 'custom'> | null>(
     null
@@ -176,8 +172,6 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
 
   return (
     <div className="space-y-6">
-      <input type="hidden" name="houseRulesJson" value={JSON.stringify(rules)} />
-
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -436,7 +430,7 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium">Icon (optional)</span>
+              <span className="text-xs font-medium">Icon</span>
               <select
                 value={customIcon}
                 onChange={(event) => setCustomIcon(event.target.value as RuleIconId | '')}

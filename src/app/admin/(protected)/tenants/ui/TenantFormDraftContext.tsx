@@ -1,9 +1,10 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { GuestExtraConfig } from '@/entities/guest-extra';
 import type { HouseRule } from '@/entities/house-rules';
-import type { GuestStayConfig, TenantSettings } from '@/entities/tenant';
+import type { GuestStayConfig, TenantLandingSettings, TenantSettings } from '@/entities/tenant';
+import type { TenantHostelSettings } from '@/entities/tenant/model/hostelSettings';
 import type { RouteId } from '@/entities/hostel';
 import type { LocalizedField } from '@/entities/city-pack/model/types';
 import type { HostelPlace } from '@/entities/tenant/model/hostelPlaces';
@@ -15,15 +16,26 @@ export interface TenantFormDraft {
   guestExtras?: GuestExtraConfig[];
   guestStay?: GuestStayConfig;
   hostelPlaces?: HostelPlace[];
+  landing?: TenantLandingSettings;
+  hostel?: TenantHostelSettings;
   roomMapEnabled?: boolean;
   launchBookingPath?: 'engine' | 'wa';
   arrivalWalkToHostel?: LocalizedField;
   arrivalWalkToHostelByRoute?: Partial<Record<RouteId, LocalizedField>>;
 }
 
+interface UpdateDraftOptions {
+  /** When true, updates draft state without marking the form unsaved. */
+  silent?: boolean;
+}
+
 interface TenantFormDraftContextValue {
   draft: TenantFormDraft;
-  updateDraft: (patch: Partial<TenantFormDraft>) => void;
+  updateDraft: (patch: Partial<TenantFormDraft>, options?: UpdateDraftOptions) => void;
+  syncDraft: (patch: Partial<TenantFormDraft>) => void;
+  isDirty: boolean;
+  markDirty: () => void;
+  resetDirty: () => void;
 }
 
 const TenantFormDraftContext = createContext<TenantFormDraftContextValue | null>(null);
@@ -36,6 +48,23 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
     ...(draft.guestExtras !== undefined ? { guestExtras: draft.guestExtras } : {}),
     ...(draft.guestStay !== undefined ? { guestStay: draft.guestStay } : {}),
     ...(draft.hostelPlaces !== undefined ? { hostelPlaces: draft.hostelPlaces } : {}),
+    ...(draft.landing !== undefined
+      ? {
+          landing: {
+            ...base.landing,
+            ...draft.landing,
+            roomTypes: draft.landing.roomTypes ?? base.landing?.roomTypes,
+          },
+        }
+      : {}),
+    ...(draft.hostel !== undefined
+      ? {
+          hostel: {
+            ...base.hostel,
+            ...draft.hostel,
+          },
+        }
+      : {}),
     ...(draft.arrivalWalkToHostel !== undefined
       ? { arrivalWalkToHostel: draft.arrivalWalkToHostel }
       : {}),
@@ -70,12 +99,31 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
 
 export function TenantFormDraftProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<TenantFormDraft>({});
+  const [isDirty, setIsDirty] = useState(false);
+  const isHydratingRef = useRef(true);
 
-  const updateDraft = useCallback((patch: Partial<TenantFormDraft>) => {
-    setDraft((current) => ({ ...current, ...patch }));
+  useEffect(() => {
+    isHydratingRef.current = false;
   }, []);
 
-  const value = useMemo(() => ({ draft, updateDraft }), [draft, updateDraft]);
+  const markDirty = useCallback(() => setIsDirty(true), []);
+  const resetDirty = useCallback(() => setIsDirty(false), []);
+
+  const updateDraft = useCallback((patch: Partial<TenantFormDraft>, options?: UpdateDraftOptions) => {
+    setDraft((current) => ({ ...current, ...patch }));
+    if (!options?.silent && !isHydratingRef.current) {
+      setIsDirty(true);
+    }
+  }, []);
+
+  const syncDraft = useCallback((patch: Partial<TenantFormDraft>) => {
+    updateDraft(patch, { silent: true });
+  }, [updateDraft]);
+
+  const value = useMemo(
+    () => ({ draft, updateDraft, syncDraft, isDirty, markDirty, resetDirty }),
+    [draft, updateDraft, syncDraft, isDirty, markDirty, resetDirty]
+  );
 
   return <TenantFormDraftContext.Provider value={value}>{children}</TenantFormDraftContext.Provider>;
 }

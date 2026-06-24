@@ -109,7 +109,7 @@ function AccessPointRow({
         />
       </label>
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Night code (optional)</span>
+        <span className="text-sm font-medium">Night code</span>
         <span className="block text-xs text-muted-foreground">
           Leave empty if no lock yet or staff opens manually.
         </span>
@@ -231,7 +231,7 @@ export function ArrivalAccessFields({ settings }: ArrivalAccessFieldsProps) {
           <div>
             <p className="text-sm font-medium">Access points</p>
             <p className="text-xs text-muted-foreground">
-              Ordered path: outside door first, then zones/floors. Codes optional per point.
+              Ordered path: outside door first, then zones/floors. Add a code only where guests need one.
             </p>
           </div>
           <button
@@ -259,7 +259,7 @@ export function ArrivalAccessFields({ settings }: ArrivalAccessFieldsProps) {
       </div>
 
       <AdminField
-        label="Bed → floor map (JSON, optional)"
+        label="Bed → floor map (JSON)"
         name="bedFloorMapJson"
         defaultValue={
           settings?.arrivalAccess?.bedFloorMap

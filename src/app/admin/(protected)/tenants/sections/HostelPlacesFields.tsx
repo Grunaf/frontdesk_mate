@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { HostelPlace, HostelPlaceCategory } from '@/entities/tenant/model/hostelPlaces';
 import { HOSTEL_PLACE_CATEGORIES } from '@/entities/tenant/model/hostelPlaces';
 import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
@@ -50,16 +50,12 @@ export function HostelPlacesFields({ settings }: HostelPlacesFieldsProps) {
     applyPlaces((current) => current.filter((place) => place.id !== id));
   };
 
-  useEffect(() => {
-    updateDraft({ hostelPlaces: placesRef.current });
-  }, [updateDraft]);
-
   return (
     <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
       <div>
         <p className="text-sm font-medium">Near the hostel</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Optional — add 3–5 spots within walking distance. Shown above the city guide in the guest app.
+          Add 3–5 spots within walking distance. Shown above the city guide in the guest app.
           Does not affect city pack gate.
         </p>
       </div>
@@ -99,13 +95,13 @@ export function HostelPlacesFields({ settings }: HostelPlacesFieldsProps) {
             <input
               value={place.mapsUrl ?? ''}
               onChange={(event) => updatePlace(place.id, { mapsUrl: event.target.value })}
-              placeholder="Google Maps link (optional)"
+              placeholder="Google Maps link"
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             />
             <textarea
               value={place.note ?? ''}
               onChange={(event) => updatePlace(place.id, { note: event.target.value })}
-              placeholder="Short note (optional)"
+              placeholder="Short note"
               rows={2}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             />

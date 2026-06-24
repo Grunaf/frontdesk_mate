@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
+import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import {
   isCityPackReadyForTenant,
   resolveCityPackNotReadyReasonForTenant,
@@ -12,6 +12,7 @@ import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tena
 import { normalizeTenantSlugInput } from '@/shared/config';
 import { cn } from '@/shared/lib/utils';
 import { AdminField } from '../ui/AdminField';
+import { CityPackInheritanceCard } from '../ui/CityPackInheritanceCard';
 
 interface IdentityFieldsProps {
   slug: string;
@@ -20,6 +21,7 @@ interface IdentityFieldsProps {
   cityPackId: CityPackId;
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
+  cityPackContent?: CityPackContent;
   settings?: TenantSettings;
   readinessInput: TenantReadinessInput;
   onChange: (next: { slug: string; name: string; cityPackId: CityPackId }) => void;
@@ -32,6 +34,7 @@ export function IdentityFields({
   cityPackId,
   cityPackOptions,
   cityPackGateSnapshot,
+  cityPackContent,
   settings,
   readinessInput,
   onChange,
@@ -45,6 +48,7 @@ export function IdentityFields({
   const missingName = isTenantFieldMissing('name', readinessInput);
   const packReady = isCityPackReadyForTenant(cityPackId, cityPackGateSnapshot);
   const packNotReadyReason = resolveCityPackNotReadyReasonForTenant(cityPackId, cityPackGateSnapshot);
+  const selectedPackLabel = cityPackOptions.find((pack) => pack.id === cityPackId)?.label;
   const previewLogoUrl = logoUrlPreview.trim() || undefined;
 
   return (
@@ -120,6 +124,12 @@ export function IdentityFields({
             </a>
           </p>
         ) : null}
+        <CityPackInheritanceCard
+          cityPackId={cityPackId}
+          cityPackLabel={selectedPackLabel}
+          cityPackGateSnapshot={cityPackGateSnapshot}
+          cityPackContent={cityPackContent}
+        />
       </label>
       <AdminField
         label="Logo URL"

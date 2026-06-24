@@ -1,8 +1,17 @@
+'use client';
+
+import { useState } from 'react';
 import type { TenantSettings } from '@/entities/tenant';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
+import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
+import { shouldShowReceptionWhatsappToggles } from '../lib/tenantAdminFieldSpecs';
 import { AdminCheckbox, AdminField } from '../ui/AdminField';
+import { AdminPhoneField } from '../ui/AdminPhoneField';
+import { AdminTimeField } from '../ui/AdminTimeField';
+import { AdminFieldRow } from '../ui/AdminField';
+import { HostelPolicyFields } from './HostelPolicyFields';
 
-export type ContactsFieldsScope = 'full' | 'launch-core' | 'launch-booking-override';
+export type ContactsFieldsScope = 'full' | 'launch-core';
 
 interface ContactsFieldsProps {
   settings?: TenantSettings;
@@ -10,41 +19,47 @@ interface ContactsFieldsProps {
   scope?: ContactsFieldsScope;
 }
 
+function hasPhoneChannelOverrides(settings: TenantSettings): boolean {
+  const receptionPhone = settings.contacts?.phoneRaw?.trim() ?? '';
+  const receptionWhatsapp = settings.reception?.whatsappPhoneRaw?.trim() ?? '';
+  const bookingWhatsapp = settings.contacts?.bookingWhatsappPhoneRaw?.trim() ?? '';
+
+  return Boolean(
+    settings.contacts?.taxiPhoneRaw?.trim() ||
+      settings.contacts?.feedbackPhoneRaw?.trim() ||
+      (receptionWhatsapp && receptionWhatsapp !== receptionPhone) ||
+      (bookingWhatsapp && bookingWhatsapp !== receptionPhone)
+  );
+}
+
 export function ContactsFields({
   settings,
   readinessInput,
   scope = 'full',
 }: ContactsFieldsProps) {
-  if (scope === 'launch-booking-override') {
-    return (
-      <AdminField
-        label="Different WhatsApp for bookings (optional)"
-        name="bookingWhatsappPhoneRaw"
-        defaultValue={settings?.contacts?.bookingWhatsappPhoneRaw}
-        hint="Leave empty to use reception phone for hero and room booking links."
-      />
-    );
-  }
+  const showReceptionToggles = shouldShowReceptionWhatsappToggles(settings ?? {});
+  const [overridesOpen, setOverridesOpen] = useState(() =>
+    hasPhoneChannelOverrides(settings ?? {})
+  );
 
   if (scope === 'launch-core') {
     return (
       <div className="space-y-4">
         <p className="rounded-lg border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-          Hero and room cards use the reception phone for WhatsApp bookings unless you set a
-          separate booking number in the booking step.
+          Reception phone and stay policy live here. Landing hero and room cards are in the next
+          blocks. Property address is in Arrival journey.
         </p>
-        <AdminField
-          label="Reception phone (raw)"
-          name="phoneRaw"
-          defaultValue={settings?.contacts?.phoneRaw}
+        <AdminPhoneField
+          label="Reception phone"
+          rawName="phoneRaw"
+          maskName="phoneMask"
+          presetName="phoneFormatPreset"
+          defaultRaw={settings?.contacts?.phoneRaw}
+          defaultMask={settings?.contacts?.phoneMask}
+          defaultPreset={normalizePhoneDisplayPreset(settings?.contacts?.phoneFormatPreset)}
           missing={isTenantFieldMissing('phoneRaw', readinessInput)}
         />
-        <AdminField
-          label="Address"
-          name="address"
-          defaultValue={settings?.contacts?.address}
-          missing={isTenantFieldMissing('address', readinessInput)}
-        />
+        <HostelPolicyFields settings={settings} readinessInput={readinessInput} scope="launch-core" />
       </div>
     );
   }
@@ -52,48 +67,27 @@ export function ContactsFields({
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reception</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <AdminField
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Reception desk
+        </p>
+        <AdminFieldRow>
+          <AdminTimeField
             label="Reception open"
             name="receptionOpen"
             defaultValue={settings?.reception?.open}
-            placeholder="08:00"
           />
-          <AdminField
+          <AdminTimeField
             label="Reception close"
             name="receptionClose"
             defaultValue={settings?.reception?.close}
-            placeholder="22:00"
           />
-        </div>
-        <AdminField
-          label="Reception WhatsApp (raw, optional override)"
-          name="receptionWhatsappPhoneRaw"
-          defaultValue={settings?.reception?.whatsappPhoneRaw}
-          hint="Defaults to reception phone when empty."
-        />
-        <AdminField
-          label="Different WhatsApp for bookings (optional)"
-          name="bookingWhatsappPhoneRaw"
-          defaultValue={settings?.contacts?.bookingWhatsappPhoneRaw}
-          hint="Landing hero and room cards use this when set; otherwise reception phone."
-        />
+        </AdminFieldRow>
         <AdminField
           label="Reception availability hint"
           name="receptionAvailabilityHint"
           defaultValue={settings?.reception?.availabilityHint}
           placeholder="Replies on WhatsApp during reception hours."
-        />
-        <AdminCheckbox
-          label="Reception reachable on WhatsApp"
-          name="receptionWhatsappEnabled"
-          defaultChecked={settings?.reception?.whatsappEnabled !== false}
-        />
-        <AdminCheckbox
-          label="Reception can help book a taxi"
-          name="receptionCanHelpWithTaxi"
-          defaultChecked={settings?.reception?.canHelpWithTaxi !== false}
+          width="lg"
         />
         <AdminField
           label="Reception desk PIN"
@@ -101,38 +95,99 @@ export function ContactsFields({
           type="password"
           placeholder={settings?.reception?.deskPinHash ? '•••••• (unchanged)' : 'Set PIN for reception desk'}
           hint="Used at {slug}.reception.domain. Leave blank to keep the current PIN."
+          width="sm"
         />
+        {showReceptionToggles ? (
+          <>
+            <AdminCheckbox
+              label="Reception reachable on WhatsApp"
+              name="receptionWhatsappEnabled"
+              defaultChecked={settings?.reception?.whatsappEnabled !== false}
+            />
+            <AdminCheckbox
+              label="Reception can help book a taxi"
+              name="receptionCanHelpWithTaxi"
+              defaultChecked={settings?.reception?.canHelpWithTaxi !== false}
+            />
+          </>
+        ) : null}
       </div>
 
       <div className="space-y-4 border-t pt-6">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Contact details</p>
-        <AdminField
-          label="Reception phone (raw)"
-          name="phoneRaw"
-          defaultValue={settings?.contacts?.phoneRaw}
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Phones & email
+        </p>
+        <AdminPhoneField
+          label="Reception phone"
+          rawName="phoneRaw"
+          maskName="phoneMask"
+          presetName="phoneFormatPreset"
+          defaultRaw={settings?.contacts?.phoneRaw}
+          defaultMask={settings?.contacts?.phoneMask}
+          defaultPreset={normalizePhoneDisplayPreset(settings?.contacts?.phoneFormatPreset)}
           missing={isTenantFieldMissing('phoneRaw', readinessInput)}
+          hint="Used for reception desk, WhatsApp, and landing booking when no override is set."
         />
-        <AdminField label="Reception phone (display)" name="phoneMask" defaultValue={settings?.contacts?.phoneMask} />
+
+        <details
+          open={overridesOpen}
+          onToggle={(event) => setOverridesOpen(event.currentTarget.open)}
+          className="rounded-lg border bg-muted/10 px-4 py-3"
+        >
+          <summary className="cursor-pointer text-sm font-medium">
+            Different numbers for specific channels
+          </summary>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Leave empty to use the reception phone for WhatsApp and landing booking links.
+          </p>
+          <div className="mt-4 space-y-4">
+            <AdminField
+              label="Reception WhatsApp"
+              name="receptionWhatsappPhoneRaw"
+              defaultValue={settings?.reception?.whatsappPhoneRaw}
+              hint="Defaults to reception phone when empty."
+              width="md"
+            />
+            <AdminField
+              label="Booking WhatsApp"
+              name="bookingWhatsappPhoneRaw"
+              defaultValue={settings?.contacts?.bookingWhatsappPhoneRaw}
+              hint="Landing hero and room cards use this when set; otherwise reception phone."
+              width="md"
+            />
+            <AdminPhoneField
+              label="Taxi phone override"
+              rawName="taxiPhoneRaw"
+              maskName="taxiPhoneMask"
+              presetName="taxiPhoneFormatPreset"
+              defaultRaw={settings?.contacts?.taxiPhoneRaw}
+              defaultMask={settings?.contacts?.taxiPhoneMask}
+              defaultPreset={normalizePhoneDisplayPreset(settings?.contacts?.taxiPhoneFormatPreset)}
+              hint="Overrides the city pack recommended taxi number."
+            />
+            <AdminField
+              label="Route feedback WhatsApp"
+              name="feedbackPhoneRaw"
+              defaultValue={settings?.contacts?.feedbackPhoneRaw}
+              width="md"
+            />
+          </div>
+        </details>
+
         <AdminField
-          label="Taxi WhatsApp phone (raw)"
-          name="taxiPhoneRaw"
-          defaultValue={settings?.contacts?.taxiPhoneRaw}
+          label="Email"
+          name="email"
+          type="email"
+          defaultValue={settings?.contacts?.email}
+          width="md"
         />
-        <AdminField label="Taxi phone (display)" name="taxiPhoneMask" defaultValue={settings?.contacts?.taxiPhoneMask} />
-        <AdminField
-          label="Route feedback WhatsApp (raw)"
-          name="feedbackPhoneRaw"
-          defaultValue={settings?.contacts?.feedbackPhoneRaw}
-        />
-        <AdminField label="Email" name="email" type="email" defaultValue={settings?.contacts?.email} />
-        <AdminField
-          label="Address"
-          name="address"
-          defaultValue={settings?.contacts?.address}
-          missing={isTenantFieldMissing('address', readinessInput)}
-        />
-        <AdminField label="Google Maps URL" name="mapsUrl" defaultValue={settings?.contacts?.mapsUrl} />
       </div>
+
+      <HostelPolicyFields settings={settings} readinessInput={readinessInput} scope="full" />
+
+      <p className="text-sm text-muted-foreground">
+        Property address, maps link, and walk directions are in <strong>Arrival journey</strong>.
+      </p>
     </div>
   );
 }

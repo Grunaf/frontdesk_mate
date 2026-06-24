@@ -24,6 +24,11 @@ import {
   parseArrivalWalkByRouteJson,
   parseArrivalWalkToHostelJson,
 } from './(protected)/tenants/lib/parseArrivalTransportSettings';
+import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
+import { resolveStoredPhoneMask } from '@/shared/lib/phoneDisplay';
+import { normalizeTimeValue } from '@/shared/lib/time';
+import type { TenantHostelSettings } from '@/entities/tenant/model/hostelSettings';
+import { resolveCityTaxDisplay } from '@/entities/tenant/lib/resolveHostelMoney';
 
 function parseAccessPoints(formData: FormData): AccessPoint[] | undefined {
   const raw = String(formData.get('accessPointsJson') || '').trim();
@@ -232,6 +237,44 @@ function parseHouseRules(formData: FormData): HouseRule[] | undefined {
   }
 }
 
+function readPhoneField(
+  formData: FormData,
+  rawKey: string,
+  maskKey: string,
+  presetKey: string
+): {
+  raw?: string;
+  mask?: string;
+  preset?: string;
+} {
+  const raw = String(formData.get(rawKey) || '').trim() || undefined;
+  const preset = normalizePhoneDisplayPreset(String(formData.get(presetKey) || ''));
+  const maskInput = String(formData.get(maskKey) || '').trim() || undefined;
+
+  if (!raw) {
+    return {};
+  }
+
+  return {
+    raw,
+    preset: preset ?? 'auto',
+    mask: resolveStoredPhoneMask(raw, maskInput, preset ?? 'auto'),
+  };
+}
+
+function parseHostelJson(formData: FormData): TenantHostelSettings | undefined {
+  const raw = String(formData.get('hostelJson') || '').trim();
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(raw) as TenantHostelSettings;
+  } catch {
+    return undefined;
+  }
+}
+
 function readSettings(formData: FormData): TenantSettings {
   const roomMapEnabled = String(formData.get('roomMapEnabled') || '').trim() === 'true';
   const houseRules = parseHouseRules(formData);
@@ -258,6 +301,7 @@ function readSettings(formData: FormData): TenantSettings {
   const laundryPrice = guestExtras?.find(
     (entry) => entry.presetId === 'laundry' && entry.enabled
   )?.priceLabel;
+  const hostel = parseHostelJson(formData);
 
   return {
     booking:
@@ -268,14 +312,15 @@ function readSettings(formData: FormData): TenantSettings {
             engineId: bookingEngineId,
             url: bookingUrl,
           },
-    checkInTime: String(formData.get('checkInTime') || '') || undefined,
-    checkOutTime: String(formData.get('checkOutTime') || '') || undefined,
-    cityTax: String(formData.get('cityTax') || '') || undefined,
-    selfCheckInTimeAfter: String(formData.get('selfCheckInTimeAfter') || '') || undefined,
+    checkInTime: normalizeTimeValue(String(formData.get('checkInTime') || '')),
+    checkOutTime: normalizeTimeValue(String(formData.get('checkOutTime') || '')),
+    selfCheckInTimeAfter: normalizeTimeValue(String(formData.get('selfCheckInTimeAfter') || '')),
+    cityTax: undefined,
     laundryCost: laundryPrice,
     heroBgUrl: String(formData.get('heroBgUrl') || '') || undefined,
     logoUrl: String(formData.get('logoUrl') || '') || undefined,
     landing: parseLanding(formData),
+    hostel,
     highlightedBedId,
     guestStay,
     arrivalAccess: {
@@ -293,24 +338,37 @@ function readSettings(formData: FormData): TenantSettings {
       password: String(formData.get('wifiPassword') || '') || undefined,
     },
     reception: {
-      open: String(formData.get('receptionOpen') || '') || undefined,
-      close: String(formData.get('receptionClose') || '') || undefined,
+      open: normalizeTimeValue(String(formData.get('receptionOpen') || '')),
+      close: normalizeTimeValue(String(formData.get('receptionClose') || '')),
       whatsappPhoneRaw: String(formData.get('receptionWhatsappPhoneRaw') || '') || undefined,
       availabilityHint: String(formData.get('receptionAvailabilityHint') || '') || undefined,
       whatsappEnabled: formData.get('receptionWhatsappEnabled') === 'true',
       canHelpWithTaxi: formData.get('receptionCanHelpWithTaxi') === 'true',
     },
-    contacts: {
-      phoneRaw: String(formData.get('phoneRaw') || '') || undefined,
-      bookingWhatsappPhoneRaw: String(formData.get('bookingWhatsappPhoneRaw') || '') || undefined,
-      phoneMask: String(formData.get('phoneMask') || '') || undefined,
-      taxiPhoneRaw: String(formData.get('taxiPhoneRaw') || '') || undefined,
-      taxiPhoneMask: String(formData.get('taxiPhoneMask') || '') || undefined,
-      email: String(formData.get('email') || '') || undefined,
-      address: String(formData.get('address') || '') || undefined,
-      mapsUrl: String(formData.get('mapsUrl') || '') || undefined,
-      feedbackPhoneRaw: String(formData.get('feedbackPhoneRaw') || '') || undefined,
-    },
+    contacts: (() => {
+      const phone = readPhoneField(formData, 'phoneRaw', 'phoneMask', 'phoneFormatPreset');
+      const taxiPhone = readPhoneField(
+        formData,
+        'taxiPhoneRaw',
+        'taxiPhoneMask',
+        'taxiPhoneFormatPreset'
+      );
+
+      return {
+        phoneRaw: phone.raw,
+        phoneMask: phone.mask,
+        phoneFormatPreset: phone.preset,
+        bookingWhatsappPhoneRaw:
+          String(formData.get('bookingWhatsappPhoneRaw') || '') || undefined,
+        taxiPhoneRaw: taxiPhone.raw,
+        taxiPhoneMask: taxiPhone.mask,
+        taxiPhoneFormatPreset: taxiPhone.preset,
+        email: String(formData.get('email') || '') || undefined,
+        address: String(formData.get('address') || '') || undefined,
+        mapsUrl: String(formData.get('mapsUrl') || '') || undefined,
+        feedbackPhoneRaw: String(formData.get('feedbackPhoneRaw') || '') || undefined,
+      };
+    })(),
     arrivalWalkToHostel:
       parseArrivalWalkToHostelJson(String(formData.get('arrivalWalkToHostelJson') || '')) ??
       (String(formData.get('arrivalWalkToHostel') || '').trim() || undefined),
@@ -359,6 +417,41 @@ export async function saveTenantAction(formData: FormData) {
   const lookupSlug = originalSlug || slug;
   const previousTenant = lookupSlug ? await getTenantRecord(lookupSlug) : null;
   let settings = readSettings(formData);
+
+  if (previousTenant) {
+    const previous = previousTenant.settings;
+
+    if (!settings.hostel && previous.hostel) {
+      settings = { ...settings, hostel: previous.hostel };
+    }
+
+    if (!settings.landing?.roomTypes?.length && previous.landing?.roomTypes?.length) {
+      settings = {
+        ...settings,
+        landing: {
+          ...previous.landing,
+          ...settings.landing,
+          roomTypes: previous.landing.roomTypes,
+        },
+      };
+    }
+
+    if (
+      settings.guestExtras === undefined &&
+      previous.guestExtras &&
+      previous.guestExtras.length > 0
+    ) {
+      settings = {
+        ...settings,
+        guestExtras: previous.guestExtras,
+      };
+    }
+  }
+
+  settings = {
+    ...settings,
+    cityTax: resolveCityTaxDisplay(settings) || previousTenant?.settings.cityTax,
+  };
 
   if (
     previousTenant?.settings.houseRules?.length &&

@@ -78,13 +78,15 @@ export function BookingEngineFields({ settings, readinessInput }: BookingEngineF
                 : 'Usually the tenant slug or property ID in Frontdesk Master.'
             }
             missing={isTenantFieldMissing('bookingEngineId', readinessInput)}
+            width="sm"
           />
           <AdminField
-            label="Custom booking URL (optional override)"
+            label="Custom booking URL"
             name="bookingUrl"
             defaultValue={initial.url}
             placeholder="https://…"
             hint="When set, replaces the default provider URL. Query params are still appended automatically."
+            width="lg"
           />
         </>
       )}

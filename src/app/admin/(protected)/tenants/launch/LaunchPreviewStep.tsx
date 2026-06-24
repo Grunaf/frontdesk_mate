@@ -62,7 +62,7 @@ export function LaunchPreviewStep({ slug, lifecycleStatus, readinessInput }: Lau
 
       {gate.incompleteOptional.length > 0 ? (
         <details className="rounded-lg border bg-muted/20 px-4 py-3 text-sm">
-          <summary className="cursor-pointer font-medium">Optional improvements</summary>
+          <summary className="cursor-pointer font-medium">Recommended improvements</summary>
           <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
             {gate.incompleteOptional.map((item) => (
               <li key={item.id}>• {item.label}</li>

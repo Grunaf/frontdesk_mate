@@ -4,6 +4,10 @@ import { useMemo } from 'react';
 import type { RouteId } from '@/entities/hostel';
 import type { CityPackContent } from '@/entities/city-pack/model/types';
 import {
+  buildTenantWalkSeedFromCityTemplates,
+  readCityRouteWalkTemplate,
+} from '@/entities/city-pack/lib/resolveArrivalTransportReadiness';
+import {
   resolveAdminCityPackEnabledRoutes,
   resolveAdminCityPackRoutes,
   resolveCityDefaultWalkLabel,
@@ -68,17 +72,54 @@ function ArrivalTransportFieldsBody({
     });
   };
 
+  const hasGlobalWalk = Boolean(globalWalk.en?.trim() || globalWalk.ru?.trim());
+  const emptyRouteCount = hasGlobalWalk
+    ? 0
+    : enabledRoutes.filter(
+        (routeId) =>
+          !readLocalizedField(walkByRoute[routeId]).en?.trim() &&
+          !readLocalizedField(walkByRoute[routeId]).ru?.trim()
+      ).length;
+
+  const seedFromCityTemplates = () => {
+    const seed = buildTenantWalkSeedFromCityTemplates({
+      cityPackId,
+      cityPackContent,
+      settings: merged,
+    });
+    updateDraft(seed);
+  };
+
+  const applyCityTemplate = (routeId: RouteId) => {
+    const template = readCityRouteWalkTemplate(cityRoutes, routeId);
+    if (template) {
+      updateWalkByRoute(routeId, template);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Last-mile overrides are hostel-specific. Empty fields fall back to the city pack default.
+        Last mile is <strong>hostel-specific</strong> and required before go-live. City pack walk
+        text is an editorial template — pre-fill from it, then adjust for this building.
       </p>
 
       <AdminEditingLocaleSwitcher label="Editing language" />
 
+      {emptyRouteCount > 0 ? (
+        <button
+          type="button"
+          onClick={seedFromCityTemplates}
+          className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+        >
+          Pre-fill {emptyRouteCount} empty route{emptyRouteCount === 1 ? '' : 's'} from city
+          templates
+        </button>
+      ) : null}
+
       <AdminLocalizedInput
         label="Walk to hostel (all routes)"
-        hint="Overrides city default unless a per-route field is set."
+        hint="Use when the final walk is the same from every hub."
         value={globalWalk}
         onChange={(next) => updateDraft({ arrivalWalkToHostel: next })}
         multiline
@@ -88,12 +129,13 @@ function ArrivalTransportFieldsBody({
       {enabledRoutes.length > 0 ? (
         <div className="space-y-2 border-t pt-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Per-route overrides
+            Per-route walk (required)
           </p>
           <div className="space-y-2">
             {enabledRoutes.map((routeId) => {
               const preset = ROUTE_PRESETS.find((route) => route.id === routeId);
               const cityDefault = resolveCityDefaultWalkLabel(cityRoutes, routeId, locale);
+              const hasTemplate = Boolean(readCityRouteWalkTemplate(cityRoutes, routeId));
 
               return (
                 <div key={routeId} className="rounded-lg border p-3">
@@ -101,14 +143,23 @@ function ArrivalTransportFieldsBody({
                     <p className="text-sm font-medium">{preset?.label ?? routeId}</p>
                     {cityDefault ? (
                       <AdminLocalizedPreview
-                        label="City default"
+                        label="City template"
                         value={cityDefault}
                         locale={locale}
                       />
                     ) : null}
                   </div>
+                  {hasTemplate ? (
+                    <button
+                      type="button"
+                      onClick={() => applyCityTemplate(routeId)}
+                      className="mb-2 text-xs font-medium text-primary hover:underline"
+                    >
+                      Use city template
+                    </button>
+                  ) : null}
                   <AdminLocalizedInput
-                    label="Hostel override"
+                    label="Hostel walk directions"
                     value={readLocalizedField(walkByRoute[routeId])}
                     onChange={(next) => updateWalkByRoute(routeId, next)}
                     multiline

@@ -36,7 +36,7 @@ function ChecklistRow({ item }: { item: GuestPathItem }) {
                 : 'bg-muted text-muted-foreground'
             )}
           >
-            {item.tier === 'must' ? 'Must' : 'Optional'}
+            {item.tier === 'must' ? 'Must' : 'Later'}
           </span>
         </span>
         {item.detail && !item.complete ? (
