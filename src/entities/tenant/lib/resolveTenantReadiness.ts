@@ -26,7 +26,7 @@ export type TenantReadinessSectionId =
   | 'subscription'
   | 'landing'
   | 'booking'
-  | 'arrival'
+  | 'arrival-journey'
   | 'guest-app'
   | 'wifi'
   | 'contacts';
@@ -182,7 +182,7 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
     }),
     item({
       id: 'check-in-time',
-      sectionId: 'landing',
+      sectionId: 'contacts',
       label: 'Check-in time',
       tier: 'recommended',
       complete: Boolean(settings.checkInTime?.trim()),
@@ -203,14 +203,14 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
     }),
     item({
       id: 'address',
-      sectionId: 'contacts',
+      sectionId: 'arrival-journey',
       label: 'Address',
       tier: 'recommended',
       complete: Boolean(settings.contacts?.address?.trim()),
     }),
     item({
       id: 'arrival-walk',
-      sectionId: 'contacts',
+      sectionId: 'arrival-journey',
       label: 'Arrival walk directions',
       tier: 'recommended',
       complete: arrivalWalkReadiness.complete,
@@ -218,7 +218,7 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
     }),
     item({
       id: 'door-access',
-      sectionId: 'arrival',
+      sectionId: 'arrival-journey',
       label: 'Door access configured',
       tier: 'recommended',
       complete: hasDoorAccessConfigured(settings),

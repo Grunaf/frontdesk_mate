@@ -35,6 +35,26 @@ describe('resolveLandingRooms', () => {
     expect(resolved.roomTypes[0]?.engineRoomTypeId).toBe('DORM8');
   });
 
+  it('keeps wa booking room cards without engine room type id', () => {
+    const settings: TenantSettings = {
+      booking: { provider: 'none' },
+      landing: {
+        roomTypes: [
+          {
+            id: 'dorm',
+            engineRoomTypeId: '',
+            title: 'Dorm bed',
+            description: 'Shared room',
+            imageUrl: '/images/rooms/single-dorm.jpg',
+          },
+        ],
+      },
+    };
+
+    expect(resolveLandingRooms(settings).roomTypes).toHaveLength(1);
+    expect(resolveLandingRooms(settings).roomTypes[0]?.engineRoomTypeId).toBe('');
+  });
+
   it('detects landing content from hero or rooms', () => {
     expect(hasLandingRooms({ landing: { roomTypes: [] } })).toBe(false);
     expect(hasLandingContent({ heroBgUrl: 'images/room.jpg' })).toBe(true);

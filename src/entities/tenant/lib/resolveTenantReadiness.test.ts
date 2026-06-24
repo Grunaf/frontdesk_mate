@@ -28,6 +28,7 @@ const baseSettings: TenantSettings = {
   arrivalAccess: {
     accessPoints: [{ id: 'main', kind: 'outside', label: 'Main', sortOrder: 0, code: '1234' }],
   },
+  arrivalWalkToHostel: { en: 'Walk from the hub to {address}.' },
   heroBgUrl: '/hero.jpg',
   highlightedBedId: '4B',
   houseRules: [
