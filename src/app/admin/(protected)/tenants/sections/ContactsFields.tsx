@@ -1,6 +1,6 @@
 import type { TenantSettings } from '@/entities/tenant';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
-import { AdminCheckbox, AdminField, AdminTextarea } from '../ui/AdminField';
+import { AdminCheckbox, AdminField } from '../ui/AdminField';
 
 export type ContactsFieldsScope = 'full' | 'launch-core' | 'launch-booking-override';
 
@@ -132,17 +132,6 @@ export function ContactsFields({
           missing={isTenantFieldMissing('address', readinessInput)}
         />
         <AdminField label="Google Maps URL" name="mapsUrl" defaultValue={settings?.contacts?.mapsUrl} />
-      </div>
-
-      <div className="space-y-4 border-t pt-6">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Arrival directions</p>
-        <AdminTextarea
-          label="Walk to hostel (tenant override)"
-          name="arrivalWalkToHostel"
-          defaultValue={settings?.arrivalWalkToHostel}
-          placeholder="Final steps from the city route to your door. Overrides city pack text when set."
-          hint="Shown in pre-trip info and affects route readiness."
-        />
       </div>
     </div>
   );

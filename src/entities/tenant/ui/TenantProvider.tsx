@@ -1,12 +1,14 @@
 'use client';
 
 import { useContext, useMemo } from 'react';
+import { useLocale } from '@/shared/i18n';
 import { useTenantCityPack } from '../model/tenant-config';
 import { resolveCapabilities } from '../lib/resolveCapabilities';
 import { resolveGuestBedId } from '../lib/resolveGuestBedId';
 import { resolveGuestStayPlan } from '../lib/resolveGuestStayPlan';
 import { useGuestRuntimeBedId } from './GuestRuntimeProvider';
 import { TenantContext } from './tenant-context';
+import type { AppLocale } from '@/entities/city-pack/model/types';
 
 export function TenantProvider({
   config,
@@ -25,10 +27,14 @@ export function useTenant() {
   }
 
   const guestBedId = useGuestRuntimeBedId();
+  const locale = useLocale() as AppLocale;
   const cityPack = useTenantCityPack(
     context.cityPackId,
+    locale,
     context.cityPackPlaces,
-    context.cityPackEnabledRoutes
+    context.cityPackEnabledRoutes,
+    context.cityPackContent,
+    context.cityPackStatus
   );
 
   const settings = useMemo(() => {

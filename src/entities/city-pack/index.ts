@@ -1,8 +1,10 @@
 export type {
   CityPackAdminPlace,
   CityPackContent,
+  CityPackContentWarnings,
   CityPackListItem,
   CityPackRecord,
+  CityPackRouteContent,
   CityPackSelectOption,
   CityPackStatus,
   CityPackWizardStepId,
@@ -32,3 +34,8 @@ export {
   type CityPackGateEntry,
   type CityPackGateSnapshot,
 } from './lib/resolveCityPackGateForTenant';
+export { resolveCityPackForGuest } from './lib/resolveCityPackForGuest';
+export {
+  buildCityPackRouteSeedContent,
+  buildCityPackRoutesFromCode,
+} from './lib/buildCityPackRouteContentFromCode';

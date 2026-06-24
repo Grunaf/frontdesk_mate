@@ -1,7 +1,8 @@
 'use client';
 
-import { useTranslations } from '@/shared/i18n';
+import { useTranslations, useLocale } from '@/shared/i18n';
 import { useTenant } from '@/entities/tenant';
+import type { AppLocale } from '@/entities/city-pack/model/types';
 import {
   BottomSheet,
   BottomSheetBody,
@@ -35,6 +36,7 @@ export function PublicRouteDetailsSheet({
 }) {
   const { settings, hostel } = useTenant();
   const routes = useTranslations();
+  const locale = useLocale() as AppLocale;
   const directions = useTranslations('pages.arrivalJourney.directions');
   const RouteIcon = getRouteDisplayIcon(route);
   const showOfficialSchedule = hasOfficialRouteSchedule(route);
@@ -45,6 +47,7 @@ export function PublicRouteDetailsSheet({
     routes,
     settings,
     address,
+    locale,
   });
 
   return (

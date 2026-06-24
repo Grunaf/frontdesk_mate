@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from '@/shared/i18n';
 import { useTenant } from '@/entities/tenant';
 import { getRouteFeedbackLink } from '../lib/getRouteFeedbackLink';
+import { resolveRouteCopyField, resolveRouteHint } from '../lib/resolveRouteCopy';
 import { Button, ExternalServiceTouchLink, Icon, Tabs, TabsList, TabsTrigger } from '@/shared/ui';
 import type { RouteId } from '@/entities/hostel';
 import { getActiveRoutes } from '@/entities/hostel';
@@ -13,7 +14,7 @@ import { TaxiBackupCard } from './TaxiBackupCard';
 import { TaxiBackupSheet } from './TaxiBackupSheet';
 
 export function DirectionPicker() {
-  const { hostel, routes: arrivalRoutes, routeCategories, contentKeys } = useTenant();
+  const { hostel, routes: arrivalRoutes, routeCategories, contentKeys, cityPack } = useTenant();
   const routes = useTranslations();
   const directions = useTranslations('pages.arrivalJourney.directions');
 
@@ -52,9 +53,13 @@ export function DirectionPicker() {
   const routeFeedbackLink = getRouteFeedbackLink(
     hostel.contacts.feedbackPhone.raw ?? '',
     directions('routeFeedbackMessage', {
-      route: routes(currentRoute.translationKeys.publicTitle),
+      route: resolveRouteCopyField(currentRoute, 'publicTitle', routes),
     })
   );
+
+  const busClarificationQuestion =
+    cityPack.guestWarnings?.busClarificationQuestion ??
+    (contentKeys.busClarificationQuestion ? routes(contentKeys.busClarificationQuestion) : undefined);
 
   const handleCategoryChange = (categoryValue: string) => {
     const targetCategory = routeCategories.find((cat) => cat.id === categoryValue);
@@ -87,10 +92,10 @@ export function DirectionPicker() {
         </TabsList>
       </Tabs>
 
-      {subRoutes.length > 0 && contentKeys.busClarificationQuestion && (
+      {subRoutes.length > 0 && busClarificationQuestion && (
         <div className="animate-fadeIn space-y-4 rounded-xl border bg-muted p-4">
           <p className="text-center text-xs font-medium text-muted-foreground">
-            {routes(contentKeys.busClarificationQuestion)}
+            {busClarificationQuestion}
           </p>
 
           <div className="grid grid-cols-2 gap-4">
@@ -109,7 +114,9 @@ export function DirectionPicker() {
                 >
                   <span className="w-full break-words text-sm font-semibold">{routes(route.titleKey)}</span>
                   {route.hintKey && (
-                    <span className="w-full break-words text-xs text-muted-foreground">{routes(route.hintKey)}</span>
+                    <span className="w-full break-words text-xs text-muted-foreground">
+                      {resolveRouteHint(route, routes)}
+                    </span>
                   )}
                 </Button>
               );
@@ -146,8 +153,8 @@ export function DirectionPicker() {
           open={primaryDetailsOpen}
           onOpenChange={setPrimaryDetailsOpen}
           route={currentRoute}
-          title={routes(currentRoute.translationKeys.publicTitle)}
-          subtitle={routes(currentRoute.translationKeys.publicSummary)}
+          title={resolveRouteCopyField(currentRoute, 'publicTitle', routes)}
+          subtitle={resolveRouteCopyField(currentRoute, 'publicSummary', routes)}
         />
 
         {alternativeRoute && (
@@ -155,8 +162,8 @@ export function DirectionPicker() {
             open={alternativeDetailsOpen}
             onOpenChange={setAlternativeDetailsOpen}
             route={alternativeRoute}
-            title={routes(alternativeRoute.translationKeys.publicTitle)}
-            subtitle={routes(alternativeRoute.translationKeys.publicSummary)}
+            title={resolveRouteCopyField(alternativeRoute, 'publicTitle', routes)}
+            subtitle={resolveRouteCopyField(alternativeRoute, 'publicSummary', routes)}
           />
         )}
 

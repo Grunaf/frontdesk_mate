@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GuestStayConfig, StayBed, StayFloor, StayRoom, TenantSettings } from '@/entities/tenant';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import { dedupeGuestStayBedIds, normalizeGuestStayLabels, remapHighlightedBedIdAfterDedupe, resolveBedPickerOptions } from '@/entities/tenant/lib/resolveBedDisplay';
@@ -10,6 +10,38 @@ import { ChevronDown } from 'lucide-react';
 import { RoomMapReadinessChecklist } from '../ui/RoomMapReadinessChecklist';
 import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { RoomSetupCard } from '../ui/RoomSetupCard';
+
+interface GuestStayFormState {
+  roomMapEnabled: boolean;
+  floors: StayFloor[];
+  rooms: StayRoom[];
+  beds: StayBed[];
+  highlightedBedId: string;
+}
+
+function buildGuestStayConfig(state: GuestStayFormState): GuestStayConfig | undefined {
+  if (!state.roomMapEnabled) {
+    return undefined;
+  }
+
+  return {
+    floors: state.floors,
+    rooms: state.rooms,
+    beds: state.beds,
+  };
+}
+
+function sanitizeHighlightedBedId(state: GuestStayFormState): string {
+  if (!state.roomMapEnabled || !state.highlightedBedId.trim()) {
+    return state.highlightedBedId;
+  }
+
+  const validValues = new Set(
+    resolveBedPickerOptions(buildGuestStayConfig(state)).map((option) => option.value)
+  );
+
+  return validValues.has(state.highlightedBedId) ? state.highlightedBedId : '';
+}
 
 interface GuestStayFieldsProps {
   settings?: TenantSettings;
@@ -129,27 +161,54 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
   const [highlightedBedId, setHighlightedBedId] = useState(initialGuestStay.highlightedBedId);
   const [floorsOpen, setFloorsOpen] = useState(false);
 
+  const guestStayStateRef = useRef<GuestStayFormState>({
+    roomMapEnabled: initialEnabled,
+    floors: initialGuestStay.floors.length ? initialGuestStay.floors : [],
+    rooms: initialGuestStay.rooms.length ? initialGuestStay.rooms : [],
+    beds: initialGuestStay.beds.length ? initialGuestStay.beds : [],
+    highlightedBedId: initialGuestStay.highlightedBedId,
+  });
+
+  const readGuestStayState = (): GuestStayFormState => ({
+    roomMapEnabled,
+    floors,
+    rooms,
+    beds,
+    highlightedBedId,
+  });
+
+  const commitGuestStayState = (next: GuestStayFormState) => {
+    const sanitized: GuestStayFormState = {
+      ...next,
+      highlightedBedId: sanitizeHighlightedBedId(next),
+    };
+
+    guestStayStateRef.current = sanitized;
+    setRoomMapEnabled(sanitized.roomMapEnabled);
+    setFloors(sanitized.floors);
+    setRooms(sanitized.rooms);
+    setBeds(sanitized.beds);
+    setHighlightedBedId(sanitized.highlightedBedId);
+    updateDraft({
+      roomMapEnabled: sanitized.roomMapEnabled,
+      guestStay: buildGuestStayConfig(sanitized),
+      highlightedBedId: sanitized.roomMapEnabled ? sanitized.highlightedBedId : '',
+    });
+  };
+
+  const applyGuestStayState = (updater: (current: GuestStayFormState) => GuestStayFormState) => {
+    commitGuestStayState(updater(guestStayStateRef.current));
+  };
+
+  useEffect(() => {
+    commitGuestStayState(guestStayStateRef.current);
+  }, []);
+
   const guestStay = useMemo<GuestStayConfig | undefined>(
-    () => (roomMapEnabled ? { floors, rooms, beds } : undefined),
+    () => buildGuestStayConfig(readGuestStayState()),
     [roomMapEnabled, floors, rooms, beds]
   );
   const bedPickerOptions = useMemo(() => resolveBedPickerOptions(guestStay), [guestStay]);
-
-  useEffect(() => {
-    updateDraft({
-      roomMapEnabled,
-      guestStay,
-      highlightedBedId: roomMapEnabled ? highlightedBedId : '',
-    });
-  }, [roomMapEnabled, guestStay, highlightedBedId, updateDraft]);
-
-  useEffect(() => {
-    if (!highlightedBedId.trim()) return;
-    const validValues = new Set(bedPickerOptions.map((option) => option.value));
-    if (!validValues.has(highlightedBedId)) {
-      setHighlightedBedId('');
-    }
-  }, [bedPickerOptions, highlightedBedId]);
 
   const handleToggleRoomMap = (enabled: boolean) => {
     if (!enabled) {
@@ -164,21 +223,35 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
       ) {
         return;
       }
-      setRoomMapEnabled(false);
-      setFloors([]);
-      setRooms([]);
-      setBeds([]);
-      setHighlightedBedId('');
+      applyGuestStayState((current) => ({
+        ...current,
+        roomMapEnabled: false,
+        floors: [],
+        rooms: [],
+        beds: [],
+        highlightedBedId: '',
+      }));
       return;
     }
 
-    setRoomMapEnabled(true);
-    if (floors.length === 0 && rooms.length === 0) {
-      const seed = seedGuestStay();
-      setFloors(seed.floors);
-      setRooms(seed.rooms);
-      setBeds(seed.beds);
-    }
+    applyGuestStayState((current) => {
+      if (!enabled) {
+        return current;
+      }
+
+      if (current.floors.length === 0 && current.rooms.length === 0) {
+        const seed = seedGuestStay();
+        return {
+          ...current,
+          roomMapEnabled: true,
+          floors: seed.floors,
+          rooms: seed.rooms,
+          beds: seed.beds,
+        };
+      }
+
+      return { ...current, roomMapEnabled: true };
+    });
   };
 
   const previewSettings: TenantSettings = {
@@ -229,14 +302,22 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
               <button
                 type="button"
                 onClick={() => {
-                  const floorId = floors[0]?.id ?? '1';
-                  if (floors.length === 0) {
-                    const seed = seedGuestStay();
-                    setFloors(seed.floors);
-                    setRooms((current) => [...current, emptyRoom(current.length, seed.floors[0].id)]);
-                    return;
-                  }
-                  setRooms((current) => [...current, emptyRoom(current.length, floorId)]);
+                  applyGuestStayState((current) => {
+                    const floorId = current.floors[0]?.id ?? '1';
+                    if (current.floors.length === 0) {
+                      const seed = seedGuestStay();
+                      return {
+                        ...current,
+                        floors: seed.floors,
+                        rooms: [...current.rooms, emptyRoom(current.rooms.length, seed.floors[0].id)],
+                      };
+                    }
+
+                    return {
+                      ...current,
+                      rooms: [...current.rooms, emptyRoom(current.rooms.length, floorId)],
+                    };
+                  });
                 }}
                 className="shrink-0 rounded-md border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted"
               >
@@ -253,17 +334,28 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
                   beds={beds}
                   guestStay={guestStay}
                   onRoomChange={(next) =>
-                    setRooms((current) => current.map((item, i) => (i === index ? next : item)))
+                    applyGuestStayState((current) => ({
+                      ...current,
+                      rooms: current.rooms.map((item, i) => (i === index ? next : item)),
+                    }))
                   }
-                  onBedsChange={setBeds}
-                  onRemove={() => {
-                    setRooms((current) =>
-                      current.length <= 1 ? current : current.filter((_, i) => i !== index)
-                    );
-                    setBeds((current) => current.filter((bed) => bed.roomId !== room.id));
-                  }}
+                  onBedsChange={(nextBeds) =>
+                    applyGuestStayState((current) => ({ ...current, beds: nextBeds }))
+                  }
+                  onRemove={() =>
+                    applyGuestStayState((current) => ({
+                      ...current,
+                      rooms:
+                        current.rooms.length <= 1
+                          ? current.rooms
+                          : current.rooms.filter((_, i) => i !== index),
+                      beds: current.beds.filter((bed) => bed.roomId !== room.id),
+                    }))
+                  }
                   previewBedId={highlightedBedId}
-                  onPreviewBedSelect={setHighlightedBedId}
+                  onPreviewBedSelect={(bedId) =>
+                    applyGuestStayState((current) => ({ ...current, highlightedBedId: bedId }))
+                  }
                 />
               ))}
             </div>
@@ -288,7 +380,12 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
                 </span>
                 <select
                   value={highlightedBedId}
-                  onChange={(event) => setHighlightedBedId(event.target.value)}
+                  onChange={(event) =>
+                    applyGuestStayState((current) => ({
+                      ...current,
+                      highlightedBedId: event.target.value,
+                    }))
+                  }
                   className={cn(
                     'w-full rounded-md border bg-background px-3 py-2 text-sm',
                     isTenantFieldMissing('highlightedBedId', readinessInput) &&
@@ -335,14 +432,27 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
                     floor={floor}
                     canRemove={floors.length > 1}
                     onChange={(next) =>
-                      setFloors((current) => current.map((item, i) => (i === index ? next : item)))
+                      applyGuestStayState((current) => ({
+                        ...current,
+                        floors: current.floors.map((item, i) => (i === index ? next : item)),
+                      }))
                     }
-                    onRemove={() => setFloors((current) => current.filter((_, i) => i !== index))}
+                    onRemove={() =>
+                      applyGuestStayState((current) => ({
+                        ...current,
+                        floors: current.floors.filter((_, i) => i !== index),
+                      }))
+                    }
                   />
                 ))}
                 <button
                   type="button"
-                  onClick={() => setFloors((current) => [...current, emptyFloor(current.length)])}
+                  onClick={() =>
+                    applyGuestStayState((current) => ({
+                      ...current,
+                      floors: [...current.floors, emptyFloor(current.floors.length)],
+                    }))
+                  }
                   className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
                 >
                   Add floor

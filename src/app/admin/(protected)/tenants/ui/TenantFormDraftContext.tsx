@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { HouseRule } from '@/entities/house-rules';
 import type { GuestStayConfig, TenantSettings } from '@/entities/tenant';
+import type { RouteId } from '@/entities/hostel';
+import type { LocalizedField } from '@/entities/city-pack/model/types';
 import type { HostelPlace } from '@/entities/tenant/model/hostelPlaces';
 import { getHouseRules, migrateActiveRulesKeys } from '@/entities/house-rules';
 
@@ -13,6 +15,8 @@ export interface TenantFormDraft {
   hostelPlaces?: HostelPlace[];
   roomMapEnabled?: boolean;
   launchBookingPath?: 'engine' | 'wa';
+  arrivalWalkToHostel?: LocalizedField;
+  arrivalWalkToHostelByRoute?: Partial<Record<RouteId, LocalizedField>>;
 }
 
 interface TenantFormDraftContextValue {
@@ -29,6 +33,12 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
     ...(draft.houseRules !== undefined ? { houseRules: draft.houseRules } : {}),
     ...(draft.guestStay !== undefined ? { guestStay: draft.guestStay } : {}),
     ...(draft.hostelPlaces !== undefined ? { hostelPlaces: draft.hostelPlaces } : {}),
+    ...(draft.arrivalWalkToHostel !== undefined
+      ? { arrivalWalkToHostel: draft.arrivalWalkToHostel }
+      : {}),
+    ...(draft.arrivalWalkToHostelByRoute !== undefined
+      ? { arrivalWalkToHostelByRoute: draft.arrivalWalkToHostelByRoute }
+      : {}),
   };
 
   if (draft.roomMapEnabled === false) {

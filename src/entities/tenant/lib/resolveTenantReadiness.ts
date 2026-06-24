@@ -1,5 +1,6 @@
 import { resolveHouseRulesReady, resolveHouseRulesReadyDetail } from '@/entities/house-rules';
 import type { CityPackGateSnapshot } from '@/entities/city-pack';
+import type { CityPackContent } from '@/entities/city-pack/model/types';
 import { resolveCityPackHasPlacesForTenant } from '@/entities/city-pack/lib/resolveCityPackGateForTenant';
 import type { CityPackId } from '@/entities/hostel';
 import { isRoomMapModuleEnabled } from './resolveGuestModuleToggles';
@@ -12,6 +13,7 @@ import {
   type GuestAppModuleId,
 } from './resolveGuestAppModules';
 import { hasLandingContent } from './resolveLandingRooms';
+import { resolveArrivalWalkReadiness } from '@/entities/city-pack/lib/resolveArrivalTransportReadiness';
 import { needsLandingBookingEngine } from './resolveLandingBookingGap';
 import {
   resolveTenantLifecycleStatus,
@@ -67,6 +69,7 @@ export interface TenantReadinessInput {
   lifecycleStatus: TenantLifecycleStatus;
   cityPackHasPlaces?: boolean;
   cityPackGateSnapshot?: CityPackGateSnapshot;
+  cityPackContent?: CityPackContent;
 }
 
 function resolveReadinessCityPackHasPlaces(input: TenantReadinessInput): boolean | undefined {
@@ -144,6 +147,11 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
   const slug = input.slug?.trim() ?? '';
   const name = input.name?.trim() ?? '';
   const guestAppModuleInput = buildGuestAppModuleInput(input);
+  const arrivalWalkReadiness = resolveArrivalWalkReadiness({
+    cityPackId,
+    settings,
+    cityPackContent: input.cityPackContent,
+  });
   const capabilities = resolveCapabilities({
     cityPackId,
     settings,
@@ -199,6 +207,14 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
       label: 'Address',
       tier: 'recommended',
       complete: Boolean(settings.contacts?.address?.trim()),
+    }),
+    item({
+      id: 'arrival-walk',
+      sectionId: 'contacts',
+      label: 'Arrival walk directions',
+      tier: 'recommended',
+      complete: arrivalWalkReadiness.complete,
+      detail: arrivalWalkReadiness.detail,
     }),
     item({
       id: 'door-access',
@@ -350,6 +366,7 @@ export function buildTenantReadinessInput(input: {
   is_active?: boolean;
   cityPackHasPlaces?: boolean;
   cityPackGateSnapshot?: CityPackGateSnapshot;
+  cityPackContent?: CityPackContent;
 }): TenantReadinessInput {
   const lifecycleStatus = resolveTenantLifecycleStatus({
     archived_at: input.archived_at ?? null,
@@ -366,6 +383,7 @@ export function buildTenantReadinessInput(input: {
     lifecycleStatus,
     cityPackHasPlaces: input.cityPackHasPlaces,
     cityPackGateSnapshot: input.cityPackGateSnapshot,
+    cityPackContent: input.cityPackContent,
   };
 }
 

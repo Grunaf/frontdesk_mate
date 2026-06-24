@@ -61,6 +61,19 @@ export interface CategoryConfig {
   defaultRouteId: RouteId;
 }
 
+export interface RouteGuestCopy {
+  publicTitle: string;
+  publicSummary: string;
+  publicPreview: string;
+  publicText: string;
+  publicGetOffAt: string;
+  publicWalkToHostel: string;
+  taxiCost: string;
+  taxiPickupPoint: string;
+  fareLabel?: string;
+  hint?: string;
+}
+
 export interface RouteConfig {
   id: RouteId;
   category: RouteCategory;
@@ -87,4 +100,6 @@ export interface RouteConfig {
     taxiDurationMin: { min: number; max: number };
     publicTransport: PublicTransportConfig;
   };
+  /** DB-resolved guest copy for the active locale (overrides translationKeys in UI). */
+  guestCopy?: RouteGuestCopy;
 }

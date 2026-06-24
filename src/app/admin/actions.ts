@@ -15,6 +15,10 @@ import {
   clearAdminSession,
   setAdminSession,
 } from './lib/adminSession';
+import {
+  parseArrivalWalkByRouteJson,
+  parseArrivalWalkToHostelJson,
+} from './(protected)/tenants/lib/parseArrivalTransportSettings';
 
 function parseAccessPoints(formData: FormData): AccessPoint[] | undefined {
   const raw = String(formData.get('accessPointsJson') || '').trim();
@@ -264,7 +268,12 @@ function readSettings(formData: FormData): TenantSettings {
       mapsUrl: String(formData.get('mapsUrl') || '') || undefined,
       feedbackPhoneRaw: String(formData.get('feedbackPhoneRaw') || '') || undefined,
     },
-    arrivalWalkToHostel: String(formData.get('arrivalWalkToHostel') || '') || undefined,
+    arrivalWalkToHostel:
+      parseArrivalWalkToHostelJson(String(formData.get('arrivalWalkToHostelJson') || '')) ??
+      (String(formData.get('arrivalWalkToHostel') || '').trim() || undefined),
+    arrivalWalkToHostelByRoute: parseArrivalWalkByRouteJson(
+      String(formData.get('arrivalWalkByRouteJson') || '')
+    ),
   };
 }
 

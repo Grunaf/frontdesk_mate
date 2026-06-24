@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { CityPackGateSnapshot } from '@/entities/city-pack';
 import type { CityPackId } from '@/entities/hostel';
 import type { TenantSettings } from '@/entities/tenant';
@@ -29,18 +29,12 @@ export function GuestAppFields({
   onJumpToSection,
   scope = 'full',
 }: GuestAppFieldsProps) {
-  const { draft, updateDraft } = useTenantFormDraft();
+  const { draft } = useTenantFormDraft();
 
   const mergedSettings = useMemo(
     () => mergeDraftSettings(settings ?? {}, draft),
     [settings, draft]
   );
-
-  useEffect(() => {
-    if (settings?.houseRules !== undefined && draft.houseRules === undefined) {
-      updateDraft({ houseRules: settings.houseRules });
-    }
-  }, [settings?.houseRules, draft.houseRules, updateDraft]);
 
   return (
     <div className="space-y-6">
