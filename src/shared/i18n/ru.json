@@ -38,10 +38,10 @@
         "night": "night",
         "bookButton": "Book Now",
         "bookAndUpgradeButton": "Book 2 beds, then upgrade",
-        "upgradeNoticeHint": "Upgrade instructions will be provided after booking completion",
+        "upgradeNoticeHint": "После бронирования пришлём инструкции по upgrade",
         "selectDatesButton": "View Availability",
         "contactReceptionButton": "Contact reception",
-        "bookingUnavailableHint": "Online booking is not available — contact reception to reserve.",
+        "bookingUnavailableHint": "Онлайн-бронирование недоступно — свяжитесь с ресепшеном для резерва.",
         "singleBedDorm": {
           "title": "Single Bed in Shared Dorm",
           "description": "Perfect for solo travelers and backpackers. Features comfortable mattresses, personal lockers, and individual power sockets next to your bed."

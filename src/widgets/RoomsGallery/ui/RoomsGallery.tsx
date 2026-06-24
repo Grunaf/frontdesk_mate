@@ -1,15 +1,13 @@
 'use client';
 
-import Image from 'next/image';
 import { useTranslations } from '@/shared/i18n';
-import { ArrowUpRight } from 'lucide-react';
-import { Button, Card, CardContent, CardTitle, Icon, Badge } from '@/shared/ui';
 import { buildBookingRoomUrl, resolveLandingRooms, useHostelConfig, useTenant } from '@/entities/tenant';
 import { trackBookingWhatsappClick } from '@/shared/lib/analytics';
 import { resolveGuestBookingPhone } from '@/entities/tenant/lib/resolveGuestBookingPhone';
 import { getMessengerUpgradeLink } from '../getMessengerUpgradeLink';
 import { getReceptionBookingLink } from '../lib/getReceptionBookingLink';
 import { markLandingWhatsappFollowup } from '@/features/booking/lib/getHeroWhatsappBookingLink';
+import { LandingRoomCard } from './LandingRoomCard';
 
 interface RoomsGalleryProps {
   checkin?: string;
@@ -86,91 +84,23 @@ export function RoomsGallery({ checkin, checkout }: RoomsGalleryProps) {
                 ? t('bookAndUpgradeButton')
                 : t('contactReceptionButton')
               : t('contactReceptionButton');
-            const showBookingCta = bookingEnabled && bookingLink;
-            const showFallbackCta = !bookingEnabled && fallbackLink;
-            const showUnavailableHint = !bookingEnabled && !fallbackLink;
 
             return (
-              <Card
+              <LandingRoomCard
                 key={room.id}
-                className="group flex flex-col overflow-hidden p-0 transition-all hover:-translate-y-1 hover:shadow-xl"
-              >
-                <div className="relative h-64 w-full overflow-hidden sm:h-72">
-                  <Image
-                    src={room.imageUrl}
-                    alt={room.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    unoptimized
-                  />
-                  {typeof room.priceFromEur === 'number' && (
-                    <Badge className="absolute top-4 left-4 rounded-lg bg-foreground/80 px-3 py-1.5 text-sm font-bold text-background backdrop-blur-sm">
-                      {t('priceFrom')}
-                      <span className="text-primary">€{room.priceFromEur}</span> / {t('night')}
-                    </Badge>
-                  )}
-                </div>
-
-                <CardContent className="flex flex-grow flex-col p-6 sm:p-8">
-                  <CardTitle className="text-xl transition-colors group-hover:text-primary sm:text-2xl">
-                    {room.title}
-                  </CardTitle>
-
-                  <p className="mt-3 line-clamp-3 flex-grow text-sm leading-relaxed font-light text-muted-foreground sm:text-base">
-                    {room.description}
-                  </p>
-
-                  {showBookingCta ? (
-                    <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-6">
-                      {room.requiresChatUpgrade && isDatesSelected && (
-                        <p className="animate-fadeIn text-[11px] text-muted-foreground">
-                          {t('upgradeNoticeHint')}
-                        </p>
-                      )}
-                      <Button asChild variant="outline" className="group/btn ml-auto">
-                        <a href={bookingLink} target="_blank" rel="noopener noreferrer">
-                          <span>{ctaLabel}</span>
-                          <Icon
-                            icon={ArrowUpRight}
-                            size={16}
-                            className="transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5"
-                          />
-                        </a>
-                      </Button>
-                    </div>
-                  ) : null}
-
-                  {showFallbackCta ? (
-                    <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-6">
-                      <Button asChild variant="outline" className="group/btn ml-auto">
-                        <a
-                          href={fallbackLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => {
-                            markLandingWhatsappFollowup();
-                            trackBookingWhatsappClick(slug, 'room_card');
-                          }}
-                        >
-                          <span>{fallbackLabel}</span>
-                          <Icon
-                            icon={ArrowUpRight}
-                            size={16}
-                            className="transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5"
-                          />
-                        </a>
-                      </Button>
-                    </div>
-                  ) : null}
-
-                  {showUnavailableHint ? (
-                    <p className="mt-6 border-t border-border pt-6 text-xs text-muted-foreground">
-                      {t('bookingUnavailableHint')}
-                    </p>
-                  ) : null}
-                </CardContent>
-              </Card>
+                room={room}
+                settings={settings}
+                bookingEnabled={bookingEnabled}
+                bookingLink={bookingLink}
+                fallbackLink={fallbackLink}
+                ctaLabel={ctaLabel}
+                fallbackLabel={fallbackLabel}
+                showUpgradeHint={room.requiresChatUpgrade === true && Boolean(isDatesSelected)}
+                onFallbackClick={() => {
+                  markLandingWhatsappFollowup();
+                  trackBookingWhatsappClick(slug, 'room_card');
+                }}
+              />
             );
           })}
         </div>
