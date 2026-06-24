@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { RouteId } from '@/entities/hostel';
+import type { CityPackContent } from '@/entities/city-pack/model/types';
 import { buildCityPackRoutesFromCode } from './buildCityPackRouteContentFromCode';
 import {
   resolveArrivalWalkPreviewText,
@@ -6,8 +8,8 @@ import {
 } from './resolveArrivalTransportReadiness';
 
 describe('resolveArrivalWalkReadiness', () => {
-  const cityPackContent = {
-    enabledRoutes: ['airport', 'bus_central'] as const,
+  const cityPackContent: CityPackContent = {
+    enabledRoutes: ['airport', 'bus_central'] satisfies RouteId[],
     routes: buildCityPackRoutesFromCode('sarajevo'),
   };
 

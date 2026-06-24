@@ -12,6 +12,7 @@ import {
   MIN_PLACES_FOR_PACK,
   resolveFirstIncompletePackStep,
   type CityPackAdminPlace,
+  type CityPackContent,
   type CityPackContentWarnings,
   type CityPackRecord,
   type CityPackRouteContent,
@@ -95,13 +96,13 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   const [taxiPhone, setTaxiPhone] = useState(pack.content.recommendedTaxi?.phoneRaw ?? '');
   const [taxiMask, setTaxiMask] = useState(pack.content.recommendedTaxi?.phoneMask ?? '');
 
-  const content = useMemo(
+  const content = useMemo<CityPackContent>(
     () => ({
       places,
       enabledRoutes,
       routes,
       warnings,
-      preTripTips: preTripSundayClosure ? (['sundayClosure'] as const) : undefined,
+      preTripTips: preTripSundayClosure ? ['sundayClosure'] : undefined,
       recommendedTaxi: taxiName.trim()
         ? {
             name: taxiName.trim(),
