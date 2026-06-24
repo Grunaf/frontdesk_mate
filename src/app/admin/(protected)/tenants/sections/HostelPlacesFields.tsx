@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { HostelPlace, HostelPlaceCategory } from '@/entities/tenant/model/hostelPlaces';
 import { HOSTEL_PLACE_CATEGORIES } from '@/entities/tenant/model/hostelPlaces';
-import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
+import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
+import { useSyncedFormRef } from '../lib/syncTenantFormDraft';
 
 interface HostelPlacesFieldsProps {
   settings?: { hostelPlaces?: HostelPlace[] };
@@ -14,21 +15,23 @@ function createHostelPlaceId() {
 }
 
 export function HostelPlacesFields({ settings }: HostelPlacesFieldsProps) {
-  const { draft, updateDraft } = useTenantFormDraft();
-  const merged = useMemo(
-    () => mergeDraftSettings(settings ?? {}, draft),
-    [settings, draft]
-  );
-  const [places, setPlaces] = useState<HostelPlace[]>(merged.hostelPlaces ?? []);
+  const { updateDraft } = useTenantFormDraft();
+  const [places, setPlaces] = useState<HostelPlace[]>(settings?.hostelPlaces ?? []);
+  const placesRef = useSyncedFormRef(places);
 
   const syncPlaces = (next: HostelPlace[]) => {
+    placesRef.current = next;
     setPlaces(next);
     updateDraft({ hostelPlaces: next });
   };
 
+  const applyPlaces = (updater: (current: HostelPlace[]) => HostelPlace[]) => {
+    syncPlaces(updater(placesRef.current));
+  };
+
   const addPlace = () => {
-    syncPlaces([
-      ...places,
+    applyPlaces((current) => [
+      ...current,
       {
         id: createHostelPlaceId(),
         name: '',
@@ -38,12 +41,18 @@ export function HostelPlacesFields({ settings }: HostelPlacesFieldsProps) {
   };
 
   const updatePlace = (id: string, patch: Partial<HostelPlace>) => {
-    syncPlaces(places.map((place) => (place.id === id ? { ...place, ...patch } : place)));
+    applyPlaces((current) =>
+      current.map((place) => (place.id === id ? { ...place, ...patch } : place))
+    );
   };
 
   const removePlace = (id: string) => {
-    syncPlaces(places.filter((place) => place.id !== id));
+    applyPlaces((current) => current.filter((place) => place.id !== id));
   };
+
+  useEffect(() => {
+    updateDraft({ hostelPlaces: placesRef.current });
+  }, [updateDraft]);
 
   return (
     <div className="space-y-4 rounded-xl border bg-muted/20 p-4">

@@ -16,6 +16,7 @@ export {
   type RouteMode,
   type CategoryConfig,
   type RouteConfig,
+  type RouteGuestCopy,
   type PublicTransportConfig,
   type CityPackId,
   type CityPack,
@@ -23,6 +24,8 @@ export {
   type RecommendedTaxi,
 } from './model/routes';
 export {
+  type CodeCityPackId,
+  type CityPackGuestWarnings,
   type Place,
   type PlaceCategory,
   type PlaceIconId,

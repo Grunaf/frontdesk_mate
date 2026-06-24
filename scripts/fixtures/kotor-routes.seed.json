@@ -1,0 +1,140 @@
+{
+  "routes": {
+    "airport": {
+      "category": "airport",
+      "locationLabel": {
+        "en": "Tivat Airport",
+        "ru": "аэропорта Тиват"
+      },
+      "copy": {
+        "publicTitle": {
+          "en": "Bus via coastal road",
+          "ru": "Автобус через прибрежную дорогу"
+        },
+        "publicSummary": {
+          "en": "No bus at the terminal — walk to the highway or Tivat bus station, then a local bus to Kotor.",
+          "ru": "У терминала нет автобуса — дойдите до трассы или автовокзала Тиват, затем автобус до Котора."
+        },
+        "publicPreview": {
+          "en": "Exit the terminal, turn left and walk ~12 minutes along the access road until you reach the coastal highway and the bus stop.",
+          "ru": "Выйдите из терминала, поверните налево и идите ~12 минут по подъездной дороге до прибрежной трассы и остановки."
+        },
+        "publicText": {
+          "en": "There is no bus stop at the airport building. Walk to the Adriatic highway (E65) and take any bus heading towards Kotor or Budva, or continue to Tivat bus station (~20 min walk) for a scheduled departure. Pay the driver in cash.",
+          "ru": "Остановки у здания аэропорта нет. Дойдите до Adriatic highway (E65) и садитесь в автобус в сторону Котора или Будвы, либо идите ~20 минут до автовокзала Тиват на рейс по расписанию. Билет — у водителя, наличными."
+        },
+        "publicGetOffAt": {
+          "en": "Get off at Kotor bus station (Autobuska stanica Kotor). Some seasonal services may stop closer to the old town — ask the driver for Stari Grad.",
+          "ru": "Выходите на автовокзале Котор (Autobuska stanica Kotor). В сезон часть рейсов останавливается ближе к старому городу — спросите водителя про Stari Grad."
+        },
+        "publicWalkToHostel": {
+          "en": "From Kotor bus station, walk downhill to Stari Grad. Continue to our hostel at {address}.",
+          "ru": "От автовокзала спускайтесь к Stari Grad. Дальше — к нашему хостелу по адресу {address}."
+        },
+        "taxiCost": {
+          "en": "A direct taxi from Tivat Airport to Kotor is usually {minEUR}–{maxEUR} € depending on season and whether you pre-book.",
+          "ru": "Прямое такси из аэропорта Тиват до Котора обычно {minEUR}–{maxEUR} € — зависит от сезона и того, заказали ли заранее."
+        },
+        "taxiPickupPoint": {
+          "en": "Tivat Airport (TIV) — arrivals hall",
+          "ru": "Tivat Airport (TIV) — зал прилёта"
+        }
+      },
+      "transit": {
+        "durationMin": 40,
+        "fareLabel": {
+          "en": "Bus €3–4 (cash to driver)",
+          "ru": "Автобус €3–4 (наличные водителю)"
+        },
+        "officialRouteUrl": "https://www.autobusni-kolodvor.com/en/bus-tivat-kotor-timetable"
+      },
+      "taxi": {
+        "priceKM": {
+          "min": 20,
+          "max": 35
+        },
+        "priceEUR": {
+          "min": 20,
+          "max": 35
+        },
+        "durationMin": {
+          "min": 15,
+          "max": 25
+        }
+      }
+    },
+    "bus_central": {
+      "category": "bus",
+      "routeMode": "walk_only",
+      "locationLabel": {
+        "en": "Kotor bus station",
+        "ru": "автовокзала Котор"
+      },
+      "copy": {
+        "publicTitle": {
+          "en": "Walk to old town",
+          "ru": "Пешком в старый город"
+        },
+        "publicSummary": {
+          "en": "Regional buses stop at Kotor bus station — the old town is about 15 minutes downhill on foot.",
+          "ru": "Междугородние автобусы приходят на автовокзал Котор — до старого города ~15 минут спуска пешком."
+        },
+        "publicPreview": {
+          "en": "You are already at Kotor bus station when your intercity bus arrives.",
+          "ru": "Вы уже на автовокзале Котор после междугороднего рейса."
+        },
+        "publicText": {
+          "en": "Regional buses from Dubrovnik, Podgorica, Budva and Tivat terminate at Kotor bus station. Follow signs to Stari Grad downhill along the main road. Suitcases on wheels are fine.",
+          "ru": "Междугородние автобусы из Дубровника, Подгорицы, Будвы и Тивата приходят на автовокзал Котор. Следуйте указателям Stari Grad вниз по главной дороге. Чемодан на колёсах нормально."
+        },
+        "publicGetOffAt": {
+          "en": "Kotor bus station — final stop for most regional routes.",
+          "ru": "Автовокзал Котор — конечная для большинства региональных маршрутов."
+        },
+        "publicWalkToHostel": {
+          "en": "Head towards the old town walls and the Sea Gate, then continue to our hostel at {address}.",
+          "ru": "Идите к стенам старого города и морским воротам (Sea Gate), затем к нашему хостелу по адресу {address}."
+        },
+        "taxiCost": {
+          "en": "A short taxi from the bus station to the old town is usually {minEUR}–{maxEUR} € — handy with heavy luggage.",
+          "ru": "Короткое такси с автовокзала до старого города обычно {minEUR}–{maxEUR} € — удобно с тяжёлым багажом."
+        },
+        "taxiPickupPoint": {
+          "en": "Kotor Bus Station (Autobuska stanica)",
+          "ru": "Kotor Bus Station (Autobuska stanica)"
+        }
+      },
+      "transit": {
+        "durationMin": 15,
+        "fareLabel": {
+          "en": "Free (on foot)",
+          "ru": "Бесплатно (пешком)"
+        }
+      },
+      "taxi": {
+        "priceKM": {
+          "min": 5,
+          "max": 10
+        },
+        "priceEUR": {
+          "min": 5,
+          "max": 10
+        },
+        "durationMin": {
+          "min": 5,
+          "max": 12
+        }
+      }
+    }
+  },
+  "warnings": {
+    "taxiStand": {
+      "en": "At TIV there is no official taxi queue inside the terminal. Use the desk in arrivals or ask the hostel to pre-book. Avoid drivers who approach you in the parking lot with inflated fixed prices.",
+      "ru": "В терминале TIV нет официальной стоянки такси. Берите машину у стойки в зале прилёта или закажите через хостел. Не соглашайтесь на завышенные фиксированные цены у водителей на парковке."
+    },
+    "taxiMeter": {
+      "en": "Agree a fixed fare to Kotor old town (usually €20–35) before you leave, or confirm the meter is running. Airport taxis often quote flat rates instead of the meter.",
+      "ru": "Договоритесь о фиксированной цене до старого города Котор (обычно €20–35) или убедитесь, что включён счётчик. В аэропорту чаще называют фикс, а не тариф по счётчику."
+    }
+  }
+}

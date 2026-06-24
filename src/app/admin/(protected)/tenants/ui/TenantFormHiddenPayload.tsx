@@ -3,6 +3,12 @@
 import { getHouseRules } from '@/entities/house-rules';
 import type { TenantSettings } from '@/entities/tenant';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
+import {
+  parseArrivalWalkByRouteJson,
+  parseArrivalWalkToHostelJson,
+  serializeArrivalWalkByRouteJson,
+  serializeArrivalWalkToHostelJson,
+} from '../lib/parseArrivalTransportSettings';
 
 interface TenantFormHiddenPayloadProps {
   subscriptionStartsAt: string;
@@ -39,6 +45,16 @@ export function TenantFormHiddenPayload({
         type="hidden"
         name="highlightedBedId"
         value={roomMapEnabled ? (mergedSettings.highlightedBedId ?? '') : ''}
+      />
+      <input
+        type="hidden"
+        name="arrivalWalkToHostelJson"
+        value={serializeArrivalWalkToHostelJson(mergedSettings.arrivalWalkToHostel)}
+      />
+      <input
+        type="hidden"
+        name="arrivalWalkByRouteJson"
+        value={serializeArrivalWalkByRouteJson(mergedSettings.arrivalWalkToHostelByRoute)}
       />
     </div>
   );

@@ -11,6 +11,12 @@ import {
   type CityPackContent,
   type CityPackStatus,
 } from '@/entities/city-pack';
+import {
+  mergeCityPackContentForSave,
+  parseCityPackRoutesJson,
+  parseCityPackWarningsJson,
+} from '@/entities/city-pack/lib/normalizeCityPackRoutes';
+import type { RouteId } from '@/entities/hostel';
 import { getCityPackForAdmin, upsertCityPack } from '@/entities/city-pack/server';
 import { assertAdminAuthenticated } from '../../lib/adminSession';
 
@@ -37,17 +43,33 @@ function readContent(formData: FormData): CityPackContent {
   }
   const taxiName = String(formData.get('recommendedTaxiName') || '').trim();
   const taxiPhoneRaw = String(formData.get('recommendedTaxiPhoneRaw') || '').trim();
+  const taxiPhoneMask = String(formData.get('recommendedTaxiPhoneMask') || '').trim();
+  const routes = parseCityPackRoutesJson(String(formData.get('routesJson') || '{}'));
+  const warnings = parseCityPackWarningsJson(String(formData.get('warningsJson') || '{}'));
+  let preTripTips: CityPackContent['preTripTips'];
+  try {
+    const parsed = JSON.parse(String(formData.get('preTripTipsJson') || '[]'));
+    preTripTips = Array.isArray(parsed) && parsed.includes('sundayClosure') ? ['sundayClosure'] : undefined;
+  } catch {
+    preTripTips = undefined;
+  }
 
-  return {
+  const base: CityPackContent = {
     places,
     enabledRoutes,
+    routes: Object.keys(routes).length > 0 ? routes : undefined,
+    warnings,
+    preTripTips,
     recommendedTaxi: taxiName
       ? {
           name: taxiName,
           phoneRaw: taxiPhoneRaw || undefined,
+          phoneMask: taxiPhoneMask || undefined,
         }
       : undefined,
   };
+
+  return mergeCityPackContentForSave(base, enabledRoutes as RouteId[]);
 }
 
 export async function saveCityPackAction(formData: FormData) {

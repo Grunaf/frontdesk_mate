@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { getCityPack, type CityPackId, type Place, type RouteId } from '@/entities/hostel';
-import { applyEnabledRoutesToCityPack } from '@/entities/city-pack/lib/applyEnabledRoutesToCityPack';
+import type { CityPackId, Place, RouteId } from '@/entities/hostel';
+import type { AppLocale, CityPackContent, CityPackStatus } from '@/entities/city-pack/model/types';
+import { resolveCityPackForGuest } from '@/entities/city-pack/lib/resolveCityPackForGuest';
 import type { HostelConfig } from '../model/hostel-config';
 import type { TenantCapabilities } from '../model/capabilities';
 import type { TenantSettings } from '../model/settings';
@@ -23,23 +24,31 @@ export interface TenantConfig {
   cityPackPlaces?: Place[];
   /** DB-resolved route ids for guest runtime (empty when pack is not ready). */
   cityPackEnabledRoutes?: RouteId[];
+  /** Raw city pack content from DB (routes merged at runtime). */
+  cityPackContent?: CityPackContent;
+  cityPackStatus?: CityPackStatus;
   /** Server-resolved gate for local guide module. */
   cityPackHasPlaces?: boolean;
 }
 
 export function useTenantCityPack(
   cityPackId: CityPackId,
+  locale: AppLocale,
   cityPackPlaces?: Place[],
-  cityPackEnabledRoutes?: RouteId[]
+  cityPackEnabledRoutes?: RouteId[],
+  cityPackContent?: CityPackContent,
+  cityPackStatus?: CityPackStatus
 ) {
-  return useMemo(() => {
-    const base = getCityPack(cityPackId);
-    const withPlaces = { ...base, places: cityPackPlaces ?? [] };
-
-    if (!cityPackEnabledRoutes?.length) {
-      return { ...withPlaces, routes: {}, categories: [] };
-    }
-
-    return applyEnabledRoutesToCityPack(withPlaces, cityPackEnabledRoutes);
-  }, [cityPackId, cityPackPlaces, cityPackEnabledRoutes]);
+  return useMemo(
+    () =>
+      resolveCityPackForGuest({
+        packId: cityPackId,
+        locale,
+        content: cityPackContent,
+        packStatus: cityPackStatus,
+        places: cityPackPlaces,
+        enabledRoutes: cityPackEnabledRoutes,
+      }),
+    [cityPackId, locale, cityPackContent, cityPackPlaces, cityPackEnabledRoutes, cityPackStatus]
+  );
 }

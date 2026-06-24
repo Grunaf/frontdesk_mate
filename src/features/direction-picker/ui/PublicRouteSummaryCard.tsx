@@ -1,10 +1,12 @@
 'use client';
 
-import { useTranslations } from '@/shared/i18n';
+import { useTranslations, useLocale } from '@/shared/i18n';
 import { useTenant } from '@/entities/tenant';
 import { Button, CardTitle, Icon } from '@/shared/ui';
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import { hasOfficialRouteSchedule, isWalkOnlyRoute, type RouteConfig } from '@/entities/hostel';
+import type { AppLocale } from '@/entities/city-pack/model/types';
+import { resolveRouteCopyField } from '../lib/resolveRouteCopy';
 import {
   getRouteDisplayIcon,
   resolveWalkToHostelText,
@@ -24,6 +26,7 @@ export function PublicRouteSummaryCard({
 }) {
   const { settings, hostel } = useTenant();
   const routes = useTranslations();
+  const locale = useLocale() as AppLocale;
   const directions = useTranslations('pages.arrivalJourney.directions');
   const RouteIcon = getRouteDisplayIcon(route);
   const AlternativeRouteIcon = alternativeRoute ? getRouteDisplayIcon(alternativeRoute) : null;
@@ -36,6 +39,7 @@ export function PublicRouteSummaryCard({
     routes,
     settings,
     address,
+    locale,
   });
 
   return (
@@ -50,9 +54,11 @@ export function PublicRouteSummaryCard({
             <Icon icon={RouteIcon} className="h-5 w-5" />
           </div>
           <div className="min-w-0 space-y-2">
-            <CardTitle className="text-foreground">{routes(route.translationKeys.publicTitle)}</CardTitle>
+            <CardTitle className="text-foreground">
+              {resolveRouteCopyField(route, 'publicTitle', routes)}
+            </CardTitle>
             <p className="text-sm leading-relaxed text-foreground/90">
-              {routes(route.translationKeys.publicSummary)}
+              {resolveRouteCopyField(route, 'publicSummary', routes)}
             </p>
           </div>
         </div>
@@ -60,7 +66,9 @@ export function PublicRouteSummaryCard({
         <TransitLegMeta route={route} routes={routes} directions={directions} />
 
         {!walkOnly && (
-          <p className="text-xs font-medium text-foreground">{routes(route.translationKeys.publicGetOffAt)}</p>
+          <p className="text-xs font-medium text-foreground">
+            {resolveRouteCopyField(route, 'publicGetOffAt', routes)}
+          </p>
         )}
 
         {walkOnly && (
@@ -101,10 +109,10 @@ export function PublicRouteSummaryCard({
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               <CardTitle className="text-sm text-foreground">
-                {routes(alternativeRoute.translationKeys.publicTitle)}
+                {resolveRouteCopyField(alternativeRoute, 'publicTitle', routes)}
               </CardTitle>
               <p className="text-xs leading-relaxed text-foreground/90">
-                {routes(alternativeRoute.translationKeys.publicSummary)}
+                {resolveRouteCopyField(alternativeRoute, 'publicSummary', routes)}
               </p>
               <TransitLegMeta route={alternativeRoute} routes={routes} directions={directions} />
             </div>

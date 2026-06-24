@@ -1,5 +1,6 @@
 import { TenantForm } from '../TenantForm';
-import { getCityPackGateSnapshotForAdmin, listCityPacksForTenantSelect } from '@/entities/city-pack/server';
+import { getCityPackForAdmin, getCityPackGateSnapshotForAdmin, listCityPacksForTenantSelect } from '@/entities/city-pack/server';
+import type { CityPackContent } from '@/entities/city-pack';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { isSupabaseAdminConfigured } from '@/shared/lib/db/admin';
 import { buildSubscriptionDefaults } from '../sections/SubscriptionFields';
@@ -18,6 +19,14 @@ export default async function AdminTenantPage({ params, searchParams }: AdminTen
   const subscriptionDefaults = buildSubscriptionDefaults(tenant);
   const { options: cityPackOptions } = await listCityPacksForTenantSelect(tenant?.city_pack_id);
   const { snapshot: cityPackGateSnapshot } = await getCityPackGateSnapshotForAdmin();
+  const cityPackContentsById: Record<string, CityPackContent> = {};
+  const packIds = [...new Set(cityPackOptions.map((option) => option.id))];
+  await Promise.all(
+    packIds.map(async (packId) => {
+      const { pack } = await getCityPackForAdmin(packId);
+      cityPackContentsById[packId] = pack?.content ?? {};
+    })
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -55,6 +64,7 @@ export default async function AdminTenantPage({ params, searchParams }: AdminTen
         justSaved={saved === '1'}
         cityPackOptions={cityPackOptions}
         cityPackGateSnapshot={cityPackGateSnapshot}
+        cityPackContentsById={cityPackContentsById}
         initial={{
           slug: tenant?.slug ?? (isNew ? '' : slug),
           name: tenant?.name ?? '',

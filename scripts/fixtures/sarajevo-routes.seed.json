@@ -1,0 +1,285 @@
+{
+  "routes": {
+    "airport": {
+      "category": "airport",
+      "locationLabel": {
+        "en": "the airport",
+        "ru": "the airport"
+      },
+      "copy": {
+        "publicTitle": {
+          "en": "Trolleybus №103",
+          "ru": "Троллейбус №103"
+        },
+        "publicSummary": {
+          "en": "Cheapest option — trolleybus 103 to Čobanija, then a short walk to Dalmatinska 6.",
+          "ru": "Самый дешёвый вариант — троллейбус 103 до Čobanija, затем короткая прогулка до Dalmatinska 6."
+        },
+        "publicPreview": {
+          "en": "Walk about 14 minutes (1 km) out of the airport terminal to the 'Dobrinja škola' trolleybus stop.",
+          "ru": "Walk about 14 minutes (1 km) out of the airport terminal to the 'Dobrinja škola' trolleybus stop."
+        },
+        "publicText": {
+          "en": "Take trolleybus №103 directly to the city center. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver (cash only). Remember to validate your ticket inside!",
+          "ru": "Take trolleybus №103 directly to the city center. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver (cash only). Remember to validate your ticket inside!"
+        },
+        "publicGetOffAt": {
+          "en": "Get off at 'Čobanija' stop.",
+          "ru": "Get off at 'Čobanija' stop."
+        },
+        "publicWalkToHostel": {
+          "en": "Cross the bridge over the river, turn left onto Main Street, and walk towards Dalmatinska 6.",
+          "ru": "Cross the bridge over the river, turn left onto Main Street, and walk towards Dalmatinska 6."
+        },
+        "taxiCost": {
+          "en": "The fair price from the airport to the hostel is around {minKM}–{maxKM} KM ({minEUR}–{maxEUR} €).",
+          "ru": "The fair price from the airport to the hostel is around {minKM}–{maxKM} KM ({minEUR}–{maxEUR} €)."
+        },
+        "taxiPickupPoint": {
+          "en": "Sarajevo Airport (Terminal B)",
+          "ru": "Sarajevo Airport (Terminal B)"
+        }
+      },
+      "transit": {
+        "durationMin": 27,
+        "stops": 15,
+        "ticketPrice": {
+          "kioskKM": 1.8,
+          "driverKM": 2
+        },
+        "officialRouteUrl": "https://gras.ba/redovi-voznje/"
+      },
+      "taxi": {
+        "priceKM": {
+          "min": 15,
+          "max": 20
+        },
+        "priceEUR": {
+          "min": 7,
+          "max": 10
+        },
+        "durationMin": {
+          "min": 15,
+          "max": 25
+        }
+      }
+    },
+    "bus_central": {
+      "category": "bus",
+      "hint": {
+        "en": "EU routes, Croatia, Federation of BiH",
+        "ru": "EU routes, Croatia, Federation of BiH"
+      },
+      "locationLabel": {
+        "en": "the main bus station",
+        "ru": "the main bus station"
+      },
+      "copy": {
+        "publicTitle": {
+          "en": "Tram №1",
+          "ru": "Трамвай №1"
+        },
+        "publicSummary": {
+          "en": "Fastest option — tram 1 to Pošta stop, hostel is around the corner.",
+          "ru": "Самый быстрый вариант — трамвай 1 до остановки Pošta, хостел за углом."
+        },
+        "publicPreview": {
+          "en": "Exit the bus station and walk 1 minute (78 m) forward to the 'Željezniчка stanica' tram loop right on the square.",
+          "ru": "Exit the bus station and walk 1 minute (78 m) forward to the 'Željezniчка stanica' tram loop right on the square."
+        },
+        "publicText": {
+          "en": "Take Tram №1 directly to the hostel area. Tickets are 1.80 KM at the kiosk or 2.00 KM from the driver (cash only).",
+          "ru": "Take Tram №1 directly to the hostel area. Tickets are 1.80 KM at the kiosk or 2.00 KM from the driver (cash only)."
+        },
+        "publicGetOffAt": {
+          "en": "Get off at 'Pošta' stop. You will see a massive Post Office building.",
+          "ru": "Get off at 'Pošta' stop. You will see a massive Post Office building."
+        },
+        "publicWalkToHostel": {
+          "en": "Walk up towards Dalmatinska 6 — we are right around the corner.",
+          "ru": "Walk up towards Dalmatinska 6 — we are right around the corner."
+        },
+        "taxiCost": {
+          "en": "A short ride to the hostel. The price should not exceed 7–10 KM.",
+          "ru": "A short ride to the hostel. The price should not exceed 7–10 KM."
+        },
+        "taxiPickupPoint": {
+          "en": "Central Bus Station",
+          "ru": "Central Bus Station"
+        }
+      },
+      "transit": {
+        "durationMin": 9,
+        "stops": 4,
+        "ticketPrice": {
+          "kioskKM": 1.8,
+          "driverKM": 2
+        },
+        "officialRouteUrl": "https://gras.ba/redovi-voznje/"
+      },
+      "taxi": {
+        "priceKM": {
+          "min": 7,
+          "max": 10
+        },
+        "priceEUR": {
+          "min": 3,
+          "max": 5
+        },
+        "durationMin": {
+          "min": 5,
+          "max": 10
+        }
+      }
+    },
+    "bus_istochno": {
+      "category": "bus",
+      "hint": {
+        "en": "Balkan routes: Serbia, Montenegro, etc.",
+        "ru": "Balkan routes: Serbia, Montenegro, etc."
+      },
+      "locationLabel": {
+        "en": "Istočno Sarajevo bus station",
+        "ru": "Istočno Sarajevo bus station"
+      },
+      "copy": {
+        "publicTitle": {
+          "en": "Trolleybus №103",
+          "ru": "Троллейбус №103"
+        },
+        "publicSummary": {
+          "en": "Direct route across the entity border to Čobanija, then walk to the hostel.",
+          "ru": "Прямой маршрут через границу сущностей до Čobanija, затем пешком до хостела."
+        },
+        "publicPreview": {
+          "en": "Walk about 7 minutes (500 m) from the East Sarajevo station building to the 'Dobrinja' terminal trolleybus stop.",
+          "ru": "Walk about 7 minutes (500 m) from the East Sarajevo station building to the 'Dobrinja' terminal trolleybus stop."
+        },
+        "publicText": {
+          "en": "Take trolleybus №103 towards 'Trg Austrije'. Tickets are 1.80 KM in the kiosk or 2.00 KM from the driver in cash. Please validate it immediately.",
+          "ru": "Take trolleybus №103 towards 'Trg Austrije'. Tickets are 1.80 KM in the kiosk or 2.00 KM from the driver in cash. Please validate it immediately."
+        },
+        "publicGetOffAt": {
+          "en": "Get off at 'Čobanija' stop.",
+          "ru": "Get off at 'Čobanija' stop."
+        },
+        "publicWalkToHostel": {
+          "en": "Cross the bridge over the Miljacka river and walk straight towards Dalmatinska street.",
+          "ru": "Cross the bridge over the Miljacka river and walk straight towards Dalmatinska street."
+        },
+        "taxiCost": {
+          "en": "A convenient way to cross the entity border directly to the hostel door. Average cost is around 15 KM.",
+          "ru": "A convenient way to cross the entity border directly to the hostel door. Average cost is around 15 KM."
+        },
+        "taxiPickupPoint": {
+          "en": "East Sarajevo Bus Station (Lukavica)",
+          "ru": "East Sarajevo Bus Station (Lukavica)"
+        }
+      },
+      "transit": {
+        "durationMin": 30,
+        "stops": 17,
+        "ticketPrice": {
+          "kioskKM": 1.8,
+          "driverKM": 2
+        },
+        "officialRouteUrl": "https://gras.ba/redovi-voznje/"
+      },
+      "taxi": {
+        "priceKM": {
+          "min": 15,
+          "max": 20
+        },
+        "priceEUR": {
+          "min": 7,
+          "max": 10
+        },
+        "durationMin": {
+          "min": 20,
+          "max": 30
+        }
+      }
+    },
+    "train_station": {
+      "category": "train",
+      "locationLabel": {
+        "en": "the railway station",
+        "ru": "the railway station"
+      },
+      "copy": {
+        "publicTitle": {
+          "en": "Tram №1",
+          "ru": "Трамвай №1"
+        },
+        "publicSummary": {
+          "en": "Direct tram from the square to Pošta, ~3 min walk to the door.",
+          "ru": "Прямой трамвай с площади до Pošta, ~3 мин пешком до входа."
+        },
+        "publicPreview": {
+          "en": "Exit the railway station building. The tram loop is right in front of you on the main square (1 min walk).",
+          "ru": "Exit the railway station building. The tram loop is right in front of you on the main square (1 min walk)."
+        },
+        "publicText": {
+          "en": "Take Tram №1 towards 'Baščaršija'. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver in cash.",
+          "ru": "Take Tram №1 towards 'Baščaršija'. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver in cash."
+        },
+        "publicGetOffAt": {
+          "en": "Get off at 'Pošta' stop.",
+          "ru": "Get off at 'Pošta' stop."
+        },
+        "publicWalkToHostel": {
+          "en": "Walk towards Dalmatinska 6 (approx. 3 minutes).",
+          "ru": "Walk towards Dalmatinska 6 (approx. 3 minutes)."
+        },
+        "taxiCost": {
+          "en": "The hostel is close, so the fair ride price on the taximeter is around 7–10 KM.",
+          "ru": "The hostel is close, so the fair ride price on the taximeter is around 7–10 KM."
+        },
+        "taxiPickupPoint": {
+          "en": "Main Railway/Bus Station",
+          "ru": "Main Railway/Bus Station"
+        }
+      },
+      "transit": {
+        "durationMin": 9,
+        "stops": 4,
+        "ticketPrice": {
+          "kioskKM": 1.8,
+          "driverKM": 2
+        },
+        "officialRouteUrl": "https://gras.ba/redovi-voznje/"
+      },
+      "taxi": {
+        "priceKM": {
+          "min": 7,
+          "max": 10
+        },
+        "priceEUR": {
+          "min": 3,
+          "max": 5
+        },
+        "durationMin": {
+          "min": 5,
+          "max": 10
+        }
+      }
+    }
+  },
+  "warnings": {
+    "taxiStand": {
+      "en": "Take a taxi only from the official stands on the street. Never agree to fixed high prices offered by drivers waiting right by the bus platforms.",
+      "ru": "Take a taxi only from the official stands on the street. Never agree to fixed high prices offered by drivers waiting right by the bus platforms."
+    },
+    "taxiMeter": {
+      "en": "Make sure the driver clears the meter and starts it at the official base rate (2.50 KM).",
+      "ru": "Make sure the driver clears the meter and starts it at the official base rate (2.50 KM)."
+    },
+    "busClarification": {
+      "en": "Which direction or country did you arrive from?",
+      "ru": "Which direction or country did you arrive from?"
+    }
+  },
+  "preTripTips": [
+    "sundayClosure"
+  ]
+}

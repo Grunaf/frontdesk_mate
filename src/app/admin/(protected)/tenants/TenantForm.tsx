@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import type { CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
+import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import type { CityPackId, TenantSettings } from '@/entities/tenant';
 import { TenantFormAccordion } from './TenantFormAccordion';
 
@@ -8,6 +8,7 @@ interface TenantFormProps {
   justSaved?: boolean;
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
+  cityPackContentsById: Record<string, CityPackContent>;
   initial: {
     slug: string;
     name: string;
@@ -24,6 +25,7 @@ export function TenantForm({
   justSaved,
   cityPackOptions,
   cityPackGateSnapshot,
+  cityPackContentsById,
   initial,
 }: TenantFormProps) {
   return (
@@ -33,6 +35,7 @@ export function TenantForm({
         justSaved={justSaved}
         cityPackOptions={cityPackOptions}
         cityPackGateSnapshot={cityPackGateSnapshot}
+        cityPackContentsById={cityPackContentsById}
         initial={initial}
       />
     </Suspense>

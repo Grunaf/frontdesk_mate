@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
 import { saveTenantAction, setTenantArchiveAction } from '../../actions';
-import type { CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
+import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import type { CityPackId, TenantSettings } from '@/entities/tenant';
 import {
   getTenantSetupSummaries,
@@ -37,6 +37,7 @@ import {
   type AdminSectionId,
 } from './lib/adminSections';
 import { ContactsFields } from './sections/ContactsFields';
+import { ArrivalTransportFields } from './sections/ArrivalTransportFields';
 import { GuestAppFields } from './sections/GuestAppFields';
 import { IdentityFields } from './sections/IdentityFields';
 import { LandingFields } from './sections/LandingFields';
@@ -58,6 +59,7 @@ interface TenantFormAccordionProps {
   justSaved?: boolean;
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
+  cityPackContentsById: Record<string, CityPackContent>;
   initial: {
     slug: string;
     name: string;
@@ -92,6 +94,7 @@ function SectionPanel({
   onJumpToSection,
   cityPackOptions,
   cityPackGateSnapshot,
+  cityPackContentsById,
 }: {
   sectionId: AdminSectionId;
   initial: TenantFormAccordionProps['initial'];
@@ -104,6 +107,7 @@ function SectionPanel({
   onJumpToSection: (sectionId: AdminSectionId) => void;
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
+  cityPackContentsById: Record<string, CityPackContent>;
 }) {
   const s = initial.settings;
 
@@ -155,7 +159,21 @@ function SectionPanel({
     case 'wifi':
       return <WifiFields settings={s} readinessInput={readinessInput} />;
     case 'contacts':
-      return <ContactsFields settings={s} readinessInput={readinessInput} />;
+      return (
+        <div className="space-y-8">
+          <ContactsFields settings={s} readinessInput={readinessInput} />
+          <div className="border-t pt-8">
+            <p className="mb-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Arrival transport (last mile)
+            </p>
+            <ArrivalTransportFields
+              settings={s}
+              cityPackId={identity.cityPackId}
+              cityPackContent={cityPackContentsById[identity.cityPackId]}
+            />
+          </div>
+        </div>
+      );
   }
 }
 
@@ -184,6 +202,7 @@ function TenantFormAccordionInner({
   justSaved = false,
   cityPackOptions,
   cityPackGateSnapshot,
+  cityPackContentsById,
   initial,
 }: TenantFormAccordionProps) {
   const router = useRouter();
@@ -240,8 +259,17 @@ function TenantFormAccordionInner({
       settings: mergedSettings,
       lifecycleStatus,
       cityPackGateSnapshot,
+      cityPackContent: cityPackContentsById[identity.cityPackId],
     }),
-    [identity.slug, identity.name, identity.cityPackId, mergedSettings, lifecycleStatus, cityPackGateSnapshot]
+    [
+      identity.slug,
+      identity.name,
+      identity.cityPackId,
+      mergedSettings,
+      lifecycleStatus,
+      cityPackGateSnapshot,
+      cityPackContentsById,
+    ]
   );
 
   const setupSummaries = useMemo(
@@ -710,6 +738,7 @@ function TenantFormAccordionInner({
                         onJumpToSection={jumpToSection}
                         cityPackOptions={cityPackOptions}
                         cityPackGateSnapshot={cityPackGateSnapshot}
+                        cityPackContentsById={cityPackContentsById}
                       />
                     </div>
                   </div>

@@ -6,17 +6,27 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PlaceCategory } from '@/entities/hostel';
 import { PLACE_CATEGORY_IDS, resolvePlaceCategoryAdminLabel } from '@/entities/hostel';
 import {
-  CITY_PACK_WIZARD_STEPS,
   countGatePlaces,
   hasRouteGate,
   isPackReadyForTenants,
   MIN_PLACES_FOR_PACK,
   resolveFirstIncompletePackStep,
-  ROUTE_PRESETS,
   type CityPackAdminPlace,
+  type CityPackContent,
+  type CityPackContentWarnings,
   type CityPackRecord,
+  type CityPackRouteContent,
   type CityPackWizardStepId,
 } from '@/entities/city-pack';
+import {
+  buildCityPackContentWarningsFromCode,
+  buildCityPackRouteSeedContent,
+  isCodeCityPackRouteSeedAvailable,
+} from '@/entities/city-pack/lib/buildCityPackRouteContentFromCode';
+import {
+  resolveAdminCityPackEnabledRoutes,
+  resolveAdminCityPackRoutes,
+} from '@/entities/city-pack/lib/resolveAdminCityPackTransport';
 import {
   normalizeCityPackAdminPlace,
   serializeCityPackAdminPlace,
@@ -25,6 +35,9 @@ import { saveCityPackAction } from '../actions';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/ui';
 import { PlaceIconPicker } from './PlaceIconPicker';
+import { CityPackRoutesStep } from './CityPackRoutesStep';
+import type { RouteId } from '@/entities/hostel';
+import { CITY_PACK_WIZARD_STEPS } from '@/entities/city-pack';
 
 interface CityPackWizardProps {
   pack: CityPackRecord;
@@ -34,6 +47,24 @@ interface CityPackWizardProps {
 
 function createPlaceId() {
   return `place-${Date.now().toString(36)}`;
+}
+
+function readPackSeed(packId: string) {
+  if (!isCodeCityPackRouteSeedAvailable(packId)) {
+    return { routes: {}, warnings: undefined, preTripTips: undefined };
+  }
+
+  return buildCityPackRouteSeedContent(packId);
+}
+
+function initialWarnings(pack: CityPackRecord): CityPackContentWarnings {
+  return (
+    pack.content.warnings ??
+    (isCodeCityPackRouteSeedAvailable(pack.id)
+      ? buildCityPackContentWarningsFromCode(pack.id)
+      : undefined) ??
+    {}
+  );
 }
 
 export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
@@ -48,19 +79,39 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   const [places, setPlaces] = useState<CityPackAdminPlace[]>(() =>
     (pack.content.places ?? []).map(normalizeCityPackAdminPlace)
   );
-  const [enabledRoutes, setEnabledRoutes] = useState<string[]>(pack.content.enabledRoutes ?? []);
+  const [enabledRoutes, setEnabledRoutes] = useState<RouteId[]>(() =>
+    resolveAdminCityPackEnabledRoutes(pack.id, pack.content)
+  );
+  const [routes, setRoutes] = useState<Partial<Record<RouteId, CityPackRouteContent>>>(() =>
+    resolveAdminCityPackRoutes(pack.id, pack.content)
+  );
+  const [warnings, setWarnings] = useState<CityPackContentWarnings>(() => initialWarnings(pack));
+  const [preTripSundayClosure, setPreTripSundayClosure] = useState(
+    () =>
+      pack.content.preTripTips?.includes('sundayClosure') ??
+      readPackSeed(pack.id).preTripTips?.includes('sundayClosure') ??
+      false
+  );
   const [taxiName, setTaxiName] = useState(pack.content.recommendedTaxi?.name ?? '');
   const [taxiPhone, setTaxiPhone] = useState(pack.content.recommendedTaxi?.phoneRaw ?? '');
+  const [taxiMask, setTaxiMask] = useState(pack.content.recommendedTaxi?.phoneMask ?? '');
 
-  const content = useMemo(
+  const content = useMemo<CityPackContent>(
     () => ({
       places,
-      enabledRoutes: enabledRoutes as CityPackRecord['content']['enabledRoutes'],
+      enabledRoutes,
+      routes,
+      warnings,
+      preTripTips: preTripSundayClosure ? ['sundayClosure'] : undefined,
       recommendedTaxi: taxiName.trim()
-        ? { name: taxiName.trim(), phoneRaw: taxiPhone.trim() || undefined }
+        ? {
+            name: taxiName.trim(),
+            phoneRaw: taxiPhone.trim() || undefined,
+            phoneMask: taxiMask.trim() || undefined,
+          }
         : undefined,
     }),
-    [enabledRoutes, places, taxiName, taxiPhone]
+    [enabledRoutes, places, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, warnings]
   );
 
   const placesCount = countGatePlaces(content);
@@ -118,10 +169,18 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
     setPlaces((current) => current.filter((place) => place.id !== id));
   };
 
-  const toggleRoute = (routeId: string) => {
-    setEnabledRoutes((current) =>
-      current.includes(routeId) ? current.filter((id) => id !== routeId) : [...current, routeId]
-    );
+  const handleEnabledRoutesChange = (next: RouteId[]) => {
+    const seedRoutes = resolveAdminCityPackRoutes(pack.id, pack.content);
+    setRoutes((current) => {
+      const merged = { ...current };
+      for (const routeId of next) {
+        if (!merged[routeId] && seedRoutes[routeId]) {
+          merged[routeId] = seedRoutes[routeId]!;
+        }
+      }
+      return merged;
+    });
+    setEnabledRoutes(next);
   };
 
   return (
@@ -177,8 +236,16 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
           value={JSON.stringify(places.map(serializeCityPackAdminPlace))}
         />
         <input type="hidden" name="enabledRoutesJson" value={JSON.stringify(enabledRoutes)} />
+        <input type="hidden" name="routesJson" value={JSON.stringify(routes)} />
+        <input type="hidden" name="warningsJson" value={JSON.stringify(warnings)} />
+        <input
+          type="hidden"
+          name="preTripTipsJson"
+          value={JSON.stringify(preTripSundayClosure ? ['sundayClosure'] : [])}
+        />
         <input type="hidden" name="recommendedTaxiName" value={taxiName} />
         <input type="hidden" name="recommendedTaxiPhoneRaw" value={taxiPhone} />
+        <input type="hidden" name="recommendedTaxiPhoneMask" value={taxiMask} />
 
         {stepId === 'identity' ? (
           <div className="space-y-4">
@@ -291,52 +358,23 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
         ) : null}
 
         {stepId === 'routes' ? (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              At least one route required for tenant-ready pack. Route copy stays in i18n for code packs.
-            </p>
-            <div className="space-y-2">
-              {ROUTE_PRESETS.map((route) => (
-                <label key={route.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={enabledRoutes.includes(route.id)}
-                    onChange={() => toggleRoute(route.id)}
-                  />
-                  {route.label}
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Active routes:{' '}
-              {enabledRoutes.length > 0
-                ? enabledRoutes
-                    .map((routeId) => ROUTE_PRESETS.find((route) => route.id === routeId)?.label ?? routeId)
-                    .join(', ')
-                : 'none selected'}
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">Default taxi name</span>
-                <input
-                  value={taxiName}
-                  onChange={(event) => setTaxiName(event.target.value)}
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">Default taxi phone</span>
-                <input
-                  value={taxiPhone}
-                  onChange={(event) => setTaxiPhone(event.target.value)}
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Routes gate: {routesGateMet ? 'met' : 'enable at least one route'}
-            </p>
-          </div>
+          <CityPackRoutesStep
+            packId={pack.id}
+            enabledRoutes={enabledRoutes}
+            routes={routes}
+            warnings={warnings}
+            preTripSundayClosure={preTripSundayClosure}
+            taxiName={taxiName}
+            taxiPhone={taxiPhone}
+            taxiMask={taxiMask}
+            onEnabledRoutesChange={handleEnabledRoutesChange}
+            onRoutesChange={setRoutes}
+            onWarningsChange={setWarnings}
+            onPreTripSundayClosureChange={setPreTripSundayClosure}
+            onTaxiNameChange={setTaxiName}
+            onTaxiPhoneChange={setTaxiPhone}
+            onTaxiMaskChange={setTaxiMask}
+          />
         ) : null}
 
         {stepId === 'preview' ? (

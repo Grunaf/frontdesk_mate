@@ -24,6 +24,7 @@ import { Car, Phone } from 'lucide-react';
 import type { RouteConfig } from '@/entities/hostel';
 import { resolveReceptionTaxiBackup } from '../lib/resolveReceptionTaxiBackup';
 import { resolveRecommendedTaxi } from '../lib/resolveRecommendedTaxi';
+import { resolveRouteCopyField } from '../lib/resolveRouteCopy';
 import { TaxiRouteSummary } from './TaxiBackupCard';
 
 export function TaxiBackupSheet({
@@ -40,10 +41,16 @@ export function TaxiBackupSheet({
   const taxiActions = useTranslations('components.taxi');
   const directions = useTranslations('pages.arrivalJourney.directions');
 
-  const pickupPoint = routes(route.translationKeys.taxiPickupPoint);
+  const pickupPoint = resolveRouteCopyField(route, 'taxiPickupPoint', routes);
   const destination = hostel.contacts.address.display ?? '';
 
   const recommendedTaxi = resolveRecommendedTaxi(cityPack.recommendedTaxi, hostel.contacts.taxiPhone);
+  const taxiStandWarning =
+    cityPack.guestWarnings?.taxiStandWarning ??
+    (contentKeys.taxiStandWarning ? routes(contentKeys.taxiStandWarning) : '');
+  const taxiMeterWarning =
+    cityPack.guestWarnings?.taxiMeterWarning ??
+    (contentKeys.taxiMeterWarning ? routes(contentKeys.taxiMeterWarning) : '');
 
   const taxiWhatsappLink = recommendedTaxi
     ? createWhatsappLink(
@@ -98,8 +105,8 @@ export function TaxiBackupSheet({
                   {taxiActions('safetyTipsTitle')}
                 </AccordionTrigger>
                 <AccordionContent className="space-y-3 px-4 pb-4 text-sm leading-relaxed text-muted-foreground">
-                  <p>{routes(contentKeys.taxiStandWarning)}</p>
-                  <p>{routes(contentKeys.taxiMeterWarning)}</p>
+                  <p>{taxiStandWarning}</p>
+                  <p>{taxiMeterWarning}</p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

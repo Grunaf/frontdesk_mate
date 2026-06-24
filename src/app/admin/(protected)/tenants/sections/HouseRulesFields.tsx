@@ -23,6 +23,7 @@ import type { TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantRe
 import { cn } from '@/shared/lib/utils';
 import { Badge, Icon } from '@/shared/ui';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
+import { useSyncedFormRef } from '../lib/syncTenantFormDraft';
 
 interface HouseRulesFieldsProps {
   settings?: TenantSettings;
@@ -52,9 +53,27 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
     [settings, draft]
   );
 
-  const initialRules = useMemo(() => getHouseRules(mergedSettings), [mergedSettings]);
+  const [rules, setRules] = useState<HouseRule[]>(() => getHouseRules(settings ?? {}));
+  const rulesRef = useSyncedFormRef(rules);
 
-  const [rules, setRules] = useState<HouseRule[]>(initialRules);
+  const syncRules = (next: HouseRule[]) => {
+    rulesRef.current = next;
+    setRules(next);
+    updateDraft({ houseRules: next });
+  };
+
+  const applyRules = (updater: (current: HouseRule[]) => HouseRule[]) => {
+    const next = updater(rulesRef.current);
+    if (next === rulesRef.current) {
+      return;
+    }
+    syncRules(next);
+  };
+
+  useEffect(() => {
+    updateDraft({ houseRules: rulesRef.current });
+  }, [updateDraft]);
+
   const [pendingTemplate, setPendingTemplate] = useState<Exclude<RuleTemplateId, 'custom'> | null>(
     null
   );
@@ -63,14 +82,6 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
   const [customSummary, setCustomSummary] = useState('');
   const [customDetail, setCustomDetail] = useState('');
   const [customIcon, setCustomIcon] = useState<RuleIconId | ''>('');
-
-  useEffect(() => {
-    setRules(initialRules);
-  }, [initialRules]);
-
-  useEffect(() => {
-    updateDraft({ houseRules: rules });
-  }, [rules, updateDraft]);
 
   const readyState = resolveHouseRulesReady({ ...mergedSettings, houseRules: rules });
   const previewRules = resolveHouseRulesForDisplay(
@@ -87,17 +98,17 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
     !customDetailTooLong;
 
   const updateRule = (id: string, patch: Partial<HouseRule>) => {
-    setRules((current) =>
+    applyRules((current) =>
       current.map((rule) => (rule.id === id ? ({ ...rule, ...patch } as HouseRule) : rule))
     );
   };
 
   const removeRule = (id: string) => {
-    setRules((current) => current.filter((rule) => rule.id !== id));
+    applyRules((current) => current.filter((rule) => rule.id !== id));
   };
 
   const moveRule = (index: number, direction: -1 | 1) => {
-    setRules((current) => {
+    applyRules((current) => {
       const nextIndex = index + direction;
       if (nextIndex < 0 || nextIndex >= current.length) {
         return current;
@@ -123,7 +134,7 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
       return;
     }
 
-    setRules((current) => [...current, createTemplateRule(templateId)]);
+    applyRules((current) => [...current, createTemplateRule(templateId)]);
   };
 
   const confirmPendingTemplate = () => {
@@ -138,7 +149,7 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
     if (!validation.valid) {
       return;
     }
-    setRules((current) => [...current, draftRule]);
+    applyRules((current) => [...current, draftRule]);
     setPendingTemplate(null);
     setPendingParams({});
   };
@@ -147,7 +158,7 @@ export function HouseRulesFields({ settings, readinessInput }: HouseRulesFieldsP
     if (!customValid) {
       return;
     }
-    setRules((current) => [
+    applyRules((current) => [
       ...current,
       {
         id: createRuleId('custom'),

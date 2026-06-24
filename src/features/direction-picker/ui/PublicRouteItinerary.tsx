@@ -8,6 +8,7 @@ import {
   type RouteConfig,
 } from '@/entities/hostel';
 import { cn } from '@/shared/lib/utils';
+import { resolveRouteCopyField, resolveRouteFareLabel } from '../lib/resolveRouteCopy';
 import { resolveWalkToHostelText } from '../lib/resolveWalkToHostel';
 
 function RouteTimelineLeg({
@@ -48,14 +49,17 @@ export function TransitLegMeta({
 }) {
   const { ticketPrice, stops, durationMin, fareLabelKey } = route.metadata.publicTransport;
   const walkOnly = isWalkOnlyRoute(route);
-  const showFareChip = Boolean(fareLabelKey || ticketPrice);
+  const fareLabel = resolveRouteFareLabel(route, routes);
+  const showFareChip = Boolean(fareLabel || fareLabelKey || ticketPrice);
 
   return (
     <div className="flex flex-wrap gap-1.5">
       {showFareChip && (
         <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] text-foreground/90">
           <Icon icon={Ticket} className="h-3 w-3 text-muted-foreground" />
-          {fareLabelKey
+          {fareLabel
+            ? fareLabel
+            : fareLabelKey
             ? routes(fareLabelKey)
             : directions('labels.ticket', {
                 kiosk: ticketPrice!.kioskKM.toFixed(2),
@@ -105,7 +109,7 @@ export function PublicRouteItinerary({
         <RouteTimelineLeg icon={Footprints} title={directions('legs.onFootRoute')}>
           <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
             <p className="text-xs leading-relaxed text-foreground/90">
-              {routes(route.translationKeys.publicText)}
+              {resolveRouteCopyField(route, 'publicText', routes)}
             </p>
             <TransitLegMeta route={route} routes={routes} directions={directions} />
           </div>
@@ -122,18 +126,18 @@ export function PublicRouteItinerary({
     <div className="pt-1">
       <RouteTimelineLeg icon={Footprints} title={directions('legs.walkToStop')}>
         <p className="text-xs leading-relaxed text-foreground/90">
-          {routes(route.translationKeys.publicPreview)}
+          {resolveRouteCopyField(route, 'publicPreview', routes)}
         </p>
       </RouteTimelineLeg>
 
       <RouteTimelineLeg icon={TransitIcon} title={directions('legs.boardAndRide')}>
         <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
           <p className="text-xs leading-relaxed text-foreground/90">
-            {routes(route.translationKeys.publicText)}
+            {resolveRouteCopyField(route, 'publicText', routes)}
           </p>
           <TransitLegMeta route={route} routes={routes} directions={directions} />
           <p className="text-xs font-medium text-foreground">
-            {routes(route.translationKeys.publicGetOffAt)}
+            {resolveRouteCopyField(route, 'publicGetOffAt', routes)}
           </p>
         </div>
       </RouteTimelineLeg>

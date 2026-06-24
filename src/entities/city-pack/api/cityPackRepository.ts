@@ -33,9 +33,12 @@ function normalizeContent(raw: CityPackContent | null | undefined): CityPackCont
   return {
     places: Array.isArray(raw.places) ? raw.places : [],
     enabledRoutes: Array.isArray(raw.enabledRoutes) ? raw.enabledRoutes : [],
+    routes: raw.routes && typeof raw.routes === 'object' ? raw.routes : undefined,
     categories: Array.isArray(raw.categories) ? raw.categories : [],
     contentKeys: raw.contentKeys,
     recommendedTaxi: raw.recommendedTaxi,
+    warnings: raw.warnings && typeof raw.warnings === 'object' ? raw.warnings : undefined,
+    preTripTips: Array.isArray(raw.preTripTips) ? raw.preTripTips : undefined,
   };
 }
 

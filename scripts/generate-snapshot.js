@@ -40,6 +40,17 @@ const OUT = path.join(ROOT, 'CONTEXT_SNAPSHOT.md');
 const APP_DIR = path.join(ROOT, 'src', 'app');
 const MIGRATIONS_DIR = path.join(ROOT, 'supabase', 'migrations');
 const SETTINGS_TYPE = path.join(ROOT, 'src', 'entities', 'tenant', 'model', 'settings.ts');
+const CITY_PACK_TYPE = path.join(ROOT, 'src', 'entities', 'city-pack', 'model', 'types.ts');
+const ADMIN_SECTIONS_FILE = path.join(
+  ROOT,
+  'src',
+  'app',
+  'admin',
+  '(protected)',
+  'tenants',
+  'lib',
+  'adminSections.ts'
+);
 
 function readSafe(filePath) {
   try {
@@ -128,18 +139,51 @@ function parseTablesFromMigrations() {
   return tables;
 }
 
-function parseTenantSettingsKeys() {
-  const source = readSafe(SETTINGS_TYPE);
+function parseInterfaceKeys(filePath, interfaceName) {
+  const source = readSafe(filePath);
   const keys = [];
-  const ifaceMatch = source.match(/export interface TenantSettings\s*\{([\s\S]*?)\n\}/);
+  const ifaceMatch = source.match(
+    new RegExp(`export interface ${interfaceName}\\s*\\{([\\s\\S]*?)\\n\\}`)
+  );
   if (!ifaceMatch) return keys;
 
-  const body = ifaceMatch[1];
-  for (const line of body.split('\n')) {
+  for (const line of ifaceMatch[1].split('\n')) {
     const m = line.match(/^\s{2}(\w+)\??\s*:/);
     if (m) keys.push(m[1]);
   }
   return keys;
+}
+
+function parseTenantSettingsKeys() {
+  return parseInterfaceKeys(SETTINGS_TYPE, 'TenantSettings');
+}
+
+function parseCityPackContentKeys() {
+  return parseInterfaceKeys(CITY_PACK_TYPE, 'CityPackContent');
+}
+
+function parseAdminSections() {
+  const source = readSafe(ADMIN_SECTIONS_FILE);
+  const rows = [];
+  const blockRe = /\{\s*id:\s*'([^']+)',\s*label:\s*'([^']+)',\s*description:\s*'([^']+)',?\s*\}/g;
+  let match;
+  while ((match = blockRe.exec(source)) !== null) {
+    rows.push(`| \`${match[1]}\` | ${match[2]} | ${match[3]} |`);
+  }
+  return rows;
+}
+
+function gitDirtySummary() {
+  try {
+    const status = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf8' }).trim();
+    if (!status) return '_Working tree clean._';
+    const lines = status.split('\n');
+    const modified = lines.filter((l) => l.startsWith(' M') || l.startsWith('M ')).length;
+    const untracked = lines.filter((l) => l.startsWith('??')).length;
+    return `${modified} modified, ${untracked} untracked — run \`git status\` before commit.`;
+  } catch {
+    return '_Git status unavailable._';
+  }
 }
 
 function recentMigrations(limit = 5) {
@@ -195,6 +239,10 @@ function packageScripts() {
     'test',
     'smoke',
     'db:migrate',
+    'city-pack:migrate-routes',
+    'city-pack:migrate-routes:apply',
+    'city-pack:export-routes',
+    'city-pack:parity',
     'validate-i18n',
     'snapshot',
   ];
@@ -208,6 +256,8 @@ function buildMarkdown() {
   const routes = collectRoutes(APP_DIR);
   const tables = parseTablesFromMigrations();
   const settingsKeys = parseTenantSettingsKeys();
+  const cityPackKeys = parseCityPackContentKeys();
+  const adminSections = parseAdminSections();
   const now = new Date().toISOString().slice(0, 10);
 
   const tableRows = [...tables.entries()]
@@ -222,6 +272,7 @@ function buildMarkdown() {
 
 - **Project:** ${pkg.name} v${pkg.version}
 - **Branch:** \`${gitBranch()}\`
+- **Working tree:** ${gitDirtySummary()}
 - **Stack:** Next.js App Router, Supabase, next-intl (en/ru), Vitest, Playwright smoke
 
 ## Sites (host routing)
@@ -254,6 +305,28 @@ ${tableRows.join('\n') || '| — | — |'}
 ${settingsKeys.map((k) => `- \`${k}\``).join('\n')}
 
 Authoring UI: \`/admin/tenants/[slug]\` (not code files).
+
+## CityPackContent keys (\`city_packs.content\` JSON)
+
+${cityPackKeys.map((k) => `- \`${k}\``).join('\n')}
+
+Authoring UI: \`/admin/city-packs/[id]\` wizard — Identity → Places → Routes & guide → Preview.
+
+## Arrival transport (data layers)
+
+| Layer | Storage | Admin UI | Guest merge |
+|-------|---------|----------|-------------|
+| City hubs & copy | \`city_packs.content.routes\` | City pack → Routes step | \`resolveCityPackForGuest\` |
+| Hostel last mile | \`arrivalWalkToHostel*\`, \`contacts.address\` | Tenant → Contacts (transport block) | \`resolveWalkToHostel\` |
+| Door access | \`arrivalAccess\` | Tenant → Arrival & doors | arrival guide after route |
+
+TZ: \`docs/tz/transport-editor-v1.md\` · Key files: \`resolveCityPackForGuest.ts\`, \`resolveRouteCopy.ts\`, \`ArrivalTransportFields.tsx\`, \`CityPackRoutesStep.tsx\`.
+
+## Admin tenant sections
+
+| ID | Label | Description |
+|----|-------|-------------|
+${adminSections.join('\n')}
 
 ## Guest app modules (readiness)
 

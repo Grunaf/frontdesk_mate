@@ -1,4 +1,5 @@
 import type { CityPackId } from '@/entities/hostel';
+import type { LocalizedField } from '@/entities/city-pack/model/types';
 import type { ArrivalAccessConfig } from './accessPoints';
 import type { TenantBookingSettings } from './booking';
 import type { GuestStayConfig } from './guestStay';
@@ -84,12 +85,10 @@ export interface TenantSettings {
   /** Spots within walking distance — shown above city pack guide. */
   hostelPlaces?: HostelPlace[];
   faqPackId?: string;
-  /** Hostel-specific final leg after the city pack route (overrides i18n walkToHostel). */
-  arrivalWalkToHostel?: string;
+  /** Hostel-specific final leg after the city pack route (overrides city default walk). */
+  arrivalWalkToHostel?: LocalizedField;
   /** Per-route overrides for the final walk-to-hostel step. */
-  arrivalWalkToHostelByRoute?: Partial<
-    Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', string>
-  >;
+  arrivalWalkToHostelByRoute?: Partial<Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', LocalizedField>>;
 }
 
 export interface TenantRecord {

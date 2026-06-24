@@ -1,4 +1,6 @@
 import { getCityPack, type CityPackId } from '@/entities/hostel';
+import type { CityPackContent } from '@/entities/city-pack/model/types';
+import { resolveArrivalWalkReadiness } from '@/entities/city-pack/lib/resolveArrivalTransportReadiness';
 import {
   readBookingSettings,
   resolveCapabilities,
@@ -126,6 +128,7 @@ export function getAdminSectionHint(
     cityPackId: CityPackId;
     settings: TenantSettings;
     lifecycleStatus?: ReturnType<typeof resolveTenantLifecycleStatus>;
+    cityPackContent?: CityPackContent;
   }
 ): string | undefined {
   const { cityPackId, settings } = input;
@@ -133,6 +136,11 @@ export function getAdminSectionHint(
   const cityPack = getCityPack(cityPackId);
   const hasTaxiNumber = Boolean(merged.contacts?.taxiPhoneRaw || cityPack.recommendedTaxi?.phoneRaw);
   const hasReceptionPhone = Boolean(merged.contacts?.phoneRaw);
+  const walkReadiness = resolveArrivalWalkReadiness({
+    cityPackId,
+    settings: merged,
+    cityPackContent: input.cityPackContent,
+  });
 
   switch (sectionId) {
     case 'identity':
@@ -163,6 +171,9 @@ export function getAdminSectionHint(
     case 'wifi':
       return merged.wifi?.name ? `Network: ${merged.wifi.name}` : 'WiFi card is off until name and password are set';
     case 'contacts':
+      if (!walkReadiness.complete) {
+        return walkReadiness.detail ?? 'Add arrival walk directions';
+      }
       if (hasTaxiNumber) {
         return `Taxi: ${cityPack.recommendedTaxi?.name ?? 'configured'}${
           merged.reception?.canHelpWithTaxi !== false && hasReceptionPhone ? ' · reception backup' : ''

@@ -54,6 +54,12 @@ export interface RecommendedTaxi {
 
 export type PreTripTipId = 'sundayClosure';
 
+export interface CityPackGuestWarnings {
+  taxiStandWarning: string;
+  taxiMeterWarning: string;
+  busClarificationQuestion?: string;
+}
+
 export interface CityPack {
   id: CityPackId;
   label: string;
@@ -65,6 +71,8 @@ export interface CityPack {
   preTripTips?: PreTripTipId[];
   /** City-default taxi; tenant `taxiPhoneRaw` overrides the number. */
   recommendedTaxi?: RecommendedTaxi;
+  /** DB-resolved warning copy for the active locale. */
+  guestWarnings?: CityPackGuestWarnings;
 }
 
 interface CodeCityPackDefinition {
