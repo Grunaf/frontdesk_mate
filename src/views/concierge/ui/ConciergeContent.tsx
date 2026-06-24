@@ -1,5 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
+import { resolveGuestExtrasLayout } from '@/entities/guest-extra';
+import { useTenant } from '@/entities/tenant';
 import { useNightMode } from '@/shared/lib';
 import { NightAccessCard } from '@/features/night-access';
 import { GuestAccessPanel, useIsGuestRegistered } from '@/features/guest-check-in';
@@ -8,6 +11,8 @@ import { GuestExtrasBlock } from '@/features/guest-services';
 import { ConciergeReceptionStrip } from '@/features/reception-contact';
 import { conciergeContentStripOffsetClass } from '@/features/reception-contact/lib/conciergeStripLayout';
 import { WifiCompactRow } from '@/features/wifi-connect';
+import { FAQAccordion, useFaqDisplays } from '@/features/faq';
+import { LocalGuide } from '@/features/welcome';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/shared/i18n';
 import { Button, ConciergeModuleSection, FeatureGate, Icon } from '@/shared/ui';
@@ -37,8 +42,19 @@ function ArrivalGuideButton() {
 }
 
 export function ConciergeContent() {
+  const t = useTranslations('pages.concierge');
   const isNightMode = useNightMode();
   const isRegistered = useIsGuestRegistered();
+  const { settings } = useTenant();
+  const extrasLayout = useMemo(
+    () => resolveGuestExtrasLayout(settings, isRegistered),
+    [settings, isRegistered]
+  );
+  const servicesCount = extrasLayout.standard.length + extrasLayout.featured.length;
+  const servicesSeeAll =
+    extrasLayout.standard.length > 0 || extrasLayout.featured.length > 2;
+  const faqDisplays = useFaqDisplays();
+  const faqSeeAll = faqDisplays.length > 2;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -57,21 +73,25 @@ export function ConciergeContent() {
 
         {/* Zone: services */}
         <ConciergeModuleSection
-          title="Services"
-          seeAllHref={SITE_CONFIG.routes.app.services.path}
+          title={t('sections.services')}
+          seeAllHref={servicesSeeAll ? SITE_CONFIG.routes.app.services.path : undefined}
+          seeAllLabel={t('viewAllServices', { count: servicesCount })}
         >
-          <GuestExtrasBlock />
+          <GuestExtrasBlock variant="compact" />
         </ConciergeModuleSection>
 
         {/* Zone: support */}
         {isRegistered ? <GuestIssueReportCard /> : null}
 
-        {/* Zone: local guide — compact stub until Chat 2 */}
+        {/* Zone: local guide */}
         <FeatureGate module="localGuide">
           <ConciergeModuleSection
-            title="Local guide"
+            title={t('sections.localGuide')}
             seeAllHref={SITE_CONFIG.routes.app.guide.path}
-          />
+            seeAllLabel={t('seeAllGuide')}
+          >
+            <LocalGuide variant="compact" />
+          </ConciergeModuleSection>
         </FeatureGate>
 
         {/* Zone: night access */}
@@ -81,13 +101,17 @@ export function ConciergeContent() {
           </FeatureGate>
         ) : null}
 
-        {/* Zone: FAQ — compact stub until Chat 4 */}
-        <FeatureGate module="faq">
-          <ConciergeModuleSection
-            title="FAQ"
-            seeAllHref={SITE_CONFIG.routes.app.faq.path}
-          />
-        </FeatureGate>
+        {/* Zone: FAQ */}
+        {faqDisplays.length > 0 ? (
+          <FeatureGate module="faq">
+            <ConciergeModuleSection
+              title={t('sections.faq')}
+              seeAllHref={faqSeeAll ? SITE_CONFIG.routes.app.faq.path : undefined}
+            >
+              <FAQAccordion variant="compact" />
+            </ConciergeModuleSection>
+          </FeatureGate>
+        ) : null}
       </div>
 
       {isRegistered ? <ConciergeReceptionStrip /> : null}

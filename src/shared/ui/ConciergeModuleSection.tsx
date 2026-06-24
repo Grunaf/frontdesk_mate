@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { SITE_CONFIG } from '@/shared/config';
 import { setInAppReturnTo } from '@/shared/lib';
+import { useTranslations } from '@/shared/i18n';
 import { Icon } from './icon';
 
 interface ConciergeModuleSectionProps {
@@ -17,10 +18,12 @@ interface ConciergeModuleSectionProps {
 export function ConciergeModuleSection({
   title,
   seeAllHref,
-  seeAllLabel = 'See all',
+  seeAllLabel,
   children,
 }: ConciergeModuleSectionProps) {
   const router = useRouter();
+  const t = useTranslations('pages.concierge');
+  const resolvedSeeAllLabel = seeAllLabel ?? t('seeAll');
 
   const handleSeeAll = () => {
     if (!seeAllHref) return;
@@ -40,7 +43,7 @@ export function ConciergeModuleSection({
             onClick={handleSeeAll}
             className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            <span>{seeAllLabel}</span>
+            <span>{resolvedSeeAllLabel}</span>
             <Icon icon={ArrowRight} className="h-3.5 w-3.5" />
           </button>
         ) : null}

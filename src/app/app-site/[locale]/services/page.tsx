@@ -1,5 +1,9 @@
-import { ServicesContent } from '@/views/services';
+import { GuestExtrasBlock } from '@/features/guest-services';
 
 export default async function ServicesPage() {
-  return <ServicesContent />;
+  return (
+    <div className="px-4 py-6">
+      <GuestExtrasBlock variant="full" />
+    </div>
+  );
 }

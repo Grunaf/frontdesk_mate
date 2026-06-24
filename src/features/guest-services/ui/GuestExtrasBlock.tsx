@@ -15,7 +15,11 @@ import { GuestExtraSheet } from './GuestExtraSheet';
 import { GuestExtraStandardTile } from './GuestExtraStandardTile';
 import { GuestExtrasFeaturedStrip } from './GuestExtrasFeaturedStrip';
 
-export function GuestExtrasBlock() {
+type GuestExtrasBlockProps = {
+  variant?: 'compact' | 'full';
+};
+
+export function GuestExtrasBlock({ variant = 'full' }: GuestExtrasBlockProps) {
   const { settings } = useTenant();
   const { session } = useGuestSession();
   const isRegistered = useIsGuestRegistered();
@@ -42,6 +46,8 @@ export function GuestExtrasBlock() {
   );
 
   const hasExtras = layout.featured.length > 0 || layout.standard.length > 0;
+  const featuredExtras =
+    variant === 'compact' ? layout.featured.slice(0, 2) : layout.featured;
 
   if (!hasExtras) {
     return null;
@@ -58,22 +64,24 @@ export function GuestExtrasBlock() {
 
   return (
     <section className="space-y-3">
-      <h3 className="px-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-        {t('sectionTitle')}
-      </h3>
+      {variant === 'full' ? (
+        <h3 className="px-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+          {t('sectionTitle')}
+        </h3>
+      ) : null}
 
-      {layout.featured.length > 0 ? (
+      {featuredExtras.length > 0 ? (
         <div className="space-y-2">
-          {layout.featured.length > 1 ? (
+          {featuredExtras.length > 1 ? (
             <p className="px-1 text-[10px] tracking-wide text-muted-foreground uppercase">
               {t('featuredLabel')}
             </p>
           ) : null}
-          <GuestExtrasFeaturedStrip extras={layout.featured} onSelect={openExtra} />
+          <GuestExtrasFeaturedStrip extras={featuredExtras} onSelect={openExtra} />
         </div>
       ) : null}
 
-      {layout.standard.length > 0 ? (
+      {variant === 'full' && layout.standard.length > 0 ? (
         <div className="grid grid-cols-2 gap-2">
           {layout.standard.map((extra) => (
             <GuestExtraStandardTile key={extra.presetId} extra={extra} onSelect={() => openExtra(extra)} />

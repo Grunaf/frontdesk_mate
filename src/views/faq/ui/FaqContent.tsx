@@ -1,7 +1,14 @@
+'use client';
+
+import { FAQAccordion } from '@/features/faq';
+import { FeatureGate } from '@/shared/ui';
+
 export function FaqContent() {
   return (
     <div className="px-4 py-6">
-      <p className="text-sm text-muted-foreground">FAQ — full view coming soon.</p>
+      <FeatureGate module="faq">
+        <FAQAccordion variant="full" />
+      </FeatureGate>
     </div>
   );
 }

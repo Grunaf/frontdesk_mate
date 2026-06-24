@@ -672,6 +672,9 @@
       "home": "Home",
       "concierge": "Concierge",
       "arrivalGuide": "Arrival Guide",
+      "guide": "Local guide",
+      "services": "Services",
+      "faq": "FAQ",
       "back": "Back",
       "backToConcierge": "Back to Concierge",
       "goToConcierge": "Go to Concierge"
@@ -681,7 +684,15 @@
       "subtitle": "Upload your favourite hostel photos or videos."
     },
     "concierge": {
-      "arrivalGuideButton": "How to get to the hostel (Guide)"
+      "arrivalGuideButton": "How to get to the hostel (Guide)",
+      "sections": {
+        "services": "Services",
+        "localGuide": "Local guide",
+        "faq": "FAQ"
+      },
+      "seeAll": "See all",
+      "seeAllGuide": "See all",
+      "viewAllServices": "View all services ({count})"
     },
     "checkIn": {
       "metaTitle": "Guest check-in",

@@ -1,1 +1,1 @@
-export { FAQAccordion } from './ui/FAQAccordion';
+export { FAQAccordion, useFaqDisplays, type FAQAccordionVariant } from './ui/FAQAccordion';

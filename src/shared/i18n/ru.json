@@ -672,6 +672,9 @@
       "home": "Главная",
       "concierge": "Concierge",
       "arrivalGuide": "Инструкция по заселению",
+      "guide": "Городской гид",
+      "services": "Услуги",
+      "faq": "FAQ",
       "back": "Назад",
       "backToConcierge": "Назад к консьержу",
       "goToConcierge": "К консьержу"
@@ -681,7 +684,15 @@
       "subtitle": "Upload your favourite hostel photos or videos."
     },
     "concierge": {
-      "arrivalGuideButton": "How to get to the hostel (Guide)"
+      "arrivalGuideButton": "Как добраться до хостела (гид)",
+      "sections": {
+        "services": "Услуги",
+        "localGuide": "Городской гид",
+        "faq": "FAQ"
+      },
+      "seeAll": "Смотреть все",
+      "seeAllGuide": "Смотреть все",
+      "viewAllServices": "Все услуги ({count})"
     },
     "checkIn": {
       "metaTitle": "Регистрация гостя",
