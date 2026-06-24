@@ -5,6 +5,8 @@ export interface CityPackLocale {
   marketingNamespace: string;
 }
 
+export const GENERIC_CITY_PACK_LOCALE_KEY = 'default';
+
 export function cityPackRoutesNamespace(id: string): string {
   return `domains.hostel.cityPacks.${id}.routes`;
 }
@@ -18,4 +20,9 @@ export function buildCityPackLocale(id: string): CityPackLocale {
     preTripNamespace: `${base}.preTrip`,
     marketingNamespace: `${base}.marketing`,
   };
+}
+
+/** Shared i18n for DB-only packs (no per-city messages file). */
+export function buildGenericCityPackLocale(): CityPackLocale {
+  return buildCityPackLocale(GENERIC_CITY_PACK_LOCALE_KEY);
 }

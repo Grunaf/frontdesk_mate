@@ -25,7 +25,8 @@ describe('city pack ids', () => {
     expect(pack.places).toEqual([]);
     expect(pack.categories).toEqual([]);
     expect(Object.keys(pack.routes)).toHaveLength(0);
-    expect(pack.locale.guideNamespace).toContain('dubrovnik');
+    expect(pack.locale.guideNamespace).toBe('domains.hostel.cityPacks.default.guide');
+    expect(pack.locale.marketingNamespace).toBe('domains.hostel.cityPacks.default.marketing');
   });
 
   it('keeps only active kotor routes in code pack', () => {

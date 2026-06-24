@@ -16,6 +16,8 @@ import {
   parseCityPackRoutesJson,
   parseCityPackWarningsJson,
 } from '@/entities/city-pack/lib/normalizeCityPackRoutes';
+import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
+import { resolveStoredPhoneMask } from '@/shared/lib/phoneDisplay';
 import type { RouteId } from '@/entities/hostel';
 import { getCityPackForAdmin, upsertCityPack } from '@/entities/city-pack/server';
 import { assertAdminAuthenticated } from '../../lib/adminSession';
@@ -43,7 +45,15 @@ function readContent(formData: FormData): CityPackContent {
   }
   const taxiName = String(formData.get('recommendedTaxiName') || '').trim();
   const taxiPhoneRaw = String(formData.get('recommendedTaxiPhoneRaw') || '').trim();
-  const taxiPhoneMask = String(formData.get('recommendedTaxiPhoneMask') || '').trim();
+  const taxiPhoneMaskInput = String(formData.get('recommendedTaxiPhoneMask') || '').trim();
+  const taxiPhoneFormatPreset = normalizePhoneDisplayPreset(
+    String(formData.get('recommendedTaxiPhoneFormatPreset') || '')
+  );
+  const taxiPhoneMask = resolveStoredPhoneMask(
+    taxiPhoneRaw,
+    taxiPhoneMaskInput,
+    taxiPhoneFormatPreset ?? 'auto'
+  );
   const routes = parseCityPackRoutesJson(String(formData.get('routesJson') || '{}'));
   const warnings = parseCityPackWarningsJson(String(formData.get('warningsJson') || '{}'));
   let preTripTips: CityPackContent['preTripTips'];
@@ -65,6 +75,7 @@ function readContent(formData: FormData): CityPackContent {
           name: taxiName,
           phoneRaw: taxiPhoneRaw || undefined,
           phoneMask: taxiPhoneMask || undefined,
+          phoneFormatPreset: taxiPhoneFormatPreset ?? (taxiPhoneRaw ? 'auto' : undefined),
         }
       : undefined,
   };

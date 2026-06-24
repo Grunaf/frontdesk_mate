@@ -2,6 +2,7 @@
 
 import { useTranslations } from '@/shared/i18n';
 import { useHostelConfig, useModuleStatus } from '@/entities/tenant';
+import { shouldShowTimedGuestBanner } from '@/entities/tenant/lib/resolveGuestFieldPresentation';
 import { FeatureGate } from '@/shared/ui';
 import { useArrivalAccessPlan } from '../lib/useArrivalAccessPlan';
 import { AccessStepsCarousel } from './AccessStepsCarousel';
@@ -49,7 +50,9 @@ export function NightReturnSection() {
   const body = (
     <section className="space-y-3">
       <h3 className="text-sm font-semibold text-foreground">{sectionT('night.heading')}</h3>
-      <ArrivalBanner variant="night" keys={banner} checkInTime={hostel.selfCheckInTimeAfter ?? ''} />
+      {shouldShowTimedGuestBanner(hostel.selfCheckInTimeAfter) ? (
+        <ArrivalBanner variant="night" keys={banner} checkInTime={hostel.selfCheckInTimeAfter ?? ''} />
+      ) : null}
       {stepsWithPhotos.length > 0 && doorPhotosStatus !== 'hidden' && (
         <AccessStepsCarousel steps={stepsWithPhotos} />
       )}

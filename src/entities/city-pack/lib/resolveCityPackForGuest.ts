@@ -30,6 +30,7 @@ function mergeRecommendedTaxi(
     name,
     phoneRaw: dbTaxi?.phoneRaw?.trim() || codeTaxi?.phoneRaw,
     phoneMask: dbTaxi?.phoneMask?.trim() || codeTaxi?.phoneMask,
+    phoneFormatPreset: dbTaxi?.phoneFormatPreset || codeTaxi?.phoneFormatPreset,
   };
 }
 

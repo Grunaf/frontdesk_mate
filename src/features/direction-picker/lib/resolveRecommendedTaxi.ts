@@ -1,6 +1,7 @@
 import type { RecommendedTaxi } from '@/entities/hostel';
 import type { HostelContactLink } from '@/entities/tenant/model/hostel-config';
 import { resolvePhoneDisplay } from '@/shared/lib/phoneDisplay';
+import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
 
 export interface ResolvedRecommendedTaxi {
   name: string;
@@ -23,11 +24,18 @@ export function resolveRecommendedTaxi(
   }
 
   const normalized = phoneRaw.replace(/\D/g, '');
+  const usesTenantNumber = Boolean(tenantTaxi.raw?.trim());
 
   return {
     name: packTaxi.name,
     phoneRaw,
-    phoneMask: resolvePhoneDisplay(normalized, packTaxi.phoneMask, tenantTaxi.mask),
+    phoneMask: resolvePhoneDisplay(
+      normalized,
+      usesTenantNumber ? tenantTaxi.mask : packTaxi.phoneMask,
+      normalizePhoneDisplayPreset(
+        usesTenantNumber ? tenantTaxi.formatPreset : packTaxi.phoneFormatPreset
+      )
+    ),
     href: `tel:+${normalized}`,
   };
 }

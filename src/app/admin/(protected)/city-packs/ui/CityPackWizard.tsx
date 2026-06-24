@@ -32,6 +32,8 @@ import {
   serializeCityPackAdminPlace,
 } from '@/entities/city-pack/lib/normalizeCityPackAdminPlace';
 import { saveCityPackAction } from '../actions';
+import { inferPhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
+import type { PhoneDisplayPresetId } from '@/shared/lib/phoneDisplay';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/ui';
 import { PlaceIconPicker } from './PlaceIconPicker';
@@ -95,6 +97,13 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   const [taxiName, setTaxiName] = useState(pack.content.recommendedTaxi?.name ?? '');
   const [taxiPhone, setTaxiPhone] = useState(pack.content.recommendedTaxi?.phoneRaw ?? '');
   const [taxiMask, setTaxiMask] = useState(pack.content.recommendedTaxi?.phoneMask ?? '');
+  const [taxiPreset, setTaxiPreset] = useState<PhoneDisplayPresetId>(() =>
+    inferPhoneDisplayPreset(
+      pack.content.recommendedTaxi?.phoneRaw,
+      pack.content.recommendedTaxi?.phoneMask,
+      pack.content.recommendedTaxi?.phoneFormatPreset
+    )
+  );
 
   const content = useMemo<CityPackContent>(
     () => ({
@@ -108,10 +117,11 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
             name: taxiName.trim(),
             phoneRaw: taxiPhone.trim() || undefined,
             phoneMask: taxiMask.trim() || undefined,
+            phoneFormatPreset: taxiPreset,
           }
         : undefined,
     }),
-    [enabledRoutes, places, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, warnings]
+    [enabledRoutes, places, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, taxiPreset, warnings]
   );
 
   const placesCount = countGatePlaces(content);
@@ -246,6 +256,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
         <input type="hidden" name="recommendedTaxiName" value={taxiName} />
         <input type="hidden" name="recommendedTaxiPhoneRaw" value={taxiPhone} />
         <input type="hidden" name="recommendedTaxiPhoneMask" value={taxiMask} />
+        <input type="hidden" name="recommendedTaxiPhoneFormatPreset" value={taxiPreset} />
 
         {stepId === 'identity' ? (
           <div className="space-y-4">
@@ -315,7 +326,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
                   <textarea
                     value={place.description ?? ''}
                     onChange={(event) => updatePlace(place.id, { description: event.target.value })}
-                    placeholder="Why we recommend (optional — overrides pack i18n when filled)"
+                    placeholder="Overrides pack i18n when filled"
                     rows={2}
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                   />
@@ -367,6 +378,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
             taxiName={taxiName}
             taxiPhone={taxiPhone}
             taxiMask={taxiMask}
+            taxiPreset={taxiPreset}
             onEnabledRoutesChange={handleEnabledRoutesChange}
             onRoutesChange={setRoutes}
             onWarningsChange={setWarnings}
@@ -374,6 +386,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
             onTaxiNameChange={setTaxiName}
             onTaxiPhoneChange={setTaxiPhone}
             onTaxiMaskChange={setTaxiMask}
+            onTaxiPresetChange={setTaxiPreset}
           />
         ) : null}
 

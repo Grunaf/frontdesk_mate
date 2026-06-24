@@ -402,6 +402,69 @@
             "heroSubtitle": "Your base for exploring Kotor Bay and the Adriatic coast",
             "heroImageAlt": "{hostelName} — hostel photo"
           }
+        },
+        "default": {
+          "payment": {
+            "cashOnly": "Cash only (EUR)"
+          },
+          "guide": {
+            "title": "Local Guide by {hostelName}",
+            "subtitle": "Curated places around town — from your city pack.",
+            "essentials": {
+              "title": "Essentials nearby",
+              "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
+              "expand": "Show",
+              "collapse": "Hide",
+              "atm": "ATM",
+              "shop": "Shop",
+              "pharmacy": "Pharmacy",
+              "lateFood": "Late food"
+            },
+            "exploreArrival": {
+              "title": "Explore the city",
+              "subtitle": "Our handpicked bars, cafes, food, and sights are ready when you are.",
+              "teaserTitle": "More recommendations waiting",
+              "teaserDescription": "Bars, coffee shops, and viewpoints are tucked away for now. Open the full city guide whenever you want.",
+              "showAllButton": "Show all recommendations"
+            },
+            "mapCard": {
+              "title": "{hostelName} Custom Google Map",
+              "description": "Opens directly in your Google Maps app with all our secret layers"
+            },
+            "tabs": {
+              "all": "All",
+              "essential": "Info",
+              "food": "Food",
+              "bars": "Bars",
+              "cafes": "Cafes",
+              "sights": "Sights"
+            },
+            "routeButton": "Route",
+            "openInMaps": "Open in Maps",
+            "showAllPlaces": "Show all places ({count})",
+            "topPick": "Top pick",
+            "emptyCategory": "No places found in this category.",
+            "nearHostel": {
+              "title": "Near the hostel",
+              "subtitle": "Walking distance from us",
+              "exploreCityTitle": "Explore the city",
+              "exploreCitySubtitle": "Handpicked places across the city"
+            },
+            "hostelPlaceCategories": {
+              "food": "Food",
+              "shop": "Shop / grocery",
+              "atm": "ATM",
+              "pharmacy": "Pharmacy",
+              "nightlife": "Nightlife",
+              "other": "Other"
+            },
+            "places": {}
+          },
+          "preTrip": {},
+          "marketing": {
+            "heroSubtitle": "Your base for exploring the city",
+            "heroImageAlt": "{hostelName} — hostel photo"
+          }
         }
       },
       "inside": {
@@ -892,8 +955,6 @@
       "callTaxi": "Call {taxiName}",
       "whatsappTaxi": "Message {taxiName} on WhatsApp",
       "whatsappTaxiMessage": "Hello! Please send a taxi to {pickupPoint}. Destination: {address}.",
-      "messageReception": "WhatsApp {hostelName} reception",
-      "messageReceptionCall": "Call {hostelName} reception",
       "askReceptionHoursHint": "Reception hours: {open}–{close}.",
       "askReceptionOpensHint": "Reception opens at {open}.",
       "safetyTipsTitle": "Before you call — safety tips",

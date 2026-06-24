@@ -1,0 +1,122 @@
+{
+  "routes": {
+    "airport": {
+      "category": "airport",
+      "locationLabel": {
+        "en": "Tivat Airport",
+        "ru": "аэропорта Тиват"
+      },
+      "copy": {
+        "publicTitle": {
+          "en": "Bus line 1 or taxi",
+          "ru": "Автобус №1 или такси"
+        },
+        "publicSummary": {
+          "en": "TIV is only a few kilometres from town — a taxi is fastest; bus line 1 runs to the centre on weekdays.",
+          "ru": "TIV в нескольких километрах от города — быстрее всего такси; автобус №1 ходит в центр в будни."
+        },
+        "publicPreview": {
+          "en": "Exit arrivals, follow signs to the bus stop on the access road or the official taxi desk in the hall.",
+          "ru": "Из зала прилёта следуйте к остановке на подъездной дороге или к официальной стойке такси."
+        },
+        "publicText": {
+          "en": "Take bus line 1 towards Tivat centre (check the display — not every departure serves the airport stop). Pay the driver in cash. On evenings and Sundays service is limited — taxi is more reliable. The walk to town along the highway is long and not pleasant with luggage.",
+          "ru": "Садитесь на автобус №1 в сторону центра Тивата (смотрите табло — не каждый рейс останавливается у аэропорта). Оплата водителю наличными. Вечером и по воскресеньям автобусов мало — надёжнее такси. Идти пешком по трассе с чемоданом неудобно."
+        },
+        "publicGetOffAt": {
+          "en": "Get off at Tivat city centre / main square (Trg Magnolija) or ask the driver for the stop closest to your hostel area.",
+          "ru": "Выходите в центре Тивата (площадь Magnolija) или попросите водителя остановить ближе к вашему хостелу."
+        },
+        "publicWalkToHostel": {
+          "en": "From the centre stop, walk to our hostel at {address}.",
+          "ru": "От центральной остановки дойдите до нашего хостела по адресу {address}."
+        },
+        "taxiCost": {
+          "en": "A taxi from Tivat Airport to town is usually {minEUR}–{maxEUR} € — agree the fare at the desk in arrivals.",
+          "ru": "Такси из аэропорта Тиват до города обычно {minEUR}–{maxEUR} € — договоритесь о цене у стойки в зале прилёта."
+        },
+        "taxiPickupPoint": {
+          "en": "Tivat Airport (TIV) — arrivals taxi desk",
+          "ru": "Tivat Airport (TIV) — стойка такси в зале прилёта"
+        }
+      },
+      "transit": {
+        "durationMin": 20,
+        "fareLabel": {
+          "en": "Bus ~€1–2 (cash)",
+          "ru": "Автобус ~€1–2 (наличные)"
+        },
+        "officialRouteUrl": "https://www.blueline.me/en/timetable"
+      },
+      "taxi": {
+        "priceKM": { "min": 8, "max": 15 },
+        "priceEUR": { "min": 8, "max": 15 },
+        "durationMin": { "min": 5, "max": 12 }
+      }
+    },
+    "bus_central": {
+      "category": "bus",
+      "routeMode": "walk_only",
+      "locationLabel": {
+        "en": "Tivat bus station",
+        "ru": "автовокзала Тиват"
+      },
+      "copy": {
+        "publicTitle": {
+          "en": "Walk from bus station",
+          "ru": "Пешком от автовокзала"
+        },
+        "publicSummary": {
+          "en": "Intercity buses stop at Autobuska stanica Tivat — most hostels are 10–20 minutes on foot.",
+          "ru": "Междугородние автобусы приходят на Autobuska stanica Tivat — до большинства хостелов 10–20 минут пешком."
+        },
+        "publicPreview": {
+          "en": "You arrive at Tivat bus station when your regional bus terminates here.",
+          "ru": "Вы приезжаете на автовокзал Тиват, если региональный рейс заканчивается здесь."
+        },
+        "publicText": {
+          "en": "Buses from Kotor, Budva, Podgorica and Herceg Novi use this station. Follow signs to the city centre or Porto Montenegro waterfront depending on your hostel. Suitcases on wheels are fine on paved paths.",
+          "ru": "Автобусы из Котора, Будвы, Подгорицы и Херцег-Нови приходят сюда. Идите к центру или набережной Porto Montenegro — смотря где хостел. По асфальту с чемоданом нормально."
+        },
+        "publicGetOffAt": {
+          "en": "Tivat bus station (Autobuska stanica Tivat) — final stop.",
+          "ru": "Автовокзал Тиват (Autobuska stanica Tivat) — конечная."
+        },
+        "publicWalkToHostel": {
+          "en": "Leave the station towards the centre and continue to our hostel at {address}.",
+          "ru": "От вокзала идите в сторону центра, затем к нашему хостелу по адресу {address}."
+        },
+        "taxiCost": {
+          "en": "A short taxi within Tivat is usually {minEUR}–{maxEUR} €.",
+          "ru": "Короткое такси по Тивату обычно {minEUR}–{maxEUR} €."
+        },
+        "taxiPickupPoint": {
+          "en": "Tivat bus station forecourt",
+          "ru": "Площадь перед автовокзалом Тиват"
+        }
+      },
+      "transit": {
+        "durationMin": 15,
+        "fareLabel": {
+          "en": "Free (on foot)",
+          "ru": "Бесплатно (пешком)"
+        }
+      },
+      "taxi": {
+        "priceKM": { "min": 3, "max": 8 },
+        "priceEUR": { "min": 3, "max": 8 },
+        "durationMin": { "min": 3, "max": 8 }
+      }
+    }
+  },
+  "warnings": {
+    "taxiStand": {
+      "en": "At TIV use the taxi desk inside arrivals. At the bus station, take taxis from the marked stand — avoid unmarked drivers quoting inflated flat rates.",
+      "ru": "В TIV берите такси у стойки в зале прилёта. На автовокзале — с официальной стоянки; не соглашайтесь на завышенные фиксированные цены у частников."
+    },
+    "taxiMeter": {
+      "en": "Short rides in Tivat should be €5–15. Agree a fixed price before you leave the airport, or confirm the meter is running in town.",
+      "ru": "Поездки по Тивату обычно €5–15. В аэропорту договоритесь о фиксе заранее; в городе проверьте, что включён счётчик."
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import type { CityPackId, RouteId } from '@/entities/hostel';
 import { ROUTE_PRESETS } from '@/entities/city-pack/lib/constants';
-import type { CityPackContent } from '@/entities/city-pack/model/types';
-import { resolveLocalizedText } from '@/entities/city-pack/model/localized';
+import type { CityPackContent, CityPackRouteContent } from '@/entities/city-pack/model/types';
+import { resolveLocalizedText, type LocalizedText } from '@/entities/city-pack/model/localized';
 import type { LocalizedField } from '@/entities/city-pack/model/types';
 import type { TenantSettings } from '@/entities/tenant';
 import {
@@ -22,6 +22,49 @@ function hasLocalizedValue(value: LocalizedField | undefined): boolean {
   return Boolean(value.en?.trim() || value.ru?.trim());
 }
 
+/** City-pack walk copy — editorial seed only; guests use tenant fields after go-live. */
+export function readCityRouteWalkTemplate(
+  cityRoutes: Partial<Record<RouteId, CityPackRouteContent>>,
+  routeId: RouteId
+): LocalizedText | undefined {
+  const walk = cityRoutes[routeId]?.copy.publicWalkToHostel;
+  if (!walk) {
+    return undefined;
+  }
+
+  if (!walk.en?.trim() && !walk.ru?.trim()) {
+    return undefined;
+  }
+
+  return walk;
+}
+
+export function buildTenantWalkSeedFromCityTemplates(input: {
+  cityPackId: CityPackId;
+  cityPackContent?: CityPackContent;
+  settings: TenantSettings;
+}): Pick<TenantSettings, 'arrivalWalkToHostel' | 'arrivalWalkToHostelByRoute'> {
+  const enabledRoutes = resolveAdminCityPackEnabledRoutes(input.cityPackId, input.cityPackContent);
+  const cityRoutes = resolveAdminCityPackRoutes(input.cityPackId, input.cityPackContent);
+  const existingByRoute = input.settings.arrivalWalkToHostelByRoute ?? {};
+  const nextByRoute: Partial<Record<RouteId, LocalizedText>> = { ...existingByRoute };
+
+  for (const routeId of enabledRoutes) {
+    if (hasLocalizedValue(existingByRoute[routeId])) {
+      continue;
+    }
+
+    const template = readCityRouteWalkTemplate(cityRoutes, routeId);
+    if (template) {
+      nextByRoute[routeId] = template;
+    }
+  }
+
+  return {
+    arrivalWalkToHostelByRoute: nextByRoute,
+  };
+}
+
 export function resolveArrivalWalkReadiness(input: {
   cityPackId: CityPackId;
   settings: TenantSettings;
@@ -32,15 +75,13 @@ export function resolveArrivalWalkReadiness(input: {
     return { complete: true };
   }
 
-  const cityRoutes = resolveAdminCityPackRoutes(input.cityPackId, input.cityPackContent);
   const hasGlobalWalk = hasLocalizedValue(input.settings.arrivalWalkToHostel);
   const missingLabels: string[] = [];
 
   for (const routeId of enabledRoutes) {
     const hasByRoute = hasLocalizedValue(input.settings.arrivalWalkToHostelByRoute?.[routeId]);
-    const hasCityDefault = Boolean(resolveCityDefaultWalkLabel(cityRoutes, routeId));
 
-    if (!hasGlobalWalk && !hasByRoute && !hasCityDefault) {
+    if (!hasGlobalWalk && !hasByRoute) {
       const label = ROUTE_PRESETS.find((route) => route.id === routeId)?.label ?? routeId;
       missingLabels.push(label);
     }
@@ -52,7 +93,7 @@ export function resolveArrivalWalkReadiness(input: {
 
   return {
     complete: false,
-    detail: `Add city or hostel walk text for: ${missingLabels.join(', ')}`,
+    detail: `Add hostel walk directions for: ${missingLabels.join(', ')} (city templates are seeds only)`,
   };
 }
 

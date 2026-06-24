@@ -1,5 +1,5 @@
 import type { CategoryConfig, RouteConfig, RouteId } from '../routes';
-import { buildCityPackLocale, cityPackRoutesNamespace } from './locale';
+import { buildCityPackLocale, buildGenericCityPackLocale, cityPackRoutesNamespace } from './locale';
 import {
   KOTOR_CONTENT_KEYS,
   KOTOR_ROUTE_CATEGORIES,
@@ -50,6 +50,7 @@ export interface RecommendedTaxi {
   name: string;
   phoneRaw?: string;
   phoneMask?: string;
+  phoneFormatPreset?: string;
 }
 
 export type PreTripTipId = 'sundayClosure';
@@ -143,7 +144,7 @@ function createDynamicCityPack(id: CityPackId): CityPack {
       taxiMeterWarning: `${routesNamespace}.taxiService.meterWarning`,
     },
     places: [],
-    locale: buildCityPackLocale(id),
+    locale: buildGenericCityPackLocale(),
   };
 }
 

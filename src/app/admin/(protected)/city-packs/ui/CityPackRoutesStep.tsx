@@ -10,6 +10,8 @@ import {
 } from '@/entities/city-pack';
 import { resolveRouteLocaleStatus } from '@/entities/city-pack/lib/resolveLocalizedLocaleStatus';
 import { cn } from '@/shared/lib/utils';
+import type { PhoneDisplayPresetId } from '@/shared/lib/phoneDisplay';
+import { AdminPhoneFieldInline } from '../../tenants/ui/AdminPhoneField';
 import { ChevronDown } from 'lucide-react';
 import { Icon } from '@/shared/ui';
 import { AdminLocalizedInput } from './AdminLocalizedInput';
@@ -81,6 +83,7 @@ function CityPackRoutesStepBody({
   taxiName,
   taxiPhone,
   taxiMask,
+  taxiPreset,
   onEnabledRoutesChange,
   onRoutesChange,
   onWarningsChange,
@@ -88,6 +91,7 @@ function CityPackRoutesStepBody({
   onTaxiNameChange,
   onTaxiPhoneChange,
   onTaxiMaskChange,
+  onTaxiPresetChange,
 }: {
   packId: string;
   enabledRoutes: RouteId[];
@@ -97,6 +101,7 @@ function CityPackRoutesStepBody({
   taxiName: string;
   taxiPhone: string;
   taxiMask: string;
+  taxiPreset: PhoneDisplayPresetId;
   onEnabledRoutesChange: (routes: RouteId[]) => void;
   onRoutesChange: (routes: Partial<Record<RouteId, CityPackRouteContent>>) => void;
   onWarningsChange: (warnings: CityPackContentWarnings) => void;
@@ -104,6 +109,7 @@ function CityPackRoutesStepBody({
   onTaxiNameChange: (value: string) => void;
   onTaxiPhoneChange: (value: string) => void;
   onTaxiMaskChange: (value: string) => void;
+  onTaxiPresetChange: (value: PhoneDisplayPresetId) => void;
 }) {
   const { locale } = useAdminEditingLocale();
   const activeRouteEditors = useMemo(
@@ -132,10 +138,11 @@ function CityPackRoutesStepBody({
             name: taxiName.trim(),
             phoneRaw: taxiPhone.trim() || undefined,
             phoneMask: taxiMask.trim() || undefined,
+            phoneFormatPreset: taxiPreset,
           }
         : undefined,
     }),
-    [enabledRoutes, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, warnings]
+    [enabledRoutes, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, taxiPreset, warnings]
   );
 
   const toggleRoute = (routeId: RouteId) => {
@@ -187,22 +194,15 @@ function CityPackRoutesStepBody({
             className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
           />
         </label>
-        <label className="block space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Taxi phone</span>
-          <input
-            value={taxiPhone}
-            onChange={(event) => onTaxiPhoneChange(event.target.value)}
-            className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
-          />
-        </label>
-        <label className="block space-y-1 sm:col-span-2">
-          <span className="text-xs font-medium text-muted-foreground">Taxi display</span>
-          <input
-            value={taxiMask}
-            onChange={(event) => onTaxiMaskChange(event.target.value)}
-            className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
-          />
-        </label>
+        <AdminPhoneFieldInline
+          label="Taxi phone"
+          raw={taxiPhone}
+          mask={taxiMask}
+          preset={taxiPreset}
+          onRawChange={onTaxiPhoneChange}
+          onMaskChange={onTaxiMaskChange}
+          onPresetChange={onTaxiPresetChange}
+        />
       </div>
 
       <div className="rounded-lg border">
@@ -284,6 +284,7 @@ export function CityPackRoutesStep(props: {
   taxiName: string;
   taxiPhone: string;
   taxiMask: string;
+  taxiPreset: PhoneDisplayPresetId;
   onEnabledRoutesChange: (routes: RouteId[]) => void;
   onRoutesChange: (routes: Partial<Record<RouteId, CityPackRouteContent>>) => void;
   onWarningsChange: (warnings: CityPackContentWarnings) => void;
@@ -291,6 +292,7 @@ export function CityPackRoutesStep(props: {
   onTaxiNameChange: (value: string) => void;
   onTaxiPhoneChange: (value: string) => void;
   onTaxiMaskChange: (value: string) => void;
+  onTaxiPresetChange: (value: PhoneDisplayPresetId) => void;
 }) {
   return (
     <AdminEditingLocaleProvider>

@@ -13,7 +13,7 @@ const postgres = require('postgres');
 
 loadEnvConfig(process.cwd());
 
-const PACK_IDS = ['sarajevo', 'kotor'];
+const PACK_IDS = ['sarajevo', 'kotor', 'tivat'];
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 
 function readOptions() {

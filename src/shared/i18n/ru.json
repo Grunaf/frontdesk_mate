@@ -402,6 +402,69 @@
             "heroSubtitle": "Ваша база для исследования Которской бухты и Адриатики",
             "heroImageAlt": "{hostelName} — фото хостела"
           }
+        },
+        "default": {
+          "payment": {
+            "cashOnly": "Только наличные (EUR)"
+          },
+          "guide": {
+            "title": "Гид от {hostelName}",
+            "subtitle": "Подборка мест в городе — из вашего city pack.",
+            "essentials": {
+              "title": "Рядом с хостелом",
+              "subtitle": "Банкомат, магазин, аптека и еда — один тап до Maps.",
+              "expand": "Показать",
+              "collapse": "Скрыть",
+              "atm": "Банкомат",
+              "shop": "Магазин",
+              "pharmacy": "Аптека",
+              "lateFood": "Еда"
+            },
+            "exploreArrival": {
+              "title": "Исследуйте город",
+              "subtitle": "Бары, кафе, еда и достопримечательности — когда будете готовы.",
+              "teaserTitle": "Ещё рекомендации",
+              "teaserDescription": "Бары, кофейни и виды спрятаны пока что. Откройте полный гид, когда захотите.",
+              "showAllButton": "Показать все рекомендации"
+            },
+            "mapCard": {
+              "title": "Карта {hostelName} в Google Maps",
+              "description": "Откроется в приложении Google Maps со всеми нашими слоями"
+            },
+            "tabs": {
+              "all": "Все",
+              "essential": "Инфо",
+              "food": "Еда",
+              "bars": "Бары",
+              "cafes": "Кафе",
+              "sights": "Места"
+            },
+            "routeButton": "Маршрут",
+            "openInMaps": "Открыть в Maps",
+            "showAllPlaces": "Показать все места ({count})",
+            "topPick": "Топ",
+            "emptyCategory": "В этой категории пока нет мест.",
+            "nearHostel": {
+              "title": "Рядом с хостелом",
+              "subtitle": "В пешей доступности",
+              "exploreCityTitle": "Исследуйте город",
+              "exploreCitySubtitle": "Подборка мест по городу"
+            },
+            "hostelPlaceCategories": {
+              "food": "Еда",
+              "shop": "Магазин / продукты",
+              "atm": "Банкомат",
+              "pharmacy": "Аптека",
+              "nightlife": "Ночная жизнь",
+              "other": "Другое"
+            },
+            "places": {}
+          },
+          "preTrip": {},
+          "marketing": {
+            "heroSubtitle": "Ваша база для исследования города",
+            "heroImageAlt": "{hostelName} — фото хостела"
+          }
         }
       },
       "inside": {
@@ -892,8 +955,6 @@
       "callTaxi": "Позвонить {taxiName}",
       "whatsappTaxi": "Написать {taxiName} в WhatsApp",
       "whatsappTaxiMessage": "Здравствуйте! Нужно такси до {pickupPoint}. Адрес: {address}.",
-      "messageReception": "WhatsApp reception {hostelName}",
-      "messageReceptionCall": "Позвонить reception {hostelName}",
       "askReceptionHoursHint": "Reception: {open}–{close}.",
       "askReceptionOpensHint": "Reception открывается в {open}.",
       "safetyTipsTitle": "Перед звонком — советы по безопасности",
