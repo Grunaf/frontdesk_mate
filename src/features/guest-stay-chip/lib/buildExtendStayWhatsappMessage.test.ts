@@ -8,7 +8,7 @@ import {
 const plan: GuestStayPlan = {
   bedId: '12',
   bedLabel: '12',
-  bedSlot: '12',
+  bedSlot: 12,
   bedTier: undefined,
   room: null,
   floor: null,
