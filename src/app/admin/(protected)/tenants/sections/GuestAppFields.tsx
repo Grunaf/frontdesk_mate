@@ -9,6 +9,7 @@ import type { AdminSectionId } from '../lib/adminSections';
 import { AdminModuleStatusPanel } from '../ui/AdminModuleStatusPanel';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { GuestStayFields } from './GuestStayFields';
+import { GuestExtrasFields } from './GuestExtrasFields';
 import { HostelPlacesFields } from './HostelPlacesFields';
 import { HouseRulesFields } from './HouseRulesFields';
 
@@ -47,6 +48,7 @@ export function GuestAppFields({
             onJumpToSection={onJumpToSection}
           />
           <GuestStayFields settings={settings} readinessInput={readinessInput} />
+          <GuestExtrasFields settings={mergedSettings} />
         </>
       ) : null}
 

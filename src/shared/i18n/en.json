@@ -903,6 +903,8 @@
     },
     "wifi": {
       "title": "Wi-Fi Connection",
+      "compactTitle": "Wi‑Fi",
+      "compactCopy": "Copy password",
       "copyLabel": "Copy Password",
       "copiedLabel": "Password Copied!"
     },
@@ -915,7 +917,124 @@
       "subtitle": "Essentials and comforts for a smooth hostel stay."
     },
     "rules": {
-      "title": "House rules"
+      "title": "House rules",
+      "tapHint": "Tap a rule for details",
+      "openDetail": "{rule} — open details"
+    },
+    "guestStayChip": {
+      "chipLabel": "My stay",
+      "sheetTitle": "Your stay",
+      "openDetail": "{summary} — open stay details",
+      "receptionHeading": "For reception",
+      "receptionHint": "Show this screen if reception asks who you are.",
+      "stayRefLabel": "Ref",
+      "registeredAsLabel": "Registered as",
+      "copyForReception": "Copy for reception",
+      "copiedForReception": "Copied",
+      "copyLineHostel": "{hostelName}",
+      "copyLineBed": "Bed: {bedLine}",
+      "copyLineDates": "Stay: {dateRange}",
+      "copyLineRef": "Ref: #{stayRef}",
+      "copyLineName": "Name: {guestName}",
+      "showRoomMapLink": "Show room map & directions",
+      "extendStayHeading": "Need more nights?",
+      "extendStayNotice": "Extensions are handled at reception. Your app access matches your booked nights — after extending, ask reception to refresh your access if door codes stop working.",
+      "extendStayWhatsapp": "Request to extend stay",
+      "extendStayMessage": "Hi! I'd like to extend my stay at {hostelName}. I'm in bed {bedLabel}, currently until {checkoutDate}. Ref #{stayRef}. How many nights can I add?",
+      "extendStayMessageNamed": "Hi! I'd like to extend my stay at {hostelName}. I'm in bed {bedLabel}, currently until {checkoutDate}. Ref #{stayRef}. Registered as {guestName}. How many nights can I add?"
+    },
+    "conciergeContact": {
+      "receptionStripLabel": "Message {hostelName} reception",
+      "receptionStripLabelCompact": "Message reception",
+      "receptionStripHint": "Questions about your stay, laundry, or checkout",
+      "whatsappMessage": "Hi, I have a question about my stay at {hostelName}"
+    },
+    "guestIssue": {
+      "cardTitle": "Something not working?",
+      "cardDescription": "Shower, door, bed, Wi‑Fi… Reception sees it on their screen.",
+      "cardButton": "Report issue",
+      "sheetTitle": "Report an issue",
+      "sheetDescription": "Tell reception what needs fixing in your room.",
+      "sendPreviewHeading": "We'll send",
+      "stayRefLabel": "Ref",
+      "privacyNotice": "Only reception sees this. Used to fix the problem in your room — not shared publicly.",
+      "categoryLabel": "What's wrong?",
+      "noteLabel": "Details",
+      "notePlaceholder": "Optional — e.g. no hot water",
+      "noteOptional": "Optional",
+      "submitButton": "Send report",
+      "submitting": "Sending…",
+      "successTitle": "Sent to reception",
+      "successBody": "Your report was sent. Ref #{stayRef} is included.",
+      "successUrgent": "For urgent help, message reception on WhatsApp.",
+      "successWhatsappButton": "Message reception",
+      "successWhatsappMessage": "Hi, I reported an issue in my room at {hostelName}. Can you help?",
+      "successClose": "Done",
+      "myStayPrompt": "Something broken in your room?",
+      "myStayLink": "Report issue",
+      "categories": {
+        "shower": "Shower",
+        "toilet": "Toilet",
+        "door_lock": "Door",
+        "bed": "Bed",
+        "wifi": "Wi‑Fi",
+        "other": "Other"
+      },
+      "errors": {
+        "categoryRequired": "Choose a category.",
+        "unauthorized": "Sign in again to send a report.",
+        "tooManyOpen": "You already have open reports. Ask at reception if urgent.",
+        "noteTooLong": "Note is too long.",
+        "invalidCategory": "Choose a valid category.",
+        "dbUnavailable": "Could not send right now. Try again or message reception.",
+        "generic": "Something went wrong. Try again."
+      }
+    },
+    "guestExtras": {
+      "sectionTitle": "Extras",
+      "featuredLabel": "Featured",
+      "priceLabel": "{price}",
+      "highlightPriceFrom": "from {amount} {currency}",
+      "priceAskReception": "Ask reception for price",
+      "scheduleLabel": "{schedule}",
+      "receptionButton": "Come to reception",
+      "externalLinkButton": "Open partner page",
+      "laundryMessage": "Hi! I'd like to use the laundry at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "earlyCheckinMessage": "Hi! I'd like to request an early check-in at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "lateCheckoutMessage": "Hi! I'd like to request a late checkout at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}. Standard checkout is {checkoutTime}.",
+      "partnerTransferMessage": "Hi! I'd like to book a transfer from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "partnerTourMessage": "Hi! I'm interested in the tour from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "partnerGuideMessage": "Hi! I'm interested in the local guide from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "laundry": {
+        "title": "Laundry",
+        "description": "Washing and drying on site. Reception will help you get started.",
+        "whatsappButton": "Message reception"
+      },
+      "earlyCheckin": {
+        "title": "Early check-in",
+        "description": "Arriving before standard check-in? Ask reception if an early room is available.",
+        "whatsappButton": "Message reception"
+      },
+      "lateCheckout": {
+        "title": "Late checkout",
+        "description": "Need a few extra hours? Message reception before checkout time.",
+        "whatsappButton": "Message reception"
+      },
+      "partnerTransfer": {
+        "title": "Airport transfer",
+        "description": "On-demand ride with our partner. Book via WhatsApp or their page.",
+        "whatsappButton": "Book via WhatsApp"
+      },
+      "partnerTour": {
+        "title": "City tour",
+        "description": "Join a guided tour with our local partner.",
+        "whatsappButton": "Ask on WhatsApp"
+      },
+      "partnerGuide": {
+        "title": "Local guide",
+        "description": "A paid guide for your day — book with our partner.",
+        "whatsappButton": "Ask on WhatsApp"
+      }
     },
     "featureGate": {
       "previewBadge": "Preview"

@@ -11,9 +11,7 @@ import {
 } from 'lucide-react';
 import type { RuleIconId, RuleTemplateId } from '../model/types';
 
-export interface RuleRenderContext {
-  laundryCost?: string;
-}
+export interface RuleRenderContext {}
 
 export interface RuleRenderResult {
   summary: string;
@@ -46,7 +44,6 @@ export const CUSTOM_RULE_ICON_OPTIONS: RuleIconId[] = [
   'cigarette',
   'glass',
   'shield',
-  'shirt',
   'volume',
   'clock',
   'ban',
@@ -97,21 +94,6 @@ export const HOUSE_RULE_TEMPLATES: RuleTemplateDefinition[] = [
       summary: 'Auto-registration',
       detail: 'We handle all police paperwork automatically upon check-in. You do not need to do anything.',
     }),
-  },
-  {
-    id: 'laundry',
-    kind: 'configured',
-    label: 'Laundry service',
-    description: 'Optional cost override; falls back to tenant laundry cost.',
-    icon: 'shirt',
-    paramSchema: { cost: 'money' },
-    render: (params, ctx) => {
-      const cost = params.cost?.trim() || ctx.laundryCost?.trim() || 'ask reception';
-      return {
-        summary: 'Laundry available',
-        detail: `Washing and drying costs ${cost}. Contact reception to use the laundry.`,
-      };
-    },
   },
 ];
 

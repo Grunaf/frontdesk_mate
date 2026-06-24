@@ -7,6 +7,11 @@ import { getTenantRecord, listTenants, setTenantArchived, upsertTenant } from '@
 import { isCityPackId } from '@/entities/hostel';
 import type { HouseRule } from '@/entities/house-rules';
 import { HOUSE_RULE_DETAIL_MAX, HOUSE_RULE_SUMMARY_MAX, validateHouseRule } from '@/entities/house-rules';
+import {
+  GUEST_EXTRA_PRESET_IDS,
+  type GuestExtraConfig,
+  type GuestExtraPresetId,
+} from '@/entities/guest-extra';
 import type { AccessPoint, ArrivalLayoutKind, TenantSettings } from '@/entities/tenant';
 import { isBookingProvider } from '@/entities/tenant';
 import { normalizeGuestStayForSave } from '@/entities/tenant/lib/resolveBedDisplay';
@@ -149,6 +154,39 @@ function parseHostelPlaces(formData: FormData): TenantSettings['hostelPlaces'] {
   }
 }
 
+function isGuestExtraPresetId(value: string): value is GuestExtraPresetId {
+  return (GUEST_EXTRA_PRESET_IDS as readonly string[]).includes(value);
+}
+
+function parseGuestExtras(formData: FormData): GuestExtraConfig[] | undefined {
+  const raw = String(formData.get('guestExtrasJson') || '').trim();
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as GuestExtraConfig[];
+    if (!Array.isArray(parsed)) {
+      return undefined;
+    }
+
+    return parsed
+      .filter((entry) => entry?.presetId && isGuestExtraPresetId(entry.presetId))
+      .map((entry) => ({
+        presetId: entry.presetId,
+        enabled: entry.enabled === true,
+        highlight: entry.highlight === true ? true : undefined,
+        imageUrl: String(entry.imageUrl ?? '').trim() || undefined,
+        priceLabel: String(entry.priceLabel ?? '').trim() || undefined,
+        scheduleLabel: String(entry.scheduleLabel ?? '').trim() || undefined,
+        externalUrl: String(entry.externalUrl ?? '').trim() || undefined,
+        whatsappEnabled: entry.whatsappEnabled === false ? false : undefined,
+      }));
+  } catch {
+    return undefined;
+  }
+}
+
 function parseHouseRules(formData: FormData): HouseRule[] | undefined {
   const raw = String(formData.get('houseRulesJson') || '').trim();
   if (!raw) {
@@ -162,7 +200,7 @@ function parseHouseRules(formData: FormData): HouseRule[] | undefined {
     }
 
     return parsed
-      .filter((rule) => rule?.id && rule?.templateId)
+      .filter((rule) => rule?.id && rule?.templateId && String(rule.templateId) !== 'laundry')
       .map((rule) => {
         if (rule.templateId === 'custom') {
           return {
@@ -216,6 +254,10 @@ function readSettings(formData: FormData): TenantSettings {
   const bookingProvider = isBookingProvider(bookingProviderRaw) ? bookingProviderRaw : 'none';
   const bookingEngineId = String(formData.get('bookingEngineId') || '').trim() || undefined;
   const bookingUrl = String(formData.get('bookingUrl') || '').trim() || undefined;
+  const guestExtras = parseGuestExtras(formData);
+  const laundryPrice = guestExtras?.find(
+    (entry) => entry.presetId === 'laundry' && entry.enabled
+  )?.priceLabel;
 
   return {
     booking:
@@ -230,7 +272,7 @@ function readSettings(formData: FormData): TenantSettings {
     checkOutTime: String(formData.get('checkOutTime') || '') || undefined,
     cityTax: String(formData.get('cityTax') || '') || undefined,
     selfCheckInTimeAfter: String(formData.get('selfCheckInTimeAfter') || '') || undefined,
-    laundryCost: String(formData.get('laundryCost') || '') || undefined,
+    laundryCost: laundryPrice,
     heroBgUrl: String(formData.get('heroBgUrl') || '') || undefined,
     logoUrl: String(formData.get('logoUrl') || '') || undefined,
     landing: parseLanding(formData),
@@ -244,6 +286,7 @@ function readSettings(formData: FormData): TenantSettings {
       bedFloorMap: arrivalAccessInput.bedFloorMap,
     },
     houseRules,
+    guestExtras,
     hostelPlaces: parseHostelPlaces(formData),
     wifi: {
       name: String(formData.get('wifiName') || '') || undefined,

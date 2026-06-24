@@ -28,7 +28,7 @@
 
 - `ArrivalJourneyCoordinator.tsx` — sheet state, убрать `navigateToCheckIn` для locked
 - `CheckInRequiredSheet.tsx` — без изменений
-- `docs/qa/arrival-guide-pass.md` — сценарии 5, 7
+- `docs/qa/guest-flow-pass.md` — section **C** (locked sheet)
 
 ## 5. Acceptance
 

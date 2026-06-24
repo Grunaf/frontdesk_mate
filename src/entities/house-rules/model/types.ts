@@ -3,7 +3,6 @@ export type RuleTemplateId =
   | 'smoking'
   | 'alcohol'
   | 'registration'
-  | 'laundry'
   | 'custom';
 
 export type RuleTemplateKind = 'simple' | 'configured' | 'custom';

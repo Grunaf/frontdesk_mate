@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { getHouseRules, resolveHouseRulesForDisplay } from '@/entities/house-rules';
 import { useTenant } from '@/entities/tenant';
 import { useTranslations } from '@/shared/i18n';
@@ -8,9 +9,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 export function FAQAccordion() {
   const { settings } = useTenant();
   const tTitle = useTranslations('components.rules');
-  const displays = resolveHouseRulesForDisplay(getHouseRules(settings), {
-    laundryCost: settings.laundryCost,
-  });
+  const displays = useMemo(() => {
+    return resolveHouseRulesForDisplay(getHouseRules(settings));
+  }, [settings]);
 
   if (displays.length === 0) {
     return null;

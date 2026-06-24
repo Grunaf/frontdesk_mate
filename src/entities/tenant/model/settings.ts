@@ -25,6 +25,7 @@ export {
 } from './hostelPlaces';
 
 import type { HouseRule } from '@/entities/house-rules';
+import type { GuestExtraConfig } from '@/entities/guest-extra';
 
 export interface TenantSettings {
   booking?: TenantBookingSettings;
@@ -82,6 +83,8 @@ export interface TenantSettings {
   activeRulesKeys?: string[];
   /** Guest house rules (templates + custom). */
   houseRules?: HouseRule[];
+  /** Concierge Extras bento catalog (ops + partner offers). */
+  guestExtras?: GuestExtraConfig[];
   /** Spots within walking distance — shown above city pack guide. */
   hostelPlaces?: HostelPlace[];
   faqPackId?: string;

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '../icon';
@@ -32,6 +33,25 @@ export function SegmentedChipBar({
   bleed = true,
   className,
 }: SegmentedChipBarProps) {
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
+
+  useEffect(() => {
+    const activeTab = tabRefs.current.get(value);
+    if (!activeTab) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      activeTab.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [value, items]);
+
   return (
     <div
       role="tablist"
@@ -49,6 +69,13 @@ export function SegmentedChipBar({
         return (
           <button
             key={item.id}
+            ref={(element) => {
+              if (element) {
+                tabRefs.current.set(item.id, element);
+              } else {
+                tabRefs.current.delete(item.id);
+              }
+            }}
             type="button"
             role="tab"
             aria-selected={isActive}

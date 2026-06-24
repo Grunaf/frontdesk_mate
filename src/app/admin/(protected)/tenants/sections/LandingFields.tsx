@@ -361,7 +361,6 @@ export function LandingFields({
         defaultValue={settings?.selfCheckInTimeAfter}
         placeholder="23:00"
       />
-      <AdminField label="Laundry cost" name="laundryCost" defaultValue={settings?.laundryCost} placeholder="10€" />
     </div>
   );
 }
