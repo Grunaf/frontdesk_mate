@@ -9,6 +9,7 @@ import { resolvePostCheckInPath } from '../lib/resolveGuestLanding';
 import { CheckInPinForm } from './CheckInPinForm';
 import { useGuestSession } from './GuestSessionProvider';
 import { useTranslations } from '@/shared/i18n';
+import { trackCheckInSuccess } from '@/shared/lib/analytics';
 import { getTenantPublicUrl } from '@/shared/config';
 import { writeGuestRegistrationIndex } from '@/shared/lib/guestRegistrationIndex';
 import { Button, Icon } from '@/shared/ui';
@@ -56,6 +57,7 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
     startTransition(async () => {
       const result = await activateGuestStayAction(token, locale);
       if (result.ok) {
+        trackCheckInSuccess(result.registration.tenantSlug);
         writeGuestRegistrationIndex({
           tenantSlug: result.registration.tenantSlug,
           bedId: result.registration.bedId,

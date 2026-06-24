@@ -943,6 +943,13 @@
       "extendStayMessage": "Hi! I'd like to extend my stay at {hostelName}. I'm in bed {bedLabel}, currently until {checkoutDate}. Ref #{stayRef}. How many nights can I add?",
       "extendStayMessageNamed": "Hi! I'd like to extend my stay at {hostelName}. I'm in bed {bedLabel}, currently until {checkoutDate}. Ref #{stayRef}. Registered as {guestName}. How many nights can I add?"
     },
+    "receptionContact": {
+      "messageReception": "Message reception",
+      "callReception": "Call reception",
+      "noContact": "Contact reception for help.",
+      "askReceptionHoursHint": "Reception hours: {open}–{close}.",
+      "askReceptionOpensHint": "Reception opens at {open}."
+    },
     "conciergeContact": {
       "receptionStripLabel": "Message {hostelName} reception",
       "receptionStripLabelCompact": "Message reception",

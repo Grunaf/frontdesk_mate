@@ -7,6 +7,7 @@ import { Calendar as CalendarIcon, Users, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { buildBookingSearchUrl, useHostelConfig, useTenant } from '@/entities/tenant';
+import { trackBookingWhatsappClick } from '@/shared/lib/analytics';
 import { resolveGuestBookingPhone } from '@/entities/tenant/lib/resolveGuestBookingPhone';
 import { getHeroWhatsappBookingLink, markLandingWhatsappFollowup } from '../lib/getHeroWhatsappBookingLink';
 import {
@@ -27,7 +28,7 @@ import { BookingField } from './booking-field';
 export function BookingForm() {
   const t = useTranslations('components.hero');
   const hostel = useHostelConfig();
-  const { name, capabilities, settings } = useTenant();
+  const { name, capabilities, settings, slug } = useTenant();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -90,6 +91,7 @@ export function BookingForm() {
 
     syncDatesToUrl(checkin, checkout);
     markLandingWhatsappFollowup();
+    trackBookingWhatsappClick(slug, 'hero');
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 

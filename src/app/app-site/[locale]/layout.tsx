@@ -3,6 +3,7 @@ import { listPublicTenants, resolveTenantAccess } from '@/entities/tenant/server
 import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
 import { GuestAppRuntime } from '@/entities/tenant/ui/GuestAppRuntime';
 import { TenantOfflineContent } from '@/views/platform/ui/TenantOfflineContent';
+import { AnalyticsProvider } from '@/shared/lib/analytics';
 import { BaseHeader } from '@/shared/ui';
 import { getRouteTranslations } from '@/shared/lib/getRouteTranslations';
 import { notFound } from 'next/navigation';
@@ -40,16 +41,18 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
 
   return (
     <TenantProvider config={tenant}>
-      <GuestAppRuntime
-        session={session}
-        currentTenantSlug={tenantSlug}
-        sessionBedId={session?.bedId ?? null}
-      >
-        <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-          <BaseHeader translatedTitles={translatedTitles} />
-          <main className="flex flex-1 flex-col">{children}</main>
-        </div>
-      </GuestAppRuntime>
+      <AnalyticsProvider tenantSlug={tenantSlug} site="app">
+        <GuestAppRuntime
+          session={session}
+          currentTenantSlug={tenantSlug}
+          sessionBedId={session?.bedId ?? null}
+        >
+          <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
+            <BaseHeader translatedTitles={translatedTitles} />
+            <main className="flex flex-1 flex-col">{children}</main>
+          </div>
+        </GuestAppRuntime>
+      </AnalyticsProvider>
     </TenantProvider>
   );
 }

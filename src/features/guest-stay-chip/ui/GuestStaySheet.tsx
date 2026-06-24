@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { GuestStayPlan } from '@/entities/tenant';
-import { resolveReceptionAvailabilityHint } from '@/entities/tenant/lib/resolveReceptionAvailabilityHint';
+import { resolveReceptionContact } from '@/entities/tenant/lib/resolveReceptionContact';
 import { useTenant } from '@/entities/tenant';
 import { formatBedLocationLine } from '@/features/find-your-bed/lib/formatBedLocation';
 import { FindYourBedSummary } from '@/features/find-your-bed/ui/FindYourBedSummary';
+import { ReceptionContactActions, useReceptionContactLabels } from '@/features/reception-contact';
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
-import { createWhatsappLink } from '@/shared/lib';
 import { cn } from '@/shared/lib/utils';
 import {
   BottomSheet,
@@ -20,7 +20,6 @@ import {
   BottomSheetHeader,
   BottomSheetTitle,
   Button,
-  ExternalServiceButton,
   Icon,
 } from '@/shared/ui';
 import { BedDouble, Check, Copy } from 'lucide-react';
@@ -52,14 +51,14 @@ export function GuestStaySheet({
   checkInAt,
   checkOutAt,
 }: GuestStaySheetProps) {
-  const { name, hostel } = useTenant();
+  const { name, hostel, slug } = useTenant();
   const locale = useLocale();
   const params = useParams<{ locale: string }>();
   const routeLocale = params.locale ?? locale;
   const t = useTranslations('components.guestStayChip');
   const tBed = useTranslations('components.findYourBed');
-  const tReception = useTranslations('components.taxi');
   const tIssue = useTranslations('components.guestIssue');
+  const receptionLabels = useReceptionContactLabels();
   const { openReportSheet } = useGuestIssueReport();
   const [copied, setCopied] = useState(false);
 
@@ -95,12 +94,6 @@ export function GuestStaySheet({
   }, [bedLine, dateRange, name, stayRef, t, trimmedGuestName]);
 
   const extendContact = useMemo(() => {
-    const whatsappPhone = hostel.reception.whatsapp.raw;
-
-    if (!hostel.reception.whatsappEnabled || !whatsappPhone) {
-      return null;
-    }
-
     const bedLabel = resolveGuestStayBedLabel(plan, (key, values) =>
       tBed(key, values as Record<string, string | number> | undefined)
     );
@@ -115,13 +108,23 @@ export function GuestStaySheet({
       composeMessage: (key, values) => t(key, values),
     });
 
-    return {
-      whatsappHref: createWhatsappLink(whatsappPhone, message),
-      availabilityHint: resolveReceptionAvailabilityHint(hostel.reception, (key, hintParams) =>
-        tReception(key, hintParams)
-      ),
-    };
-  }, [checkOutAt, hostel.reception, locale, name, plan, stayRef, t, tBed, tReception, trimmedGuestName]);
+    return resolveReceptionContact(hostel, {
+      message,
+      urgency: 'low',
+      translate: receptionLabels.translateHint,
+    });
+  }, [
+    checkOutAt,
+    hostel,
+    locale,
+    name,
+    plan,
+    receptionLabels.translateHint,
+    stayRef,
+    t,
+    tBed,
+    trimmedGuestName,
+  ]);
 
   const handleCopyForReception = async () => {
     if (!receptionCopyText) {
@@ -222,14 +225,14 @@ export function GuestStaySheet({
 
         {extendContact ? (
           <BottomSheetFooter className="border-t border-border/60">
-            <ExternalServiceButton service="whatsapp" href={extendContact.whatsappHref}>
-              {t('extendStayWhatsapp')}
-            </ExternalServiceButton>
-            {extendContact.availabilityHint ? (
-              <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-                {extendContact.availabilityHint}
-              </p>
-            ) : null}
+            <ReceptionContactActions
+              contact={extendContact}
+              labels={{ message: receptionLabels.message, call: receptionLabels.call }}
+              whatsappVariant="primary"
+              callButtonSize="default"
+              analyticsContext="extend_stay"
+              tenantSlug={slug}
+            />
           </BottomSheetFooter>
         ) : null}
       </BottomSheetContent>

@@ -5,6 +5,7 @@ import { useTranslations } from '@/shared/i18n';
 import { ArrowUpRight } from 'lucide-react';
 import { Button, Card, CardContent, CardTitle, Icon, Badge } from '@/shared/ui';
 import { buildBookingRoomUrl, resolveLandingRooms, useHostelConfig, useTenant } from '@/entities/tenant';
+import { trackBookingWhatsappClick } from '@/shared/lib/analytics';
 import { resolveGuestBookingPhone } from '@/entities/tenant/lib/resolveGuestBookingPhone';
 import { getMessengerUpgradeLink } from '../getMessengerUpgradeLink';
 import { getReceptionBookingLink } from '../lib/getReceptionBookingLink';
@@ -18,7 +19,7 @@ interface RoomsGalleryProps {
 export function RoomsGallery({ checkin, checkout }: RoomsGalleryProps) {
   const t = useTranslations('domains.hostel.rooms');
   const hostel = useHostelConfig();
-  const { capabilities, settings } = useTenant();
+  const { capabilities, settings, slug } = useTenant();
   const bookingEnabled = capabilities.booking === 'ready';
   const landing = resolveLandingRooms(settings);
   const receptionPhone = resolveGuestBookingPhone(settings);
@@ -147,7 +148,10 @@ export function RoomsGallery({ checkin, checkout }: RoomsGalleryProps) {
                           href={fallbackLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          onClick={() => markLandingWhatsappFollowup()}
+                          onClick={() => {
+                            markLandingWhatsappFollowup();
+                            trackBookingWhatsappClick(slug, 'room_card');
+                          }}
                         >
                           <span>{fallbackLabel}</span>
                           <Icon

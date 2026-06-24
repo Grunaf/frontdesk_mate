@@ -4,11 +4,12 @@ import { useMemo, useState, useTransition } from 'react';
 import { formatStayReference } from '@/entities/guest-stay';
 import { GUEST_ISSUE_CATEGORIES, type GuestIssueCategory } from '@/entities/guest-issue';
 import { resolveGuestStayPlan, useTenant } from '@/entities/tenant';
+import { resolveReceptionContact } from '@/entities/tenant/lib/resolveReceptionContact';
 import { CheckInRequiredSheet, useGuestSession, useIsGuestRegistered } from '@/features/guest-check-in';
 import { formatBedLocationLine } from '@/features/find-your-bed/lib/formatBedLocation';
 import { FindYourBedSummary } from '@/features/find-your-bed/ui/FindYourBedSummary';
+import { ReceptionContactActions, useReceptionContactLabels } from '@/features/reception-contact';
 import { useTranslations } from '@/shared/i18n';
-import { createWhatsappLink } from '@/shared/lib';
 import { cn } from '@/shared/lib/utils';
 import {
   BottomSheet,
@@ -18,7 +19,6 @@ import {
   BottomSheetHeader,
   BottomSheetTitle,
   Button,
-  ExternalServiceButton,
   SegmentedChipBar,
 } from '@/shared/ui';
 import { createGuestIssueAction } from '../actions/guestIssueActions';
@@ -36,6 +36,7 @@ export function GuestIssueReportSheet({ open, onOpenChange }: GuestIssueReportSh
   const isRegistered = useIsGuestRegistered();
   const t = useTranslations('components.guestIssue');
   const tBed = useTranslations('components.findYourBed');
+  const receptionLabels = useReceptionContactLabels();
   const [category, setCategory] = useState<GuestIssueCategory | null>(null);
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,14 +58,15 @@ export function GuestIssueReportSheet({ open, onOpenChange }: GuestIssueReportSh
     [t]
   );
 
-  const whatsappHref = useMemo(() => {
-    const phone = hostel.reception.whatsapp.raw;
-    if (!hostel.reception.whatsappEnabled || !phone) {
-      return null;
-    }
-
-    return createWhatsappLink(phone, t('successWhatsappMessage', { hostelName: name }));
-  }, [hostel.reception, name, t]);
+  const receptionContact = useMemo(
+    () =>
+      resolveReceptionContact(hostel, {
+        message: t('successWhatsappMessage', { hostelName: name }),
+        urgency: 'low',
+        translate: receptionLabels.translateHint,
+      }),
+    [hostel, name, receptionLabels.translateHint, t]
+  );
 
   const resetForm = () => {
     setCategory(null);
@@ -212,10 +214,15 @@ export function GuestIssueReportSheet({ open, onOpenChange }: GuestIssueReportSh
         <BottomSheetFooter className="border-t border-border/60">
           {successStayRef ? (
             <div className="flex w-full flex-col gap-2">
-              {whatsappHref ? (
-                <ExternalServiceButton service="whatsapp" href={whatsappHref}>
-                  {t('successWhatsappButton')}
-                </ExternalServiceButton>
+              {receptionContact ? (
+                <ReceptionContactActions
+                  contact={receptionContact}
+                  labels={{ message: receptionLabels.message, call: receptionLabels.call }}
+                  whatsappVariant="primary"
+                  callButtonSize="default"
+                  analyticsContext="issue"
+                  tenantSlug={tenantSlug}
+                />
               ) : null}
               <Button type="button" variant="outline" className="w-full" onClick={() => handleOpenChange(false)}>
                 {t('successClose')}

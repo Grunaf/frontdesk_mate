@@ -4,11 +4,14 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useTenant } from '@/entities/tenant';
-import { resolveReceptionAvailabilityHint } from '@/entities/tenant/lib/resolveReceptionAvailabilityHint';
+import { resolveReceptionContact } from '@/entities/tenant/lib/resolveReceptionContact';
+import {
+  ReceptionContactActions,
+  useReceptionContactLabels,
+} from '@/features/reception-contact';
 import { useForeignGuestRegistration, useGuestSession } from './GuestSessionProvider';
 import { useTranslations } from '@/shared/i18n';
 import { getTenantPublicUrl } from '@/shared/config';
-import { createWhatsappLink } from '@/shared/lib';
 import {
   BottomSheet,
   BottomSheetBody,
@@ -18,10 +21,9 @@ import {
   BottomSheetHeader,
   BottomSheetTitle,
   Button,
-  ExternalServiceButton,
   Icon,
 } from '@/shared/ui';
-import { ArrowLeftRight, Phone } from 'lucide-react';
+import { ArrowLeftRight } from 'lucide-react';
 
 interface CheckInRequiredSheetProps {
   open: boolean;
@@ -29,42 +31,25 @@ interface CheckInRequiredSheetProps {
 }
 
 export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredSheetProps) {
-  const { name, hostel } = useTenant();
+  const { name, hostel, slug } = useTenant();
   const { currentTenantSlug } = useGuestSession();
   const foreignRegistration = useForeignGuestRegistration();
   const t = useTranslations('pages.checkIn.checkInRequired');
   const tCross = useTranslations('pages.checkIn.crossHostel');
-  const tReception = useTranslations('components.taxi');
+  const receptionLabels = useReceptionContactLabels();
   const params = useParams<{ locale: string }>();
   const locale = params.locale ?? 'en';
   const checkInPath = `/${locale}/check-in`;
 
-  const receptionContact = useMemo(() => {
-    const whatsappPhone = hostel.reception.whatsapp.raw;
-    const message = t('whatsappMessage', { hostelName: name });
-
-    if (hostel.reception.whatsappEnabled && whatsappPhone) {
-      return {
-        whatsappHref: createWhatsappLink(whatsappPhone, message),
-        telHref: null as string | null,
-        availabilityHint: resolveReceptionAvailabilityHint(hostel.reception, (key, params) =>
-          tReception(key, params)
-        ),
-      };
-    }
-
-    if (hostel.contacts.phone.href) {
-      return {
-        whatsappHref: null,
-        telHref: hostel.contacts.phone.href,
-        availabilityHint: resolveReceptionAvailabilityHint(hostel.reception, (key, params) =>
-          tReception(key, params)
-        ),
-      };
-    }
-
-    return null;
-  }, [hostel, name, t, tReception]);
+  const receptionContact = useMemo(
+    () =>
+      resolveReceptionContact(hostel, {
+        message: t('whatsappMessage', { hostelName: name }),
+        urgency: 'high',
+        translate: receptionLabels.translateHint,
+      }),
+    [hostel, name, receptionLabels.translateHint, t]
+  );
 
   const registeredUrl = foreignRegistration
     ? getTenantPublicUrl(foreignRegistration.tenantSlug, 'app', locale)
@@ -130,29 +115,16 @@ export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredShee
           <Button asChild size="lg" className="w-full">
             <Link href={checkInPath}>{t('signIn')}</Link>
           </Button>
-          {receptionContact?.whatsappHref ? (
-            <ExternalServiceButton
-              service="whatsapp"
-              href={receptionContact.whatsappHref}
-              className="w-full border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
-            >
-              {t('whatsappReception')}
-            </ExternalServiceButton>
-          ) : receptionContact?.telHref ? (
-            <Button asChild size="lg" variant="outline" className="w-full">
-              <a href={receptionContact.telHref} className="flex items-center justify-center gap-2">
-                <Icon icon={Phone} className="size-4" />
-                {t('callReception')}
-              </a>
-            </Button>
+          {receptionContact ? (
+            <ReceptionContactActions
+              contact={receptionContact}
+              labels={{ message: receptionLabels.message, call: receptionLabels.call }}
+              analyticsContext="check_in"
+              tenantSlug={slug}
+            />
           ) : (
             <p className="text-center text-sm text-muted-foreground">{t('noContact')}</p>
           )}
-          {receptionContact?.availabilityHint ? (
-            <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-              {receptionContact.availabilityHint}
-            </p>
-          ) : null}
         </BottomSheetFooter>
       </BottomSheetContent>
     </BottomSheet>

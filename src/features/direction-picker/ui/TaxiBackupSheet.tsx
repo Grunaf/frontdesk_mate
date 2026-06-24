@@ -16,15 +16,14 @@ import {
   BottomSheetTitle,
   Button,
   ExternalServiceButton,
-  ExternalServiceTouchLink,
   Icon,
-  TouchLink,
 } from '@/shared/ui';
 import { Car, Phone } from 'lucide-react';
 import type { RouteConfig } from '@/entities/hostel';
 import { resolveReceptionTaxiBackup } from '../lib/resolveReceptionTaxiBackup';
 import { resolveRecommendedTaxi } from '../lib/resolveRecommendedTaxi';
 import { resolveRouteCopyField } from '../lib/resolveRouteCopy';
+import { ReceptionContactActions, ReceptionContactHint, useReceptionContactLabels } from '@/features/reception-contact';
 import { TaxiRouteSummary } from './TaxiBackupCard';
 
 export function TaxiBackupSheet({
@@ -36,10 +35,11 @@ export function TaxiBackupSheet({
   onOpenChange: (open: boolean) => void;
   route: RouteConfig;
 }) {
-  const { name, hostel, cityPack, contentKeys } = useTenant();
+  const { name, hostel, cityPack, contentKeys, slug } = useTenant();
   const routes = useTranslations();
   const taxiActions = useTranslations('components.taxi');
   const directions = useTranslations('pages.arrivalJourney.directions');
+  const receptionLabels = useReceptionContactLabels();
 
   const pickupPoint = resolveRouteCopyField(route, 'taxiPickupPoint', routes);
   const destination = hostel.contacts.address.display ?? '';
@@ -69,15 +69,11 @@ export function TaxiBackupSheet({
       address: destination,
       hostelName: name,
     }),
-    (key, params) => taxiActions(key, params)
+    receptionLabels.translateHint
   );
 
   const hasTaxi = Boolean(recommendedTaxi);
   const hasReception = Boolean(receptionBackup);
-  const receptionHref = receptionBackup?.whatsappHref ?? receptionBackup?.telHref ?? null;
-  const receptionLinkLabel = receptionBackup?.whatsappHref
-    ? taxiActions('messageReception', { hostelName: name })
-    : taxiActions('messageReceptionCall', { hostelName: name });
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
@@ -111,25 +107,21 @@ export function TaxiBackupSheet({
               </AccordionItem>
             </Accordion>
 
-            {hasReception && receptionHref && (
+            {hasReception && receptionBackup ? (
               <section className="space-y-1.5">
                 <p className="flex flex-wrap items-center justify-center gap-x-1 text-center text-[11px] leading-relaxed text-muted-foreground">
                   {taxiActions('needHelpTitle')}{' '}
-                  {receptionBackup?.whatsappHref ? (
-                    <ExternalServiceTouchLink service="whatsapp" href={receptionHref}>
-                      {receptionLinkLabel}
-                    </ExternalServiceTouchLink>
-                  ) : (
-                    <TouchLink href={receptionHref}>{receptionLinkLabel}</TouchLink>
-                  )}
+                  <ReceptionContactActions
+                    contact={receptionBackup}
+                    labels={{ message: receptionLabels.message, call: receptionLabels.call }}
+                    layout="inline"
+                    analyticsContext="taxi"
+                    tenantSlug={slug}
+                  />
                 </p>
-                {receptionBackup?.availabilityHint && (
-                  <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-                    {receptionBackup.availabilityHint}
-                  </p>
-                )}
+                <ReceptionContactHint contact={receptionBackup} />
               </section>
-            )}
+            ) : null}
 
             {!hasTaxi && !hasReception && (
               <p className="text-sm text-muted-foreground">{taxiActions('noContactFallback')}</p>

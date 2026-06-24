@@ -943,6 +943,13 @@
       "extendStayMessage": "Здравствуйте! Хочу продлить проживание в {hostelName}. Кровать {bedLabel}, сейчас до {checkoutDate}. Ref #{stayRef}. На сколько ночей можно продлить?",
       "extendStayMessageNamed": "Здравствуйте! Хочу продлить проживание в {hostelName}. Кровать {bedLabel}, сейчас до {checkoutDate}. Ref #{stayRef}. В системе: {guestName}. На сколько ночей можно продлить?"
     },
+    "receptionContact": {
+      "messageReception": "Написать на ресепшен",
+      "callReception": "Позвонить на ресепшен",
+      "noContact": "Свяжитесь с ресепшеном для помощи.",
+      "askReceptionHoursHint": "Reception: {open}–{close}.",
+      "askReceptionOpensHint": "Reception открывается в {open}."
+    },
     "conciergeContact": {
       "receptionStripLabel": "Написать ресепшену {hostelName}",
       "receptionStripLabelCompact": "Написать ресепшену",

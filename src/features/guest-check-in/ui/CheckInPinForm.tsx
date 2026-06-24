@@ -12,6 +12,7 @@ import {
 } from '../lib/pinActivationErrors';
 import { useGuestSession } from './GuestSessionProvider';
 import { useTranslations } from '@/shared/i18n';
+import { trackCheckInSuccess } from '@/shared/lib/analytics';
 import { writeGuestRegistrationIndex } from '@/shared/lib/guestRegistrationIndex';
 import {
   clearPendingGuestPinActivation,
@@ -47,6 +48,7 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
 
   const completeActivation = useCallback(
     (registration: { tenantSlug: string; bedId: string; exp: number }) => {
+      trackCheckInSuccess(registration.tenantSlug);
       clearPendingGuestPinActivation();
       writeGuestRegistrationIndex(registration);
       router.refresh();
