@@ -3,47 +3,21 @@
 import { useMemo } from 'react';
 import { resolveGuestExtrasLayout } from '@/entities/guest-extra';
 import { useTenant } from '@/entities/tenant';
-import { useNightMode } from '@/shared/lib';
-import { NightAccessCard } from '@/features/night-access';
 import { GuestAccessPanel, useIsGuestRegistered } from '@/features/guest-check-in';
 import { GuestIssueReportCard } from '@/features/guest-issue-report';
 import { GuestExtrasBlock } from '@/features/guest-services';
 import { ConciergeReceptionStrip } from '@/features/reception-contact';
 import { conciergeContentStripOffsetClass } from '@/features/reception-contact/lib/conciergeStripLayout';
-import { WifiCompactRow } from '@/features/wifi-connect';
+import { StayEssentialsBridges } from '@/features/stay-essentials';
 import { FAQAccordion, useFaqDisplays } from '@/features/faq';
 import { LocalGuide } from '@/features/welcome';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/shared/i18n';
-import { Button, ConciergeModuleSection, FeatureGate, Icon } from '@/shared/ui';
+import { ConciergeModuleSection, FeatureGate } from '@/shared/ui';
 import { SITE_CONFIG } from '@/shared/config';
-import { setInAppReturnTo } from '@/shared/lib';
 import { cn } from '@/shared/lib/utils';
-import { ArrowRight } from 'lucide-react';
-
-function ArrivalGuideButton() {
-  const t = useTranslations('pages.concierge');
-  const router = useRouter();
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={() => {
-        setInAppReturnTo(SITE_CONFIG.routes.app.concierge.path);
-        router.push(SITE_CONFIG.routes.app.welcome.path);
-      }}
-      className="h-auto w-full justify-between p-3 text-left text-xs font-medium"
-    >
-      <span>{t('arrivalGuideButton')}</span>
-      <Icon icon={ArrowRight} className="h-4 w-4 text-muted-foreground" />
-    </Button>
-  );
-}
 
 export function ConciergeContent() {
   const t = useTranslations('pages.concierge');
-  const isNightMode = useNightMode();
   const isRegistered = useIsGuestRegistered();
   const { settings } = useTenant();
   const extrasLayout = useMemo(
@@ -68,8 +42,7 @@ export function ConciergeContent() {
         {!isRegistered ? <GuestAccessPanel /> : null}
 
         {/* Zone: arrival essentials */}
-        <ArrivalGuideButton />
-        {isRegistered ? <WifiCompactRow /> : null}
+        <StayEssentialsBridges />
 
         {/* Zone: services */}
         <ConciergeModuleSection
@@ -93,13 +66,6 @@ export function ConciergeContent() {
             <LocalGuide variant="compact" />
           </ConciergeModuleSection>
         </FeatureGate>
-
-        {/* Zone: night access */}
-        {isRegistered ? (
-          <FeatureGate module="nightAccess">
-            {isNightMode ? <NightAccessCard /> : null}
-          </FeatureGate>
-        ) : null}
 
         {/* Zone: FAQ */}
         {faqDisplays.length > 0 ? (

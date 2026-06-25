@@ -978,7 +978,51 @@
       "compactTitle": "Wi‑Fi",
       "compactCopy": "Скопировать пароль",
       "copyLabel": "Copy Password",
-      "copiedLabel": "Password Copied!"
+      "copiedLabel": "Password Copied!",
+      "sheetNetworkLabel": "Сеть",
+      "sheetPasswordLabel": "Пароль"
+    },
+    "stayEssentials": {
+      "bridges": {
+        "wifi": "Wi‑Fi",
+        "checkout": "Выезд",
+        "nightAccess": "Ночной доступ",
+        "reception": "О ресепшене"
+      },
+      "bridgeAriaLabelUnread": "{title} — не просмотрено",
+      "bridgeAriaLabelRead": "{title} — просмотрено",
+      "sheetStub": "Содержимое скоро появится.",
+      "nightAccessSheet": {
+        "fullAccessGuide": "Полный гид по доступу",
+        "dismiss": "Я получил ключ от комнаты"
+      },
+      "checkout": {
+        "checkOutUntil": "Выезд до {time}",
+        "packNightBefore": {
+          "title": "Соберите вещи с вечера",
+          "description": "Соберите вещи накануне выезда, чтобы утром уйти тихо и не будить соседей по комнате."
+        },
+        "personalCheckout": "Ваш выезд по брони: {date}",
+        "luggageTitle": "Багаж после выезда",
+        "lateCheckoutHint": "Нужен поздний выезд? Спросите на ресепшене.",
+        "lateCheckoutLink": "Запросить поздний выезд"
+      },
+      "reception": {
+        "hoursTitle": "Часы работы ресепшена",
+        "hours": "Открыто {open}–{close}",
+        "helpWithTitle": "Мы поможем с",
+        "helpBullets": {
+          "checkIn": "Заселением, оплатой и регистрацией паспорта",
+          "luggage": "Хранением багажа до заселения или после выезда",
+          "laundry": "Прачкой и вопросами по комнате",
+          "tours": "Экскурсиями, трансферами и советами по городу",
+          "lateCheckout": "Запросами на поздний выезд"
+        },
+        "taxiViaReception": "Ресепшен может помочь заказать такси, когда вы в городе.",
+        "luggageTitle": "Хранение багажа",
+        "selfCheckInAfter": "После {time} можно пользоваться кодами дверей в приложении, если ресепшен закрыт.",
+        "footerHint": "Чтобы написать ресепшену, используйте кнопку ниже."
+      }
     },
     "registrationAlert": {
       "title": "Settle Payment & Passport.",

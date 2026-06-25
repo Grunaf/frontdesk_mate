@@ -978,7 +978,51 @@
       "compactTitle": "Wi‑Fi",
       "compactCopy": "Copy password",
       "copyLabel": "Copy Password",
-      "copiedLabel": "Password Copied!"
+      "copiedLabel": "Password Copied!",
+      "sheetNetworkLabel": "Network",
+      "sheetPasswordLabel": "Password"
+    },
+    "stayEssentials": {
+      "bridges": {
+        "wifi": "Wi‑Fi",
+        "checkout": "Check-out",
+        "nightAccess": "Night access",
+        "reception": "About reception"
+      },
+      "bridgeAriaLabelUnread": "{title} — not viewed",
+      "bridgeAriaLabelRead": "{title} — viewed",
+      "sheetStub": "Content coming soon.",
+      "nightAccessSheet": {
+        "fullAccessGuide": "Full access guide",
+        "dismiss": "I picked up my room key"
+      },
+      "checkout": {
+        "checkOutUntil": "Check-out until {time}",
+        "packNightBefore": {
+          "title": "Pack the night before",
+          "description": "Pack your things the evening before checkout so you can leave quietly in the morning without waking roommates."
+        },
+        "personalCheckout": "Your booked checkout: {date}",
+        "luggageTitle": "Luggage after checkout",
+        "lateCheckoutHint": "Need a later checkout? Ask at reception.",
+        "lateCheckoutLink": "Request late checkout"
+      },
+      "reception": {
+        "hoursTitle": "Reception hours",
+        "hours": "Open {open}–{close}",
+        "helpWithTitle": "We can help with",
+        "helpBullets": {
+          "checkIn": "Check-in, payment, and passport registration",
+          "luggage": "Luggage storage before check-in or after checkout",
+          "laundry": "Laundry and on-site questions about your room",
+          "tours": "Tours, transfers, and local tips",
+          "lateCheckout": "Late checkout requests"
+        },
+        "taxiViaReception": "Reception can help you book a taxi when you're out and about.",
+        "luggageTitle": "Luggage storage",
+        "selfCheckInAfter": "After {time}, you can use the app door codes if reception is closed.",
+        "footerHint": "Use the button below to message reception."
+      }
     },
     "registrationAlert": {
       "title": "Settle Payment & Passport.",

@@ -29,6 +29,7 @@ export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './Accordion';
 export { FeatureGate } from './FeatureGate';
 export {
+  BOTTOM_SHEET_SIZES,
   BottomSheet,
   BottomSheetPortal,
   BottomSheetOverlay,
