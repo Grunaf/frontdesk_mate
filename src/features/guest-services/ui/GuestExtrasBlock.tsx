@@ -5,6 +5,7 @@ import { formatStayReference } from '@/entities/guest-stay';
 import {
   resolveGuestExtrasLayout,
   trackGuestExtraEvent,
+  type GuestExtraPresetId,
   type ResolvedGuestExtra,
 } from '@/entities/guest-extra';
 import { resolveGuestStayPlan, useTenant } from '@/entities/tenant';
@@ -17,9 +18,13 @@ import { GuestExtrasFeaturedStrip } from './GuestExtrasFeaturedStrip';
 
 type GuestExtrasBlockProps = {
   variant?: 'compact' | 'full';
+  excludePresetIds?: readonly GuestExtraPresetId[];
 };
 
-export function GuestExtrasBlock({ variant = 'full' }: GuestExtrasBlockProps) {
+export function GuestExtrasBlock({
+  variant = 'full',
+  excludePresetIds,
+}: GuestExtrasBlockProps) {
   const { settings } = useTenant();
   const { session } = useGuestSession();
   const isRegistered = useIsGuestRegistered();
@@ -29,8 +34,8 @@ export function GuestExtrasBlock({ variant = 'full' }: GuestExtrasBlockProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const layout = useMemo(
-    () => resolveGuestExtrasLayout(settings, isRegistered),
-    [settings, isRegistered]
+    () => resolveGuestExtrasLayout(settings, isRegistered, { excludePresetIds }),
+    [settings, isRegistered, excludePresetIds]
   );
   const plan = useMemo(
     () => resolveGuestStayPlan(settings, session?.bedId),

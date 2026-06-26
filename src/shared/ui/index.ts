@@ -6,6 +6,7 @@ export {
 export { Button, buttonVariants } from './button';
 export { SegmentedChipBar, type SegmentedChipBarProps, type SegmentedChipItem } from './SegmentedChipBar';
 export { BaseHeader } from './BaseHeader/BaseHeader';
+export { AppHeaderShell } from './BaseHeader/AppHeaderShell';
 export { ConciergeModuleSection } from './ConciergeModuleSection';
 export { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card';
 export { Alert, AlertTitle, AlertDescription, AlertAction } from './alert';

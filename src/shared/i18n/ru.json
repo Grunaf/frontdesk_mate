@@ -688,10 +688,11 @@
       "sections": {
         "services": "Услуги",
         "localGuide": "Городской гид",
-        "faq": "FAQ"
+        "houseRules": "Правила дома"
       },
       "seeAll": "Смотреть все",
       "seeAllGuide": "Смотреть все",
+      "seeAllRules": "Все правила",
       "viewAllServices": "Все услуги ({count})"
     },
     "checkIn": {
@@ -1005,7 +1006,8 @@
         "personalCheckout": "Ваш выезд по брони: {date}",
         "luggageTitle": "Багаж после выезда",
         "lateCheckoutHint": "Нужен поздний выезд? Спросите на ресепшене.",
-        "lateCheckoutLink": "Запросить поздний выезд"
+        "lateCheckoutLink": "Подробнее о позднем выезде",
+        "lateCheckoutLinkWithPrice": "Поздний выезд · {price}"
       },
       "reception": {
         "hoursTitle": "Часы работы ресепшена",
@@ -1117,10 +1119,11 @@
       "sectionTitle": "Дополнительно",
       "featuredLabel": "Рекомендуем",
       "priceLabel": "{price}",
+      "priceFormatted": "{amount} {currency}",
       "highlightPriceFrom": "от {amount} {currency}",
       "priceAskReception": "Цену уточните на ресепшене",
       "scheduleLabel": "{schedule}",
-      "receptionButton": "Подойти на ресепшен",
+      "opsReceptionHint": "Спросите на ресепшене в часы работы.",
       "externalLinkButton": "Открыть страницу партнёра",
       "laundryMessage": "Здравствуйте! Хочу воспользоваться прачкой в {hostelName}. Кровать {bedLabel}. Ref #{stayRef}.",
       "earlyCheckinMessage": "Здравствуйте! Хочу ранний заезд в {hostelName}. Кровать {bedLabel}. Ref #{stayRef}.",
@@ -1141,6 +1144,7 @@
       "lateCheckout": {
         "title": "Поздний выезд",
         "description": "Нужно ещё несколько часов? Напишите ресепшену до времени выезда.",
+        "availabilityHint": "Зависит от наличия мест в день выезда.",
         "whatsappButton": "Написать на ресепшен"
       },
       "partnerTransfer": {

@@ -15,6 +15,7 @@ import { cn } from '@/shared/lib/utils';
 import {
   BottomSheet,
   BottomSheetBody,
+  BOTTOM_SHEET_SIZES,
   BottomSheetContent,
   BottomSheetFooter,
   BottomSheetHeader,
@@ -142,7 +143,7 @@ export function GuestStaySheet({
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
-      <BottomSheetContent className="px-0 pb-0">
+      <BottomSheetContent size={BOTTOM_SHEET_SIZES.large} className="flex flex-col px-0 pb-0">
         <BottomSheetHeader className="px-6 pb-3">
           <div className="flex items-start gap-3 pr-8">
             <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">

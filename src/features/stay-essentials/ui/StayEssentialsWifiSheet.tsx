@@ -10,6 +10,7 @@ import {
   BottomSheetFooter,
   BottomSheetHeader,
   BottomSheetTitle,
+  BOTTOM_SHEET_SIZES,
   Button,
 } from '@/shared/ui';
 
@@ -43,7 +44,7 @@ export function StayEssentialsWifiSheet({ open, onOpenChange }: StayEssentialsWi
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
-      <BottomSheetContent size="small" className="flex flex-col">
+      <BottomSheetContent size={BOTTOM_SHEET_SIZES.medium} className="flex flex-col">
         <BottomSheetHeader>
           <BottomSheetTitle>{t('bridges.wifi')}</BottomSheetTitle>
         </BottomSheetHeader>
@@ -51,12 +52,16 @@ export function StayEssentialsWifiSheet({ open, onOpenChange }: StayEssentialsWi
         <BottomSheetBody className="flex flex-1 flex-col pb-2">
           <div className="space-y-4">
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">{wifiT('sheetNetworkLabel')}</p>
-              <p className="truncate text-lg font-semibold text-foreground">{wifiName}</p>
+              <p className="text-muted-foreground text-xs font-medium">
+                {wifiT('sheetNetworkLabel')}
+              </p>
+              <p className="text-foreground truncate text-lg font-semibold">{wifiName}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">{wifiT('sheetPasswordLabel')}</p>
-              <p className="font-mono text-lg font-semibold text-foreground">{wifiPassword}</p>
+              <p className="text-muted-foreground text-xs font-medium">
+                {wifiT('sheetPasswordLabel')}
+              </p>
+              <p className="text-foreground font-mono text-lg font-semibold">{wifiPassword}</p>
             </div>
           </div>
         </BottomSheetBody>

@@ -23,7 +23,7 @@ import {
   Icon,
   Separator,
 } from '@/shared/ui';
-import { Briefcase, Clock, LogOut, Moon, type LucideIcon } from 'lucide-react';
+import { Briefcase, Clock, Moon, type LucideIcon } from 'lucide-react';
 
 interface StayEssentialsCheckoutSheetProps {
   open: boolean;
@@ -34,9 +34,10 @@ interface InfoRowProps {
   icon: LucideIcon;
   title: string;
   description?: string;
+  action?: ReactNode;
 }
 
-function InfoRow({ icon, title, description }: InfoRowProps) {
+function InfoRow({ icon, title, description, action }: InfoRowProps) {
   return (
     <div className="flex items-start gap-3">
       <Icon icon={icon} className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
@@ -45,6 +46,7 @@ function InfoRow({ icon, title, description }: InfoRowProps) {
         {description ? (
           <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
         ) : null}
+        {action}
       </div>
     </div>
   );
@@ -73,6 +75,19 @@ export function StayEssentialsCheckoutSheet({
       null,
     [settings]
   );
+
+  const lateCheckoutLinkLabel = useMemo(() => {
+    if (!lateCheckoutExtra) {
+      return null;
+    }
+
+    const price = lateCheckoutExtra.priceLabel?.trim();
+    if (!price) {
+      return checkoutT('lateCheckoutLink');
+    }
+
+    return checkoutT('lateCheckoutLinkWithPrice', { price });
+  }, [checkoutT, lateCheckoutExtra]);
 
   const personalCheckout = checkOutAt
     ? formatGuestStayCheckoutShort(checkOutAt, locale)
@@ -103,6 +118,19 @@ export function StayEssentialsCheckoutSheet({
         key="checkout-time"
         icon={Clock}
         title={checkoutT('checkOutUntil', { time: checkOutTime })}
+        description={checkoutT('lateCheckoutHint')}
+        action={
+          lateCheckoutLinkLabel ? (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto px-0 text-sm"
+              onClick={() => setLateExtraOpen(true)}
+            >
+              {lateCheckoutLinkLabel}
+            </Button>
+          ) : null
+        }
       />
     );
   }
@@ -143,23 +171,6 @@ export function StayEssentialsCheckoutSheet({
       />
     );
   }
-
-  rows.push(<Separator key="sep-late" />);
-  rows.push(
-    <div key="late-checkout" className="space-y-2">
-      <InfoRow icon={LogOut} title={checkoutT('lateCheckoutHint')} />
-      {lateCheckoutExtra ? (
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto px-0 text-sm"
-          onClick={() => setLateExtraOpen(true)}
-        >
-          {checkoutT('lateCheckoutLink')}
-        </Button>
-      ) : null}
-    </div>
-  );
 
   return (
     <>

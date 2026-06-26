@@ -1,7 +1,6 @@
 export type GuestExtraAnalyticsEvent =
   | 'extras_tile_click'
   | 'extras_sheet_open'
-  | 'extras_cta_reception'
   | 'extras_cta_whatsapp'
   | 'extras_cta_link';
 

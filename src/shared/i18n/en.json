@@ -688,11 +688,12 @@
       "sections": {
         "services": "Services",
         "localGuide": "Local guide",
-        "faq": "FAQ"
+        "houseRules": "House rules"
       },
       "seeAll": "See all",
       "seeAllGuide": "See all",
-      "viewAllServices": "View all services ({count})"
+      "seeAllRules": "All rules",
+      "viewAllServices": "All services ({count})"
     },
     "checkIn": {
       "metaTitle": "Guest check-in",
@@ -1005,7 +1006,8 @@
         "personalCheckout": "Your booked checkout: {date}",
         "luggageTitle": "Luggage after checkout",
         "lateCheckoutHint": "Need a later checkout? Ask at reception.",
-        "lateCheckoutLink": "Request late checkout"
+        "lateCheckoutLink": "Late checkout details",
+        "lateCheckoutLinkWithPrice": "Late checkout details · {price}"
       },
       "reception": {
         "hoursTitle": "Reception hours",
@@ -1117,10 +1119,11 @@
       "sectionTitle": "Extras",
       "featuredLabel": "Featured",
       "priceLabel": "{price}",
+      "priceFormatted": "{amount} {currency}",
       "highlightPriceFrom": "from {amount} {currency}",
       "priceAskReception": "Ask reception for price",
       "scheduleLabel": "{schedule}",
-      "receptionButton": "Come to reception",
+      "opsReceptionHint": "Ask at reception during opening hours.",
       "externalLinkButton": "Open partner page",
       "laundryMessage": "Hi! I'd like to use the laundry at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
       "earlyCheckinMessage": "Hi! I'd like to request an early check-in at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
@@ -1141,6 +1144,7 @@
       "lateCheckout": {
         "title": "Late checkout",
         "description": "Need a few extra hours? Message reception before checkout time.",
+        "availabilityHint": "Subject to availability on checkout day.",
         "whatsappButton": "Message reception"
       },
       "partnerTransfer": {

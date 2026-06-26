@@ -179,7 +179,7 @@ function BottomSheetBody({
         ref={scrollRef}
         data-slot="bottom-sheet-body"
         className={cn(
-          'h-full overflow-y-auto overscroll-contain px-6',
+          'h-full overflow-y-auto overscroll-contain px-6 pt-4',
           canScrollDown && 'pb-2',
           className
         )}

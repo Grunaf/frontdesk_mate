@@ -1,7 +1,8 @@
 'use client';
 
-import { parseGuestExtraPriceLabel, type ResolvedGuestExtra } from '@/entities/guest-extra';
+import type { ResolvedGuestExtra } from '@/entities/guest-extra';
 import { useTranslations } from '@/shared/i18n';
+import { formatGuestExtraPriceLine } from '../lib/formatGuestExtraPriceLine';
 import { guestExtraPresetI18nKey } from '../lib/guestExtraI18n';
 
 interface GuestExtraHighlightTileProps {
@@ -13,13 +14,11 @@ export function GuestExtraHighlightTile({ extra, onSelect }: GuestExtraHighlight
   const t = useTranslations('components.guestExtras');
   const key = guestExtraPresetI18nKey(extra.presetId);
 
-  const parsedPrice = parseGuestExtraPriceLabel(extra.priceLabel);
-  const priceLine = parsedPrice
-    ? t('highlightPriceFrom', {
-        amount: parsedPrice.amount,
-        currency: parsedPrice.currency,
-      })
-    : t('priceAskReception');
+  const priceLine = formatGuestExtraPriceLine(
+    (key, values) => t(key, values),
+    extra.priceLabel,
+    'from'
+  );
 
   const title = t(`${key}.title`);
 

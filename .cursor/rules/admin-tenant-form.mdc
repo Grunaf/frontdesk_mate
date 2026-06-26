@@ -1,0 +1,18 @@
+---
+description: Admin tenant form — draft vs submit, validation
+alwaysApply: true
+---
+
+# Admin tenant form
+
+Форма tenant (`TenantFormAccordion`) — **два слоя**:
+
+1. **Draft UI** — React state (`useTenantFormDraft`), инпуты **без `name`**.
+2. **Submit** — скрытый payload (`TenantFormHiddenPayload`) → `saveTenantAction`.
+
+## Правила
+
+- На `<form>` стоит **`novalidate`** — native HTML5 validation не используется.
+- Инпуты **без `name`** — только draft: **запрещены** `required`, `min`, `max`, `pattern`.
+- Клиентская валидация перед save — **`validateTenantFormBeforeSave`** в `handleFormSubmit` (тост + jump к секции).
+- Серверная валидация — в `saveTenantAction` / `readSettings`.

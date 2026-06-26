@@ -9,13 +9,5 @@ export function shouldShowGuestStayChip(input: {
     return false;
   }
 
-  if (input.cleanPath === SITE_CONFIG.routes.app.welcome.path) {
-    return false;
-  }
-
-  if (input.cleanPath.startsWith('/check-in')) {
-    return false;
-  }
-
-  return true;
+  return input.cleanPath === SITE_CONFIG.routes.app.concierge.path;
 }

@@ -2,6 +2,7 @@
 
 import type { ResolvedGuestExtra } from '@/entities/guest-extra';
 import { useTranslations } from '@/shared/i18n';
+import { formatGuestExtraPriceLine } from '../lib/formatGuestExtraPriceLine';
 import { guestExtraPresetI18nKey } from '../lib/guestExtraI18n';
 
 interface GuestExtraStandardTileProps {
@@ -13,9 +14,10 @@ export function GuestExtraStandardTile({ extra, onSelect }: GuestExtraStandardTi
   const t = useTranslations('components.guestExtras');
   const key = guestExtraPresetI18nKey(extra.presetId);
 
-  const priceLine = extra.priceLabel
-    ? t('priceLabel', { price: extra.priceLabel })
-    : t('priceAskReception');
+  const priceLine = formatGuestExtraPriceLine(
+    (key, values) => t(key, values),
+    extra.priceLabel
+  );
 
   return (
     <button

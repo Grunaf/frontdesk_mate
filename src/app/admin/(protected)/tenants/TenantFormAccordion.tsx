@@ -40,6 +40,7 @@ import {
   formatAdminSectionGuestProgress,
   getAdminSectionGuestProgress,
 } from './lib/resolveAdminSectionProgress';
+import { validateTenantFormBeforeSave } from './lib/validateTenantFormBeforeSave';
 import { ArrivalJourneyFields } from './sections/ArrivalJourneyFields';
 import { ContactsFields } from './sections/ContactsFields';
 import { GuestAppFields } from './sections/GuestAppFields';
@@ -519,20 +520,41 @@ function TenantFormAccordionInner({
 
   const handleFormSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
-      if (!subscription.subscriptionStartsAt.trim() || !subscription.subscriptionEndsAt.trim()) {
-        event.preventDefault();
-        setToast({
-          variant: 'warning',
-          message: 'Set subscription start and end dates in step 1 before saving.',
-        });
+      const block = validateTenantFormBeforeSave({
+        subscriptionStartsAt: subscription.subscriptionStartsAt,
+        subscriptionEndsAt: subscription.subscriptionEndsAt,
+        mergedSettings,
+      });
+
+      if (!block) {
+        return;
+      }
+
+      event.preventDefault();
+      setToast({ variant: 'warning', message: block.message });
+
+      if (block.code === 'subscription_dates') {
         if (adminMode === 'launch') {
           setLaunchStep('identity');
         } else {
           jumpToSection('subscription');
         }
+        return;
+      }
+
+      if (adminMode === 'launch') {
+        setLaunchStep('rules-wifi');
+      } else {
+        jumpToSection('guest-app');
       }
     },
-    [subscription.subscriptionStartsAt, subscription.subscriptionEndsAt, adminMode, jumpToSection]
+    [
+      subscription.subscriptionStartsAt,
+      subscription.subscriptionEndsAt,
+      mergedSettings,
+      adminMode,
+      jumpToSection,
+    ]
   );
 
   return (
@@ -547,6 +569,7 @@ function TenantFormAccordionInner({
         ref={formRef}
         action={saveTenantAction}
         className="relative"
+        noValidate
         onSubmit={handleFormSubmit}
         onInput={markDirty}
       >

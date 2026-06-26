@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react';
 import { SITE_CONFIG } from '@/shared/config';
 import { setInAppReturnTo } from '@/shared/lib';
 import { useTranslations } from '@/shared/i18n';
+import { Button } from './button';
 import { Icon } from './icon';
 
 interface ConciergeModuleSectionProps {
@@ -33,19 +34,21 @@ export function ConciergeModuleSection({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2 px-1">
-        <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+      <div className="flex items-end justify-between gap-3 px-1">
+        <h3 className="min-w-0 flex-1 text-2xl font-semibold leading-tight text-foreground">
           {title}
         </h3>
         {seeAllHref ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleSeeAll}
-            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="relative h-7 min-h-0 shrink-0 self-end max-w-[45%] px-2.5 py-0 text-sm leading-none -my-1.5"
           >
-            <span>{resolvedSeeAllLabel}</span>
-            <Icon icon={ArrowRight} className="h-3.5 w-3.5" />
-          </button>
+            <span className="truncate">{resolvedSeeAllLabel}</span>
+            <Icon icon={ArrowRight} className="size-3.5 shrink-0" />
+          </Button>
         ) : null}
       </div>
       {children}

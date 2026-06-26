@@ -29,7 +29,9 @@ test.describe('guest concierge stay chip', () => {
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
     await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
     await expect(page.getByText(/Ref #/)).toBeVisible();
-    await expect(page.getByRole('link', { name: /Request to extend stay|Написать о продлении/i })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /Message reception|Написать ресепшену/i })
+    ).toBeVisible();
   });
 
   test('hides reception strip while stay sheet is open', async ({ page }) => {
