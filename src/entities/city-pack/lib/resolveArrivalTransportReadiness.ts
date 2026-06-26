@@ -47,7 +47,7 @@ export function buildTenantWalkSeedFromCityTemplates(input: {
   const enabledRoutes = resolveAdminCityPackEnabledRoutes(input.cityPackId, input.cityPackContent);
   const cityRoutes = resolveAdminCityPackRoutes(input.cityPackId, input.cityPackContent);
   const existingByRoute = input.settings.arrivalWalkToHostelByRoute ?? {};
-  const nextByRoute: Partial<Record<RouteId, LocalizedText>> = { ...existingByRoute };
+  const nextByRoute: Partial<Record<RouteId, LocalizedField>> = { ...existingByRoute };
 
   for (const routeId of enabledRoutes) {
     if (hasLocalizedValue(existingByRoute[routeId])) {
