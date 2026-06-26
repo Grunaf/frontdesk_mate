@@ -50,7 +50,7 @@ describe('resolveArrivalWalkReadiness', () => {
     expect(
       resolveArrivalWalkReadiness({
         cityPackId: 'custom-pack',
-        settings: { arrivalWalkToHostel: { en: 'Go left at the corner' } },
+        settings: { arrivalWalkToHostel: 'Go left at the corner' },
         cityPackContent: {
           enabledRoutes: ['airport'],
           routes: {},
@@ -65,7 +65,7 @@ describe('resolveArrivalWalkReadiness', () => {
         cityPackId: 'sarajevo',
         settings: {
           arrivalWalkToHostelByRoute: {
-            airport: { en: 'Walk from the stop to our door' },
+            airport: 'Walk from the stop to our door',
           },
         },
         cityPackContent,
@@ -77,8 +77,8 @@ describe('resolveArrivalWalkReadiness', () => {
         cityPackId: 'sarajevo',
         settings: {
           arrivalWalkToHostelByRoute: {
-            airport: { en: 'Walk from the stop to our door' },
-            bus_central: { en: 'Enter the courtyard' },
+            airport: 'Walk from the stop to our door',
+            bus_central: 'Enter the courtyard',
           },
         },
         cityPackContent,
@@ -100,7 +100,7 @@ describe('buildTenantWalkSeedFromCityTemplates', () => {
       settings: {},
     });
 
-    expect(seed.arrivalWalkToHostelByRoute?.airport?.en).toContain('Dalmatinska');
+    expect(seed.arrivalWalkToHostelByRoute?.airport).toContain('Dalmatinska');
   });
 });
 
