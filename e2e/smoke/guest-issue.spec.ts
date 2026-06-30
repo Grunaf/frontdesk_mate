@@ -18,6 +18,7 @@ test.describe('guest issue report', () => {
     const reportTrigger = page.getByRole('button', {
       name: /Something not working\?|Что-то не работает\?/i,
     });
+    await reportTrigger.scrollIntoViewIfNeeded();
     await expect(reportTrigger).toBeVisible();
     await reportTrigger.click();
 
@@ -26,7 +27,9 @@ test.describe('guest issue report', () => {
     await page.locator('#guest-issue-note').fill('No hot water');
     await page.getByRole('button', { name: /Send report|Отправить/i }).click();
 
-    await expect(page.getByText(/Sent to reception|Отправлено ресепшену/i)).toBeVisible();
+    await expect(page.getByText(/Sent to reception|Отправлено ресепшену/i)).toBeVisible({
+      timeout: config.navTimeoutMs,
+    });
     await expect(page.getByText(/Ref #/)).toBeVisible();
   });
 
@@ -36,7 +39,11 @@ test.describe('guest issue report', () => {
       .locator('[data-slot="bottom-sheet-content"]')
       .filter({ hasText: /For reception|Для ресепшена/i });
     await expect(staySheet).toBeVisible();
-    await staySheet.getByRole('button', { name: /Report issue|Сообщить о поломке/i }).click();
+    const reportFromStay = staySheet.getByRole('button', {
+      name: /Report issue|Сообщить о поломке/i,
+    });
+    await reportFromStay.scrollIntoViewIfNeeded();
+    await reportFromStay.click();
     await expect(page.getByText(/Only reception sees this|Видит только ресепшен/i)).toBeVisible();
   });
 });

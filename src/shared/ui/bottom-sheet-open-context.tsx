@@ -68,11 +68,12 @@ export function useRegisterBottomSheetOpen(open: boolean | undefined): void {
   const { registerOpen } = useContext(BottomSheetOpenContext);
 
   useLayoutEffect(() => {
-    if (open !== true) {
-      return;
+    if (open === true) {
+      registerOpen(id, true);
     }
 
-    registerOpen(id, true);
-    return () => registerOpen(id, false);
+    return () => {
+      registerOpen(id, false);
+    };
   }, [id, open, registerOpen]);
 }
