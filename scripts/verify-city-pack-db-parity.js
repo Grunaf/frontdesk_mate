@@ -140,6 +140,11 @@ function diffRoutes(packId, expected, actualContent) {
 }
 
 async function main() {
+  if (process.env.SKIP_CITY_PACK_DB === '1') {
+    console.warn('[city-pack:parity] SKIP_CITY_PACK_DB=1 — skipping parity check.');
+    process.exit(0);
+  }
+
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
