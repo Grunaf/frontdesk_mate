@@ -7,6 +7,7 @@ import {
   resolveArrivalWalkPreviewText,
   resolveArrivalWalkReadiness,
 } from './resolveArrivalTransportReadiness';
+import { resolveLocalizedText } from '@/entities/city-pack/model/localized';
 
 describe('resolveArrivalWalkReadiness', () => {
   const cityPackContent: CityPackContent = {
@@ -100,7 +101,9 @@ describe('buildTenantWalkSeedFromCityTemplates', () => {
       settings: {},
     });
 
-    expect(seed.arrivalWalkToHostelByRoute?.airport).toContain('Dalmatinska');
+    expect(resolveLocalizedText(seed.arrivalWalkToHostelByRoute?.airport, 'en')).toContain(
+      'Dalmatinska'
+    );
   });
 });
 

@@ -33,7 +33,7 @@ function buildHostel(overrides: {
       socials: {},
       feedbackPhone: { raw: '', mask: '', href: '' },
     },
-  } as HostelConfig;
+  } as unknown as HostelConfig;
 }
 
 describe('resolveReceptionContact', () => {
