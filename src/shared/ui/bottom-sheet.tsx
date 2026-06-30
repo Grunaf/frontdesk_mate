@@ -7,8 +7,15 @@ import { X } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from './button';
 import { useRegisterBottomSheetOpen } from './bottom-sheet-open-context';
+import { useBottomSheetScrollFade } from './useBottomSheetScrollFade';
 
-type BottomSheetSize = 'small' | 'compact' | 'large';
+export const BOTTOM_SHEET_SIZES = {
+  small: 'small',
+  medium: 'compact',
+  large: 'large',
+} as const;
+
+export type BottomSheetSize = (typeof BOTTOM_SHEET_SIZES)[keyof typeof BOTTOM_SHEET_SIZES];
 
 function bottomSheetSizeClassName(size: BottomSheetSize): string {
   switch (size) {
@@ -22,7 +29,7 @@ function bottomSheetSizeClassName(size: BottomSheetSize): string {
   }
 }
 
-const BottomSheetSizeContext = React.createContext<BottomSheetSize>('compact');
+const BottomSheetSizeContext = React.createContext<BottomSheetSize>(BOTTOM_SHEET_SIZES.medium);
 
 type BottomSheetProps = React.ComponentProps<typeof DrawerPrimitive.Root>;
 
@@ -86,7 +93,7 @@ function BottomSheetContent({
   className,
   children,
   showCloseButton = true,
-  size = 'compact',
+  size = BOTTOM_SHEET_SIZES.medium,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content> & {
   showCloseButton?: boolean;
@@ -134,16 +141,57 @@ function BottomSheetHeader({ className, ...props }: React.ComponentProps<'div'>)
   );
 }
 
-function BottomSheetBody({ className, ...props }: React.ComponentProps<'div'>) {
+function BottomSheetScrollFade({
+  position,
+}: {
+  position: 'top' | 'bottom';
+}) {
   return (
     <div
-      data-slot="bottom-sheet-body"
+      aria-hidden="true"
+      data-slot={`bottom-sheet-scroll-fade-${position}`}
       className={cn(
-        'min-h-0 flex-1 overflow-y-auto overscroll-contain px-6',
-        className
+        'pointer-events-none absolute inset-x-0 z-10 h-8 motion-reduce:transition-none',
+        position === 'top'
+          ? 'top-0 bg-gradient-to-b from-popover via-popover/80 to-transparent'
+          : 'bottom-0 bg-gradient-to-t from-popover via-popover/80 to-transparent'
       )}
-      {...props}
     />
+  );
+}
+
+function BottomSheetBody({
+  className,
+  showScrollFade = true,
+  showTopScrollFade = true,
+  children,
+  ...props
+}: React.ComponentProps<'div'> & {
+  showScrollFade?: boolean;
+  showTopScrollFade?: boolean;
+}) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const { canScrollUp, canScrollDown } = useBottomSheetScrollFade(scrollRef, showScrollFade, children);
+
+  return (
+    <div className="relative min-h-0 flex-1">
+      <div
+        ref={scrollRef}
+        data-slot="bottom-sheet-body"
+        className={cn(
+          'h-full overflow-y-auto overscroll-contain px-6 pt-4',
+          canScrollDown && 'pb-2',
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+      {showScrollFade && showTopScrollFade && canScrollUp ? (
+        <BottomSheetScrollFade position="top" />
+      ) : null}
+      {showScrollFade && canScrollDown ? <BottomSheetScrollFade position="bottom" /> : null}
+    </div>
   );
 }
 

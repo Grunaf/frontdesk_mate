@@ -14,6 +14,13 @@ const {
 loadEnvConfig(process.cwd());
 
 async function main() {
+  if (process.env.SKIP_CITY_PACK_DB === '1') {
+    console.warn(
+      '[city-pack:validate-v3] SKIP_CITY_PACK_DB=1 — skipping DB validation.'
+    );
+    process.exit(0);
+  }
+
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {

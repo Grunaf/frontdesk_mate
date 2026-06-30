@@ -181,6 +181,23 @@ describe('resolveGuestExtrasLayout', () => {
     expect(layout.featured).toHaveLength(4);
     expect(layout.standard).toHaveLength(4);
   });
+
+  it('excludes preset ids from concierge layout when requested', () => {
+    const layout = resolveGuestExtrasLayout(
+      {
+        guestExtras: [
+          { presetId: 'laundry', enabled: true },
+          { presetId: 'late_checkout', enabled: true, priceLabel: '10€' },
+          { presetId: 'partner_tour', enabled: true },
+        ],
+      },
+      true,
+      { excludePresetIds: ['late_checkout'] }
+    );
+
+    expect(layout.featured).toHaveLength(0);
+    expect(layout.standard.map((extra) => extra.presetId)).toEqual(['laundry', 'partner_tour']);
+  });
 });
 
 describe('guestExtraSupportsSchedule', () => {

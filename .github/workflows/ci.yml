@@ -13,6 +13,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
       ADMIN_SECRET: ci-admin-secret
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,8 +38,11 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      - name: City pack DB gate
+        run: npm run city-pack:validate-v3 && npm run city-pack:parity
+
       - name: Build
-        run: npm run build
+        run: npm run build:vercel
 
   # Enable after GitHub secrets + repo variable ENABLE_SMOKE_CI=true (see SMOKE.md)
   smoke:
@@ -46,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: mcr.microsoft.com/playwright:v1.51.1-noble
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

@@ -12,10 +12,18 @@ describe('shouldShowGuestStayChip', () => {
     ).toBe(true);
   });
 
-  it('hides on arrival guide', () => {
+  it('hides on arrival guide and drill-down routes', () => {
     expect(
       shouldShowGuestStayChip({
         cleanPath: '/welcome',
+        isRegistered: true,
+        hasForeignRegistration: false,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldShowGuestStayChip({
+        cleanPath: '/guide',
         isRegistered: true,
         hasForeignRegistration: false,
       })

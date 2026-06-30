@@ -115,7 +115,7 @@ export function GuestExtrasFields({ settings }: GuestExtrasFieldsProps) {
               {extra.enabled ? (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <label className="block space-y-1 text-xs">
-                    <span>Price label</span>
+                    <span>Price label *</span>
                     <input
                       value={extra.priceLabel ?? ''}
                       onChange={(event) =>

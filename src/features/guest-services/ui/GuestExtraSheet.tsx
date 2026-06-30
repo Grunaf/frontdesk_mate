@@ -19,6 +19,7 @@ import {
   Button,
   ExternalServiceButton,
 } from '@/shared/ui';
+import { formatGuestExtraPriceLine } from '../lib/formatGuestExtraPriceLine';
 import { guestExtraPresetI18nKey } from '../lib/guestExtraI18n';
 
 interface GuestExtraSheetProps {
@@ -71,14 +72,13 @@ export function GuestExtraSheet({
   }
 
   const key = guestExtraPresetI18nKey(extra.presetId);
-  const priceLine = extra.priceLabel
-    ? t('priceLabel', { price: extra.priceLabel })
-    : t('priceAskReception');
+  const priceLine = formatGuestExtraPriceLine((key, values) => t(key, values), extra.priceLabel);
   const isOps = extra.kind === 'ops';
-  const partnerCtaCount =
-    Number(Boolean(waEnabled && extra.whatsappEnabled && whatsappHref)) +
-    Number(Boolean(extra.externalUrl));
+  const showWhatsappCta = Boolean(waEnabled && extra.whatsappEnabled && whatsappHref);
+  const showOpsReceptionHint = isOps && !showWhatsappCta;
+  const partnerCtaCount = Number(showWhatsappCta) + Number(Boolean(extra.externalUrl));
   const sheetSize = isOps || partnerCtaCount <= 1 ? 'small' : 'compact';
+  const hasFooter = isOps ? showWhatsappCta : showWhatsappCta || Boolean(extra.externalUrl);
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
@@ -87,73 +87,54 @@ export function GuestExtraSheet({
           <BottomSheetTitle>{t(`${key}.title`)}</BottomSheetTitle>
         </BottomSheetHeader>
         <BottomSheetBody className="space-y-3">
-          <p className="text-sm text-muted-foreground">{priceLine}</p>
+          <p className="text-muted-foreground text-sm">{priceLine}</p>
           {extra.scheduleLabel ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {t('scheduleLabel', { schedule: extra.scheduleLabel })}
             </p>
           ) : null}
-          <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+          <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
             {t(`${key}.description`)}
           </p>
+          {extra.presetId === 'late_checkout' ? (
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              {t(`${key}.availabilityHint`)}
+            </p>
+          ) : null}
+          {showOpsReceptionHint ? (
+            <p className="text-muted-foreground text-sm leading-relaxed">{t('opsReceptionHint')}</p>
+          ) : null}
         </BottomSheetBody>
-        <BottomSheetFooter className="gap-2">
-          {isOps ? (
-            <>
-              <Button
-                type="button"
+        {hasFooter ? (
+          <BottomSheetFooter className="gap-2">
+            {showWhatsappCta ? (
+              <ExternalServiceButton
+                service="whatsapp"
+                href={whatsappHref!}
                 className="w-full"
-                onClick={() => {
-                  trackGuestExtraEvent('extras_cta_reception', { presetId: extra.presetId });
-                  onOpenChange(false);
-                }}
+                onClick={() =>
+                  trackGuestExtraEvent('extras_cta_whatsapp', { presetId: extra.presetId })
+                }
               >
-                {t('receptionButton')}
+                {t(`${key}.whatsappButton`)}
+              </ExternalServiceButton>
+            ) : null}
+            {!isOps && extra.externalUrl ? (
+              <Button asChild variant="outline" className="w-full">
+                <a
+                  href={extra.externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() =>
+                    trackGuestExtraEvent('extras_cta_link', { presetId: extra.presetId })
+                  }
+                >
+                  {t('externalLinkButton')}
+                </a>
               </Button>
-              {waEnabled && extra.whatsappEnabled && whatsappHref ? (
-                <ExternalServiceButton
-                  service="whatsapp"
-                  href={whatsappHref}
-                  className="w-full"
-                  onClick={() =>
-                    trackGuestExtraEvent('extras_cta_whatsapp', { presetId: extra.presetId })
-                  }
-                >
-                  {t(`${key}.whatsappButton`)}
-                </ExternalServiceButton>
-              ) : null}
-            </>
-          ) : (
-            <>
-              {waEnabled && extra.whatsappEnabled && whatsappHref ? (
-                <ExternalServiceButton
-                  service="whatsapp"
-                  href={whatsappHref}
-                  className="w-full"
-                  onClick={() =>
-                    trackGuestExtraEvent('extras_cta_whatsapp', { presetId: extra.presetId })
-                  }
-                >
-                  {t(`${key}.whatsappButton`)}
-                </ExternalServiceButton>
-              ) : null}
-              {extra.externalUrl ? (
-                <Button asChild variant="outline" className="w-full">
-                  <a
-                    href={extra.externalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() =>
-                      trackGuestExtraEvent('extras_cta_link', { presetId: extra.presetId })
-                    }
-                  >
-                    {t('externalLinkButton')}
-                  </a>
-                </Button>
-              ) : null}
-            </>
-          )}
-        </BottomSheetFooter>
+            ) : null}
+          </BottomSheetFooter>
+        ) : null}
       </BottomSheetContent>
     </BottomSheet>
   );

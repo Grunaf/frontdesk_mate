@@ -15,15 +15,21 @@ test.describe('guest issue report', () => {
   });
 
   test('shows report card and sends shower issue', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /Report issue|Сообщить о поломке/i })).toBeVisible();
-    await page.getByRole('button', { name: /Report issue|Сообщить о поломке/i }).first().click();
+    const reportTrigger = page.getByRole('button', {
+      name: /Something not working\?|Что-то не работает\?/i,
+    });
+    await reportTrigger.scrollIntoViewIfNeeded();
+    await expect(reportTrigger).toBeVisible();
+    await reportTrigger.click();
 
     await expect(page.getByText(/Only reception sees this|Видит только ресепшен/i)).toBeVisible();
     await page.getByRole('tab', { name: /Shower|Душ/i }).click();
     await page.locator('#guest-issue-note').fill('No hot water');
     await page.getByRole('button', { name: /Send report|Отправить/i }).click();
 
-    await expect(page.getByText(/Sent to reception|Отправлено ресепшену/i)).toBeVisible();
+    await expect(page.getByText(/Sent to reception|Отправлено ресепшену/i)).toBeVisible({
+      timeout: config.navTimeoutMs,
+    });
     await expect(page.getByText(/Ref #/)).toBeVisible();
   });
 
@@ -33,7 +39,11 @@ test.describe('guest issue report', () => {
       .locator('[data-slot="bottom-sheet-content"]')
       .filter({ hasText: /For reception|Для ресепшена/i });
     await expect(staySheet).toBeVisible();
-    await staySheet.getByRole('button', { name: /Report issue|Сообщить о поломке/i }).click();
+    const reportFromStay = staySheet.getByRole('button', {
+      name: /Report issue|Сообщить о поломке/i,
+    });
+    await reportFromStay.scrollIntoViewIfNeeded();
+    await reportFromStay.click();
     await expect(page.getByText(/Only reception sees this|Видит только ресепшен/i)).toBeVisible();
   });
 });
@@ -49,7 +59,10 @@ test.describe('reception issues tab', () => {
 
     await checkInWithPin(guestPage, config);
     await openConcierge(guestPage, config);
-    await guestPage.getByRole('button', { name: /Report issue|Сообщить о поломке/i }).first().click();
+    await guestPage
+      .getByRole('button', { name: /Report issue|Сообщить о поломке/i })
+      .first()
+      .click();
     await guestPage.getByRole('tab', { name: /Toilet|Туалет/i }).click();
     await guestPage.getByRole('button', { name: /Send report|Отправить/i }).click();
     await expect(guestPage.getByText(/Sent to reception|Отправлено ресепшену/i)).toBeVisible();

@@ -14,6 +14,7 @@ import { cn } from '@/shared/lib/utils';
 import {
   BottomSheet,
   BottomSheetBody,
+  BOTTOM_SHEET_SIZES,
   BottomSheetContent,
   BottomSheetFooter,
   BottomSheetHeader,
@@ -138,7 +139,7 @@ export function GuestIssueReportSheet({ open, onOpenChange }: GuestIssueReportSh
 
   return (
     <BottomSheet open={open} onOpenChange={handleOpenChange}>
-      <BottomSheetContent className="px-0 pb-0">
+      <BottomSheetContent size={BOTTOM_SHEET_SIZES.large} className="flex flex-col px-0 pb-0">
         <BottomSheetHeader className="px-6 pb-3">
           <BottomSheetTitle className="text-base leading-snug">
             {successStayRef ? t('successTitle') : t('sheetTitle')}

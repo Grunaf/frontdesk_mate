@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from '@/shared/i18n';
-import { Button } from '@/shared/ui';
+import { Icon } from '@/shared/ui';
+import { ChevronRight, Wrench } from 'lucide-react';
 import { useGuestIssueReport } from './GuestIssueReportProvider';
 
 export function GuestIssueReportCard() {
@@ -9,12 +10,14 @@ export function GuestIssueReportCard() {
   const { openReportSheet } = useGuestIssueReport();
 
   return (
-    <section className="rounded-xl border bg-muted/30 px-4 py-3">
-      <p className="text-sm font-medium text-foreground">{t('cardTitle')}</p>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t('cardDescription')}</p>
-      <Button type="button" className="mt-3 w-full" variant="outline" onClick={openReportSheet}>
-        {t('cardButton')}
-      </Button>
-    </section>
+    <button
+      type="button"
+      onClick={openReportSheet}
+      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+    >
+      <Icon icon={Wrench} className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="flex-1 text-sm font-medium text-foreground">{t('cardTitle')}</span>
+      <Icon icon={ChevronRight} className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
   );
 }

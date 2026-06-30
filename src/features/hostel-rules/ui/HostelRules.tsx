@@ -14,13 +14,14 @@ import { HostelRuleDetailSheet } from './HostelRuleDetailSheet';
 
 interface HostelRulesProps {
   settings: TenantSettings;
+  variant?: 'compact' | 'full';
 }
 
 function hasRuleDetail(rule: ResolvedHouseRuleDisplay): boolean {
   return rule.detail.trim().length > 0;
 }
 
-export function HostelRules({ settings }: HostelRulesProps) {
+export function HostelRules({ settings, variant = 'full' }: HostelRulesProps) {
   const rulesComponent = useTranslations('components.rules');
   const displays = useMemo(() => {
     return resolveHouseRulesForDisplay(getHouseRules(settings));
@@ -46,15 +47,31 @@ export function HostelRules({ settings }: HostelRulesProps) {
     }
   };
 
-  return (
-    <section>
-      <h3 className="text-sm font-semibold text-foreground">{rulesComponent('title')}</h3>
+  const Wrapper = variant === 'compact' ? 'div' : 'section';
 
-      {expandableRules.length > 0 ? (
-        <p className="mt-1 text-xs text-muted-foreground">{rulesComponent('tapHint')}</p>
+  return (
+    <Wrapper>
+      {variant === 'full' ? (
+        <h3 className="text-sm font-semibold text-foreground">{rulesComponent('title')}</h3>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      {expandableRules.length > 0 ? (
+        <p
+          className={cn(
+            'text-xs text-muted-foreground',
+            variant === 'full' ? 'mt-1' : 'mt-1.5'
+          )}
+        >
+          {rulesComponent('tapHint')}
+        </p>
+      ) : null}
+
+      <div
+        className={cn(
+          'flex flex-wrap gap-2',
+          variant === 'full' ? 'mt-2' : expandableRules.length > 0 ? 'mt-3' : null
+        )}
+      >
         {displays.map((rule) => {
           if (!hasRuleDetail(rule)) {
             return (
@@ -88,6 +105,6 @@ export function HostelRules({ settings }: HostelRulesProps) {
         open={sheetOpen}
         onOpenChange={handleSheetOpenChange}
       />
-    </section>
+    </Wrapper>
   );
 }

@@ -22,6 +22,8 @@ Automated smoke covers admin login, city packs, guest PIN, arrival routes, Local
 
 These items still need a quick human pass:
 
+- [ ] **Concierge hub** — `/` shows compact services, local guide, and FAQ blocks (no full explore tabs, full FAQ list, or full extras grid); drill-down `/guide`, `/services`, `/faq` opens full views; back returns to `/`; `FeatureGate` hides modules when disabled in tenant settings
+- [ ] **Stay essentials bridges** (registered guest on `/`) — horizontal bridge cards: title only, icon bottom-left, pastel tint per bridge; **border** = read state (primary unread / muted read); tap opens sheet; Wi‑Fi copy; check-out / reception / night access sheets when tenant data allows; night bridge hidden after key issued, dismiss, or outside arrival window; read state persists per stay after reload; reception strip hidden while any sheet is open
 - [ ] **Guest flow** — [guest-flow-pass.md](docs/qa/guest-flow-pass.md) (P0 A–E; stay chip S1–S7; reception R1–R6 if desk PIN set)
 - [ ] **Mobile width** — reception desk: issue form without scrolling, Plan calendar, Access ··· menu on touch
 - [ ] **RU locale** — switch to `/ru/welcome`, key labels not broken

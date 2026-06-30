@@ -13,23 +13,46 @@ test.describe('guest concierge stay chip', () => {
     await openConcierge(page, config);
   });
 
-  test('shows stay chip, wifi row, and reception strip', async ({ page }) => {
+  test('shows stay chip, stay essentials bridges, and reception strip', async ({ page }) => {
     await expect(page.getByRole('button', { name: /My stay|Проживание/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Message .* reception|Написать ресепшену/i })).toBeVisible();
+    const wifiBridge = page.getByTestId('stay-bridge-wifi');
+    await wifiBridge.scrollIntoViewIfNeeded();
+    await expect(wifiBridge).toBeVisible();
+    const strip = page.locator('[data-slot="concierge-reception-strip"]');
+    await expect(strip).toBeVisible();
+    await expect(
+      strip.getByRole('link', {
+        name: /Message .* reception|Call reception|Написать ресепшену|Позвонить на ресепшен/i,
+      })
+    ).toBeVisible();
   });
 
   test('opens stay sheet with reception ref block', async ({ page }) => {
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
     await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
     await expect(page.getByText(/Ref #/)).toBeVisible();
-    await expect(page.getByRole('link', { name: /Request to extend stay|Написать о продлении/i })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /Message reception|Написать ресепшену/i })
+    ).toBeVisible();
   });
 
   test('hides reception strip while stay sheet is open', async ({ page }) => {
     const strip = page.locator('[data-slot="concierge-reception-strip"]');
     await expect(strip).toBeVisible();
-    await page.getByRole('button', { name: /My stay|Проживание/ }).click();
+    const myStay = page.getByRole('button', { name: /My stay|Проживание/ });
+    await myStay.scrollIntoViewIfNeeded();
+    await myStay.click();
     await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
+    await expect(strip).toBeHidden();
+  });
+
+  test('hides reception strip while stay essentials sheet is open', async ({ page }) => {
+    const strip = page.locator('[data-slot="concierge-reception-strip"]');
+    await expect(strip).toBeVisible();
+    const wifiBridge = page.getByTestId('stay-bridge-wifi');
+    await wifiBridge.scrollIntoViewIfNeeded();
+    await wifiBridge.click();
+    await expect(page.getByText(/Network|Сеть/i)).toBeVisible();
     await expect(strip).toBeHidden();
   });
 
@@ -37,11 +60,13 @@ test.describe('guest concierge stay chip', () => {
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
     await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
 
-    const roomMapLink = page.locator('a[href*="step=settlement"]');
+    const roomMapLink = page.getByRole('link', {
+      name: /Show room map|room map|Карта комнаты|направления/i,
+    });
     await roomMapLink.scrollIntoViewIfNeeded();
     await roomMapLink.click();
 
-    await expect(page).toHaveURL(/\/welcome\?.*step=settlement/);
+    await expect(page).toHaveURL(/\/welcome\?.*step=settlement/, { timeout: config.navTimeoutMs });
     await expect(page.getByRole('tab', { name: /Settlement|Заселение/i })).toBeVisible();
   });
 

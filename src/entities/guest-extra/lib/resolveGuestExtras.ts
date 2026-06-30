@@ -120,9 +120,13 @@ export function resolveGuestExtrasForGuest(
 
 export function resolveGuestExtrasLayout(
   settings: TenantSettings,
-  isRegistered: boolean
+  isRegistered: boolean,
+  options?: { excludePresetIds?: readonly GuestExtraPresetId[] }
 ): GuestExtrasLayout {
-  const visible = resolveGuestExtrasForGuest(settings, isRegistered);
+  const excluded = new Set(options?.excludePresetIds ?? []);
+  const visible = resolveGuestExtrasForGuest(settings, isRegistered).filter(
+    (extra) => !excluded.has(extra.presetId)
+  );
 
   const featured = visible
     .filter((extra) => extra.tileVariant === 'highlight')

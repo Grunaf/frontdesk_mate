@@ -44,6 +44,17 @@ Production URLs (one deploy, many hostels):
 
 On production, bare domain and `app.yourdomain.com` **do not** fall back to the `default` tenant. Locally, `NEXT_PUBLIC_TENANT_SLUG` still selects the tenant when no subdomain is present.
 
+## Production deploy (Vercel)
+
+1. **Merge to `main`** — Production deployments come from the production branch (Settings → Git → Production Branch = `main`). Preview URLs (`*.vercel.app`) are not bound to your custom domain.
+2. **`vercel.json`** — uses `npm run build:vercel` (no city-pack DB checks at build time). Set the same Supabase/DB/admin secrets in Vercel **Production** (and **Preview** if you deploy feature branches).
+3. **Env (Production)** — see `.env.example`. Required: `NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `ADMIN_SECRET`, **`NEXT_PUBLIC_BASE_DOMAIN=your-apex`** (e.g. `staysync.cc`, not `localhost`). Do **not** set `NEXT_PUBLIC_TENANT_SLUG` on Vercel.
+4. **Domains in Vercel** — apex + `www`, plus wildcards for multi-tenant hosts:
+   - `*.yourdomain.com` (landing `{slug}.yourdomain.com`)
+   - `*.app.yourdomain.com` (guest app)
+   - `*.reception.yourdomain.com` (reception desk)
+5. **Smoke after deploy** — `https://yourdomain.com/en/`, `https://{slug}.yourdomain.com/en/`, `https://{slug}.app.yourdomain.com/en/welcome`, `/admin`. Landing “Guest app” links must point at `*.app.yourdomain.com`, not localhost.
+
 Rotate WiFi passwords and door codes after onboarding — demo values in early SQL migrations are not production secrets.
 
 ## Project layout
@@ -170,8 +181,9 @@ See `.env.example`. Required for full flow:
 
 - `DATABASE_URL` — Postgres (Supabase pooler)
 - `ADMIN_SECRET` — admin login
-- `NEXT_PUBLIC_TENANT_SLUG` — which tenant to serve locally
-- `SUPABASE_URL`, `SUPABASE_SECRET_KEY` — tenant fetch
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` — tenant fetch / admin save
+- `NEXT_PUBLIC_TENANT_SLUG` — **local dev only** (which tenant on flat localhost)
+- `NEXT_PUBLIC_BASE_DOMAIN` — **production** public hostname for generated links (Vercel env)
 
 ## Changelog (developer notes)
 

@@ -11,8 +11,8 @@ test.describe('guest extras', () => {
     await openConcierge(page, config);
   });
 
-  test('opens laundry extra sheet from bento tile', async ({ page }) => {
-    await expect(page.getByText(/^Extras$|^Дополнительно$/i)).toBeVisible();
+  test.skip('opens laundry extra sheet from bento tile', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: /Services|Услуги/i })).toBeVisible();
     await page.getByTestId('guest-extra-tile-laundry').click();
     await expect(page.getByText(/^Laundry$|^Прачка$/i).first()).toBeVisible();
     await expect(

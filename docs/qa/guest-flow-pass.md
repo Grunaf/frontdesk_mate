@@ -150,13 +150,14 @@ Requires reception PIN in tenant settings and `E2E_RECEPTION_DESK_PIN` in `e2e/e
 
 ## 5. P1 — stay chip (header)
 
-After check-in on Concierge (not on Arrival guide).
+**My stay** only on Concierge (`/`). Hidden on Arrival guide, drill-down (`/guide`, `/services`, `/faq`), and check-in.
 
 | # | Steps | Expected | Pass | Fail | Notes |
 |---|-------|----------|------|------|-------|
-| S1 | After PIN → Concierge (`/`) | Stay chip **My stay** top-right; Wi‑Fi compact row; **fixed** reception strip at bottom; **no** Find your bed card | ☐ | ☐ | |
+| S1 | After PIN → Concierge (`/`) | Stay chip **My stay** top-right; stay essentials bridges; **fixed** reception strip at bottom | ☐ | ☐ | |
 | S2 | Tap stay chip | Sheet: **For reception** block (bed, dates, **Ref #XXXXXX**); optional **Registered as** if name issued; copy icon in header; extend notice; room map link; footer WA extend (includes ref) | ☐ | ☐ | |
-| S3 | Open Arrival guide (`/welcome`) | Stay chip **hidden**; no reception strip on welcome | ☐ | ☐ | |
+| S3 | Open Arrival guide (`/welcome`) | Stay chip **hidden**; header back shows **Concierge** label; no reception strip on welcome | ☐ | ☐ | |
+| S3b | Concierge → **See all** on guide/services/faq | Header: icon-only back (no label), no brand, no My stay; back returns to Concierge | ☐ | ☐ | |
 | S4 | Sheet → **Show room map** link | Lands on Settlement (`?step=settlement`); **Settlement** tab scrolled into view in chip bar | ☐ | ☐ | |
 | S5 | Concierge reception strip | **Fixed** at bottom; opens WA. On short viewport (≤520px height): compact single-line label, no hints | ☐ | ☐ | |
 | S6 | Tap **copy icon** in For reception header | Clipboard has hostel, bed line, dates, Ref; icon briefly shows check | ☐ | ☐ | |

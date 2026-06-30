@@ -55,6 +55,7 @@ interface EssentialsSectionProps {
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   highlight?: boolean;
+  limit?: number;
   title: string;
   subtitle: string;
   expandLabel: string;
@@ -68,6 +69,7 @@ export function EssentialsSection({
   expanded,
   onExpandedChange,
   highlight = false,
+  limit,
   title,
   subtitle,
   expandLabel,
@@ -79,7 +81,8 @@ export function EssentialsSection({
     return null;
   }
 
-  const triggerLabel = buildUtilityTriggerLabel(utilities, t);
+  const visibleUtilities = limit != null ? utilities.slice(0, limit) : utilities;
+  const triggerLabel = buildUtilityTriggerLabel(visibleUtilities, t);
 
   return (
     <div className="space-y-2">
@@ -109,7 +112,7 @@ export function EssentialsSection({
 
         {expanded ? (
           <div className="divide-y border-t">
-            {utilities.map((utility) => (
+            {visibleUtilities.map((utility) => (
               <UtilityPlaceRow
                 key={utility.id}
                 recommendation={utility}

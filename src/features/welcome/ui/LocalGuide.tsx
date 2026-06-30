@@ -27,6 +27,11 @@ import {
 import { RecommendationCard } from './RecommendationCard';
 import { EssentialsSection } from './EssentialsSection';
 
+export type LocalGuideVariant = 'compact' | 'full';
+
+const COMPACT_NEAR_HOSTEL_LIMIT = 2;
+const COMPACT_ESSENTIALS_LIMIT = 3;
+
 function resolveGuideTabIcon(tabId: string) {
   if (tabId === 'all') {
     return undefined;
@@ -45,9 +50,7 @@ function RecommendationsList({
   t: ReturnType<typeof useTranslations>;
 }) {
   if (recommendations.length === 0) {
-    return (
-      <p className="py-6 text-center text-xs text-muted-foreground">{t('emptyCategory')}</p>
-    );
+    return <p className="text-muted-foreground py-6 text-center text-xs">{t('emptyCategory')}</p>;
   }
 
   return (
@@ -70,17 +73,54 @@ function RecommendationsList({
   );
 }
 
-export function LocalGuide() {
+function MapCard({
+  customMapUrl,
+  hostelName,
+  t,
+}: {
+  customMapUrl: string;
+  hostelName: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <a href={customMapUrl} target="_blank" rel="noopener noreferrer" className="group block">
+      <Card className="border-primary/20 bg-primary/5 hover:bg-primary/10 p-3.5 transition-colors">
+        <CardContent className="flex items-center justify-between gap-3 p-0">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="border-primary/20 bg-card shrink-0 rounded-lg border p-2 shadow-xs">
+              <Icon icon={MapPin} className="text-primary h-5 w-5" />
+            </div>
+            <div className="min-w-0 space-y-0.5">
+              <h4 className="text-foreground flex items-center gap-1.5 text-xs font-bold">
+                {t('mapCard.title', { hostelName })}
+                <span className="bg-primary inline-block h-1.5 w-1.5 animate-pulse rounded-full" />
+              </h4>
+              <p className="text-muted-foreground truncate pr-2 text-[11px]">
+                {t('mapCard.description')}
+              </p>
+            </div>
+          </div>
+          <span className="text-primary shrink-0 text-sm font-bold transition-transform select-none group-hover:translate-x-0.5">
+            →
+          </span>
+        </CardContent>
+      </Card>
+    </a>
+  );
+}
+
+interface LocalGuideProps {
+  variant?: LocalGuideVariant;
+}
+
+export function LocalGuide({ variant = 'full' }: LocalGuideProps) {
+  const isCompact = variant === 'compact';
   const { name, cityPack, settings } = useTenant();
   const t = useTranslations(cityPack.locale.guideNamespace);
   const { session, checkInAt } = useGuestSession();
   const hostel = useHostelConfig();
-  const {
-    isArrivalMode,
-    utilitiesExpanded,
-    setUtilitiesExpanded,
-    unlockExplore,
-  } = useLocalGuideArrivalMode(checkInAt, session?.stayId ?? null);
+  const { isArrivalMode, utilitiesExpanded, setUtilitiesExpanded, unlockExplore } =
+    useLocalGuideArrivalMode(checkInAt, session?.stayId ?? null);
 
   const hostelPlaces = useMemo(
     () =>
@@ -93,7 +133,10 @@ export function LocalGuide() {
   );
 
   const allCityRecommendations = useMemo(
-    () => sortGuestRecommendations(cityPack.places.map((place) => placeToGuestRecommendation(place, t))),
+    () =>
+      sortGuestRecommendations(
+        cityPack.places.map((place) => placeToGuestRecommendation(place, t))
+      ),
     [cityPack.places, t]
   );
 
@@ -114,9 +157,11 @@ export function LocalGuide() {
   }, [visibleTabIds]);
 
   const mapId = hostel.sources.recommendation.map;
-  const customMapUrl = mapId
-    ? `${SITE_CONFIG.googleMapsViewerPrefix}${mapId}`
-    : null;
+  const customMapUrl = mapId ? `${SITE_CONFIG.googleMapsViewerPrefix}${mapId}` : null;
+
+  const visibleHostelPlaces = isCompact
+    ? hostelPlaces.slice(0, COMPACT_NEAR_HOSTEL_LIMIT)
+    : hostelPlaces;
 
   const getRecommendationsForTab = (tabId: string) => {
     if (tabId === 'all') {
@@ -134,12 +179,57 @@ export function LocalGuide() {
   };
 
   const tabRecommendations = getRecommendationsForTab(activeTab);
-  const { visible: visibleRecommendations, hasMore, total } = limitRecommendationsForAllTab(
+  const {
+    visible: visibleRecommendations,
+    hasMore,
+    total,
+  } = limitRecommendationsForAllTab(
     tabRecommendations,
     activeTab,
     allTabExpanded,
     ALL_TAB_INITIAL_LIMIT
   );
+
+  if (isCompact) {
+    const hasContent =
+      visibleHostelPlaces.length > 0 || utilities.length > 0 || customMapUrl != null;
+
+    if (!hasContent) {
+      return null;
+    }
+
+    return (
+      <section className="animate-fade-in space-y-5">
+        {visibleHostelPlaces.length > 0 ? (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                {t('nearHostel.title')}
+              </h3>
+              <p className="text-muted-foreground text-xs">{t('nearHostel.subtitle')}</p>
+            </div>
+            <RecommendationsList recommendations={visibleHostelPlaces} activeTab="all" t={t} />
+          </div>
+        ) : null}
+
+        <EssentialsSection
+          utilities={utilities}
+          expanded={utilitiesExpanded}
+          onExpandedChange={setUtilitiesExpanded}
+          highlight={isArrivalMode}
+          limit={COMPACT_ESSENTIALS_LIMIT}
+          title={t('essentials.title')}
+          subtitle={t('essentials.subtitle')}
+          expandLabel={t('essentials.expand')}
+          collapseLabel={t('essentials.collapse')}
+          openInMapsLabel={t('openInMaps')}
+          t={t}
+        />
+
+        {customMapUrl ? <MapCard customMapUrl={customMapUrl} hostelName={name} t={t} /> : null}
+      </section>
+    );
+  }
 
   const showExploreSection = !isArrivalMode;
 
@@ -148,10 +238,10 @@ export function LocalGuide() {
       {hostelPlaces.length > 0 ? (
         <div className="space-y-3">
           <div className="space-y-1">
-            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               {t('nearHostel.title')}
             </h3>
-            <p className="text-xs text-muted-foreground">{t('nearHostel.subtitle')}</p>
+            <p className="text-muted-foreground text-xs">{t('nearHostel.subtitle')}</p>
           </div>
           <RecommendationsList recommendations={hostelPlaces} activeTab="all" t={t} />
         </div>
@@ -173,45 +263,23 @@ export function LocalGuide() {
       {showExploreSection ? (
         <>
           <div className="space-y-1">
-            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              {hostelPlaces.length > 0 ? t('nearHostel.exploreCityTitle') : t('title', { hostelName: name })}
+            <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              {hostelPlaces.length > 0
+                ? t('nearHostel.exploreCityTitle')
+                : t('title', { hostelName: name })}
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {hostelPlaces.length > 0 ? t('nearHostel.exploreCitySubtitle') : t('subtitle')}
             </p>
           </div>
 
-          {customMapUrl ? (
-            <a href={customMapUrl} target="_blank" rel="noopener noreferrer" className="group block">
-              <Card className="border-primary/20 bg-primary/5 p-3.5 transition-colors hover:bg-primary/10">
-                <CardContent className="flex items-center justify-between gap-3 p-0">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="shrink-0 rounded-lg border border-primary/20 bg-card p-2 shadow-xs">
-                      <Icon icon={MapPin} className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 space-y-0.5">
-                      <h4 className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                        {t('mapCard.title', { hostelName: name })}
-                        <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-                      </h4>
-                      <p className="truncate pr-2 text-[11px] text-muted-foreground">
-                        {t('mapCard.description')}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="shrink-0 text-sm font-bold text-primary transition-transform select-none group-hover:translate-x-0.5">
-                    →
-                  </span>
-                </CardContent>
-              </Card>
-            </a>
-          ) : null}
+          {customMapUrl ? <MapCard customMapUrl={customMapUrl} hostelName={name} t={t} /> : null}
 
           {visibleTabIds.length === 0 ? (
             <RecommendationsList recommendations={[]} activeTab="all" t={t} />
           ) : (
             <div className="space-y-3">
-              <div className="sticky top-0 z-10 -mx-4 border-b border-border/60 bg-background/95 px-4 py-2 backdrop-blur-sm sm:mx-0 sm:px-0">
+              <div className="border-border/60 bg-background/95 sticky top-0 z-10 -mx-4 border-b px-4 py-2 backdrop-blur-sm sm:mx-0 sm:px-0">
                 <SegmentedChipBar
                   items={visibleTabIds.map((tabId) => ({
                     id: tabId,
@@ -246,18 +314,18 @@ export function LocalGuide() {
       ) : (
         <div className="space-y-3">
           <div className="space-y-1">
-            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               {t('exploreArrival.title')}
             </h3>
-            <p className="text-xs text-muted-foreground">{t('exploreArrival.subtitle')}</p>
+            <p className="text-muted-foreground text-xs">{t('exploreArrival.subtitle')}</p>
           </div>
           <Card className="border-primary/30 bg-primary/5 shadow-sm">
             <CardContent className="space-y-3 p-4">
               <div className="space-y-1">
-                <h4 className="text-xs font-bold tracking-wide text-primary uppercase">
+                <h4 className="text-primary text-xs font-bold tracking-wide uppercase">
                   {t('exploreArrival.teaserTitle')}
                 </h4>
-                <p className="text-xs leading-relaxed text-muted-foreground">
+                <p className="text-muted-foreground text-xs leading-relaxed">
                   {t('exploreArrival.teaserDescription')}
                 </p>
               </div>
