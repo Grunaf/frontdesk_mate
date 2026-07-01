@@ -8,6 +8,7 @@ import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tena
 import { cn } from '@/shared/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { RoomMapReadinessChecklist } from '../ui/RoomMapReadinessChecklist';
+import { AdminImageField } from '../ui/AdminImageField';
 import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { RoomSetupCard } from '../ui/RoomSetupCard';
 
@@ -44,6 +45,7 @@ function sanitizeHighlightedBedId(state: GuestStayFormState): string {
 }
 
 interface GuestStayFieldsProps {
+  tenantSlug: string;
   settings?: TenantSettings;
   readinessInput: TenantReadinessInput;
 }
@@ -67,11 +69,13 @@ function seedGuestStay(): { floors: StayFloor[]; rooms: StayRoom[]; beds: StayBe
 
 function FloorEditor({
   floor,
+  tenantSlug,
   onChange,
   onRemove,
   canRemove,
 }: {
   floor: StayFloor;
+  tenantSlug: string;
   onChange: (next: StayFloor) => void;
   onRemove: () => void;
   canRemove: boolean;
@@ -109,20 +113,20 @@ function FloorEditor({
           className="w-full rounded-md border px-2.5 py-1.5 text-sm"
         />
       </label>
-      <label className="block space-y-1">
-        <span className="text-[11px] text-muted-foreground">Path photo URL</span>
-        <input
-          value={floor.pathImage ?? ''}
-          onChange={(event) => onChange({ ...floor, pathImage: event.target.value })}
-          placeholder="/images/corridor.jpg"
-          className="w-full rounded-md border px-2.5 py-1.5 text-sm"
-        />
-      </label>
+      <AdminImageField
+        label="Path photo (after entering floor)"
+        tenantSlug={tenantSlug}
+        kind="misc"
+        value={floor.pathImage ?? ''}
+        onChange={(next) => onChange({ ...floor, pathImage: next })}
+        placeholder="/images/corridor.jpg"
+        previewAlt={`Floor ${floor.label || floor.id} path`}
+      />
     </div>
   );
 }
 
-export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsProps) {
+export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestStayFieldsProps) {
   const { updateDraft } = useTenantFormDraft();
   const initialGuestStay = useMemo(() => {
     const raw = settings?.guestStay ?? {};
@@ -307,6 +311,7 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
                   <FloorEditor
                     key={`floor-${index}`}
                     floor={floor}
+                    tenantSlug={tenantSlug}
                     canRemove={floors.length > 1}
                     onChange={(next) =>
                       applyGuestStayState((current) => ({
@@ -377,6 +382,7 @@ export function GuestStayFields({ settings, readinessInput }: GuestStayFieldsPro
                 <RoomSetupCard
                   key={`room-${index}`}
                   room={room}
+                  tenantSlug={tenantSlug}
                   floors={floors}
                   beds={beds}
                   guestStay={guestStay}

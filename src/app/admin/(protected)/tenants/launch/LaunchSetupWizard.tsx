@@ -168,6 +168,7 @@ export function LaunchSetupWizard({
       case 'arrival':
         return (
           <ArrivalJourneyFields
+            tenantSlug={identity.slug}
             settings={settings}
             cityPackId={identity.cityPackId}
             cityPackLabel={cityPack?.label}
@@ -178,7 +179,7 @@ export function LaunchSetupWizard({
           />
         );
       case 'room-map':
-        return <GuestStayFields settings={settings} readinessInput={readinessInput} />;
+        return <GuestStayFields tenantSlug={identity.slug} settings={settings} readinessInput={readinessInput} />;
       case 'rules-wifi':
         return (
           <>
@@ -198,6 +199,7 @@ export function LaunchSetupWizard({
             </div>
             <div className="mt-6 border-t pt-6">
               <GuestAppFields
+                tenantSlug={identity.slug}
                 settings={settings}
                 cityPackId={identity.cityPackId}
                 cityPackGateSnapshot={cityPackGateSnapshot}

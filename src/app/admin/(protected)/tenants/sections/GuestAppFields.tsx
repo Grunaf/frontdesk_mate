@@ -17,6 +17,7 @@ import { HouseRulesFields } from './HouseRulesFields';
 type GuestAppTab = 'room-map' | 'rules' | 'extras' | 'near-hostel';
 
 interface GuestAppFieldsProps {
+  tenantSlug: string;
   settings?: TenantSettings;
   cityPackId: CityPackId;
   cityPackGateSnapshot?: CityPackGateSnapshot;
@@ -33,6 +34,7 @@ const TAB_LABELS: Record<GuestAppTab, string> = {
 };
 
 export function GuestAppFields({
+  tenantSlug,
   settings,
   cityPackId,
   cityPackGateSnapshot,
@@ -85,7 +87,7 @@ export function GuestAppFields({
       </div>
 
       <div className={cn(tab !== 'room-map' && 'hidden')} aria-hidden={tab !== 'room-map'}>
-        <GuestStayFields settings={settings} readinessInput={readinessInput} />
+        <GuestStayFields tenantSlug={tenantSlug} settings={settings} readinessInput={readinessInput} />
       </div>
       <div className={cn(tab !== 'rules' && 'hidden')} aria-hidden={tab !== 'rules'}>
         <HouseRulesFields settings={settings} readinessInput={readinessInput} />

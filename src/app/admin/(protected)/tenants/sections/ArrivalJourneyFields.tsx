@@ -11,6 +11,7 @@ import { ArrivalTransportFields } from './ArrivalTransportFields';
 export type ArrivalJourneyScope = 'full' | 'launch-core';
 
 interface ArrivalJourneyFieldsProps {
+  tenantSlug: string;
   settings?: TenantSettings;
   cityPackId: CityPackId;
   cityPackLabel?: string;
@@ -27,6 +28,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 export function ArrivalJourneyFields({
+  tenantSlug,
   settings,
   cityPackId,
   cityPackContent,
@@ -68,7 +70,7 @@ export function ArrivalJourneyFields({
 
           <div className="space-y-4 border-t pt-8">
             <SectionHeading>Enter the building</SectionHeading>
-            <ArrivalAccessFields settings={settings} />
+            <ArrivalAccessFields tenantSlug={tenantSlug} settings={settings} />
           </div>
         </>
       ) : (
@@ -79,7 +81,7 @@ export function ArrivalJourneyFields({
           </p>
           <div className="space-y-4 border-t pt-8">
             <SectionHeading>Enter the building</SectionHeading>
-            <ArrivalAccessFields settings={settings} />
+            <ArrivalAccessFields tenantSlug={tenantSlug} settings={settings} />
           </div>
         </>
       )}

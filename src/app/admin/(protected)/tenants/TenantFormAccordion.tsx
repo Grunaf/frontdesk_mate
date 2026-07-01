@@ -154,6 +154,7 @@ function SectionPanel({
     case 'arrival-journey':
       return (
         <ArrivalJourneyFields
+          tenantSlug={identity.slug}
           settings={s}
           cityPackId={identity.cityPackId}
           cityPackLabel={cityPackOptions.find((pack) => pack.id === identity.cityPackId)?.label}
@@ -165,6 +166,7 @@ function SectionPanel({
     case 'guest-app':
       return (
         <GuestAppFields
+          tenantSlug={identity.slug}
           settings={s}
           cityPackId={identity.cityPackId}
           cityPackGateSnapshot={cityPackGateSnapshot}

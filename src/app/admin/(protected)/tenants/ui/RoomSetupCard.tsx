@@ -6,9 +6,11 @@ import { stayBedHasLayout } from '@/entities/room/model/room-layout';
 import { cn } from '@/shared/lib/utils';
 import { ChevronDown, Trash2 } from 'lucide-react';
 import { RoomMapEditor } from './RoomMapEditor';
+import { AdminImageField } from './AdminImageField';
 
 interface RoomSetupCardProps {
   room: StayRoom;
+  tenantSlug: string;
   floors: StayFloor[];
   beds: StayBed[];
   guestStay?: GuestStayConfig;
@@ -21,6 +23,7 @@ interface RoomSetupCardProps {
 
 export function RoomSetupCard({
   room,
+  tenantSlug,
   floors,
   beds,
   guestStay,
@@ -92,15 +95,17 @@ export function RoomSetupCard({
                 ))}
               </select>
             </label>
-            <label className="block space-y-1 sm:col-span-2">
-              <span className="text-[11px] font-medium text-muted-foreground">Door photo URL</span>
-              <input
+            <div className="sm:col-span-2">
+              <AdminImageField
+                label="Door photo"
+                tenantSlug={tenantSlug}
+                kind="misc"
                 value={room.doorImage ?? ''}
-                onChange={(event) => onRoomChange({ ...room, doorImage: event.target.value })}
+                onChange={(next) => onRoomChange({ ...room, doorImage: next })}
                 placeholder="/images/your-hostel/door.jpg"
-                className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
+                previewAlt={room.label ? `Room ${room.label} door` : 'Room door'}
               />
-            </label>
+            </div>
           </div>
         )}
 

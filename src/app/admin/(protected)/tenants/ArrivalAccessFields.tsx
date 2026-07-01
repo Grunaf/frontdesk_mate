@@ -5,8 +5,10 @@ import type { AccessPoint, ArrivalLayoutKind, TenantSettings } from '@/entities/
 import { isArrivalAccessMissing } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { normalizeAccessPoints } from '@/entities/tenant/lib/normalizeAccessPoints';
 import { AdminField } from './ui/AdminField';
+import { AdminImageField } from './ui/AdminImageField';
 
 interface ArrivalAccessFieldsProps {
+  tenantSlug: string;
   settings?: TenantSettings;
 }
 
@@ -44,11 +46,13 @@ function emptyPoint(index: number, layoutKind: ArrivalLayoutKind): AccessPoint {
 function AccessPointRow({
   point,
   index,
+  tenantSlug,
   onChange,
   onRemove,
 }: {
   point: AccessPoint;
   index: number;
+  tenantSlug: string;
   onChange: (next: AccessPoint) => void;
   onRemove: () => void;
 }) {
@@ -99,15 +103,15 @@ function AccessPointRow({
           className="w-full rounded-md border bg-background px-3 py-2 text-sm"
         />
       </label>
-      <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Photo URL</span>
-        <input
-          value={point.image ?? ''}
-          onChange={(event) => onChange({ ...point, image: event.target.value })}
-          placeholder="/images/floor-1-door.jpg"
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        />
-      </label>
+      <AdminImageField
+        label="Door / access photo"
+        tenantSlug={tenantSlug}
+        kind="misc"
+        value={point.image ?? ''}
+        onChange={(next) => onChange({ ...point, image: next })}
+        placeholder="/images/floor-1-door.jpg"
+        previewAlt={point.label ?? `Access point ${index + 1}`}
+      />
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">Night code</span>
         <span className="block text-xs text-muted-foreground">
@@ -162,9 +166,10 @@ function AccessPointRow({
   );
 }
 
-export function ArrivalAccessFields({ settings }: ArrivalAccessFieldsProps) {
+export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessFieldsProps) {
   const initialPoints = useMemo(() => normalizeAccessPoints(settings ?? {}), [settings]);
   const showAccessGap = isArrivalAccessMissing(settings ?? {});
+  const [landmark, setLandmark] = useState(settings?.arrivalAccess?.landmark ?? '');
   const [layoutKind, setLayoutKind] = useState<ArrivalLayoutKind>(
     settings?.arrivalAccess?.layoutKind ??
       (initialPoints.some((point) => point.kind === 'outside' || point.id === 'building_entrance')
@@ -184,6 +189,7 @@ export function ArrivalAccessFields({ settings }: ArrivalAccessFieldsProps) {
         </p>
       ) : null}
       <input type="hidden" name="accessPointsJson" value={JSON.stringify(points)} />
+      <input type="hidden" name="arrivalLandmark" value={landmark} />
 
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">Arrival layout</span>
@@ -218,12 +224,15 @@ export function ArrivalAccessFields({ settings }: ArrivalAccessFieldsProps) {
         </select>
       </label>
 
-      <AdminField
+      <AdminImageField
         label="Landmark photo — find the hostel"
-        name="arrivalLandmark"
-        defaultValue={settings?.arrivalAccess?.landmark}
+        tenantSlug={tenantSlug}
+        kind="misc"
+        value={landmark}
+        onChange={setLandmark}
         placeholder="/images/facade.jpg"
         hint="Exterior / how to find the building. No codes here."
+        previewAlt="Hostel landmark"
       />
 
       <div className="space-y-3">
@@ -248,6 +257,7 @@ export function ArrivalAccessFields({ settings }: ArrivalAccessFieldsProps) {
             key={`point-${index}`}
             point={point}
             index={index}
+            tenantSlug={tenantSlug}
             onChange={(next) =>
               setPoints((current) => current.map((item, itemIndex) => (itemIndex === index ? next : item)))
             }
