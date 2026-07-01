@@ -3,10 +3,10 @@ import { listPublicTenants, resolveTenantAccess } from '@/entities/tenant/server
 import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
 import { GuestAppRuntime } from '@/entities/tenant/ui/GuestAppRuntime';
 import { TenantOfflineContent } from '@/views/platform/ui/TenantOfflineContent';
+import { TenantNotFoundView } from '@/views/platform/ui/TenantNotFoundView';
 import { AnalyticsProvider } from '@/shared/lib/analytics';
 import { AppHeaderShell, BaseHeader } from '@/shared/ui';
 import { getRouteTranslations } from '@/shared/lib/getRouteTranslations';
-import { notFound } from 'next/navigation';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -19,7 +19,7 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
   const access = await resolveTenantAccess('app');
 
   if (access.kind === 'missing') {
-    notFound();
+    return <TenantNotFoundView site="app" locale={locale} />;
   }
 
   if (access.kind === 'offline') {

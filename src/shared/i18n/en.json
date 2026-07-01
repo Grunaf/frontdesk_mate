@@ -860,7 +860,8 @@
       "notFound": {
         "title": "Hostel not found",
         "description": "This link does not match an active hostel. Check the address or return to the home page.",
-        "backButton": "Find your hostel"
+        "backButton": "Find your hostel",
+        "directoryTitle": "Other hostels you can open now"
       },
       "offline": {
         "metaDescription": "Online check-in info is unavailable. Contact the hostel for arrival details.",

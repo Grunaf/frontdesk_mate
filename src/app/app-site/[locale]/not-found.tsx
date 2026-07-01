@@ -1,5 +1,11 @@
-import { TenantNotFoundContent } from '@/views/platform/ui/TenantNotFoundContent';
+import { TenantNotFoundView } from '@/views/platform/ui/TenantNotFoundView';
 
-export default function AppTenantNotFound() {
-  return <TenantNotFoundContent />;
+interface AppTenantNotFoundProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function AppTenantNotFound({ params }: AppTenantNotFoundProps) {
+  const { locale } = await params;
+
+  return <TenantNotFoundView site="app" locale={locale} />;
 }
