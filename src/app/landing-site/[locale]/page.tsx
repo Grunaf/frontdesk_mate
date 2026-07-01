@@ -1,6 +1,5 @@
 import { getTranslations } from 'next-intl/server';
 import { setRequestLocale } from 'next-intl/server';
-import { notFound } from 'next/navigation';
 import { resolveTenantAccess } from '@/entities/tenant/server';
 import { HostelHero } from '@/widgets/HostelHero';
 import { RoomsGallery } from '@/widgets/RoomsGallery';
@@ -17,7 +16,8 @@ export async function generateMetadata({ params }: HomePageProps) {
   const access = await resolveTenantAccess('landing');
 
   if (access.kind === 'missing') {
-    return { title: 'Property not found' };
+    const t = await getTranslations({ locale, namespace: 'pages.platform.notFound' });
+    return { title: t('title'), description: t('description') };
   }
 
   if (access.kind === 'offline') {
@@ -43,7 +43,7 @@ export default async function LandingPage({ params, searchParams }: HomePageProp
   const access = await resolveTenantAccess('landing');
 
   if (access.kind === 'missing') {
-    notFound();
+    return null;
   }
 
   if (access.kind === 'offline') {

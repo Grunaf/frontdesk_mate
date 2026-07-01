@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getTenantRecord, resolveTenantSlug } from '@/entities/tenant/server';
 import { isReceptionAuthenticated, isReceptionSessionSecretConfigured } from '@/app/reception/lib/receptionSession';
 import { isDeskPinConfigured } from '@/app/reception/lib/deskPin';
+import { ReceptionUnknownHostelContent } from '@/views/reception/ui/ReceptionUnknownHostelContent';
 
 interface ReceptionLoginPageProps {
   searchParams: Promise<{ error?: string }>;
@@ -28,14 +29,18 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
   }
 
   const tenant = await getTenantRecord(tenantSlug);
-  const pinConfigured = isDeskPinConfigured(tenant?.settings.reception?.deskPinHash);
+  if (!tenant) {
+    return <ReceptionUnknownHostelContent />;
+  }
+
+  const pinConfigured = isDeskPinConfigured(tenant.settings.reception?.deskPinHash);
   const secretConfigured = isReceptionSessionSecretConfigured();
   const formDisabled = !secretConfigured || !pinConfigured;
 
   return (
     <div className="mx-auto max-w-sm space-y-6 pt-8">
       <div className="space-y-1 text-center">
-        <h2 className="text-xl font-semibold">{tenant?.name ?? tenantSlug}</h2>
+        <h2 className="text-xl font-semibold">{tenant.name}</h2>
         <p className="text-sm text-muted-foreground">Enter your reception desk PIN.</p>
       </div>
 

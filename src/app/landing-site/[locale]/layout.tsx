@@ -1,12 +1,12 @@
 import { TenantProvider } from '@/entities/tenant';
 import { listPublicTenants, resolveTenantAccess } from '@/entities/tenant/server';
 import { TenantOfflineContent } from '@/views/platform/ui/TenantOfflineContent';
+import { TenantNotFoundView } from '@/views/platform/ui/TenantNotFoundView';
 import { LandingSubscriptionNotice } from '@/views/landing/ui/LandingSubscriptionNotice';
 import { LandingSiteHeader } from '@/views/landing/ui/LandingSiteHeader';
 import { LandingPostWhatsappBanner } from '@/views/landing/ui/LandingPostWhatsappBanner';
 import { AnalyticsProvider, LandingViewTracker } from '@/shared/lib/analytics';
 import { getRouteTranslations } from '@/shared/lib/getRouteTranslations';
-import { notFound } from 'next/navigation';
 
 interface LandingLayoutProps {
   children: React.ReactNode;
@@ -19,7 +19,7 @@ export default async function LandingLayout({ children, params }: LandingLayoutP
   const access = await resolveTenantAccess('landing');
 
   if (access.kind === 'missing') {
-    notFound();
+    return <TenantNotFoundView site="landing" locale={locale} />;
   }
 
   if (access.kind === 'offline') {
