@@ -1,0 +1,41 @@
+# Apply supabase/migrations to the production Postgres (manual).
+# Repo secret: PROD_DATABASE_URL — Session pooler URI (port 5432), same DB as prod Supabase project.
+name: DB migrate (production)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Status only — do not apply pending migrations
+        type: boolean
+        default: false
+
+concurrency:
+  group: db-migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm install -g npm@11
+          npm ci
+
+      - name: Migration status
+        run: npm run db:migrate:status
+
+      - name: Apply pending migrations
+        if: inputs.dry_run != true
+        run: npm run db:migrate

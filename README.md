@@ -142,6 +142,13 @@ npm run db:migrate          # apply pending
 npm run db:migrate:status   # list state
 ```
 
+**Production:** Vercel deploy does not run SQL. After merging new files under `supabase/migrations/`:
+
+1. **GitHub Actions** — Actions → **DB migrate (production)** → Run workflow. Add repo secret `PROD_DATABASE_URL` (Supabase → Connect → Session pooler, port 5432). Optional: enable required reviewers on the `production` environment.
+2. **Local** — `DATABASE_URL='postgresql://…pooler…' npm run db:migrate` (explicit URL avoids hitting dev DB from `.env.local`).
+
+Then redeploy if the release depends on the new schema.
+
 Recent migrations:
 
 | File | Description |
