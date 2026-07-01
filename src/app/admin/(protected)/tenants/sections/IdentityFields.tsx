@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import {
   isCityPackReadyForTenant,
@@ -11,8 +11,9 @@ import { TenantBrand } from '@/entities/tenant/ui/TenantBrand';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { normalizeTenantSlugInput } from '@/shared/config';
 import { cn } from '@/shared/lib/utils';
-import { AdminField } from '../ui/AdminField';
+import { AdminImageField } from '../ui/AdminImageField';
 import { CityPackInheritanceCard } from '../ui/CityPackInheritanceCard';
+import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
 
 interface IdentityFieldsProps {
   slug: string;
@@ -39,17 +40,19 @@ export function IdentityFields({
   readinessInput,
   onChange,
 }: IdentityFieldsProps) {
-  const [logoUrlPreview, setLogoUrlPreview] = useState(settings?.logoUrl ?? '');
-  useEffect(() => {
-    setLogoUrlPreview(settings?.logoUrl ?? '');
-  }, [settings?.logoUrl]);
+  const { draft, updateDraft } = useTenantFormDraft();
+  const mergedSettings = useMemo(
+    () => mergeDraftSettings(settings ?? {}, draft),
+    [settings, draft]
+  );
+  const logoUrl = mergedSettings.logoUrl ?? '';
   const slugChanged = Boolean(originalSlug) && normalizeTenantSlugInput(slug) !== normalizeTenantSlugInput(originalSlug);
   const missingSlug = isTenantFieldMissing('slug', readinessInput);
   const missingName = isTenantFieldMissing('name', readinessInput);
   const packReady = isCityPackReadyForTenant(cityPackId, cityPackGateSnapshot);
   const packNotReadyReason = resolveCityPackNotReadyReasonForTenant(cityPackId, cityPackGateSnapshot);
   const selectedPackLabel = cityPackOptions.find((pack) => pack.id === cityPackId)?.label;
-  const previewLogoUrl = logoUrlPreview.trim() || undefined;
+  const previewLogoUrl = logoUrl.trim() || undefined;
 
   return (
     <div className="space-y-4">
@@ -131,11 +134,12 @@ export function IdentityFields({
           cityPackContent={cityPackContent}
         />
       </label>
-      <AdminField
-        label="Logo URL"
-        name="logoUrl"
-        value={logoUrlPreview}
-        onChange={setLogoUrlPreview}
+      <AdminImageField
+        label="Logo"
+        tenantSlug={slug}
+        kind="logo"
+        value={logoUrl}
+        onChange={(next) => updateDraft({ logoUrl: next })}
         placeholder="/images/your-hostel/logo.png"
         hint="Shown on landing header. App uses the same logo or display name, plus an APP badge."
       />

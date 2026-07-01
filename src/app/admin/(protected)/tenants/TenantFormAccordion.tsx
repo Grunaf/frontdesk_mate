@@ -143,6 +143,7 @@ function SectionPanel({
     case 'landing':
       return (
         <LandingFields
+          tenantSlug={identity.slug}
           settings={s}
           readinessInput={readinessInput}
           onJumpToSection={onJumpToSection}
@@ -672,7 +673,7 @@ function TenantFormAccordionInner({
             setIdentity(next);
           }}
           onJumpToAdvancedSection={handleJumpToAdvancedSection}
-          settings={initial.settings}
+          settings={mergedSettings}
           lifecycleStatus={lifecycleStatus}
           cityPackOptions={cityPackOptions}
           cityPackGateSnapshot={cityPackGateSnapshot}

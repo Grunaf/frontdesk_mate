@@ -123,6 +123,7 @@ export function LaunchSetupWizard({
             <ContactsFields settings={settings} readinessInput={readinessInput} scope="launch-core" />
             <div className="mt-6 border-t pt-6">
               <LandingFields
+                tenantSlug={identity.slug}
                 settings={settings}
                 readinessInput={readinessInput}
                 scope="launch-hero"
@@ -154,6 +155,7 @@ export function LaunchSetupWizard({
                     </button>
                   </div>
                   <LandingFields
+                    tenantSlug={identity.slug}
                     settings={settings}
                     readinessInput={readinessInput}
                     scope="launch-rooms"

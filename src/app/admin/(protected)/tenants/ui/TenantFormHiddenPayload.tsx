@@ -49,6 +49,8 @@ export function TenantFormHiddenPayload({
 
   return (
     <div aria-hidden className="hidden">
+      <input type="hidden" name="logoUrl" value={mergedSettings.logoUrl ?? ''} />
+      <input type="hidden" name="heroBgUrl" value={mergedSettings.heroBgUrl ?? ''} />
       <input type="hidden" name="subscriptionStartsAt" value={subscriptionStartsAt} />
       <input type="hidden" name="subscriptionEndsAt" value={subscriptionEndsAt} />
       <input type="hidden" name="houseRulesJson" value={JSON.stringify(houseRules)} />

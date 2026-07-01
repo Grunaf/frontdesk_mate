@@ -4,6 +4,7 @@ export {
   buildTenantAssetObjectPath,
   getTenantAssetPublicUrl,
   getTenantAssetsBucketName,
+  isTenantSlugForAssetPath,
 } from './lib/tenantAssetStorage';
 export { uploadTenantAsset } from './api/uploadTenantAsset';
 export { uploadTenantAssetAction } from './api/uploadTenantAssetAction';

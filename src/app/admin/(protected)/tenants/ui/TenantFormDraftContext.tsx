@@ -11,6 +11,8 @@ import type { HostelPlace } from '@/entities/tenant/model/hostelPlaces';
 import { getHouseRules, migrateActiveRulesKeys } from '@/entities/house-rules';
 
 export interface TenantFormDraft {
+  logoUrl?: string;
+  heroBgUrl?: string;
   highlightedBedId?: string;
   houseRules?: HouseRule[];
   guestExtras?: GuestExtraConfig[];
@@ -43,6 +45,8 @@ const TenantFormDraftContext = createContext<TenantFormDraftContextValue | null>
 export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft): TenantSettings {
   let merged: TenantSettings = {
     ...base,
+    ...(draft.logoUrl !== undefined ? { logoUrl: draft.logoUrl || undefined } : {}),
+    ...(draft.heroBgUrl !== undefined ? { heroBgUrl: draft.heroBgUrl || undefined } : {}),
     ...(draft.highlightedBedId !== undefined ? { highlightedBedId: draft.highlightedBedId } : {}),
     ...(draft.houseRules !== undefined ? { houseRules: draft.houseRules } : {}),
     ...(draft.guestExtras !== undefined ? { guestExtras: draft.guestExtras } : {}),

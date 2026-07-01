@@ -10,12 +10,14 @@ import type { CurrencyCode } from '@/shared/lib/currency';
 import type { AdminSectionId } from '../lib/adminSections';
 import { AdminField, AdminFieldRow } from '../ui/AdminField';
 import { AdminMoneyField } from '../ui/AdminField';
+import { AdminImageField } from '../ui/AdminImageField';
 import { AdminSectionAlert } from '../ui/AdminSectionAlert';
 import { LandingRoomCardPreview } from '../ui/LandingRoomCardPreview';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { shouldShowEngineRoomTypeId } from '../lib/tenantAdminFieldSpecs';
 
 interface LandingFieldsProps {
+  tenantSlug: string;
   settings?: TenantSettings;
   readinessInput: TenantReadinessInput;
   onJumpToSection?: (sectionId: AdminSectionId) => void;
@@ -41,6 +43,7 @@ function RoomTypeEditor({
   showDescription = true,
   settings,
   primaryCurrency,
+  tenantSlug,
 }: {
   room: LandingRoomType;
   index: number;
@@ -50,6 +53,7 @@ function RoomTypeEditor({
   showDescription?: boolean;
   settings?: TenantSettings;
   primaryCurrency: CurrencyCode;
+  tenantSlug: string;
 }) {
   return (
     <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
@@ -113,15 +117,15 @@ function RoomTypeEditor({
               currencyCode={primaryCurrency}
               amountHint="Shown on the room card price badge."
             />
-            <label className="block min-w-0 flex-1 space-y-1.5">
-              <span className="text-sm font-medium">Image URL</span>
-              <input
-                value={room.imageUrl}
-                onChange={(event) => onChange({ ...room, imageUrl: event.target.value })}
-                placeholder="/images/rooms/single-dorm.jpg"
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              />
-            </label>
+            <AdminImageField
+              label="Room photo"
+              tenantSlug={tenantSlug}
+              kind="misc"
+              value={room.imageUrl}
+              onChange={(imageUrl) => onChange({ ...room, imageUrl })}
+              placeholder="/images/rooms/single-dorm.jpg"
+              previewAlt={room.title || `Room ${index + 1}`}
+            />
           </AdminFieldRow>
         </div>
         <label className="block space-y-1.5 sm:col-span-2 sm:max-w-[12rem]">
@@ -151,6 +155,7 @@ function RoomTypeEditor({
 }
 
 export function LandingFields({
+  tenantSlug,
   settings,
   readinessInput,
   onJumpToSection,
@@ -161,6 +166,25 @@ export function LandingFields({
     () => mergeDraftSettings(settings ?? {}, draft),
     [settings, draft]
   );
+  const heroBgUrl = mergedSettings.heroBgUrl ?? '';
+
+  const heroField = (
+    <AdminImageField
+      label="Hero image"
+      tenantSlug={tenantSlug}
+      kind="hero"
+      value={heroBgUrl}
+      onChange={(next) => updateDraft({ heroBgUrl: next })}
+      placeholder="images/room.jpg"
+      hint={
+        scope === 'launch-hero'
+          ? 'Background on the public landing page.'
+          : 'Required with room types to show the landing instead of «coming soon».'
+      }
+      missing={isTenantFieldMissing('heroBgUrl', readinessInput)}
+    />
+  );
+
   const primaryCurrency = useMemo(
     () => resolveTenantCurrency(mergedSettings).primary,
     [mergedSettings]
@@ -183,18 +207,7 @@ export function LandingFields({
   };
 
   if (scope === 'launch-hero') {
-    return (
-      <div className="space-y-4">
-        <AdminField
-          label="Hero image URL"
-          name="heroBgUrl"
-          defaultValue={settings?.heroBgUrl}
-          placeholder="images/room.jpg"
-          hint="Background on the public landing page."
-          missing={isTenantFieldMissing('heroBgUrl', readinessInput)}
-        />
-      </div>
-    );
+    return <div className="space-y-4">{heroField}</div>;
   }
 
   const roomList = (
@@ -223,6 +236,7 @@ export function LandingFields({
           primaryCurrency={primaryCurrency}
           showEngineId={showEngineId}
           showDescription={scope === 'full'}
+          tenantSlug={tenantSlug}
           onChange={(next) =>
             syncLanding(roomTypes.map((item, i) => (i === index ? next : item)))
           }
@@ -255,14 +269,7 @@ export function LandingFields({
           Room cards are visible, but Book buttons need a booking provider and property ID.
         </AdminSectionAlert>
       ) : null}
-      <AdminField
-        label="Hero image URL"
-        name="heroBgUrl"
-        defaultValue={settings?.heroBgUrl}
-        placeholder="images/room.jpg"
-        hint="Required with room types to show the landing instead of «coming soon»."
-        missing={isTenantFieldMissing('heroBgUrl', readinessInput)}
-      />
+      {heroField}
       <AdminField
         label="Rooms section title"
         name="landingRoomsSectionTitle"
