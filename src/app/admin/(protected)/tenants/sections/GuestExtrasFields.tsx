@@ -10,9 +10,12 @@ import {
 import type { TenantSettings } from '@/entities/tenant';
 import { getHouseRules } from '@/entities/house-rules';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
+import { AdminImageField } from '../ui/AdminImageField';
+import { isGuestExtraHighlightTileImageMissing } from '../lib/tenantAdminFieldSpecs';
 
 interface GuestExtrasFieldsProps {
   settings?: TenantSettings;
+  tenantSlug: string;
 }
 
 const PRESET_LABELS: Record<GuestExtraPresetId, string> = {
@@ -63,7 +66,7 @@ function buildInitialGuestExtras(settings: TenantSettings): GuestExtraConfig[] {
   });
 }
 
-export function GuestExtrasFields({ settings }: GuestExtrasFieldsProps) {
+export function GuestExtrasFields({ settings, tenantSlug }: GuestExtrasFieldsProps) {
   const { draft, updateDraft } = useTenantFormDraft();
   const merged = useMemo(
     () => mergeDraftSettings(settings ?? {}, draft),
@@ -138,29 +141,23 @@ export function GuestExtrasFields({ settings }: GuestExtrasFieldsProps) {
                   </label>
 
                   {extra.highlight ? (
-                    <label className="block space-y-1 text-xs sm:col-span-2">
-                      <span>Tile image URL</span>
-                      <input
+                    <div className="sm:col-span-2">
+                      <AdminImageField
+                        label="Tile image"
+                        tenantSlug={tenantSlug}
+                        kind="misc"
                         value={extra.imageUrl ?? ''}
-                        onChange={(event) =>
-                          updateExtra(extra.presetId, { imageUrl: event.target.value })
-                        }
+                        onChange={(imageUrl) => updateExtra(extra.presetId, { imageUrl })}
                         placeholder="https://..."
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        hint="Square photo for the featured strip. Highlight without an image stays in the standard grid."
+                        previewAlt={PRESET_LABELS[extra.presetId]}
                       />
-                      {!extra.imageUrl?.trim() ? (
-                        <span className="text-amber-700">
-                          Add a photo to show the visual highlight tile in the featured strip.
-                        </span>
+                      {isGuestExtraHighlightTileImageMissing(extra) ? (
+                        <p className="mt-1 text-xs text-amber-700">
+                          Add a photo to show this extra in the featured strip.
+                        </p>
                       ) : null}
-                      {extra.imageUrl?.trim() ? (
-                        <img
-                          src={extra.imageUrl.trim()}
-                          alt=""
-                          className="mt-2 aspect-square w-20 rounded-lg border object-cover"
-                        />
-                      ) : null}
-                    </label>
+                    </div>
                   ) : null}
 
                   {supportsSchedule ? (

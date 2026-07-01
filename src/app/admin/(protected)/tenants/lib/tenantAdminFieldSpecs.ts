@@ -1,3 +1,4 @@
+import type { GuestExtraConfig } from '@/entities/guest-extra';
 import type { BookingProvider } from '@/entities/tenant';
 import { readBookingSettings } from '@/entities/tenant/lib/resolveBookingConfig';
 import { hasLandingRooms } from '@/entities/tenant/lib/resolveLandingRooms';
@@ -54,4 +55,14 @@ export function shouldShowReceptionWhatsappToggles(settings: TenantSettings): bo
   const whatsapp = settings.reception?.whatsappPhoneRaw?.trim();
   const bookingWhatsapp = settings.contacts?.bookingWhatsappPhoneRaw?.trim();
   return Boolean(phone || whatsapp || bookingWhatsapp);
+}
+
+export function isGuestExtraHighlightTileImageMissing(entry: GuestExtraConfig): boolean {
+  return entry.enabled && Boolean(entry.highlight) && !entry.imageUrl?.trim();
+}
+
+export function findGuestExtrasHighlightMissingImage(
+  guestExtras: GuestExtraConfig[] | undefined
+): GuestExtraConfig[] {
+  return (guestExtras ?? []).filter(isGuestExtraHighlightTileImageMissing);
 }

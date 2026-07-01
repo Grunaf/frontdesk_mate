@@ -93,7 +93,7 @@ export function GuestAppFields({
         <HouseRulesFields settings={settings} readinessInput={readinessInput} />
       </div>
       <div className={cn(tab !== 'extras' && 'hidden')} aria-hidden={tab !== 'extras'}>
-        <GuestExtrasFields settings={mergedSettings} />
+        <GuestExtrasFields settings={mergedSettings} tenantSlug={tenantSlug} />
       </div>
       <div className={cn(tab !== 'near-hostel' && 'hidden')} aria-hidden={tab !== 'near-hostel'}>
         <HostelPlacesFields settings={mergedSettings} />

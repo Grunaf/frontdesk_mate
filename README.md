@@ -189,6 +189,7 @@ See `.env.example`. Required for full flow:
 - `DATABASE_URL` — Postgres (Supabase pooler)
 - `ADMIN_SECRET` — admin login
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` — tenant fetch / admin save
+- `SUPABASE_TENANT_ASSETS_BUCKET` — optional; Supabase Storage bucket for admin image uploads (default `tenant-assets`)
 - `NEXT_PUBLIC_TENANT_SLUG` — **local dev only** (which tenant on flat localhost)
 - `NEXT_PUBLIC_BASE_DOMAIN` — **production** public hostname for generated links (Vercel env)
 

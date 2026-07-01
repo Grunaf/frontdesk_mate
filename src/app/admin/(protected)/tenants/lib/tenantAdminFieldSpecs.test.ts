@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  findGuestExtrasHighlightMissingImage,
   isBookingEngineEnabled,
   isEngineRoomTypeIdRequired,
+  isGuestExtraHighlightTileImageMissing,
   shouldShowBookingEngineFields,
   shouldShowDualCurrency,
   shouldShowEngineRoomTypeId,
@@ -55,5 +57,23 @@ describe('tenantAdminFieldSpecs', () => {
     expect(
       shouldShowReceptionWhatsappToggles({ contacts: { phoneRaw: '38761111' } })
     ).toBe(true);
+  });
+
+  it('flags highlighted extras without a tile image', () => {
+    const missing = {
+      presetId: 'partner_transfer' as const,
+      enabled: true,
+      highlight: true,
+    };
+    expect(isGuestExtraHighlightTileImageMissing(missing)).toBe(true);
+    expect(
+      isGuestExtraHighlightTileImageMissing({ ...missing, imageUrl: 'https://cdn.example/t.jpg' })
+    ).toBe(false);
+    expect(
+      findGuestExtrasHighlightMissingImage([
+        missing,
+        { presetId: 'laundry', enabled: true, highlight: false },
+      ])
+    ).toHaveLength(1);
   });
 });

@@ -224,7 +224,7 @@ export function LandingFields({
       </div>
       {roomTypes.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          Add room cards for the public landing. Fill title, image URL, and internal ID at minimum.
+          Add room cards for the public landing. Fill title, image, and internal ID at minimum.
         </p>
       ) : null}
       {roomTypes.map((room, index) => (

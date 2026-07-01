@@ -167,7 +167,7 @@ export function getAdminSectionHint(
 
   switch (sectionId) {
     case 'identity':
-      return merged.logoUrl ? 'Logo configured' : 'Add a logo URL to show branding';
+      return merged.logoUrl ? 'Logo configured' : 'Add a logo image to show branding';
     case 'subscription':
       return input.lifecycleStatus ? getAdminSubscriptionHint(input.lifecycleStatus) : undefined;
     case 'guest-app': {
