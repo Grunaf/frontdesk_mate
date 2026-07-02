@@ -212,7 +212,7 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
       id: 'arrival-walk',
       sectionId: 'arrival-journey',
       label: 'Arrival walk directions',
-      tier: 'recommended',
+      tier: 'blocker',
       complete: arrivalWalkReadiness.complete,
       detail: arrivalWalkReadiness.detail,
     }),

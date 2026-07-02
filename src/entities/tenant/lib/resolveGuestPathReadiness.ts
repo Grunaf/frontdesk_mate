@@ -1,4 +1,5 @@
 import type { CityPackGateSnapshot } from '@/entities/city-pack';
+import { resolveArrivalWalkReadiness } from '@/entities/city-pack/lib/resolveArrivalTransportReadiness';
 import {
   isCityPackReadyForTenant,
   resolveCityPackNotReadyReasonForTenant,
@@ -87,6 +88,7 @@ function buildGuestPathItems(input: GuestPathReadinessInput): GuestPathItem[] {
     bookingPath: pathOverride,
     cityPackHasPlaces,
     cityPackGateSnapshot,
+    cityPackContent,
   } = input;
   const slugValue = slug?.trim() ?? '';
   const nameValue = name?.trim() ?? '';
@@ -102,6 +104,11 @@ function buildGuestPathItems(input: GuestPathReadinessInput): GuestPathItem[] {
   const packNotReadyReason = cityPackGateSnapshot
     ? resolveCityPackNotReadyReasonForTenant(cityPackId, cityPackGateSnapshot)
     : undefined;
+  const arrivalWalkReadiness = resolveArrivalWalkReadiness({
+    cityPackId,
+    settings,
+    cityPackContent,
+  });
 
   const items: GuestPathItem[] = [
     {
@@ -177,6 +184,14 @@ function buildGuestPathItems(input: GuestPathReadinessInput): GuestPathItem[] {
       label: 'Arrival access configured',
       tier: 'must',
       complete: hasDoorAccessConfigured(settings),
+      stepId: 'arrival',
+    },
+    {
+      id: 'arrival-walk-directions',
+      label: 'Hostel walk directions (all pack routes)',
+      tier: 'must',
+      complete: arrivalWalkReadiness.complete,
+      detail: arrivalWalkReadiness.detail,
       stepId: 'arrival',
     },
     {
