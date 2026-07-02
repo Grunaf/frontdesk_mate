@@ -1,11 +1,8 @@
+import { getLocale } from 'next-intl/server';
 import { TenantNotFoundView } from '@/views/platform/ui/TenantNotFoundView';
 
-interface AppTenantNotFoundProps {
-  params: Promise<{ locale: string }>;
-}
-
-export default async function AppTenantNotFound({ params }: AppTenantNotFoundProps) {
-  const { locale } = await params;
+export default async function AppTenantNotFound() {
+  const locale = await getLocale();
 
   return <TenantNotFoundView site="app" locale={locale} />;
 }

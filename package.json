@@ -58,7 +58,7 @@
   },
   "devDependencies": {
     "@feature-sliced/steiger-plugin": "^0.6.0",
-    "@playwright/test": "^1.51.1",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
