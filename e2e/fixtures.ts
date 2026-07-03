@@ -15,6 +15,8 @@ export interface E2eConfig {
   guestMagicLink?: string;
   receptionDeskPin?: string;
   navTimeoutMs: number;
+  /** When true, runs optional tourism deep-link smoke (tenant must have tourism registration enabled). */
+  tourismSmoke: boolean;
 }
 
 interface LoadE2eConfigOptions {
@@ -78,6 +80,15 @@ function requireEnv(key: string, fileEnv: Record<string, string>): string {
 function optionalEnv(key: string, fileEnv: Record<string, string>): string | undefined {
   const value = readEnv(key, fileEnv);
   return value || undefined;
+}
+
+function readTourismSmokeFlag(fileEnv: Record<string, string>): boolean {
+  const raw = readEnv('E2E_TOURISM_SMOKE', fileEnv)?.toLowerCase();
+  return raw === '1' || raw === 'true';
+}
+
+export function isTourismSmokeEnabled(fileEnv: Record<string, string> = loadEnvLocal()): boolean {
+  return readTourismSmokeFlag(fileEnv);
 }
 
 function readUrlMode(fileEnv: Record<string, string>): E2eUrlMode {
@@ -144,6 +155,7 @@ export function loadE2eConfig(options: LoadE2eConfigOptions = {}): E2eConfig {
     guestMagicLink: optionalEnv('E2E_GUEST_MAGIC_LINK', fileEnv),
     receptionDeskPin: optionalEnv('E2E_RECEPTION_DESK_PIN', fileEnv),
     navTimeoutMs: Number(readEnv('E2E_NAV_TIMEOUT', fileEnv) ?? '15000'),
+    tourismSmoke: readTourismSmokeFlag(fileEnv),
   };
 }
 

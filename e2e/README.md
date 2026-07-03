@@ -14,6 +14,7 @@
 | `E2E_ADMIN_PASSWORD` | Same as `ADMIN_SECRET` in `.env.local` |
 | `E2E_GUEST_PIN` | **Optional** — auto-provision creates a smoke stay before tests (guest name `__e2e_smoke__`) |
 | `E2E_GUEST_MAGIC_LINK` | Optional — copy full URL from reception instead of PIN |
+| `E2E_TOURISM_SMOKE` | Optional — set to `1` to run tourism deep-link smoke (enable **tourism registration** on `E2E_TENANT_SLUG` in admin first; uses fresh provisioned stay with incomplete registration) |
 
 Auto-provision needs the same Supabase keys as dev (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`) plus `ADMIN_SECRET` (or `GUEST_SESSION_SECRET`) in `.env.local`. Use a **dev/test tenant**, not production.
 
@@ -30,5 +31,6 @@ Set `E2E_PROVISION_GUEST_STAY=false` and `E2E_GUEST_PIN` to pin a manual stay in
 - Arrival route picker on welcome
 - Local Guide essentials on concierge
 - Wrong PIN error message
+- Guest tourism room map → `welcome?step=register` when `E2E_TOURISM_SMOKE=1` (skipped by default)
 
 Manual checks after green smoke: see root `SMOKE.md`.
