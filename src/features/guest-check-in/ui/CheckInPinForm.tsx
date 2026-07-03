@@ -187,7 +187,9 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
   return (
     <div className="w-full max-w-sm space-y-4 text-left">
       <div className="space-y-1.5">
-        <Label htmlFor="guest-check-in-pin">{t('label')}</Label>
+        <Label htmlFor="guest-check-in-pin" className="text-sm">
+          {t('label')}
+        </Label>
         <Input
           id="guest-check-in-pin"
           inputMode="numeric"

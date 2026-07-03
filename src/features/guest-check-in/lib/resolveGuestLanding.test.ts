@@ -42,7 +42,7 @@ describe('resolvePostCheckInPath', () => {
 
   it('routes directly when entry is known', () => {
     expect(resolvePostCheckInPath({ locale: 'en', urlEntry: 'remote' })).toBe(
-      '/en/welcome?step=route'
+      '/en/welcome?step=info'
     );
     expect(resolvePostCheckInPath({ locale: 'en', storedIntent: 'at_desk' })).toBe(
       '/en/welcome?step=settlement'

@@ -62,7 +62,7 @@ export function CrossHostelStrip({ showRoutesHint = false, className }: CrossHos
         })}
       </p>
       {showRoutesHint ? (
-        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{t('routesHint', { currentHostel: currentTenantSlug })}</p>
+        <p className="mt-1 text-sm leading-snug text-muted-foreground">{t('routesHint', { currentHostel: currentTenantSlug })}</p>
       ) : null}
       <div className="mt-2 flex flex-wrap gap-2">
         <Button asChild size="sm" variant="outline" className="h-8 text-xs">

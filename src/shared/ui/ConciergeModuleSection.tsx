@@ -44,7 +44,7 @@ export function ConciergeModuleSection({
             variant="outline"
             size="sm"
             onClick={handleSeeAll}
-            className="relative h-7 min-h-0 shrink-0 self-end max-w-[45%] px-2.5 py-0 text-sm leading-none -my-1.5"
+            className="relative min-h-11 shrink-0 self-end max-w-[45%] px-2.5 py-2 text-sm leading-none -my-1.5"
           >
             <span className="truncate">{resolvedSeeAllLabel}</span>
             <Icon icon={ArrowRight} className="size-3.5 shrink-0" />

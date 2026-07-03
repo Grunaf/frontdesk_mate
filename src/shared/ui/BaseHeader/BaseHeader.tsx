@@ -8,6 +8,8 @@ import { getInAppReturnTo } from '@/shared/lib';
 import { TenantBrand } from '@/entities/tenant/ui/TenantBrand';
 import { TenantContext } from '@/entities/tenant/ui/tenant-context';
 import {
+  GuestCheckInChip,
+  shouldShowGuestCheckInChip,
   useForeignGuestRegistration,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
@@ -38,6 +40,10 @@ export function BaseHeader({ translatedTitles }: BaseHeaderProps) {
     cleanPath,
     isRegistered,
     hasForeignRegistration: Boolean(foreignRegistration),
+  });
+  const showCheckInChip = shouldShowGuestCheckInChip({
+    cleanPath,
+    isRegistered,
   });
 
   const [inAppReturnTo, setInAppReturnTo] = useState<string | null>(null);
@@ -108,7 +114,7 @@ export function BaseHeader({ translatedTitles }: BaseHeaderProps) {
           {pageTitle}
         </div>
 
-        {showStayChip ? <GuestStayChip /> : null}
+        {showStayChip ? <GuestStayChip /> : showCheckInChip ? <GuestCheckInChip /> : null}
       </div>
     </header>
   );

@@ -78,7 +78,7 @@ export function GuestExtrasBlock({
       {featuredExtras.length > 0 ? (
         <div className="space-y-2">
           {featuredExtras.length > 1 ? (
-            <p className="px-1 text-[10px] tracking-wide text-muted-foreground uppercase">
+            <p className="px-1 text-xs tracking-wide text-muted-foreground uppercase">
               {t('featuredLabel')}
             </p>
           ) : null}

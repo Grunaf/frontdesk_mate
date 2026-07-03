@@ -5,8 +5,8 @@ export { CheckInPageContent } from './ui/CheckInPageContent';
 export { CheckInPinForm } from './ui/CheckInPinForm';
 export { CheckInRequiredSheet } from './ui/CheckInRequiredSheet';
 export { CrossHostelStrip } from './ui/CrossHostelStrip';
-export { GuestAccessPanel } from './ui/GuestAccessPanel';
-export { GuestRegistrationGate, RegistrationPrompt } from './ui/GuestRegistrationGate';
+export { GuestCheckInChip } from './ui/GuestCheckInChip';
+export { shouldShowGuestCheckInChip } from './lib/shouldShowGuestCheckInChip';
 export {
   GuestSessionProvider,
   useForeignGuestRegistration,

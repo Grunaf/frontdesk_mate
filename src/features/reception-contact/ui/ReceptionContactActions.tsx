@@ -94,7 +94,7 @@ export function ReceptionContactActions({
         </Button>
       ) : null}
       {contact.availabilityHint ? (
-        <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+        <p className="text-center text-sm leading-relaxed text-muted-foreground">
           {contact.availabilityHint}
         </p>
       ) : null}
@@ -112,7 +112,7 @@ export function ReceptionContactHint({ contact }: ReceptionContactHintProps) {
   }
 
   return (
-    <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+    <p className="text-center text-sm leading-relaxed text-muted-foreground">
       {contact.availabilityHint}
     </p>
   );

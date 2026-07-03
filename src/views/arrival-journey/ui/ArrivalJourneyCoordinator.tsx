@@ -15,6 +15,7 @@ import { useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
 import { Button, SegmentedChipBar } from '@/shared/ui';
 import { useCheckInState, type Step } from '../model/useCheckInState';
+import { resolveArrivalJourneyPrimaryButtonKey } from '../lib/resolveArrivalJourneyPrimaryButtonKey';
 
 interface ArrivalJourneyCoordinatorProps {
   isOnsite: boolean;
@@ -124,6 +125,8 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
     activeStep.onComplete();
   };
 
+  const primaryButtonKey = resolveArrivalJourneyPrimaryButtonKey(currentStep, isRegistered);
+
   return (
     <div className="flex min-h-screen w-full max-w-md flex-col bg-background">
       <SegmentedChipBar
@@ -138,10 +141,23 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
 
       <CrossHostelStrip showRoutesHint={currentStep === 'route'} className="mx-4 mt-3" />
 
+      {!isRegistered ? (
+        <p className="mx-4 mt-3 text-xs leading-relaxed text-muted-foreground">
+          {t('guestCheckIn.hint')}{' '}
+          <button
+            type="button"
+            className="font-medium text-primary underline underline-offset-2"
+            onClick={openCheckInSheet}
+          >
+            {t('guestCheckIn.link')}
+          </button>
+        </p>
+      ) : null}
+
       <main className="flex flex-col justify-between gap-y-6 bg-background px-4 pb-8 pt-4">
         <ActiveComponent />
         <Button size="lg" className="w-full" onClick={handlePrimaryAction}>
-          {t(activeStep.buttonKey)}
+          {t(primaryButtonKey)}
         </Button>
       </main>
 

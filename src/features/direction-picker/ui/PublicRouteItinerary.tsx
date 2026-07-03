@@ -55,7 +55,7 @@ export function TransitLegMeta({
   return (
     <div className="flex flex-wrap gap-1.5">
       {showFareChip && (
-        <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] text-foreground/90">
+        <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs text-foreground/90">
           <Icon icon={Ticket} className="h-3 w-3 text-muted-foreground" />
           {fareLabel
             ? fareLabel
@@ -68,12 +68,12 @@ export function TransitLegMeta({
         </span>
       )}
       {!walkOnly && stops !== undefined && (
-        <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] text-foreground/90">
+        <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs text-foreground/90">
           <Icon icon={Route} className="h-3 w-3 text-muted-foreground" />
           {directions('labels.stops', { count: stops })}
         </span>
       )}
-      <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] text-foreground/90">
+      <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs text-foreground/90">
         <Icon icon={Clock3} className="h-3 w-3 text-muted-foreground" />
         {directions('labels.duration', { minutes: durationMin })}
       </span>

@@ -65,7 +65,7 @@ export function RecommendationCard({
             </h4>
 
             {primaryBadge ? (
-              <Badge variant="outline" className="text-[11px] font-semibold tracking-wide uppercase">
+              <Badge variant="outline" className="text-xs font-semibold tracking-wide uppercase">
                 {primaryBadge.label}
               </Badge>
             ) : null}

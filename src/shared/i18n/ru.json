@@ -564,6 +564,10 @@
   },
   "pages": {
     "arrivalJourney": {
+      "guestCheckIn": {
+        "hint": "Советы и маршруты доступны всем. Коды дверей и карта кровати — после check-in. Нажмите",
+        "link": "Войти"
+      },
       "tabs": {
         "info": "Важно знать",
         "route": "Маршрут",
@@ -571,9 +575,9 @@
         "settlement": "Заселение"
       },
       "preTrip": {
-        "title": "Before Your Trip",
-        "description": "Important information to prepare for your arrival and check-in process.",
-        "actionButton": "View Directions",
+        "title": "Перед поездкой",
+        "description": "От прилёта в страну до заселения в хостеле и поиска кровати — начните здесь до поездки.",
+        "actionButton": "К маршруту",
         "sections": {
           "beforeTravel": {
             "heading": "Перед поездкой"
@@ -584,7 +588,7 @@
         },
         "checkInReady": {
           "title": "Ссылка или PIN для check-in",
-          "description": "Ресепшен высылает персональную ссылку, QR или 6-значный PIN после назначения кровати. Держите их на этом телефоне для кодов дверей и concierge."
+          "description": "Когда ресепшен назначит кровать, нажмите «Войти» на Concierge (справа вверху) или «Войти» в этом гиде, чтобы ввести PIN или ссылку. Коды и карта комнаты откроются после входа."
         },
         "luggage": {
           "title": "Luggage Storage",
@@ -628,7 +632,8 @@
           "walkToHostel": "До хостела",
           "onFootRoute": "Пешком"
         },
-        "actionButton": "How to Enter"
+        "actionButton": "К дверям и кодам",
+        "checkInToContinue": "Войти, чтобы продолжить"
       },
       "arrival": {
         "title": "Arrival Info",
@@ -707,13 +712,13 @@
       },
       "intent": {
         "metaTitle": "Где вы сейчас?",
-        "metaDescription": "Выберите, где вы сейчас — откроем нужную часть arrival guide.",
+        "metaDescription": "Выберите, где вы сейчас — откроем нужный шаг гида: от подготовки до кровати.",
         "eyebrow": "Почти готово",
         "title": "Где вы сейчас?",
-        "description": "Откроем нужную часть arrival guide.",
+        "description": "Выберите вариант — откроем нужную часть гида: до поездки, у двери или на ресепшене.",
         "options": {
           "planning": "Ещё в пути",
-          "at_door": "У двери",
+          "at_door": "У двери хостела",
           "at_desk": "На ресепшене"
         }
       },
@@ -744,16 +749,6 @@
           }
         }
       },
-      "registrationPrompt": {
-        "eyebrow": "Нужна регистрация",
-        "title": "Получите ссылку для check-in",
-        "description": "Concierge, карта комнаты и коды открываются после того, как ресепшен назначит кровать и вы откроете персональную ссылку.",
-        "welcomeDescription": "Коды дверей и шаги заселения откроются после того, как вы откроете персональную ссылку от ресепшена.",
-        "openWelcomeButton": "Посмотреть Welcome",
-        "footerLocked": "Откройте ссылку для check-in, чтобы продолжить",
-        "backToRoute": "Назад к маршруту",
-        "backToInfo": "Назад к информации"
-      },
       "crossHostel": {
         "title": "Регистрация в другом хостеле",
         "description": "Вы зарегистрированы в {registeredHostel} (кровать {bed}). Сейчас открыт {currentHostel}.",
@@ -775,8 +770,7 @@
         "callReception": "Позвонить на ресепшен",
         "signIn": "Войти",
         "whatsappMessage": "Здравствуйте, мне нужна ссылка для check-in в {hostelName}",
-        "noContact": "Свяжитесь с ресепшеном, когда назначат кровать, чтобы получить ссылку для check-in.",
-        "openSheetButton": "Как получить ссылку для check-in"
+        "noContact": "Свяжитесь с ресепшеном, когда назначат кровать, чтобы получить ссылку для check-in."
       },
       "wrongHostel": {
         "title": "Ссылка от другого хостела",
@@ -816,14 +810,14 @@
       },
       "postWhatsapp": {
         "title": "Уже договорились с ресепшеном?",
-        "description": "Откройте гид заезда — маршрут и check-in. WiFi и коды дверей после регистрации.",
+        "description": "Откройте гид заезда — маршрут и подготовка. Когда ресепшен выдаст PIN или ссылку, нажмите «Войти» (справа вверху на Concierge), чтобы открыть Wi‑Fi и коды.",
         "openGuestApp": "Открыть гид заезда",
         "keepBrowsing": "Смотреть номера",
         "dismiss": "Закрыть"
       },
       "arrivalCallout": {
         "arrivalTitle": "Скоро заезд?",
-        "arrivalDescription": "Как добраться и что ждать при check-in.",
+        "arrivalDescription": "Маршрут, часы ресепшена и что ждать до и во время check-in.",
         "arrivalCta": "Как добраться",
         "exploreTitle": "Планируете заранее?",
         "exploreDescription": "Загляните в guest app — подсказки по городу до приезда.",
@@ -986,6 +980,7 @@
     },
     "stayEssentials": {
       "bridges": {
+        "arrivalGuide": "Гид по заезду",
         "wifi": "Wi‑Fi",
         "checkout": "Выезд",
         "nightAccess": "Ночной доступ",
@@ -1039,6 +1034,10 @@
       "title": "Правила хостела",
       "tapHint": "Нажмите на правило, чтобы прочитать подробности",
       "openDetail": "{rule} — открыть подробности"
+    },
+    "guestCheckInChip": {
+      "chipLabel": "Войти",
+      "openSheet": "Войти — открыть инструкцию по check-in"
     },
     "guestStayChip": {
       "chipLabel": "Проживание",
