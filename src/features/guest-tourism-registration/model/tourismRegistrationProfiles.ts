@@ -1,3 +1,5 @@
+import type { GuestTourismDocumentKind } from '../api/uploadGuestTourismDocument';
+
 export type TourismDocumentKind = 'passport' | 'entry_stamp';
 
 export interface TourismRegistrationProfile {
@@ -29,10 +31,10 @@ export const DOCUMENT_KIND_FORM_KEY: Record<TourismDocumentKind, string> = {
   entry_stamp: 'entryStamp',
 };
 
-export const DOCUMENT_KIND_TO_STORAGE_KEY: Record<TourismDocumentKind, string> = {
+export const DOCUMENT_KIND_TO_STORAGE_KEY = {
   passport: 'passport',
   entry_stamp: 'entry-stamp',
-};
+} as const satisfies Record<TourismDocumentKind, GuestTourismDocumentKind>;
 
 export const DOCUMENT_KIND_TO_DB_COLUMN: Record<TourismDocumentKind, string> = {
   passport: 'passport_storage_path',

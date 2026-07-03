@@ -7,8 +7,14 @@ import { getTourismRegistrationByStayId } from '@/entities/guest-tourism-registr
 import { resolveTourismRegistrationProfile } from '@/entities/tenant';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
-import { uploadGuestTourismDocument } from '../api/uploadGuestTourismDocument';
-import { DOCUMENT_KIND_TO_STORAGE_KEY } from '../model/tourismRegistrationProfiles';
+import {
+  uploadGuestTourismDocument,
+  type GuestTourismDocumentKind,
+} from '../api/uploadGuestTourismDocument';
+import {
+  DOCUMENT_KIND_TO_STORAGE_KEY,
+  type TourismDocumentKind,
+} from '../model/tourismRegistrationProfiles';
 
 const MAX_NAME_LENGTH = 120;
 
@@ -73,7 +79,11 @@ export async function submitTourismGuestAction(
     return { ok: false, error: 'invalid_input' };
   }
 
-  const documentFiles: { kind: string; storageKind: string; file: File }[] = [];
+  const documentFiles: {
+    kind: TourismDocumentKind;
+    storageKind: GuestTourismDocumentKind;
+    file: File;
+  }[] = [];
   for (const kind of profile.requiredDocumentKinds) {
     const formKey = kind === 'entry_stamp' ? 'entryStamp' : kind;
     const storageKind = DOCUMENT_KIND_TO_STORAGE_KEY[kind];
