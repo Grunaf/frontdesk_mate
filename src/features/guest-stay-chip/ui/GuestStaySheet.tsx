@@ -8,6 +8,7 @@ import { resolveReceptionContact } from '@/entities/tenant/lib/resolveReceptionC
 import { useTenant } from '@/entities/tenant';
 import { formatBedLocationLine } from '@/features/find-your-bed/lib/formatBedLocation';
 import { FindYourBedSummary } from '@/features/find-your-bed/ui/FindYourBedSummary';
+import { useWelcomeBedMapStep } from '@/features/find-your-bed/ui/FindYourBedCard';
 import { ReceptionContactActions, useReceptionContactLabels } from '@/features/reception-contact';
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
@@ -66,7 +67,8 @@ export function GuestStaySheet({
   const dateRange = formatGuestStayDateRange(checkInAt, checkOutAt, locale);
   const stayRef = formatStayReference(stayId);
   const trimmedGuestName = guestName?.trim() || null;
-  const settlementPath = `/${routeLocale}${SITE_CONFIG.routes.app.welcome.path}?step=settlement`;
+  const welcomeBedMapStep = useWelcomeBedMapStep();
+  const settlementPath = `/${routeLocale}${SITE_CONFIG.routes.app.welcome.path}?step=${welcomeBedMapStep}`;
 
   const bedLine = useMemo(
     () =>

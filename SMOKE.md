@@ -43,6 +43,9 @@ These items still need a quick human pass:
 - [ ] **Images** — door/facade/hero load (no broken placeholders)
 - [ ] **Reception PIN one-time** — after page reload, Access tab shows QR/link and “PIN was shown once…” (no digits); re-issue shows new PIN
 - [ ] **Guest tourism registration (MNE)** — in admin, enable tourism registration for the tenant; guest PIN → Arrival journey **Register** step: add guest (passport + entry stamp), complete registration; on reception desk, confirm tourism checkbox / panel reflects completed stay
+  - [ ] **Locked Settlement** — with tourism on and registration incomplete: open **Settlement** tab (or `?step=settlement` deep link) → tourism required sheet (Chat C), not Wi‑Fi / bed map content
+  - [ ] **Privacy on Register** — Register step shows tourism privacy notice before submit (Chat D)
+  - [ ] **Concierge bed map** — My stay → **Show room map** (and Find your bed card if shown) lands on `?step=register`, not settlement, until registration is complete; after complete, links open settlement
 
 When something fails in automation, open the HTML report:
 
