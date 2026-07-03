@@ -157,3 +157,121 @@ export async function createTourismDocumentSignedUrl(
 
   return { ok: true, url: data.signedUrl };
 }
+
+export type TourismStayEligibleForPurge = {
+  stay_id: string;
+  tenant_id: string;
+  check_out_at: string;
+};
+
+export async function listStaysWithTourismGuestsPastCheckOut(
+  checkOutOnOrBeforeIso: string,
+  limit: number
+): Promise<TourismStayEligibleForPurge[]> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return [];
+
+  const safeLimit = Math.max(1, Math.min(limit, 500));
+
+  const { data, error } = await admin
+    .from('guest_stays')
+    .select('id, tenant_id, check_out_at, guest_stay_tourism_guests!inner(id)')
+    .lte('check_out_at', checkOutOnOrBeforeIso)
+    .limit(safeLimit);
+
+  if (error) {
+    console.error('listStaysWithTourismGuestsPastCheckOut:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => {
+    const record = row as Record<string, unknown>;
+    return {
+      stay_id: String(record.id),
+      tenant_id: String(record.tenant_id),
+      check_out_at: String(record.check_out_at),
+    };
+  });
+}
+
+export async function removeGuestDocumentObjectsFromStorage(
+  storagePaths: string[]
+): Promise<{ removedCount: number }> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { removedCount: 0 };
+  }
+
+  const uniquePaths = [...new Set(storagePaths.map((path) => path.trim()).filter(Boolean))];
+  if (uniquePaths.length === 0) {
+    return { removedCount: 0 };
+  }
+
+  const { data, error } = await admin.storage.from(GUEST_DOCUMENTS_BUCKET).remove(uniquePaths);
+
+  if (error) {
+    console.error('removeGuestDocumentObjectsFromStorage:', error.message);
+    return { removedCount: 0 };
+  }
+
+  return { removedCount: data?.length ?? uniquePaths.length };
+}
+
+export async function deleteTourismGuestsByStayId(stayId: string): Promise<boolean> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return false;
+
+  const { error } = await admin.from('guest_stay_tourism_guests').delete().eq('stay_id', stayId);
+
+  if (error) {
+    console.error('deleteTourismGuestsByStayId:', error.message);
+    return false;
+  }
+
+  return true;
+}
+
+export async function clearTourismContactWhatsappForStay(stayId: string): Promise<boolean> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return false;
+
+  const { error } = await admin
+    .from('guest_stays')
+    .update({
+      tourism_contact_whatsapp: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', stayId);
+
+  if (error) {
+    console.error('clearTourismContactWhatsappForStay:', error.message);
+    return false;
+  }
+
+  return true;
+}
+
+export async function getStayTourismCompletionTimestamp(
+  stayId: string
+): Promise<string | null> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+
+  const { data, error } = await admin
+    .from('guest_stays')
+    .select('tourism_registration_completed_at')
+    .eq('id', stayId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('getStayTourismCompletionTimestamp:', error.message);
+    return null;
+  }
+
+  if (!data) return null;
+
+  const row = data as Record<string, unknown>;
+  return row.tourism_registration_completed_at
+    ? String(row.tourism_registration_completed_at)
+    : null;
+}

@@ -6,6 +6,7 @@ import { assertReceptionAuthenticated } from '@/app/reception/lib/receptionSessi
 import type { GuestTourismRegistrationSummary } from '@/entities/guest-tourism-registration';
 import {
   createTourismDocumentSignedUrl,
+  getStayTourismCompletionTimestamp,
   getTourismRegistrationByStayId,
   setTourismExportedAt,
   type TourismReceptionDocumentKind,
@@ -85,7 +86,10 @@ export async function setTourismExportedAction(input: {
 
 export type GetTourismDocumentSignedUrlActionResult =
   | { ok: true; url: string }
-  | { ok: false; error: 'unauthorized' | 'not_found' | 'db_unavailable' | 'unknown' };
+  | {
+      ok: false;
+      error: 'unauthorized' | 'not_found' | 'documents_expired' | 'db_unavailable' | 'unknown';
+    };
 
 export async function getTourismDocumentSignedUrlAction(input: {
   tenantSlug: string;
@@ -126,6 +130,10 @@ export async function getTourismDocumentSignedUrlAction(input: {
     }
 
     if (!guestRow) {
+      const completedAt = await getStayTourismCompletionTimestamp(input.stayId);
+      if (completedAt) {
+        return { ok: false, error: 'documents_expired' };
+      }
       return { ok: false, error: 'not_found' };
     }
 
@@ -135,8 +143,22 @@ export async function getTourismDocumentSignedUrlAction(input: {
         ? String(row.passport_storage_path ?? '')
         : String(row.entry_stamp_storage_path ?? '');
 
+    if (!storagePath.trim()) {
+      const completedAt = await getStayTourismCompletionTimestamp(input.stayId);
+      if (completedAt) {
+        return { ok: false, error: 'documents_expired' };
+      }
+      return { ok: false, error: 'not_found' };
+    }
+
     const signed = await createTourismDocumentSignedUrl(storagePath);
     if (!signed.ok) {
+      if (signed.error === 'not_found') {
+        const completedAt = await getStayTourismCompletionTimestamp(input.stayId);
+        if (completedAt) {
+          return { ok: false, error: 'documents_expired' };
+        }
+      }
       return { ok: false, error: signed.error };
     }
 

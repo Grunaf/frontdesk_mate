@@ -1,5 +1,18 @@
 # Smoke tests
 
+## Tourism document retention (ops)
+
+Daily job: `purgeExpiredTourismDocuments()` in
+`src/features/guest-tourism-registration/jobs/purgeExpiredTourismDocuments.ts`.
+Policy: **90 days** after `guest_stays.check_out_at` (Chat A). Requires `SUPABASE_SECRET_KEY`.
+
+- Staging dry-run: `TOURISM_DOCUMENT_PURGE_DRY_RUN=1` (logs only, no storage/DB deletes).
+- Optional: `TOURISM_DOCUMENT_RETENTION_DAYS`, `TOURISM_DOCUMENT_PURGE_BATCH_LIMIT` (default 50).
+- Wire a trusted cron (e.g. Vercel Cron `GET` route with `CRON_SECRET`) that imports and calls the job.
+
+Manual check: backdate a test stay `check_out_at` → run job → storage objects and
+`guest_stay_tourism_guests` rows gone; reception tourism block shows **Documents purged**.
+
 ## Local
 
 ```bash

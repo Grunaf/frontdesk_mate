@@ -69,11 +69,21 @@ const SECTIONS = [
   { key: 'otherActive' as const, title: 'Other active', defaultOpen: false },
 ] as const;
 
-type TourismStatusBadge = 'not_started' | 'in_progress' | 'complete';
+type TourismStatusBadge = 'not_started' | 'in_progress' | 'complete' | 'documents_purged';
+
+function isTourismDocumentsPurged(registration: GuestTourismRegistrationSummary | null): boolean {
+  if (!registration) return false;
+  return (
+    registration.tourism_registration_completed_at != null && registration.guests.length === 0
+  );
+}
 
 function resolveTourismStatusBadge(
   registration: GuestTourismRegistrationSummary | null
 ): TourismStatusBadge {
+  if (isTourismDocumentsPurged(registration)) {
+    return 'documents_purged';
+  }
   if (!registration || registration.guests.length === 0) {
     return 'not_started';
   }
@@ -91,6 +101,8 @@ function tourismStatusBadgeLabel(status: TourismStatusBadge): string {
       return 'In progress';
     case 'complete':
       return 'Complete';
+    case 'documents_purged':
+      return 'Documents purged';
   }
 }
 
@@ -171,7 +183,11 @@ function StayTourismRegistrationBlock({
         kind,
       });
       if (!result.ok) {
-        setActionError('Could not open document.');
+        setActionError(
+          result.error === 'documents_expired'
+            ? 'Documents expired (retention policy).'
+            : 'Could not open document.'
+        );
         return;
       }
       window.open(result.url, '_blank', 'noopener,noreferrer');
@@ -188,6 +204,8 @@ function StayTourismRegistrationBlock({
           className={
             status === 'complete'
               ? 'rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-900'
+              : status === 'documents_purged'
+                ? 'rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-800'
               : status === 'in_progress'
                 ? 'rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-950'
                 : 'rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground'
@@ -224,6 +242,11 @@ function StayTourismRegistrationBlock({
 
       {isLoading ? (
         <p className="text-xs text-muted-foreground">Loading guests…</p>
+      ) : status === 'documents_purged' ? (
+        <p className="text-xs text-muted-foreground">
+          Guest document copies were removed after the retention period. Export status and
+          completion time are kept for audit.
+        </p>
       ) : registration && registration.guests.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[280px] text-left text-xs">
