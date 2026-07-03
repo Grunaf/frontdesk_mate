@@ -44,7 +44,6 @@ const baseSettings: TenantSettings = {
     rooms: [{ id: 'r1', label: 'Room', floorId: '1' }],
     beds: [{ id: '4B', roomId: 'r1', x: 20, y: 20, bedType: 'single' }],
   },
-  highlightedBedId: '4B',
   booking: { provider: 'none' },
   arrivalWalkToHostel: { en: 'Walk from the hub to {address}.' },
 };
