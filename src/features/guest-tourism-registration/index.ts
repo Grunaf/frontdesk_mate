@@ -28,6 +28,7 @@ export {
   type SubmitTourismGuestActionResult,
 } from './actions/submitTourismGuestAction';
 export { TourismRegistrationPanel } from './ui/TourismRegistrationPanel';
+export { TourismRegistrationRequiredSheet } from './ui/TourismRegistrationRequiredSheet';
 
 export {
   getTourismRegistrationProfile,

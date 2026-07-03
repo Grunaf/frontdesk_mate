@@ -568,6 +568,14 @@
         "hint": "Trip tips and directions are open to everyone. Door codes and your bed map unlock after check-in — tap",
         "link": "Check in"
       },
+      "tourismGate": {
+        "title": "Complete guest registration",
+        "description": "Your accommodation needs to register all guests before issuing settlement details. This is a legal requirement.",
+        "step1": "Tap \"Register\" below",
+        "step2": "Add each guest's name and document photos",
+        "step3": "Return here to view your settlement",
+        "cta": "Register now"
+      },
       "tabs": {
         "info": "Preparation",
         "route": "Route To Hostel",

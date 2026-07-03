@@ -10,7 +10,7 @@ import {
   CrossHostelStrip,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
-import { TourismRegistrationPanel } from '@/features/guest-tourism-registration';
+import { TourismRegistrationPanel, TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { SettlementPhase } from './SettlementPhase';
 import { useTranslations } from '@/shared/i18n';
@@ -71,6 +71,7 @@ export function ArrivalJourneyCoordinator({
   const isRegistered = useIsGuestRegistered();
   const { currentStep, setCurrentStep } = useCheckInState(isOnsite);
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
+  const [tourismGateSheetOpen, setTourismGateSheetOpen] = useState(false);
   const [tourismComplete, setTourismComplete] = useState(initialTourismComplete);
 
   useEffect(() => {
@@ -83,6 +84,14 @@ export function ArrivalJourneyCoordinator({
   const openCheckInSheet = () => {
     setCheckInSheetOpen(true);
   };
+
+  const openTourismGateSheet = () => {
+    setTourismGateSheetOpen(true);
+  };
+
+  const goToTourismRegistration = useCallback(() => {
+    setCurrentStep('register');
+  }, [setCurrentStep]);
 
   const handleTourismRegistrationComplete = useCallback(() => {
     setTourismComplete(true);
@@ -217,7 +226,7 @@ export function ArrivalJourneyCoordinator({
     if (
       isSettlementTourismLocked(step, tourismRegistrationRequired, tourismComplete, isRegistered)
     ) {
-      setCurrentStep('register');
+      openTourismGateSheet();
       return;
     }
     setCurrentStep(step);
@@ -245,7 +254,7 @@ export function ArrivalJourneyCoordinator({
     if (
       isSettlementTourismLocked(step, tourismRegistrationRequired, tourismComplete, isRegistered)
     ) {
-      setCurrentStep('register');
+      openTourismGateSheet();
     }
   };
 
@@ -264,7 +273,7 @@ export function ArrivalJourneyCoordinator({
       activeStep.id === 'settlement' &&
       !canAccessSettlement
     ) {
-      setCurrentStep('register');
+      openTourismGateSheet();
       return;
     }
 
@@ -311,6 +320,11 @@ export function ArrivalJourneyCoordinator({
       </main>
 
       <CheckInRequiredSheet open={checkInSheetOpen} onOpenChange={setCheckInSheetOpen} />
+      <TourismRegistrationRequiredSheet
+        open={tourismGateSheetOpen}
+        onOpenChange={setTourismGateSheetOpen}
+        onGoToRegistration={goToTourismRegistration}
+      />
     </div>
   );
 }
