@@ -218,6 +218,10 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-foreground">{t('intro.title', countryVars)}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{t('intro.description', countryVars)}</p>
+        <div className="space-y-1 pt-1">
+          <p className="text-sm font-medium text-foreground">{t('privacy.title')}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">{t('privacy.body')}</p>
+        </div>
       </div>
 
       {reservationName ? (

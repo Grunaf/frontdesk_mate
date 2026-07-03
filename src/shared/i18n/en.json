@@ -671,6 +671,10 @@
           "title": "Tourist registration ({country})",
           "description": "{country} requires each person staying at the accommodation to be registered separately. Upload the required identity documents for each guest."
         },
+        "privacy": {
+          "title": "Why we collect this data",
+          "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
+        },
         "reservationName": {
           "label": "Name on reservation"
         },
