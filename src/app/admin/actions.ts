@@ -279,15 +279,10 @@ function readSettings(formData: FormData): TenantSettings {
   const roomMapEnabled = String(formData.get('roomMapEnabled') || '').trim() === 'true';
   const houseRules = parseHouseRules(formData);
 
-  let highlightedBedId = roomMapEnabled
-    ? String(formData.get('highlightedBedId') || '').trim() || undefined
-    : undefined;
   let guestStay = parseGuestStay(formData);
 
   if (roomMapEnabled && guestStay) {
-    const normalized = normalizeGuestStayForSave(guestStay, highlightedBedId);
-    guestStay = normalized.guestStay;
-    highlightedBedId = normalized.highlightedBedId;
+    guestStay = normalizeGuestStayForSave(guestStay);
   }
 
   const arrivalAccessInput = readArrivalAccess(formData);
@@ -321,8 +316,7 @@ function readSettings(formData: FormData): TenantSettings {
     logoUrl: String(formData.get('logoUrl') || '') || undefined,
     landing: parseLanding(formData),
     hostel,
-    highlightedBedId,
-    guestStay,
+    guestStay: roomMapEnabled ? guestStay : undefined,
     arrivalAccess: {
       layoutKind: arrivalAccessInput.layoutKind,
       dayMode: arrivalAccessInput.dayMode,
@@ -342,6 +336,10 @@ function readSettings(formData: FormData): TenantSettings {
       close: normalizeTimeValue(String(formData.get('receptionClose') || '')),
       whatsappPhoneRaw: String(formData.get('receptionWhatsappPhoneRaw') || '') || undefined,
       availabilityHint: String(formData.get('receptionAvailabilityHint') || '') || undefined,
+      guestAccessMessageTemplate:
+        String(formData.get('guestAccessMessageTemplate') || '').trim() || undefined,
+      guestAccessPinMissingText:
+        String(formData.get('guestAccessPinMissingText') || '').trim() || undefined,
       whatsappEnabled: formData.get('receptionWhatsappEnabled') === 'true',
       canHelpWithTaxi: formData.get('receptionCanHelpWithTaxi') === 'true',
     },
@@ -464,6 +462,22 @@ export async function saveTenantAction(formData: FormData) {
   }
   const deskPin = String(formData.get('receptionDeskPin') || '').trim();
   const previousHash = previousTenant?.settings.reception?.deskPinHash;
+  const previousReception = previousTenant?.settings.reception;
+
+  if (previousReception) {
+    if (!formData.has('guestAccessMessageTemplate') && previousReception.guestAccessMessageTemplate) {
+      settings.reception = {
+        ...settings.reception,
+        guestAccessMessageTemplate: previousReception.guestAccessMessageTemplate,
+      };
+    }
+    if (!formData.has('guestAccessPinMissingText') && previousReception.guestAccessPinMissingText) {
+      settings.reception = {
+        ...settings.reception,
+        guestAccessPinMissingText: previousReception.guestAccessPinMissingText,
+      };
+    }
+  }
 
   if (deskPin) {
     settings.reception = {

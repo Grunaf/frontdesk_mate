@@ -72,8 +72,6 @@ interface RoomMapEditorProps {
   beds: StayBed[];
   onBedsChange: (beds: StayBed[]) => void;
   guestStay?: GuestStayConfig;
-  previewBedId?: string;
-  onPreviewBedSelect?: (bedId: string) => void;
 }
 
 export function RoomMapEditor({
@@ -82,8 +80,6 @@ export function RoomMapEditor({
   beds,
   onBedsChange,
   guestStay,
-  previewBedId,
-  onPreviewBedSelect,
 }: RoomMapEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragMode | null>(null);
@@ -348,19 +344,14 @@ export function RoomMapEditor({
                     y={bed.y}
                     rotation={layoutBed.rotation}
                     isNightMode={false}
+                    isHighlighted={false}
                     editorMode
                     bedType={layoutBed.bedType}
-                    isHighlighted={
-                      bed.id === previewBedId ||
-                      bed.topId === previewBedId ||
-                      bed.bottomId === previewBedId
-                    }
                     topId={bed.topId}
                     bottomId={bed.bottomId}
                     bottomLabel={bottomLabel}
                     topLabel={topLabel}
                     unitLabel={unitLabel}
-                    highlightedBedId={previewBedId}
                     selected={selectedIndex === index}
                   />
                 </g>
@@ -409,48 +400,6 @@ export function RoomMapEditor({
                   </option>
                 ))}
               </select>
-
-              {onPreviewBedSelect ? (
-                resolveBedUnitType(selectedBed) === 'bunk' ? (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedBed.topId ? (
-                      <button
-                        type="button"
-                        onClick={() => onPreviewBedSelect(selectedBed.topId!)}
-                        className={cn(
-                          'rounded-md border px-2.5 py-1.5 text-[11px] font-medium',
-                          previewBedId === selectedBed.topId && 'border-primary bg-primary/10'
-                        )}
-                      >
-                        Set upper as preview
-                      </button>
-                    ) : null}
-                    {selectedBed.bottomId ? (
-                      <button
-                        type="button"
-                        onClick={() => onPreviewBedSelect(selectedBed.bottomId!)}
-                        className={cn(
-                          'rounded-md border px-2.5 py-1.5 text-[11px] font-medium',
-                          previewBedId === selectedBed.bottomId && 'border-primary bg-primary/10'
-                        )}
-                      >
-                        Set lower as preview
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onPreviewBedSelect(selectedBed.id)}
-                    className={cn(
-                      'w-full rounded-md border px-2.5 py-1.5 text-[11px] font-medium',
-                      previewBedId === selectedBed.id && 'border-primary bg-primary/10'
-                    )}
-                  >
-                    Set as preview bed
-                  </button>
-                )
-              ) : null}
             </div>
           )}
 

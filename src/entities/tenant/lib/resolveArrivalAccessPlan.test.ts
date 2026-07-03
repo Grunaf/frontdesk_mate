@@ -3,8 +3,8 @@ import { buildHostelConfig } from '@/entities/tenant/lib/buildHostelConfig';
 import { resolveArrivalAccessPlan } from '@/entities/tenant/lib/resolveArrivalAccessPlan';
 import type { TenantSettings } from '@/entities/tenant/model/settings';
 
-function plan(settings: TenantSettings, isNightMode: boolean) {
-  return resolveArrivalAccessPlan(settings, buildHostelConfig(settings), isNightMode);
+function plan(settings: TenantSettings, isNightMode: boolean, guestBedId?: string | null) {
+  return resolveArrivalAccessPlan(settings, buildHostelConfig(settings), isNightMode, guestBedId);
 }
 
 describe('resolveArrivalAccessPlan', () => {
@@ -42,12 +42,15 @@ describe('resolveArrivalAccessPlan', () => {
     ]);
   });
 
-  it('filters access points by guest floor from bed map', () => {
+  it('filters access points by guest floor from session bed', () => {
     const settings: TenantSettings = {
-      highlightedBedId: '4B',
+      guestStay: {
+        floors: [{ id: '2', label: '2' }],
+        rooms: [{ id: 'r1', label: 'Room', floorId: '2' }],
+        beds: [{ id: '4B', roomId: 'r1' }],
+      },
       arrivalAccess: {
         layoutKind: 'building_then_zones',
-        bedFloorMap: { '4B': '2' },
         accessPoints: [
           { id: 'building_entrance', kind: 'outside', label: 'Outside', code: 'A' },
           { id: 'floor_1', kind: 'zone', label: 'Floor 1', code: '1', forFloors: ['1'], alsoForFloors: ['2'] },
@@ -56,7 +59,7 @@ describe('resolveArrivalAccessPlan', () => {
       },
     };
 
-    const result = plan(settings, true);
+    const result = plan(settings, true, '4B');
 
     expect(result.guestFloor).toBe('2');
     expect(result.nightAccess?.steps.map((step) => step.id)).toEqual([

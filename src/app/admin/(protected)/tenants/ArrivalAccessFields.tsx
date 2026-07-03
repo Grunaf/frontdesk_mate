@@ -277,7 +277,7 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
             : ''
         }
         placeholder='{"4B": "2"}'
-        hint="Filters access points by highlightedBedId until booking provides floor."
+        hint="Filters access points by the guest session bed floor when checked in."
       />
     </div>
   );

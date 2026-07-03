@@ -72,11 +72,6 @@ export function TenantFormHiddenPayload({
       />
       <input
         type="hidden"
-        name="highlightedBedId"
-        value={roomMapEnabled ? (mergedSettings.highlightedBedId ?? '') : ''}
-      />
-      <input
-        type="hidden"
         name="arrivalWalkToHostelJson"
         value={serializeArrivalWalkToHostelJson(mergedSettings.arrivalWalkToHostel)}
       />

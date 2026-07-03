@@ -2,11 +2,7 @@ import { resolveHouseRulesReady } from '@/entities/house-rules';
 import type { TenantSettings } from '../model/settings';
 
 export function isRoomMapModuleEnabled(settings: TenantSettings | undefined): boolean {
-  if (!settings?.highlightedBedId?.trim()) {
-    return false;
-  }
-
-  const stay = settings.guestStay;
+  const stay = settings?.guestStay;
   if (!stay) {
     return false;
   }

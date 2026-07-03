@@ -17,8 +17,6 @@ interface RoomSetupCardProps {
   onRoomChange: (next: StayRoom) => void;
   onBedsChange: (beds: StayBed[]) => void;
   onRemove: () => void;
-  previewBedId?: string;
-  onPreviewBedSelect?: (bedId: string) => void;
 }
 
 export function RoomSetupCard({
@@ -30,8 +28,6 @@ export function RoomSetupCard({
   onRoomChange,
   onBedsChange,
   onRemove,
-  previewBedId,
-  onPreviewBedSelect,
 }: RoomSetupCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -116,8 +112,6 @@ export function RoomSetupCard({
             beds={beds}
             onBedsChange={onBedsChange}
             guestStay={guestStay}
-            previewBedId={previewBedId}
-            onPreviewBedSelect={onPreviewBedSelect}
           />
         </div>
       </div>

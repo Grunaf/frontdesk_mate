@@ -63,9 +63,8 @@ describe('resolveGuestAppModules', () => {
     expect(localGuide?.actionSectionId).toBe('identity');
   });
 
-  it('marks room map live with bed id and layout coordinates', () => {
+  it('marks room map live with layout coordinates', () => {
     const settings: TenantSettings = {
-      highlightedBedId: '4B',
       guestStay: {
         floors: [{ id: '1', label: 'Floor 1' }],
         rooms: [{ id: 'r1', label: 'Room 1', floorId: '1' }],

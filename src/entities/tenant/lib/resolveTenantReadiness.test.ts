@@ -30,7 +30,6 @@ const baseSettings: TenantSettings = {
   },
   arrivalWalkToHostel: { en: 'Walk from the hub to {address}.' },
   heroBgUrl: '/hero.jpg',
-  highlightedBedId: '4B',
   houseRules: [
     {
       id: 'quiet-hours',

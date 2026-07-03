@@ -2,7 +2,6 @@
 update tenants
 set settings = settings || '{
   "roomLayoutId": "balkan-han",
-  "highlightedBedId": "4B",
   "doorImages": {
     "main": "/images/entrance.jpg",
     "sub": "/images/basement_entrance.jpg"

@@ -5,33 +5,26 @@ import {
 } from './resolveRoomMapReadiness';
 import type { TenantSettings } from '../model/settings';
 
+const readyGuestStay: NonNullable<TenantSettings['guestStay']> = {
+  floors: [{ id: '1', label: 'Floor 1' }],
+  rooms: [{ id: 'r1', label: 'Room 1', floorId: '1' }],
+  beds: [{ id: '4B', roomId: 'r1', x: 10, y: 20 }],
+};
+
 describe('resolveRoomMapReadiness', () => {
-  it('flags missing active bed as first gap', () => {
+  it('flags missing beds as first gap', () => {
     const steps = resolveRoomMapReadiness({ settings: {} });
-    const activeBed = steps.find((step) => step.id === 'active-bed');
+    const bedsStep = steps.find((step) => step.id === 'bed-exists');
 
-    expect(activeBed?.complete).toBe(false);
-    expect(activeBed?.message).toBe('Choose preview bed on the map');
-    expect(getFirstRoomMapReadinessGap({})).toBe('Choose preview bed on the map');
-  });
-
-  it('flags bed id not found in guest stay', () => {
-    const settings: TenantSettings = {
-      highlightedBedId: '4B',
-      guestStay: {
-        beds: [{ id: '1A', roomId: 'r1' }],
-      },
-    };
-
-    const bedExists = resolveRoomMapReadiness({ settings }).find((step) => step.id === 'bed-exists');
-    expect(bedExists?.complete).toBe(false);
-    expect(bedExists?.message).toContain('not found on map');
+    expect(bedsStep?.complete).toBe(false);
+    expect(getFirstRoomMapReadinessGap({})).toBe('Add at least one bed in a room below');
   });
 
   it('requires wayfinding content', () => {
     const settings: TenantSettings = {
-      highlightedBedId: '4B',
       guestStay: {
+        floors: [{ id: '1', label: '1' }],
+        rooms: [{ id: 'r1', label: 'Room', floorId: '1' }],
         beds: [{ id: '4B', roomId: 'r1' }],
       },
     };
@@ -41,14 +34,9 @@ describe('resolveRoomMapReadiness', () => {
     expect(wayfinding?.message).toContain('Place beds on map');
   });
 
-  it('passes when bed id and layout coordinates exist', () => {
+  it('passes when beds and layout coordinates exist', () => {
     const settings: TenantSettings = {
-      highlightedBedId: '4B',
-      guestStay: {
-        floors: [{ id: '1', label: 'Floor 1' }],
-        rooms: [{ id: 'r1', label: 'Room 1', floorId: '1' }],
-        beds: [{ id: '4B', roomId: 'r1', x: 10, y: 20 }],
-      },
+      guestStay: readyGuestStay,
     };
 
     const required = resolveRoomMapReadiness({ settings }).filter((step) => step.tier === 'required');

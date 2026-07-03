@@ -11,9 +11,9 @@ import { FindYourBedSummary } from './FindYourBedSummary';
 
 export function FindYourBedCard() {
   const t = useTranslations('components.findYourBed');
-  const { settings } = useTenant();
+  const { settings, guestBedId } = useTenant();
   const router = useRouter();
-  const plan = resolveGuestStayPlan(settings);
+  const plan = resolveGuestStayPlan(settings, guestBedId);
 
   if (!plan.bedId) {
     return null;
@@ -27,7 +27,7 @@ export function FindYourBedCard() {
       onClick={() => router.push(`${SITE_CONFIG.routes.app.welcome.path}?step=settlement`)}
     >
       <span className="min-w-0">
-        <span className="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           {t('title')}
         </span>
         <FindYourBedSummary plan={plan} variant="inline" />

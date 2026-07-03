@@ -3,8 +3,8 @@
 import { useMemo, useRef, useState } from 'react';
 import type { GuestStayConfig, StayBed, StayFloor, StayRoom, TenantSettings } from '@/entities/tenant';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
-import { dedupeGuestStayBedIds, normalizeGuestStayLabels, remapHighlightedBedIdAfterDedupe, resolveBedPickerOptions } from '@/entities/tenant/lib/resolveBedDisplay';
-import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
+import { dedupeGuestStayBedIds, normalizeGuestStayLabels } from '@/entities/tenant/lib/resolveBedDisplay';
+import type { TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { cn } from '@/shared/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { RoomMapReadinessChecklist } from '../ui/RoomMapReadinessChecklist';
@@ -17,7 +17,6 @@ interface GuestStayFormState {
   floors: StayFloor[];
   rooms: StayRoom[];
   beds: StayBed[];
-  highlightedBedId: string;
 }
 
 function buildGuestStayConfig(state: GuestStayFormState): GuestStayConfig | undefined {
@@ -30,18 +29,6 @@ function buildGuestStayConfig(state: GuestStayFormState): GuestStayConfig | unde
     rooms: state.rooms,
     beds: state.beds,
   };
-}
-
-function sanitizeHighlightedBedId(state: GuestStayFormState): string {
-  if (!state.roomMapEnabled || !state.highlightedBedId.trim()) {
-    return state.highlightedBedId;
-  }
-
-  const validValues = new Set(
-    resolveBedPickerOptions(buildGuestStayConfig(state)).map((option) => option.value)
-  );
-
-  return validValues.has(state.highlightedBedId) ? state.highlightedBedId : '';
 }
 
 interface GuestStayFieldsProps {
@@ -131,14 +118,12 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
   const initialGuestStay = useMemo(() => {
     const raw = settings?.guestStay ?? {};
     const labeled = normalizeGuestStayLabels(raw);
-    const enabled = isRoomMapModuleEnabled(settings);
 
     if (!labeled.beds?.length) {
       return {
         floors: labeled.floors ?? [],
         rooms: labeled.rooms ?? [],
         beds: labeled.beds ?? [],
-        highlightedBedId: enabled ? (settings?.highlightedBedId ?? '') : '',
       };
     }
 
@@ -147,9 +132,6 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
       floors: normalized.floors ?? [],
       rooms: normalized.rooms ?? [],
       beds: normalized.beds ?? [],
-      highlightedBedId: enabled
-        ? remapHighlightedBedIdAfterDedupe(settings?.highlightedBedId, labeled, normalized)
-        : '',
     };
   }, [settings]);
   const initialEnabled = useMemo(() => isRoomMapModuleEnabled(settings), [settings]);
@@ -162,7 +144,6 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
     initialGuestStay.rooms.length ? initialGuestStay.rooms : []
   );
   const [beds, setBeds] = useState<StayBed[]>(initialGuestStay.beds.length ? initialGuestStay.beds : []);
-  const [highlightedBedId, setHighlightedBedId] = useState(initialGuestStay.highlightedBedId);
   const [floorsOpen, setFloorsOpen] = useState(true);
 
   const guestStayStateRef = useRef<GuestStayFormState>({
@@ -170,7 +151,6 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
     floors: initialGuestStay.floors.length ? initialGuestStay.floors : [],
     rooms: initialGuestStay.rooms.length ? initialGuestStay.rooms : [],
     beds: initialGuestStay.beds.length ? initialGuestStay.beds : [],
-    highlightedBedId: initialGuestStay.highlightedBedId,
   });
 
   const readGuestStayState = (): GuestStayFormState => ({
@@ -178,25 +158,17 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
     floors,
     rooms,
     beds,
-    highlightedBedId,
   });
 
   const commitGuestStayState = (next: GuestStayFormState) => {
-    const sanitized: GuestStayFormState = {
-      ...next,
-      highlightedBedId: sanitizeHighlightedBedId(next),
-    };
-
-    guestStayStateRef.current = sanitized;
-    setRoomMapEnabled(sanitized.roomMapEnabled);
-    setFloors(sanitized.floors);
-    setRooms(sanitized.rooms);
-    setBeds(sanitized.beds);
-    setHighlightedBedId(sanitized.highlightedBedId);
+    guestStayStateRef.current = next;
+    setRoomMapEnabled(next.roomMapEnabled);
+    setFloors(next.floors);
+    setRooms(next.rooms);
+    setBeds(next.beds);
     updateDraft({
-      roomMapEnabled: sanitized.roomMapEnabled,
-      guestStay: buildGuestStayConfig(sanitized),
-      highlightedBedId: sanitized.roomMapEnabled ? sanitized.highlightedBedId : '',
+      roomMapEnabled: next.roomMapEnabled,
+      guestStay: buildGuestStayConfig(next),
     });
   };
 
@@ -208,19 +180,11 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
     () => buildGuestStayConfig(readGuestStayState()),
     [roomMapEnabled, floors, rooms, beds]
   );
-  const bedPickerOptions = useMemo(() => resolveBedPickerOptions(guestStay), [guestStay]);
 
   const handleToggleRoomMap = (enabled: boolean) => {
     if (!enabled) {
-      const hasData =
-        highlightedBedId.trim() ||
-        floors.length > 0 ||
-        rooms.length > 0 ||
-        beds.length > 0;
-      if (
-        hasData &&
-        !window.confirm('Turn off room map? This clears bed assignment and map data on save.')
-      ) {
+      const hasData = floors.length > 0 || rooms.length > 0 || beds.length > 0;
+      if (hasData && !window.confirm('Turn off room map? This clears map data on save.')) {
         return;
       }
       applyGuestStayState((current) => ({
@@ -229,16 +193,11 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
         floors: [],
         rooms: [],
         beds: [],
-        highlightedBedId: '',
       }));
       return;
     }
 
     applyGuestStayState((current) => {
-      if (!enabled) {
-        return current;
-      }
-
       if (current.floors.length === 0 && current.rooms.length === 0) {
         const seed = seedGuestStay();
         return {
@@ -256,7 +215,6 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
 
   const previewSettings: TenantSettings = {
     ...(settings ?? {}),
-    highlightedBedId: roomMapEnabled ? highlightedBedId : undefined,
     guestStay,
   };
 
@@ -272,14 +230,15 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
         <span>
           <span className="block text-sm font-medium">Room map for guests</span>
           <span className="mt-0.5 block text-xs text-muted-foreground">
-            When off, Find your bed is hidden. When on, complete all setup steps below.
+            When off, Find your bed is hidden. When on, complete all setup steps below. Guests see
+            their assigned bed after check-in.
           </span>
         </span>
       </label>
 
       {!roomMapEnabled ? (
         <p className="text-xs text-muted-foreground">
-          Enable room map to configure bed assignment and wayfinding. Partial data is not saved.
+          Enable room map to configure wayfinding. Partial data is not saved.
         </p>
       ) : (
         <>
@@ -405,59 +364,9 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
                       beds: current.beds.filter((bed) => bed.roomId !== room.id),
                     }))
                   }
-                  previewBedId={highlightedBedId}
-                  onPreviewBedSelect={(bedId) =>
-                    applyGuestStayState((current) => ({ ...current, highlightedBedId: bedId }))
-                  }
                 />
               ))}
             </div>
-          </section>
-
-          <section className="rounded-xl border border-primary/15 bg-primary/5 p-4">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
-              3 · Preview guest bed
-            </p>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Which bed is highlighted in the app until booking sync is connected. Select on the map
-              above or pick from the list.
-            </p>
-
-            {bedPickerOptions.length > 0 ? (
-              <label className="block space-y-1.5">
-                <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                  Preview bed
-                  {isTenantFieldMissing('highlightedBedId', readinessInput) ? (
-                    <span className="text-xs font-normal text-amber-700">Required for guests</span>
-                  ) : null}
-                </span>
-                <select
-                  value={highlightedBedId}
-                  onChange={(event) =>
-                    applyGuestStayState((current) => ({
-                      ...current,
-                      highlightedBedId: event.target.value,
-                    }))
-                  }
-                  className={cn(
-                    'w-full rounded-md border bg-background px-3 py-2 text-sm',
-                    isTenantFieldMissing('highlightedBedId', readinessInput) &&
-                      'border-amber-400 ring-1 ring-amber-200'
-                  )}
-                >
-                  <option value="">Choose preview bed…</option>
-                  {bedPickerOptions.map((option) => (
-                    <option key={option.key} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Place beds on the map above, then choose one here.
-              </p>
-            )}
           </section>
 
           <RoomMapReadinessChecklist

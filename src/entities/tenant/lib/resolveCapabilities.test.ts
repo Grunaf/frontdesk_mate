@@ -12,7 +12,7 @@ describe('resolveCapabilities', () => {
   it('hides room map until module structure is enabled', () => {
     const caps = resolveCapabilities({
       cityPackId: 'sarajevo',
-      settings: { highlightedBedId: '4B' },
+      settings: {},
     });
 
     expect(caps.roomMap).toBe('hidden');
@@ -22,7 +22,6 @@ describe('resolveCapabilities', () => {
     const caps = resolveCapabilities({
       cityPackId: 'sarajevo',
       settings: {
-        highlightedBedId: '4B',
         guestStay: guestStayShell,
       },
     });
@@ -34,7 +33,6 @@ describe('resolveCapabilities', () => {
     const caps = resolveCapabilities({
       cityPackId: 'sarajevo',
       settings: {
-        highlightedBedId: '4B',
         guestStay: {
           ...guestStayShell,
           beds: [{ id: '4B', roomId: 'r1', x: 10, y: 20 }],

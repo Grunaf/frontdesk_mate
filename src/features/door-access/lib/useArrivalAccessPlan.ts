@@ -5,8 +5,8 @@ import { resolveArrivalAccessPlan, useHostelConfig, useTenant } from '@/entities
 
 export function useArrivalAccessPlan() {
   const hostel = useHostelConfig();
-  const { settings } = useTenant();
+  const { settings, guestBedId } = useTenant();
   const isNightMode = useNightMode();
 
-  return resolveArrivalAccessPlan(settings, hostel, isNightMode);
+  return resolveArrivalAccessPlan(settings, hostel, isNightMode, guestBedId);
 }

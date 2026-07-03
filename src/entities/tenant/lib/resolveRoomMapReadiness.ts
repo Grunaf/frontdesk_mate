@@ -1,11 +1,11 @@
+import { stayBedHasLayout } from '@/entities/room/model/room-layout';
 import type { TenantSettings } from '../model/settings';
-import { resolveGuestStayPlan } from './resolveGuestStayPlan';
 import {
   shouldShowSubscriptionInfoStep,
   type TenantLifecycleStatus,
 } from './resolveTenantLifecycle';
 
-export type RoomMapReadinessStepId = 'active-bed' | 'bed-exists' | 'wayfinding' | 'subscription';
+export type RoomMapReadinessStepId = 'bed-exists' | 'wayfinding' | 'subscription';
 
 export type RoomMapReadinessStepTier = 'required' | 'info';
 
@@ -17,21 +17,23 @@ export interface RoomMapReadinessStep {
   tier: RoomMapReadinessStepTier;
 }
 
-function bedExistsInGuestStay(settings: TenantSettings, bedId: string): boolean {
-  const beds = settings.guestStay?.beds ?? [];
-  return beds.some(
-    (bed) => bed.id === bedId || bed.topId === bedId || bed.bottomId === bedId
-  );
+function hasGuestStayBeds(settings: TenantSettings): boolean {
+  return (settings.guestStay?.beds?.length ?? 0) > 0;
 }
 
-function hasWayfinding(settings: TenantSettings): boolean {
-  const plan = resolveGuestStayPlan(settings);
-  return Boolean(
-    plan.layoutBeds.length > 0 ||
-      plan.room?.doorImage ||
-      plan.floor?.pathHint ||
-      plan.floor?.pathImage
+function hasStructuralWayfinding(settings: TenantSettings): boolean {
+  const stay = settings.guestStay;
+  if (!stay) return false;
+
+  const bedsOnMap = (stay.beds ?? []).some((bed) => stayBedHasLayout(bed));
+  if (bedsOnMap) return true;
+
+  const floorPath = (stay.floors ?? []).some(
+    (floor) => floor.pathHint?.trim() || floor.pathImage?.trim()
   );
+  if (floorPath) return true;
+
+  return (stay.rooms ?? []).some((room) => room.doorImage?.trim());
 }
 
 export function resolveRoomMapReadiness(input: {
@@ -39,33 +41,23 @@ export function resolveRoomMapReadiness(input: {
   lifecycleStatus?: TenantLifecycleStatus;
 }): RoomMapReadinessStep[] {
   const { settings, lifecycleStatus } = input;
-  const bedId = settings.highlightedBedId?.trim() ?? '';
   const steps: RoomMapReadinessStep[] = [];
 
+  const bedsExist = hasGuestStayBeds(settings);
   steps.push({
-    id: 'active-bed',
-    label: 'Preview guest bed',
-    complete: Boolean(bedId),
-    message: bedId ? undefined : 'Choose preview bed on the map',
+    id: 'bed-exists',
+    label: 'Beds on room map',
+    complete: bedsExist,
+    message: bedsExist ? undefined : 'Add at least one bed in a room below',
     tier: 'required',
   });
 
-  if (bedId) {
-    const exists = bedExistsInGuestStay(settings, bedId);
-    steps.push({
-      id: 'bed-exists',
-      label: 'Bed exists in room map',
-      complete: exists,
-      message: exists ? undefined : 'Preview bed not found on map — pick from the list',
-      tier: 'required',
-    });
-  }
-
+  const wayfindingReady = hasStructuralWayfinding(settings);
   steps.push({
     id: 'wayfinding',
     label: 'Wayfinding content',
-    complete: hasWayfinding(settings),
-    message: hasWayfinding(settings)
+    complete: wayfindingReady,
+    message: wayfindingReady
       ? undefined
       : 'Place beds on map OR add floor path / room door photo',
     tier: 'required',

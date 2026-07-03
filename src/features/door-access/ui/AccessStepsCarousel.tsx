@@ -15,7 +15,7 @@ function SlideGuide({
   if (!slide.guideKey) return null;
 
   return (
-    <div className="animate-fade-in absolute top-3 right-3 left-3 z-10 rounded-lg border border-border/40 bg-foreground/80 p-2.5 text-[11px] leading-relaxed text-background backdrop-blur-md">
+    <div className="animate-fade-in absolute top-3 right-3 left-3 z-10 rounded-lg border border-border/40 bg-foreground/80 p-2.5 text-sm leading-relaxed text-background backdrop-blur-md">
       <p>{doors(slide.guideKey)}</p>
     </div>
   );
@@ -31,7 +31,7 @@ function SlideCode({
   if (slide.showCode && slide.code) {
     return (
       <div className="animate-fade-in absolute right-3 bottom-3 z-10 flex items-center gap-2 rounded-lg border border-border/40 bg-foreground/80 px-3 py-1.5 text-background shadow-lg backdrop-blur-md">
-        <span className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+        <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
           {slide.label}
         </span>
         <span className="font-mono text-sm font-bold tracking-wider text-primary">{slide.code}</span>
@@ -41,7 +41,7 @@ function SlideCode({
 
   if (slide.missingCode) {
     return (
-      <div className="animate-fade-in absolute right-3 bottom-3 left-3 z-10 rounded-lg border border-border/40 bg-foreground/80 px-3 py-2 text-[11px] leading-relaxed text-background shadow-lg backdrop-blur-md">
+      <div className="animate-fade-in absolute right-3 bottom-3 left-3 z-10 rounded-lg border border-border/40 bg-foreground/80 px-3 py-2 text-sm leading-relaxed text-background shadow-lg backdrop-blur-md">
         {doors('noCodeHint')}
       </div>
     );
@@ -78,7 +78,7 @@ export function AccessStepsCarousel({ steps, showStepLabels = true }: AccessStep
     <div className="space-y-3">
       {visibleSteps.length > 1 && (
         <div className="flex justify-end">
-          <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground uppercase">
+          <span className="rounded bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground uppercase">
             {activePhoto + 1} / {visibleSteps.length}
           </span>
         </div>
@@ -102,7 +102,7 @@ export function AccessStepsCarousel({ steps, showStepLabels = true }: AccessStep
                 className={`space-y-2 transition-all duration-300 ${isActive ? 'scale-100' : 'scale-95 opacity-60'}`}
               >
                 {showStepLabels && (
-                  <p className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+                  <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                     {slide.label}
                   </p>
                 )}

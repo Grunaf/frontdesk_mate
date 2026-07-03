@@ -1,8 +1,6 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { readGuestBedIdFromSearchParams } from '../lib/resolveGuestBedId';
 
 const GuestRuntimeContext = createContext<{ guestBedId: string | null }>({
   guestBedId: null,
@@ -15,9 +13,7 @@ export function GuestRuntimeProvider({
   sessionBedId?: string | null;
   children: React.ReactNode;
 }) {
-  const searchParams = useSearchParams();
-  const urlBedId = readGuestBedIdFromSearchParams(searchParams);
-  const guestBedId = sessionBedId?.trim() || urlBedId || null;
+  const guestBedId = sessionBedId?.trim() || null;
 
   return (
     <GuestRuntimeContext.Provider value={{ guestBedId }}>{children}</GuestRuntimeContext.Provider>

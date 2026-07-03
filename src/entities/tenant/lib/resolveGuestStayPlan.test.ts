@@ -3,7 +3,6 @@ import { resolveGuestFloorFromStay, resolveGuestStayPlan } from './resolveGuestS
 import type { TenantSettings } from '../model/settings';
 
 const balkanStay: TenantSettings = {
-  highlightedBedId: '4B',
   guestStay: {
     floors: [
       {
@@ -37,7 +36,7 @@ const balkanStay: TenantSettings = {
 
 describe('resolveGuestStayPlan', () => {
   it('builds anchor, floor hint, room door, and layout beds from guest stay', () => {
-    const plan = resolveGuestStayPlan(balkanStay);
+    const plan = resolveGuestStayPlan(balkanStay, '4B');
 
     expect(plan.bedId).toBe('4B');
     expect(plan.bedLabel).toBe('2');
@@ -52,7 +51,7 @@ describe('resolveGuestStayPlan', () => {
   });
 
   it('resolves bunk tier IDs to the same room', () => {
-    const plan = resolveGuestStayPlan({ ...balkanStay, highlightedBedId: '4A-Top' });
+    const plan = resolveGuestStayPlan(balkanStay, '4A-Top');
 
     expect(plan.bedId).toBe('4A-Top');
     expect(plan.bedLabel).toBe('1 · Upper');
@@ -62,8 +61,8 @@ describe('resolveGuestStayPlan', () => {
     expect(plan.layoutBeds).toHaveLength(2);
   });
 
-  it('returns minimal plan when only bed id is set', () => {
-    const plan = resolveGuestStayPlan({ highlightedBedId: '4B' });
+  it('returns minimal plan when only runtime bed id is set', () => {
+    const plan = resolveGuestStayPlan({}, '4B');
 
     expect(plan.room).toBeNull();
     expect(plan.layoutBeds).toHaveLength(0);

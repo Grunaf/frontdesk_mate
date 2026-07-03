@@ -19,9 +19,9 @@ interface FindYourBedPanelProps {
 
 export function FindYourBedPanel({ compact = false }: FindYourBedPanelProps) {
   const t = useTranslations('components.findYourBed');
-  const { settings } = useTenant();
+  const { settings, guestBedId } = useTenant();
   const isNight = useNightMode();
-  const plan = resolveGuestStayPlan(settings);
+  const plan = resolveGuestStayPlan(settings, guestBedId);
 
   const floorHintOnly = plan.steps.find((step) => step.kind === 'floor_path' && step.hint && !step.imageSrc);
   const photoSteps = plan.steps.filter((step) => step.imageSrc);
@@ -48,7 +48,7 @@ export function FindYourBedPanel({ compact = false }: FindYourBedPanelProps) {
 
       {hasMap ? (
         <div>
-          <p className="mb-2 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+          <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
             {t('insideRoom')}
           </p>
           <RoomLayout

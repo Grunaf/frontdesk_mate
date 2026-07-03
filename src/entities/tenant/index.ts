@@ -36,7 +36,6 @@ export {
   type ResolvedLandingRooms,
 } from './lib/resolveLandingRooms';
 export {
-  readGuestBedIdFromSearchParams,
   resolveGuestBedId,
 } from './lib/resolveGuestBedId';
 export type { LandingRoomType, TenantLandingSettings } from './model/landing';
