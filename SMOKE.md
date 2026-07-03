@@ -8,7 +8,8 @@ Policy: **90 days** after `guest_stays.check_out_at` (Chat A). Requires `SUPABAS
 
 - Staging dry-run: `TOURISM_DOCUMENT_PURGE_DRY_RUN=1` (logs only, no storage/DB deletes).
 - Optional: `TOURISM_DOCUMENT_RETENTION_DAYS`, `TOURISM_DOCUMENT_PURGE_BATCH_LIMIT` (default 50).
-- Wire a trusted cron (e.g. Vercel Cron `GET` route with `CRON_SECRET`) that imports and calls the job.
+- **Vercel:** set `CRON_SECRET` on the project; `vercel.json` runs `GET /api/cron/tourism-document-purge` daily at **03:00 UTC**. Vercel sends `Authorization: Bearer <CRON_SECRET>`.
+- Manual trigger: `curl -sS -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/tourism-document-purge` — check Vercel function logs for `[tourism-document-purge]`.
 
 Manual check: backdate a test stay `check_out_at` → run job → storage objects and
 `guest_stay_tourism_guests` rows gone; reception tourism block shows **Documents purged**.

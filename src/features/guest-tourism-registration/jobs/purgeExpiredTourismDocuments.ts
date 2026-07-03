@@ -10,9 +10,8 @@ import 'server-only';
  *
  * ## Ops / cron
  *
- * Run daily from a trusted server context (Vercel Cron, systemd, GitHub Actions) with
- * `SUPABASE_SECRET_KEY` set. Example Next route (not in repo): `GET /api/cron/tourism-document-purge`
- * guarded by `CRON_SECRET` header, calling `purgeExpiredTourismDocuments()`.
+ * Run daily via Vercel Cron (`GET /api/cron/tourism-document-purge`, `CRON_SECRET`) or any
+ * trusted caller with `SUPABASE_SECRET_KEY` set.
  *
  * Env:
  * - `TOURISM_DOCUMENT_RETENTION_DAYS` — override default 90
