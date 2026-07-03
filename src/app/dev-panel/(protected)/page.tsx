@@ -1,7 +1,20 @@
 import Link from 'next/link';
 import { logoutDevPanelAction } from '../actions';
+import { type DevPanelEnvRow } from '../lib/buildDevPanelEnvRows';
 import { collectDevPanelSnapshot } from '../lib/collectDevPanelSnapshot';
 import { DevPanelProductMap } from '../ui/DevPanelProductMap';
+
+function envStatusLabel(row: DevPanelEnvRow): string {
+  if (row.effective === 'set') return 'set';
+  if (row.effective === 'fallback') return 'fallback';
+  return 'missing';
+}
+
+function envStatusClass(row: DevPanelEnvRow): string {
+  if (row.effective === 'set') return 'text-emerald-700';
+  if (row.effective === 'fallback') return 'text-amber-700';
+  return 'text-red-700';
+}
 
 function StatusDot({ ok }: { ok: boolean }) {
   return (
@@ -52,10 +65,13 @@ export default async function DevPanelPage() {
               key={row.key}
               className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
             >
-              <code className="text-xs">{row.key}</code>
-              <span className={row.set ? 'text-emerald-700' : 'text-red-700'}>
-                {row.set ? 'set' : 'missing'}
-              </span>
+              <div className="min-w-0">
+                <code className="text-xs">{row.key}</code>
+                {row.note ? (
+                  <p className="text-xs text-muted-foreground">{row.note}</p>
+                ) : null}
+              </div>
+              <span className={`shrink-0 ${envStatusClass(row)}`}>{envStatusLabel(row)}</span>
             </li>
           ))}
         </ul>

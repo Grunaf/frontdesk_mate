@@ -9,15 +9,20 @@ import {
 } from '@/entities/city-pack/lib/resolveCityPackGateForTenant';
 import { resolveGuestAppModules } from '@/entities/tenant/lib/resolveGuestAppModules';
 import { getTenantConfig, getTenantRecord } from '@/entities/tenant/server';
+import {
+  buildDevPanelEnvRows,
+  isDevPanelSecretEffective,
+  isGuestSessionSecretEffective,
+  isReceptionSessionSecretEffective,
+  resolveSupabaseAdminKeyLabel,
+  type DevPanelEnvRow,
+} from './buildDevPanelEnvRows';
 import { isSupabaseAdminConfigured } from '@/shared/lib/db/admin';
 import { isProd } from '@/shared/lib/env';
 
 const SNAPSHOT_ENV_KEYS = snapshotEnvKeys as string[];
 
-export interface DevPanelEnvRow {
-  key: string;
-  set: boolean;
-}
+export type { DevPanelEnvRow };
 
 export interface DevPanelCheck {
   id: string;
@@ -48,10 +53,7 @@ function resolveDevTenantSlug(): string {
 }
 
 function buildEnvRows(): DevPanelEnvRow[] {
-  return SNAPSHOT_ENV_KEYS.map((key) => ({
-    key,
-    set: Boolean(process.env[key]?.trim()),
-  }));
+  return buildDevPanelEnvRows(SNAPSHOT_ENV_KEYS);
 }
 
 async function checkDatabase(): Promise<DevPanelCheck> {
@@ -116,8 +118,41 @@ export async function collectDevPanelSnapshot(): Promise<DevPanelSnapshot> {
     label: 'Supabase admin (writes)',
     ok: isSupabaseAdminConfigured(),
     detail: isSupabaseAdminConfigured()
-      ? 'SUPABASE_SECRET_KEY configured'
-      : 'Add SUPABASE_SECRET_KEY for admin save / reception',
+      ? `${resolveSupabaseAdminKeyLabel()} configured`
+      : 'Add SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) for admin save / storage / guest stays',
+  });
+
+  const guestSecretDedicated = Boolean(process.env.GUEST_SESSION_SECRET?.trim());
+  const receptionSecretDedicated = Boolean(process.env.RECEPTION_SESSION_SECRET?.trim());
+  checks.push({
+    id: 'guest-session-secret',
+    label: 'Guest session signing',
+    ok: isGuestSessionSecretEffective(),
+    detail: !isGuestSessionSecretEffective()
+      ? 'Set GUEST_SESSION_SECRET or ADMIN_SECRET'
+      : guestSecretDedicated
+        ? 'GUEST_SESSION_SECRET set'
+        : 'Using ADMIN_SECRET fallback — set GUEST_SESSION_SECRET before hostel prod',
+  });
+  checks.push({
+    id: 'reception-session-secret',
+    label: 'Reception session + desk PIN hashing',
+    ok: isReceptionSessionSecretEffective(),
+    detail: !isReceptionSessionSecretEffective()
+      ? 'Set RECEPTION_SESSION_SECRET or ADMIN_SECRET'
+      : receptionSecretDedicated
+        ? 'RECEPTION_SESSION_SECRET set'
+        : 'Using ADMIN_SECRET fallback — set RECEPTION_SESSION_SECRET before hostel prod',
+  });
+  checks.push({
+    id: 'dev-panel-secret',
+    label: 'Dev panel auth',
+    ok: isDevPanelSecretEffective(),
+    detail: isDevPanelSecretEffective()
+      ? process.env.DEV_PANEL_SECRET?.trim()
+        ? 'DEV_PANEL_SECRET set'
+        : 'Using ADMIN_SECRET fallback'
+      : 'Set DEV_PANEL_SECRET or ADMIN_SECRET',
   });
 
   const tenantRecord = await getTenantRecord(devTenantSlug);
