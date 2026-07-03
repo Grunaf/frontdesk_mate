@@ -58,7 +58,15 @@ import {
 import { TenantReadinessChecklist } from './ui/TenantReadinessChecklist';
 import { TenantCommandBar } from './ui/TenantCommandBar';
 import { TenantFormHiddenPayload } from './ui/TenantFormHiddenPayload';
-import { resolveTourismRegistrationRequired } from '@/entities/tenant/lib/normalizeGuestStaySettings';
+import {
+  resolveTourismRegistrationConfig,
+  resolveTourismRegistrationRequired,
+} from '@/entities/tenant/lib/normalizeGuestStaySettings';
+import {
+  DEFAULT_TOURISM_PROFILE_ID,
+  getTourismRegistrationProfile,
+  TOURISM_PROFILE_IDS,
+} from '@/features/guest-tourism-registration/model/tourismRegistrationProfiles';
 
 interface TenantFormAccordionProps {
   originalSlug: string;
@@ -97,23 +105,50 @@ function GuestTourismRegistrationComplianceField({
   const checked =
     draft.tourismRegistrationRequired ?? resolveTourismRegistrationRequired(mergedSettings);
 
+  const existingConfig = resolveTourismRegistrationConfig(mergedSettings);
+  const profileId =
+    draft.tourismProfileId ?? existingConfig?.profileId ?? DEFAULT_TOURISM_PROFILE_ID;
+
   return (
-    <label className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200/60 bg-amber-50/40 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => updateDraft({ tourismRegistrationRequired: event.target.checked })}
-        className="mt-0.5 size-4 shrink-0 rounded border"
-      />
-      <span>
-        <span className="block text-sm font-medium">Require guest tourism registration (Montenegro)</span>
-        <span className="mt-0.5 block text-xs text-muted-foreground">
-          When on, guests must submit passport photos, entry stamp, and a WhatsApp contact before
-          settlement (Wi‑Fi, bed map). Reception can mark submissions as sent to the tourism
-          organization.
+    <div className="mb-6 rounded-xl border border-amber-200/60 bg-amber-50/40 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => updateDraft({ tourismRegistrationRequired: event.target.checked })}
+          className="mt-0.5 size-4 shrink-0 rounded border"
+        />
+        <span>
+          <span className="block text-sm font-medium">Guest registration</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            When enabled, guests must register their identity documents before accessing settlement
+            details. Required documents depend on the selected jurisdiction.
+          </span>
         </span>
-      </span>
-    </label>
+      </label>
+
+      {checked ? (
+        <div className="ml-7 mt-3">
+          <label className="block text-xs font-medium text-muted-foreground">
+            Jurisdiction
+            <select
+              value={profileId}
+              onChange={(event) => updateDraft({ tourismProfileId: event.target.value })}
+              className="mt-1 block w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+            >
+              {TOURISM_PROFILE_IDS.map((id) => {
+                const profile = getTourismRegistrationProfile(id);
+                return (
+                  <option key={id} value={id}>
+                    {profile?.countryNameKey ?? id}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -11,6 +11,7 @@ import type { HostelPlace } from '@/entities/tenant/model/hostelPlaces';
 import { getHouseRules, migrateActiveRulesKeys } from '@/entities/house-rules';
 import {
   finalizeGuestStayForSave,
+  resolveTourismRegistrationConfig,
   resolveTourismRegistrationRequired,
 } from '@/entities/tenant/lib/normalizeGuestStaySettings';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
@@ -26,6 +27,7 @@ export interface TenantFormDraft {
   hostel?: TenantHostelSettings;
   roomMapEnabled?: boolean;
   tourismRegistrationRequired?: boolean;
+  tourismProfileId?: string;
   launchBookingPath?: 'engine' | 'wa';
   arrivalWalkToHostel?: LocalizedField;
   arrivalWalkToHostelByRoute?: Partial<Record<RouteId, LocalizedField>>;
@@ -96,6 +98,9 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
 
   const tourismRegistrationRequired =
     draft.tourismRegistrationRequired ?? resolveTourismRegistrationRequired(base);
+  const existingConfig = resolveTourismRegistrationConfig(base);
+  const tourismProfileId =
+    draft.tourismProfileId ?? existingConfig?.profileId;
   const roomMapEnabled = draft.roomMapEnabled ?? isRoomMapModuleEnabled(merged);
 
   merged = {
@@ -104,6 +109,7 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       roomMapEnabled,
       guestStay: merged.guestStay,
       tourismRegistrationRequired,
+      tourismProfileId,
     }),
   };
 

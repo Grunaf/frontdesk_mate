@@ -280,6 +280,7 @@ function readSettings(formData: FormData): TenantSettings {
   const roomMapEnabled = String(formData.get('roomMapEnabled') || '').trim() === 'true';
   const tourismRegistrationRequired =
     String(formData.get('tourismRegistrationRequired') || '').trim() === 'true';
+  const tourismProfileId = String(formData.get('tourismProfileId') || '').trim() || undefined;
   const houseRules = parseHouseRules(formData);
 
   let guestStay = parseGuestStay(formData);
@@ -292,6 +293,7 @@ function readSettings(formData: FormData): TenantSettings {
     roomMapEnabled,
     guestStay: roomMapEnabled ? guestStay : undefined,
     tourismRegistrationRequired,
+    tourismProfileId,
   });
 
   const arrivalAccessInput = readArrivalAccess(formData);

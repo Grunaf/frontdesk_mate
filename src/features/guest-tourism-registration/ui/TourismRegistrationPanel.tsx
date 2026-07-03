@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useGuestSession } from '@/features/guest-check-in';
-import { useTenant } from '@/entities/tenant';
+import { resolveTourismRegistrationProfile, useTenant } from '@/entities/tenant';
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 import {
@@ -30,8 +30,10 @@ type TourismRegistrationPanelProps = {
 
 export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPanelProps) {
   const t = useTranslations('pages.arrivalJourney.register');
-  const { slug: tenantSlug } = useTenant();
+  const { slug: tenantSlug, settings } = useTenant();
   const { session } = useGuestSession();
+  const profile = resolveTourismRegistrationProfile(settings);
+  const countryVars = { country: profile?.countryNameKey ?? '' };
 
   const [guests, setGuests] = useState<TourismGuestListItem[]>([]);
   const [registrationComplete, setRegistrationComplete] = useState(false);
@@ -182,7 +184,7 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
       <div className="space-y-6 pt-5">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">{t('complete.summaryTitle')}</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">{t('intro.description')}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{t('intro.description', countryVars)}</p>
         </div>
 
         {reservationName ? (
@@ -214,8 +216,8 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
   return (
     <div className="space-y-6 pt-5">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-foreground">{t('intro.title')}</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">{t('intro.description')}</p>
+        <h2 className="text-lg font-semibold text-foreground">{t('intro.title', countryVars)}</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t('intro.description', countryVars)}</p>
       </div>
 
       {reservationName ? (
@@ -232,6 +234,7 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
 
       <AddTourismGuestForm
         tenantSlug={tenantSlug}
+        requiredDocumentKinds={profile?.requiredDocumentKinds ?? ['passport', 'entry_stamp']}
         disabled={isGuestUploadPending}
         onUploadPendingChange={setIsGuestUploadPending}
         onGuestAdded={handleGuestAdded}

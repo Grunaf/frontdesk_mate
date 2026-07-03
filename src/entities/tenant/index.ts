@@ -47,10 +47,14 @@ export {
 } from './lib/resolveGuestStayPlan';
 export {
   resolveTourismRegistrationRequired,
+  resolveTourismRegistrationConfig,
+  resolveTourismRegistrationProfile,
   normalizeGuestStayComplianceOnRead,
   finalizeGuestStayForSave,
 } from './lib/normalizeGuestStaySettings';
-export type { GuestStayConfig,
+export type {
+  GuestStayConfig,
+  TourismRegistrationConfig,
   GuestStayPlan,
   GuestStayStep,
   StayBed,

@@ -4,10 +4,11 @@ import { randomUUID } from 'crypto';
 
 import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
 import { getTourismRegistrationByStayId } from '@/entities/guest-tourism-registration/server';
-import { resolveTourismRegistrationRequired } from '@/entities/tenant';
+import { resolveTourismRegistrationProfile } from '@/entities/tenant';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import { uploadGuestTourismDocument } from '../api/uploadGuestTourismDocument';
+import { DOCUMENT_KIND_TO_STORAGE_KEY } from '../model/tourismRegistrationProfiles';
 
 const MAX_NAME_LENGTH = 120;
 
@@ -51,7 +52,8 @@ export async function submitTourismGuestAction(
   }
 
   const tenant = await getTenantRecord(slug);
-  if (!tenant || !resolveTourismRegistrationRequired(tenant.settings)) {
+  const profile = tenant ? resolveTourismRegistrationProfile(tenant.settings) : undefined;
+  if (!tenant || !profile) {
     return { ok: false, error: 'feature_disabled' };
   }
 
@@ -67,37 +69,37 @@ export async function submitTourismGuestAction(
 
   const firstName = readGuestNamePart(formData, 'firstName');
   const lastName = readGuestNamePart(formData, 'lastName');
-  const passport = readImageFile(formData, 'passport');
-  const entryStamp = readImageFile(formData, 'entryStamp');
-
-  if (!firstName || !lastName || !passport || !entryStamp) {
+  if (!firstName || !lastName) {
     return { ok: false, error: 'invalid_input' };
+  }
+
+  const documentFiles: { kind: string; storageKind: string; file: File }[] = [];
+  for (const kind of profile.requiredDocumentKinds) {
+    const formKey = kind === 'entry_stamp' ? 'entryStamp' : kind;
+    const storageKind = DOCUMENT_KIND_TO_STORAGE_KEY[kind];
+    const file = readImageFile(formData, formKey);
+    if (!file) {
+      return { ok: false, error: 'invalid_input' };
+    }
+    documentFiles.push({ kind, storageKind, file });
   }
 
   const guestRowId = randomUUID();
 
-  const passportUpload = await uploadGuestTourismDocument({
-    tenantId: tenant.id,
-    stayId: session.stayId,
-    guestRowId,
-    kind: 'passport',
-    file: passport,
-  });
+  const uploadResults: Record<string, string> = {};
+  for (const doc of documentFiles) {
+    const uploadResult = await uploadGuestTourismDocument({
+      tenantId: tenant.id,
+      stayId: session.stayId,
+      guestRowId,
+      kind: doc.storageKind,
+      file: doc.file,
+    });
 
-  if (!passportUpload.ok) {
-    return { ok: false, error: passportUpload.error };
-  }
-
-  const entryStampUpload = await uploadGuestTourismDocument({
-    tenantId: tenant.id,
-    stayId: session.stayId,
-    guestRowId,
-    kind: 'entry-stamp',
-    file: entryStamp,
-  });
-
-  if (!entryStampUpload.ok) {
-    return { ok: false, error: entryStampUpload.error };
+    if (!uploadResult.ok) {
+      return { ok: false, error: uploadResult.error };
+    }
+    uploadResults[doc.kind] = uploadResult.storagePath;
   }
 
   const admin = getSupabaseAdmin();
@@ -112,8 +114,8 @@ export async function submitTourismGuestAction(
       stay_id: session.stayId,
       first_name: firstName,
       last_name: lastName,
-      passport_storage_path: passportUpload.storagePath,
-      entry_stamp_storage_path: entryStampUpload.storagePath,
+      passport_storage_path: uploadResults['passport'] ?? '',
+      entry_stamp_storage_path: uploadResults['entry_stamp'] ?? '',
     })
     .select('id, first_name, last_name')
     .single();

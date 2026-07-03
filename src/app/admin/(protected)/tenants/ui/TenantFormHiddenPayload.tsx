@@ -4,7 +4,10 @@ import { getHouseRules } from '@/entities/house-rules';
 import type { TenantSettings } from '@/entities/tenant';
 import { resolveCityTaxAmount, resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
-import { resolveTourismRegistrationRequired } from '@/entities/tenant/lib/normalizeGuestStaySettings';
+import {
+  resolveTourismRegistrationConfig,
+  resolveTourismRegistrationRequired,
+} from '@/entities/tenant/lib/normalizeGuestStaySettings';
 import {
   parseArrivalWalkByRouteJson,
   parseArrivalWalkToHostelJson,
@@ -48,6 +51,8 @@ export function TenantFormHiddenPayload({
   const roomMapEnabled = roomMapEnabledOverride ?? isRoomMapModuleEnabled(mergedSettings);
   const houseRules = getHouseRules(mergedSettings);
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(mergedSettings);
+  const tourismConfig = resolveTourismRegistrationConfig(mergedSettings);
+  const tourismProfileId = tourismConfig?.profileId ?? '';
   const guestStayJson =
     roomMapEnabled && mergedSettings.guestStay ? JSON.stringify(mergedSettings.guestStay) : '';
 
@@ -74,6 +79,7 @@ export function TenantFormHiddenPayload({
         name="tourismRegistrationRequired"
         value={tourismRegistrationRequired ? 'true' : 'false'}
       />
+      <input type="hidden" name="tourismProfileId" value={tourismProfileId} />
       <input type="hidden" name="guestStayJson" value={guestStayJson} />
       <input
         type="hidden"

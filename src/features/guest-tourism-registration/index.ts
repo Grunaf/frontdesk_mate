@@ -28,3 +28,11 @@ export {
   type SubmitTourismGuestActionResult,
 } from './actions/submitTourismGuestAction';
 export { TourismRegistrationPanel } from './ui/TourismRegistrationPanel';
+
+export {
+  getTourismRegistrationProfile,
+  DEFAULT_TOURISM_PROFILE_ID,
+  TOURISM_PROFILE_IDS,
+  type TourismDocumentKind,
+  type TourismRegistrationProfile,
+} from './model/tourismRegistrationProfiles';

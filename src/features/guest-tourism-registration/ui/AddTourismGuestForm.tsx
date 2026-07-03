@@ -7,27 +7,41 @@ import {
   compressImageForUpload,
   CompressImageForUploadError,
 } from '../lib/compressImageForUpload';
+import {
+  DOCUMENT_KIND_FORM_KEY,
+  type TourismDocumentKind,
+} from '../model/tourismRegistrationProfiles';
 import { useTranslations } from '@/shared/i18n';
 import { Alert, AlertDescription, Button, Input, Label } from '@/shared/ui';
 
 const MAX_NAME_LENGTH = 120;
 
+const DOCUMENT_KIND_LABEL_KEY: Record<TourismDocumentKind, string> = {
+  passport: 'addGuest.passport',
+  entry_stamp: 'addGuest.entryStamp',
+};
+
+const DOCUMENT_KIND_ERROR_KEY: Record<TourismDocumentKind, string> = {
+  passport: 'fieldErrors.passport',
+  entry_stamp: 'fieldErrors.entryStamp',
+};
+
 type AddTourismGuestFormProps = {
   tenantSlug: string;
+  requiredDocumentKinds: TourismDocumentKind[];
   disabled?: boolean;
   onGuestAdded: () => void;
   onUploadPendingChange?: (pending: boolean) => void;
 };
 
-type FieldErrors = {
+type FieldErrors = Record<string, string | undefined> & {
   firstName?: string;
   lastName?: string;
-  passport?: string;
-  entryStamp?: string;
 };
 
 export function AddTourismGuestForm({
   tenantSlug,
+  requiredDocumentKinds,
   disabled = false,
   onGuestAdded,
   onUploadPendingChange,
@@ -40,8 +54,7 @@ export function AddTourismGuestForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const passportRef = useRef<HTMLInputElement>(null);
-  const entryStampRef = useRef<HTMLInputElement>(null);
+  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const resolveActionError = (code: string): string => {
     switch (code) {
@@ -87,13 +100,12 @@ export function AddTourismGuestForm({
       errors.lastName = tField('lastName');
     }
 
-    const passportFile = passportRef.current?.files?.[0];
-    const stampFile = entryStampRef.current?.files?.[0];
-    if (!passportFile?.size) {
-      errors.passport = tField('passport');
-    }
-    if (!stampFile?.size) {
-      errors.entryStamp = tField('entryStamp');
+    for (const kind of requiredDocumentKinds) {
+      const formKey = DOCUMENT_KIND_FORM_KEY[kind];
+      const file = fileRefs.current[formKey]?.files?.[0];
+      if (!file?.size) {
+        errors[formKey] = tField(DOCUMENT_KIND_ERROR_KEY[kind].replace('fieldErrors.', '') as 'passport' | 'entryStamp');
+      }
     }
 
     return errors;
@@ -110,22 +122,24 @@ export function AddTourismGuestForm({
       return;
     }
 
-    const passportFile = passportRef.current!.files![0];
-    const stampFile = entryStampRef.current!.files![0];
+    const filesToCompress = requiredDocumentKinds.map((kind) => {
+      const formKey = DOCUMENT_KIND_FORM_KEY[kind];
+      return { kind, formKey, file: fileRefs.current[formKey]!.files![0] };
+    });
 
     startTransition(async () => {
       onUploadPendingChange?.(true);
       try {
-        const [compressedPassport, compressedStamp] = await Promise.all([
-          compressImageForUpload(passportFile),
-          compressImageForUpload(stampFile),
-        ]);
+        const compressed = await Promise.all(
+          filesToCompress.map(({ file }) => compressImageForUpload(file))
+        );
 
         const formData = new FormData();
         formData.append('firstName', firstName.trim());
         formData.append('lastName', lastName.trim());
-        formData.append('passport', compressedPassport);
-        formData.append('entryStamp', compressedStamp);
+        filesToCompress.forEach(({ formKey }, i) => {
+          formData.append(formKey, compressed[i]);
+        });
 
         const result = await submitTourismGuestAction(tenantSlug, formData);
         if (!result.ok) {
@@ -136,8 +150,10 @@ export function AddTourismGuestForm({
         setFirstName('');
         setLastName('');
         setFieldErrors({});
-        if (passportRef.current) passportRef.current.value = '';
-        if (entryStampRef.current) entryStampRef.current.value = '';
+        for (const { formKey } of filesToCompress) {
+          const ref = fileRefs.current[formKey];
+          if (ref) ref.value = '';
+        }
         setSuccessMessage(t('addGuest.success'));
         onGuestAdded();
       } catch (error) {
@@ -198,35 +214,26 @@ export function AddTourismGuestForm({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="tourism-passport">{t('addGuest.passport')}</Label>
-        <Input
-          id="tourism-passport"
-          ref={passportRef}
-          type="file"
-          accept="image/*"
-          disabled={disabled || isPending}
-          aria-invalid={Boolean(fieldErrors.passport)}
-        />
-        {fieldErrors.passport ? (
-          <p className="text-xs text-destructive">{fieldErrors.passport}</p>
-        ) : null}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="tourism-entry-stamp">{t('addGuest.entryStamp')}</Label>
-        <Input
-          id="tourism-entry-stamp"
-          ref={entryStampRef}
-          type="file"
-          accept="image/*"
-          disabled={disabled || isPending}
-          aria-invalid={Boolean(fieldErrors.entryStamp)}
-        />
-        {fieldErrors.entryStamp ? (
-          <p className="text-xs text-destructive">{fieldErrors.entryStamp}</p>
-        ) : null}
-      </div>
+      {requiredDocumentKinds.map((kind) => {
+        const formKey = DOCUMENT_KIND_FORM_KEY[kind];
+        const htmlId = `tourism-${formKey}`;
+        return (
+          <div key={kind} className="space-y-2">
+            <Label htmlFor={htmlId}>{t(DOCUMENT_KIND_LABEL_KEY[kind])}</Label>
+            <Input
+              id={htmlId}
+              ref={(el) => { fileRefs.current[formKey] = el; }}
+              type="file"
+              accept="image/*"
+              disabled={disabled || isPending}
+              aria-invalid={Boolean(fieldErrors[formKey])}
+            />
+            {fieldErrors[formKey] ? (
+              <p className="text-xs text-destructive">{fieldErrors[formKey]}</p>
+            ) : null}
+          </div>
+        );
+      })}
 
       <Button type="submit" className="w-full" disabled={disabled || isPending}>
         {isPending ? (

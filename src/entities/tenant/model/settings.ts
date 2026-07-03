@@ -5,7 +5,7 @@ import type { TenantBookingSettings } from './booking';
 import type { GuestStayConfig } from './guestStay';
 
 export type { ArrivalAccessConfig, AccessPoint, ArrivalLayoutKind } from './accessPoints';
-export type { GuestStayConfig, StayBed, StayFloor, StayRoom } from './guestStay';
+export type { GuestStayConfig, TourismRegistrationConfig, StayBed, StayFloor, StayRoom } from './guestStay';
 
 import type { TenantLandingSettings } from './landing';
 import type { TenantHostelSettings } from './hostelSettings';

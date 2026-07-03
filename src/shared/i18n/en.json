@@ -660,8 +660,8 @@
         "actionButton": "Continue to settlement",
         "loading": "Loading registration…",
         "intro": {
-          "title": "Tourist registration (Montenegro)",
-          "description": "Montenegro requires each person staying at the accommodation to be registered separately. Upload a photo of each guest's passport bio page and their entry stamp."
+          "title": "Tourist registration ({country})",
+          "description": "{country} requires each person staying at the accommodation to be registered separately. Upload the required identity documents for each guest."
         },
         "reservationName": {
           "label": "Name on reservation"
