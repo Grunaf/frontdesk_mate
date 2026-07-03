@@ -523,10 +523,12 @@ function TenantFormAccordionInner({
 
   const handleFormSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
+      const formData = new FormData(event.currentTarget);
       const block = validateTenantFormBeforeSave({
         subscriptionStartsAt: subscription.subscriptionStartsAt,
         subscriptionEndsAt: subscription.subscriptionEndsAt,
         mergedSettings,
+        receptionDeskPin: String(formData.get('receptionDeskPin') || ''),
       });
 
       if (!block) {
@@ -542,6 +544,11 @@ function TenantFormAccordionInner({
         } else {
           jumpToSection('subscription');
         }
+        return;
+      }
+
+      if (block.code === 'reception_desk_pin') {
+        jumpToSection('contacts');
         return;
       }
 

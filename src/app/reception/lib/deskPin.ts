@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
+export const DESK_PIN_MIN_LENGTH = 6;
+
 function readDeskPinSecret(): string | undefined {
   return (
     process.env.RECEPTION_SESSION_SECRET?.trim() ||
@@ -36,4 +38,10 @@ export function verifyDeskPin(
 
 export function isDeskPinConfigured(storedHash: string | undefined): boolean {
   return Boolean(storedHash?.trim());
+}
+
+export function isNewDeskPinValid(pin: string): boolean {
+  const normalized = pin.trim();
+  if (!normalized) return true;
+  return normalized.length >= DESK_PIN_MIN_LENGTH;
 }

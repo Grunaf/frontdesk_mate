@@ -7,16 +7,32 @@ import {
   RECEPTION_SESSION_COOKIE_NAME,
 } from '@/app/reception/lib/receptionSession';
 import {
-  receptionLoginUrl,
   receptionOriginUrl,
   receptionRedirect,
   resolveReceptionTenantSlug,
 } from '@/app/reception/lib/resolveReceptionTenantSlug';
+import {
+  getRequestClientIp,
+  isPinAttemptRateLimited,
+  recordPinAttemptFailure,
+} from '@/shared/lib/pinRateLimit';
 
 export async function POST(request: NextRequest) {
   const tenantSlug = resolveReceptionTenantSlug(request);
   if (!tenantSlug) {
     return receptionRedirect(request, '/login', 'no_tenant');
+  }
+
+  const clientIp = getRequestClientIp(request.headers);
+
+  if (
+    await isPinAttemptRateLimited({
+      scope: 'reception',
+      tenantSlug,
+      clientIp,
+    })
+  ) {
+    return receptionRedirect(request, '/login', 'rate_limited');
   }
 
   const formData = await request.formData();
@@ -33,6 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!verifyDeskPin(tenantSlug, pin, storedHash)) {
+    await recordPinAttemptFailure({ scope: 'reception', tenantSlug, clientIp });
     return receptionRedirect(request, '/login', 'invalid_pin');
   }
 

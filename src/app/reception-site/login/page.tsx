@@ -63,6 +63,12 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
         </p>
       )}
 
+      {error === 'rate_limited' && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          Too many attempts. Wait about 15 minutes and try again.
+        </p>
+      )}
+
       {error === 'pin_not_configured' && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
           Desk PIN is not set for this hostel.

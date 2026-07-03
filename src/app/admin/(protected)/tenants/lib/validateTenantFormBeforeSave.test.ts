@@ -47,6 +47,20 @@ describe('validateTenantFormBeforeSave', () => {
       })
     ).toBeNull();
   });
+
+  it('blocks save when reception desk PIN is too short', () => {
+    expect(
+      validateTenantFormBeforeSave({
+        subscriptionStartsAt: '2026-01-01',
+        subscriptionEndsAt: '2026-12-31',
+        mergedSettings: {},
+        receptionDeskPin: '12345',
+      })
+    ).toEqual({
+      code: 'reception_desk_pin',
+      message: 'Reception desk PIN must be at least 6 characters.',
+    });
+  });
 });
 
 describe('findGuestExtrasMissingPriceLabel', () => {

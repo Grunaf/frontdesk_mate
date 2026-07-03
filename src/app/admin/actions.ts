@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { hashDeskPin } from '@/app/reception/lib/deskPin';
+import { hashDeskPin, isNewDeskPinValid, DESK_PIN_MIN_LENGTH } from '@/app/reception/lib/deskPin';
 import { getTenantRecord, listTenants, setTenantArchived, upsertTenant } from '@/entities/tenant/server';
 import { isCityPackId } from '@/entities/hostel';
 import type { HouseRule } from '@/entities/house-rules';
@@ -463,6 +463,10 @@ export async function saveTenantAction(formData: FormData) {
   const deskPin = String(formData.get('receptionDeskPin') || '').trim();
   const previousHash = previousTenant?.settings.reception?.deskPinHash;
   const previousReception = previousTenant?.settings.reception;
+
+  if (deskPin && !isNewDeskPinValid(deskPin)) {
+    throw new Error(`Reception desk PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`);
+  }
 
   if (previousReception) {
     if (!formData.has('guestAccessMessageTemplate') && previousReception.guestAccessMessageTemplate) {

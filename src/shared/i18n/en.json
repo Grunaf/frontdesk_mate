@@ -746,6 +746,10 @@
           "db_unavailable": {
             "title": "Temporary error",
             "description": "We could not verify your PIN. Try again in a moment."
+          },
+          "too_many_attempts": {
+            "title": "Too many tries",
+            "description": "Wait about 15 minutes, then try again or ask reception for help."
           }
         }
       },

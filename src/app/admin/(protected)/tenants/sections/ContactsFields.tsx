@@ -98,7 +98,7 @@ export function ContactsFields({
           name="receptionDeskPin"
           type="password"
           placeholder={settings?.reception?.deskPinHash ? '•••••• (unchanged)' : 'Set PIN for reception desk'}
-          hint="Used at {slug}.reception.domain. Leave blank to keep the current PIN."
+          hint="Used at {slug}.reception.domain. At least 6 characters when changing. Leave blank to keep the current PIN."
           width="sm"
         />
         {showReceptionToggles ? (
