@@ -7,6 +7,11 @@ import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccess
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
 import {
+  resolveGuestAccessMessageTemplate,
+  resolveGuestAccessPinMissingText,
+} from '@/entities/tenant';
+import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
+import {
   createGuestStayAction,
   listActiveGuestStaysAction,
   reissueGuestStayAction,
@@ -20,7 +25,7 @@ import {
   type IssuedAccessFilter,
   isValidAccessRange,
 } from '../lib/guestAccessDates';
-import { resolveBedInventory } from '../lib/resolveBedInventory';
+import { resolveBedInventory, flattenBedInventory } from '../lib/resolveBedInventory';
 import { resolveGuestAccessPeriod } from '../lib/resolveGuestAccessPeriod';
 import {
   formatReceptionDeskStats,
@@ -91,6 +96,10 @@ export function ReceptionCheckInPanel({
   const [isPending, startTransition] = useTransition();
 
   const tenantSettings = settings ?? {};
+  const omitBedFromGuestMessage = useMemo(
+    () => isRoomMapModuleEnabled(tenantSettings),
+    [tenantSettings]
+  );
   const rangeValid = isValidAccessRange(checkInDate, checkOutDate);
 
   const accessPeriod = useMemo(
@@ -99,6 +108,21 @@ export function ReceptionCheckInPanel({
   );
 
   const inventory = useMemo(() => resolveBedInventory(tenantSettings, stays), [tenantSettings, stays]);
+  const guestAccessMessageTemplate = useMemo(
+    () => resolveGuestAccessMessageTemplate(tenantSettings),
+    [tenantSettings]
+  );
+  const guestAccessPinMissingText = useMemo(
+    () => resolveGuestAccessPinMissingText(tenantSettings),
+    [tenantSettings]
+  );
+  const resolveBedLabel = useCallback(
+    (bedId: string) => {
+      const match = flattenBedInventory(inventory).find((entry) => entry.bedId === bedId);
+      return match?.displayLabel ?? bedId;
+    },
+    [inventory]
+  );
   const deskStats = useMemo(
     () => formatReceptionDeskStats(resolveReceptionDeskStats(inventory, stays)),
     [inventory, stays]
@@ -464,6 +488,11 @@ export function ReceptionCheckInPanel({
                 stayPins={stayPins}
                 isPending={isPending}
                 revokeError={revokeError}
+                hostelName={tenantName}
+                guestAccessMessageTemplate={guestAccessMessageTemplate}
+                guestAccessPinMissingText={guestAccessPinMissingText}
+                resolveBedLabel={resolveBedLabel}
+                omitBedFromGuestMessage={omitBedFromGuestMessage}
               />
             </TabsContent>
 

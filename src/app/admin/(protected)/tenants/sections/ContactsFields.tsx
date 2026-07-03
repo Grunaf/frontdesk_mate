@@ -2,10 +2,14 @@
 
 import { useState } from 'react';
 import type { TenantSettings } from '@/entities/tenant';
+import {
+  DEFAULT_GUEST_ACCESS_MESSAGE_TEMPLATE,
+  DEFAULT_GUEST_ACCESS_PIN_MISSING_TEXT,
+} from '@/entities/tenant';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
 import { shouldShowReceptionWhatsappToggles } from '../lib/tenantAdminFieldSpecs';
-import { AdminCheckbox, AdminField } from '../ui/AdminField';
+import { AdminCheckbox, AdminField, AdminTextarea } from '../ui/AdminField';
 import { AdminPhoneField } from '../ui/AdminPhoneField';
 import { AdminTimeField } from '../ui/AdminTimeField';
 import { AdminFieldRow } from '../ui/AdminField';
@@ -111,6 +115,36 @@ export function ContactsFields({
             />
           </>
         ) : null}
+      </div>
+
+      <div className="space-y-4 border-t pt-6">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Guest access message
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Reception copies this into Booking chat after issuing access. Guests sign in via{' '}
+          <strong className="font-medium text-foreground">Check in</strong> on Concierge (top right in
+          the guest app). Placeholders:{' '}
+          <code className="text-xs">{'{sendLink}'}</code>, <code className="text-xs">{'{pin}'}</code>,{' '}
+          <code className="text-xs">{'{pinOrHelp}'}</code>, <code className="text-xs">{'{guestName}'}</code>,{' '}
+          <code className="text-xs">{'{hostelName}'}</code>, <code className="text-xs">{'{bedLabel}'}</code>.
+        </p>
+        <AdminTextarea
+          label="Message template"
+          name="guestAccessMessageTemplate"
+          rows={10}
+          defaultValue={settings?.reception?.guestAccessMessageTemplate ?? ''}
+          placeholder={DEFAULT_GUEST_ACCESS_MESSAGE_TEMPLATE}
+          hint="Empty uses the built-in default (see placeholder). Edit to match your Booking messages."
+        />
+        <AdminField
+          label="PIN missing text"
+          name="guestAccessPinMissingText"
+          defaultValue={settings?.reception?.guestAccessPinMissingText ?? ''}
+          placeholder={DEFAULT_GUEST_ACCESS_PIN_MISSING_TEXT}
+          hint="Used for {pinOrHelp} when reception no longer has the PIN (e.g. from the access list)."
+          width="lg"
+        />
       </div>
 
       <div className="space-y-4 border-t pt-6">

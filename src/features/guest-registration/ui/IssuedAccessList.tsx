@@ -39,6 +39,11 @@ interface IssuedAccessListProps {
   stayPins: Record<string, string>;
   isPending: boolean;
   revokeError: string | null;
+  hostelName: string;
+  guestAccessMessageTemplate: string;
+  guestAccessPinMissingText: string;
+  resolveBedLabel: (bedId: string) => string;
+  omitBedFromGuestMessage?: boolean;
 }
 
 const FILTER_ITEMS = [
@@ -62,6 +67,11 @@ function StayRow({
   onChangeDates,
   stayPins,
   isPending,
+  hostelName,
+  guestAccessMessageTemplate,
+  guestAccessPinMissingText,
+  resolveBedLabel,
+  omitBedFromGuestMessage = false,
 }: {
   stay: GuestStayRecordWithLink;
   expandedStayId: string | null;
@@ -70,6 +80,11 @@ function StayRow({
   onChangeDates: (stay: GuestStayRecordWithLink) => void;
   stayPins: Record<string, string>;
   isPending: boolean;
+  hostelName: string;
+  guestAccessMessageTemplate: string;
+  guestAccessPinMissingText: string;
+  resolveBedLabel: (bedId: string) => string;
+  omitBedFromGuestMessage?: boolean;
 }) {
   const status = resolveGuestAccessStatus(stay);
   const isExpanded = expandedStayId === stay.id;
@@ -139,8 +154,13 @@ function StayRow({
         <MagicLinkCard
           magicLinkUrl={stay.magicLinkUrl}
           bedId={stay.bed_id}
+          bedLabel={resolveBedLabel(stay.bed_id)}
           guestName={stay.guest_name ?? undefined}
           guestPin={stayPins[stay.id]}
+          hostelName={hostelName}
+          guestAccessMessageTemplate={guestAccessMessageTemplate}
+          guestAccessPinMissingText={guestAccessPinMissingText}
+          omitBedFromMessage={omitBedFromGuestMessage}
         />
       ) : null}
     </li>
@@ -159,6 +179,11 @@ export function IssuedAccessList({
   stayPins,
   isPending,
   revokeError,
+  hostelName,
+  guestAccessMessageTemplate,
+  guestAccessPinMissingText,
+  resolveBedLabel,
+  omitBedFromGuestMessage = false,
 }: IssuedAccessListProps) {
   const [refQuery, setRefQuery] = useState('');
   const [refError, setRefError] = useState<string | null>(null);
@@ -247,6 +272,11 @@ export function IssuedAccessList({
                         onChangeDates={onChangeDates}
                         stayPins={stayPins}
                         isPending={isPending}
+                        hostelName={hostelName}
+                        guestAccessMessageTemplate={guestAccessMessageTemplate}
+                        guestAccessPinMissingText={guestAccessPinMissingText}
+                        resolveBedLabel={resolveBedLabel}
+                        omitBedFromGuestMessage={omitBedFromGuestMessage}
                       />
                     ))}
                   </ul>

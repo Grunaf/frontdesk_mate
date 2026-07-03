@@ -3,13 +3,19 @@
 import QRCode from 'qrcode';
 import { useEffect, useMemo, useState } from 'react';
 import { appendGuestEntryToMagicLink } from '@/entities/guest-stay/lib/buildMagicLinkUrl';
+import { renderGuestAccessMessage } from '../lib/renderGuestAccessMessage';
 import { Button } from '@/shared/ui';
 
 interface MagicLinkCardProps {
   magicLinkUrl: string;
   bedId: string;
+  bedLabel?: string;
+  omitBedFromMessage?: boolean;
   guestName?: string;
   guestPin?: string;
+  hostelName: string;
+  guestAccessMessageTemplate: string;
+  guestAccessPinMissingText: string;
   onDismiss?: () => void;
 }
 
@@ -19,25 +25,75 @@ function formatGuestPin(pin: string): string {
   return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
-function resolveSubtitle(guestName: string | undefined, bedId: string): string {
-  if (guestName) {
-    return `${guestName} · bed ${bedId}`;
+function resolveSubtitle(
+  guestName: string | undefined,
+  bedLabel: string,
+  omitBedFromMessage: boolean
+): string {
+  if (omitBedFromMessage) {
+    return guestName ? `${guestName} · copy message for Booking chat` : 'Copy message for Booking chat';
   }
-  return `Bed ${bedId} · show QR or send the guest link`;
+  if (guestName) {
+    return `${guestName} · ${bedLabel}`;
+  }
+  return `${bedLabel} · copy message for Booking chat`;
 }
 
-export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDismiss }: MagicLinkCardProps) {
+type CopiedKind = 'message' | 'send' | 'onsite' | null;
+
+export function MagicLinkCard({
+  magicLinkUrl,
+  bedId,
+  bedLabel,
+  omitBedFromMessage = false,
+  guestName,
+  guestPin,
+  hostelName,
+  guestAccessMessageTemplate,
+  guestAccessPinMissingText,
+  onDismiss,
+}: MagicLinkCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState<'link' | 'send' | null>(null);
+  const [copied, setCopied] = useState<CopiedKind>(null);
+  const [showSendLink, setShowSendLink] = useState(false);
+
+  const messageBedLabel = omitBedFromMessage ? '' : bedLabel?.trim() || bedId;
+
   const sendMagicLinkUrl = useMemo(
     () => appendGuestEntryToMagicLink(magicLinkUrl, 'remote'),
     [magicLinkUrl]
   );
 
+  const onsiteMagicLinkUrl = useMemo(
+    () => appendGuestEntryToMagicLink(magicLinkUrl, 'desk'),
+    [magicLinkUrl]
+  );
+
+  const guestMessage = useMemo(
+    () =>
+      renderGuestAccessMessage(guestAccessMessageTemplate, {
+        sendLink: sendMagicLinkUrl,
+        pin: guestPin,
+        pinMissingText: guestAccessPinMissingText,
+        guestName,
+        hostelName,
+        bedLabel: messageBedLabel,
+      }),
+    [
+      guestAccessMessageTemplate,
+      sendMagicLinkUrl,
+      guestPin,
+      guestAccessPinMissingText,
+      guestName,
+      hostelName,
+      messageBedLabel,
+    ]
+  );
+
   useEffect(() => {
     let cancelled = false;
 
-    QRCode.toDataURL(magicLinkUrl, { margin: 1, width: 220 })
+    QRCode.toDataURL(onsiteMagicLinkUrl, { margin: 1, width: 220 })
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })
@@ -48,9 +104,9 @@ export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDism
     return () => {
       cancelled = true;
     };
-  }, [magicLinkUrl]);
+  }, [onsiteMagicLinkUrl]);
 
-  const copyLink = async (value: string, kind: 'link' | 'send') => {
+  const copyText = async (value: string, kind: Exclude<CopiedKind, null>) => {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(kind);
@@ -64,7 +120,9 @@ export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDism
     <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
       <div>
         <p className="text-sm font-semibold text-foreground">Guest access ready</p>
-        <p className="text-xs text-muted-foreground">{resolveSubtitle(guestName, bedId)}</p>
+        <p className="text-xs text-muted-foreground">
+          {resolveSubtitle(guestName, messageBedLabel || bedId, omitBedFromMessage)}
+        </p>
       </div>
 
       {guestPin ? (
@@ -81,50 +139,84 @@ export function MagicLinkCard({ magicLinkUrl, bedId, guestName, guestPin, onDism
         </div>
       ) : (
         <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-          PIN was shown once when access was issued. Use the QR or link below, or re-issue for a new
-          PIN.
+          PIN was shown once when access was issued. The copy message below uses help text instead
+          of a code — re-issue for a new PIN if needed.
         </p>
       )}
 
-      {qrDataUrl ? (
-        <div className="flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={qrDataUrl}
-            alt="Guest access QR code"
-            className="rounded-lg border bg-white p-2"
-          />
-        </div>
-      ) : null}
-
-      <div className="space-y-2">
-        <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-          Guest link (QR / on-site)
+      <div className="space-y-2 rounded-lg border bg-background p-3">
+        <p className="text-sm font-medium text-foreground">Before arrival</p>
+        <p className="text-xs text-muted-foreground">
+          Guest not here yet — paste into Booking chat (or WhatsApp). The link opens the arrival guide
+          (directions and prep). PIN / link unlock the app via Check in on Concierge.
         </p>
-        <code className="block break-all rounded-md border bg-background px-2 py-2 text-[11px]">
-          {magicLinkUrl}
-        </code>
-        <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-          Send link (opens route tab)
-        </p>
-        <code className="block break-all rounded-md border bg-background px-2 py-2 text-[11px]">
-          {sendMagicLinkUrl}
-        </code>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" onClick={() => copyLink(magicLinkUrl, 'link')}>
-          {copied === 'link' ? 'Copied' : 'Copy QR link'}
+        <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => copyText(guestMessage, 'message')}>
+          {copied === 'message' ? 'Copied' : 'Copy message for guest'}
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={() => copyLink(sendMagicLinkUrl, 'send')}>
-          {copied === 'send' ? 'Copied' : 'Copy send link'}
-        </Button>
-        {onDismiss ? (
-          <Button type="button" size="sm" variant="outline" onClick={onDismiss}>
-            Done
-          </Button>
+        {!guestPin ? (
+          <p className="text-[11px] text-muted-foreground">PIN not stored — message uses your help text for the code.</p>
         ) : null}
+        <div className="pt-1">
+          <button
+            type="button"
+            className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+            onClick={() => setShowSendLink((open) => !open)}
+          >
+            {showSendLink ? 'Hide send link' : 'Show send link only'}
+          </button>
+          {showSendLink ? (
+            <div className="mt-2 space-y-2">
+              <code className="block break-all rounded-md border px-2 py-2 text-[11px]">
+                {sendMagicLinkUrl}
+              </code>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => copyText(sendMagicLinkUrl, 'send')}
+              >
+                {copied === 'send' ? 'Copied' : 'Copy send link'}
+              </Button>
+            </div>
+          ) : null}
+        </div>
       </div>
+
+      <details className="rounded-lg border bg-background px-3 py-2">
+        <summary className="cursor-pointer text-sm font-medium text-foreground">
+          At reception (on-site)
+        </summary>
+        <p className="mt-2 text-xs text-muted-foreground">
+          For guests at the desk — QR opens Settlement after they use Check in with their PIN or link.
+          Use for on-site handoff, not for Booking chat before travel.
+        </p>
+        {qrDataUrl ? (
+          <div className="mt-3 flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrDataUrl}
+              alt="On-site guest check-in QR code"
+              className="rounded-lg border bg-white p-2"
+            />
+          </div>
+        ) : null}
+        <div className="mt-3 space-y-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => copyText(onsiteMagicLinkUrl, 'onsite')}
+          >
+            {copied === 'onsite' ? 'Copied' : 'Copy on-site link'}
+          </Button>
+        </div>
+      </details>
+
+      {onDismiss ? (
+        <Button type="button" size="sm" variant="outline" onClick={onDismiss}>
+          Done
+        </Button>
+      ) : null}
     </div>
   );
 }
