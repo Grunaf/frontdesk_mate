@@ -4,6 +4,10 @@ import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import { isTourismRegistrationComplete as isTourismRegistrationCompleteSummary } from '../lib/isTourismRegistrationComplete';
 import type { GuestTourismGuest, GuestTourismRegistrationSummary } from '../model/types';
 
+const GUEST_DOCUMENTS_BUCKET = 'guest-documents';
+
+const SIGNED_URL_TTL_SECONDS = 10 * 60;
+
 const STAY_TOURISM_COLUMNS =
   'tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at';
 
@@ -117,4 +121,39 @@ export async function setTourismExportedAt(
   }
 
   return { ok: true };
+}
+
+export type TourismReceptionDocumentKind = 'passport' | 'entry_stamp';
+
+export type CreateTourismDocumentSignedUrlResult =
+  | { ok: true; url: string }
+  | { ok: false; error: 'not_found' | 'db_unavailable' };
+
+export async function createTourismDocumentSignedUrl(
+  storagePath: string
+): Promise<CreateTourismDocumentSignedUrlResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const trimmed = storagePath.trim();
+  if (!trimmed) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const { data, error } = await admin.storage
+    .from(GUEST_DOCUMENTS_BUCKET)
+    .createSignedUrl(trimmed, SIGNED_URL_TTL_SECONDS);
+
+  if (error) {
+    console.error('createTourismDocumentSignedUrl:', error.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!data?.signedUrl) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  return { ok: true, url: data.signedUrl };
 }

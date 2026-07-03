@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DirectionPicker } from '@/features/direction-picker';
 import { DoorAccessPanel } from '@/features/door-access';
 import { PreTripInfo } from '@/features/pre-trip';
@@ -10,6 +10,8 @@ import {
   CrossHostelStrip,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
+import { TourismRegistrationPanel } from '@/features/guest-tourism-registration';
+import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { SettlementPhase } from './SettlementPhase';
 import { useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
@@ -19,6 +21,7 @@ import { resolveArrivalJourneyPrimaryButtonKey } from '../lib/resolveArrivalJour
 
 interface ArrivalJourneyCoordinatorProps {
   isOnsite: boolean;
+  tourismRegistrationComplete?: boolean;
 }
 
 export interface StepItem {
@@ -29,27 +32,84 @@ export interface StepItem {
   buttonKey: string;
 }
 
-const REGISTRATION_LOCKED_STEPS: Step[] = ['arrival', 'settlement'];
+const REGISTRATION_LOCKED_STEPS: Step[] = ['arrival', 'register', 'settlement'];
 
 function isRegistrationLockedStep(step: Step, isRegistered: boolean): boolean {
   return !isRegistered && REGISTRATION_LOCKED_STEPS.includes(step);
 }
 
-export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinatorProps) {
+function isSettlementTourismLocked(
+  step: Step,
+  tourismRegistrationRequired: boolean,
+  tourismComplete: boolean,
+  isRegistered: boolean
+): boolean {
+  if (step !== 'settlement') return false;
+  if (!tourismRegistrationRequired || !isRegistered) return false;
+  return !tourismComplete;
+}
+
+function isValidUrlStep(
+  step: string | null,
+  tourismRegistrationRequired: boolean
+): step is Step {
+  if (!step) return false;
+  const base: Step[] = ['info', 'route', 'arrival', 'settlement'];
+  const withRegister: Step[] = [...base.slice(0, 3), 'register', ...base.slice(3)];
+  const allowed = tourismRegistrationRequired ? withRegister : base;
+  return allowed.includes(step as Step);
+}
+
+export function ArrivalJourneyCoordinator({
+  isOnsite,
+  tourismRegistrationComplete: initialTourismComplete = false,
+}: ArrivalJourneyCoordinatorProps) {
   const t = useTranslations('pages.arrivalJourney');
   const router = useRouter();
+  const { settings } = useTenant();
+  const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const isRegistered = useIsGuestRegistered();
   const { currentStep, setCurrentStep } = useCheckInState(isOnsite);
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
+  const [tourismComplete, setTourismComplete] = useState(initialTourismComplete);
+
+  useEffect(() => {
+    setTourismComplete(initialTourismComplete);
+  }, [initialTourismComplete]);
+
+  const canAccessSettlement =
+    isRegistered && (!tourismRegistrationRequired || tourismComplete);
 
   const openCheckInSheet = () => {
     setCheckInSheetOpen(true);
   };
 
+  const handleTourismRegistrationComplete = useCallback(() => {
+    setTourismComplete(true);
+    setCurrentStep('settlement');
+  }, [setCurrentStep]);
+
+  useEffect(() => {
+    if (
+      currentStep === 'settlement' &&
+      tourismRegistrationRequired &&
+      isRegistered &&
+      !tourismComplete
+    ) {
+      setCurrentStep('register');
+    }
+  }, [
+    currentStep,
+    tourismRegistrationRequired,
+    isRegistered,
+    tourismComplete,
+    setCurrentStep,
+  ]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const step = params.get('step');
-    if (step !== 'info' && step !== 'route' && step !== 'arrival' && step !== 'settlement') {
+    if (!isValidUrlStep(step, tourismRegistrationRequired)) {
       return;
     }
 
@@ -59,47 +119,105 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
       return;
     }
 
-    setCurrentStep(step);
-  }, [isRegistered, setCurrentStep]);
+    let target: Step = step;
 
-  const stepsConfig: StepItem[] = [
-    {
-      id: 'info',
-      label: t('tabs.info'),
-      Component: PreTripInfo,
-      onComplete: () => setCurrentStep('route'),
-      buttonKey: 'preTrip.actionButton',
-    },
-    {
-      id: 'route',
-      label: t('tabs.route'),
-      Component: DirectionPicker,
-      onComplete: () => setCurrentStep('arrival'),
-      buttonKey: 'directions.actionButton',
-    },
-    {
-      id: 'arrival',
-      label: t('tabs.arrival'),
-      Component: DoorAccessPanel,
-      onComplete: () => setCurrentStep('settlement'),
-      buttonKey: 'arrival.actionButton',
-    },
-    {
+    if (step === 'register' && !tourismRegistrationRequired) {
+      target = 'settlement';
+    }
+
+    if (
+      target === 'settlement' &&
+      tourismRegistrationRequired &&
+      isRegistered &&
+      !tourismComplete
+    ) {
+      target = 'register';
+    }
+
+    setCurrentStep(target);
+  }, [
+    isRegistered,
+    setCurrentStep,
+    tourismRegistrationRequired,
+    tourismComplete,
+  ]);
+
+  const stepsConfig: StepItem[] = useMemo(() => {
+    const arrivalOnComplete = () =>
+      setCurrentStep(tourismRegistrationRequired ? 'register' : 'settlement');
+
+    const base: StepItem[] = [
+      {
+        id: 'info',
+        label: t('tabs.info'),
+        Component: PreTripInfo,
+        onComplete: () => setCurrentStep('route'),
+        buttonKey: 'preTrip.actionButton',
+      },
+      {
+        id: 'route',
+        label: t('tabs.route'),
+        Component: DirectionPicker,
+        onComplete: () => setCurrentStep('arrival'),
+        buttonKey: 'directions.actionButton',
+      },
+      {
+        id: 'arrival',
+        label: t('tabs.arrival'),
+        Component: DoorAccessPanel,
+        onComplete: arrivalOnComplete,
+        buttonKey: 'arrival.actionButton',
+      },
+    ];
+
+    if (tourismRegistrationRequired) {
+      base.push({
+        id: 'register',
+        label: t('tabs.register'),
+        Component: function RegisterStep() {
+          return <TourismRegistrationPanel onComplete={handleTourismRegistrationComplete} />;
+        },
+        onComplete: handleTourismRegistrationComplete,
+        buttonKey: 'register.actionButton',
+      });
+    }
+
+    base.push({
       id: 'settlement',
       label: t('tabs.settlement'),
       Component: SettlementPhase,
       onComplete: () => router.push(SITE_CONFIG.routes.app.concierge.path),
       buttonKey: 'settlement.actionButton',
-    },
-  ];
+    });
 
-  const activeStep = stepsConfig.find((step) => step.id === currentStep) || stepsConfig[0];
-  const ActiveComponent = activeStep.Component;
+    return base;
+  }, [
+    t,
+    tourismRegistrationRequired,
+    setCurrentStep,
+    router,
+    handleTourismRegistrationComplete,
+  ]);
+
+  const activeStep =
+    stepsConfig.find((step) => step.id === currentStep) || stepsConfig[0];
+  const ActiveComponent =
+    activeStep.id === 'settlement' && !canAccessSettlement
+      ? function TourismGateFallback() {
+          return <TourismRegistrationPanel onComplete={handleTourismRegistrationComplete} />;
+        }
+      : activeStep.Component;
 
   const handleStepChange = (value: string) => {
     const step = value as Step;
     if (isRegistrationLockedStep(step, isRegistered)) {
       openCheckInSheet();
+      return;
+    }
+    if (
+      isSettlementTourismLocked(step, tourismRegistrationRequired, tourismComplete, isRegistered)
+    ) {
+      setCurrentStep('register');
       return;
     }
     setCurrentStep(step);
@@ -108,8 +226,28 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   const chipItems = stepsConfig.map((step) => ({
     id: step.id,
     label: step.label,
-    locked: isRegistrationLockedStep(step.id, isRegistered),
+    locked:
+      isRegistrationLockedStep(step.id, isRegistered) ||
+      isSettlementTourismLocked(
+        step.id,
+        tourismRegistrationRequired,
+        tourismComplete,
+        isRegistered
+      ),
   }));
+
+  const handleLockedChipClick = (id: string) => {
+    const step = id as Step;
+    if (isRegistrationLockedStep(step, isRegistered)) {
+      openCheckInSheet();
+      return;
+    }
+    if (
+      isSettlementTourismLocked(step, tourismRegistrationRequired, tourismComplete, isRegistered)
+    ) {
+      setCurrentStep('register');
+    }
+  };
 
   const handlePrimaryAction = () => {
     if (!isRegistered && activeStep.id === 'route') {
@@ -122,10 +260,19 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
       return;
     }
 
+    if (
+      activeStep.id === 'settlement' &&
+      !canAccessSettlement
+    ) {
+      setCurrentStep('register');
+      return;
+    }
+
     activeStep.onComplete();
   };
 
   const primaryButtonKey = resolveArrivalJourneyPrimaryButtonKey(currentStep, isRegistered);
+  const showPrimaryButton = activeStep.id !== 'register';
 
   return (
     <div className="flex min-h-screen w-full max-w-md flex-col bg-background">
@@ -135,7 +282,7 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
         items={chipItems}
         value={currentStep}
         onValueChange={handleStepChange}
-        onLockedClick={openCheckInSheet}
+        onLockedClick={handleLockedChipClick}
         ariaLabel="Arrival guide steps"
       />
 
@@ -156,9 +303,11 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
 
       <main className="flex flex-col justify-between gap-y-6 bg-background px-4 pb-8 pt-4">
         <ActiveComponent />
-        <Button size="lg" className="w-full" onClick={handlePrimaryAction}>
-          {t(primaryButtonKey)}
-        </Button>
+        {showPrimaryButton ? (
+          <Button size="lg" className="w-full" onClick={handlePrimaryAction}>
+            {t(primaryButtonKey)}
+          </Button>
+        ) : null}
       </main>
 
       <CheckInRequiredSheet open={checkInSheetOpen} onOpenChange={setCheckInSheetOpen} />

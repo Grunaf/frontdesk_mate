@@ -29,6 +29,7 @@ These items still need a quick human pass:
 - [ ] **RU locale** — switch to `/ru/welcome`, key labels not broken
 - [ ] **Images** — door/facade/hero load (no broken placeholders)
 - [ ] **Reception PIN one-time** — after page reload, Access tab shows QR/link and “PIN was shown once…” (no digits); re-issue shows new PIN
+- [ ] **Guest tourism registration (MNE)** — in admin, enable tourism registration for the tenant; guest PIN → Arrival journey **Register** step: add guest (passport + entry stamp), complete registration; on reception desk, confirm tourism checkbox / panel reflects completed stay
 
 When something fails in automation, open the HTML report:
 

@@ -15,5 +15,10 @@ describe('resolveArrivalJourneyPrimaryButtonKey', () => {
   it('keeps step-specific keys for other steps', () => {
     expect(resolveArrivalJourneyPrimaryButtonKey('info', false)).toBe('preTrip.actionButton');
     expect(resolveArrivalJourneyPrimaryButtonKey('arrival', true)).toBe('arrival.actionButton');
+    expect(resolveArrivalJourneyPrimaryButtonKey('register', true)).toBe('register.actionButton');
+  });
+
+  it('keeps register CTA when guest is not registered yet', () => {
+    expect(resolveArrivalJourneyPrimaryButtonKey('register', false)).toBe('register.actionButton');
   });
 });

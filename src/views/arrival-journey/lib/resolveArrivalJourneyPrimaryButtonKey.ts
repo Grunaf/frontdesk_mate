@@ -12,6 +12,7 @@ export function resolveArrivalJourneyPrimaryButtonKey(
     info: 'preTrip.actionButton',
     route: 'directions.actionButton',
     arrival: 'arrival.actionButton',
+    register: 'register.actionButton',
     settlement: 'settlement.actionButton',
   };
 

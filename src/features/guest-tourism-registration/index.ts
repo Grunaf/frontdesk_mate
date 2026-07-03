@@ -10,6 +10,15 @@ export {
   type CompleteTourismRegistrationActionResult,
 } from './actions/completeTourismRegistrationAction';
 export {
+  getTourismDocumentSignedUrlAction,
+  loadTourismRegistrationForReceptionAction,
+  setTourismExportedAction,
+  type GetTourismDocumentSignedUrlActionResult,
+  type LoadTourismRegistrationForReceptionActionResult,
+  type SetTourismExportedActionResult,
+} from './actions/receptionTourismActions';
+export type { TourismReceptionDocumentKind } from '@/entities/guest-tourism-registration/server';
+export {
   listTourismGuestsForSessionAction,
   type ListTourismGuestsForSessionActionResult,
   type TourismGuestListItem,
@@ -18,3 +27,4 @@ export {
   submitTourismGuestAction,
   type SubmitTourismGuestActionResult,
 } from './actions/submitTourismGuestAction';
+export { TourismRegistrationPanel } from './ui/TourismRegistrationPanel';

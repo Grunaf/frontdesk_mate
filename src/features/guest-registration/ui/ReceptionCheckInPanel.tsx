@@ -9,6 +9,7 @@ import type { TenantSettings } from '@/entities/tenant';
 import {
   resolveGuestAccessMessageTemplate,
   resolveGuestAccessPinMissingText,
+  resolveTourismRegistrationRequired,
 } from '@/entities/tenant';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import {
@@ -114,6 +115,10 @@ export function ReceptionCheckInPanel({
   );
   const guestAccessPinMissingText = useMemo(
     () => resolveGuestAccessPinMissingText(tenantSettings),
+    [tenantSettings]
+  );
+  const tourismRegistrationRequired = useMemo(
+    () => resolveTourismRegistrationRequired(tenantSettings),
     [tenantSettings]
   );
   const resolveBedLabel = useCallback(
@@ -493,6 +498,15 @@ export function ReceptionCheckInPanel({
                 guestAccessPinMissingText={guestAccessPinMissingText}
                 resolveBedLabel={resolveBedLabel}
                 omitBedFromGuestMessage={omitBedFromGuestMessage}
+                tourismRegistrationRequired={tourismRegistrationRequired}
+                tenantSlug={tenantSlug}
+                onTourismExportedAtChange={(stayId, tourismExportedAt) => {
+                  setStays((current) =>
+                    current.map((stay) =>
+                      stay.id === stayId ? { ...stay, tourism_exported_at: tourismExportedAt } : stay
+                    )
+                  );
+                }}
               />
             </TabsContent>
 

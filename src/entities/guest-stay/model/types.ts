@@ -9,6 +9,9 @@ export interface GuestStayRecord {
   activated_at: string | null;
   revoked_at: string | null;
   created_at: string;
+  tourism_contact_whatsapp?: string | null;
+  tourism_registration_completed_at?: string | null;
+  tourism_exported_at?: string | null;
 }
 
 export interface GuestStayRecordWithLink extends GuestStayRecord {
