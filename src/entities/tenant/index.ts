@@ -45,8 +45,12 @@ export {
   resolveGuestFloorFromStay,
   hasGuestStayConfigured,
 } from './lib/resolveGuestStayPlan';
-export type {
-  GuestStayConfig,
+export {
+  resolveTourismRegistrationRequired,
+  normalizeGuestStayComplianceOnRead,
+  finalizeGuestStayForSave,
+} from './lib/normalizeGuestStaySettings';
+export type { GuestStayConfig,
   GuestStayPlan,
   GuestStayStep,
   StayBed,

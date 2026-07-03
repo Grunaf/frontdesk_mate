@@ -39,6 +39,8 @@ export interface GuestStayConfig {
   floors?: StayFloor[];
   rooms?: StayRoom[];
   beds?: StayBed[];
+  /** When true, guest app requires Montenegro tourism registration before settlement. */
+  tourismRegistrationRequired?: boolean;
 }
 
 export type GuestStayStepKind = 'floor_path' | 'room_door';

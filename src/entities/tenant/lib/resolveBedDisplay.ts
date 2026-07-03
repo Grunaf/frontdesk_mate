@@ -83,7 +83,12 @@ export function normalizeGuestStayLabels(guestStay: GuestStayConfig): GuestStayC
 
 export function normalizeGuestStayForSave(guestStay: GuestStayConfig): GuestStayConfig {
   const labeled = normalizeGuestStayLabels(guestStay);
-  return dedupeGuestStayBedIds(labeled);
+  const result = dedupeGuestStayBedIds(labeled);
+  if (result.tourismRegistrationRequired !== true) {
+    const { tourismRegistrationRequired: _omit, ...rest } = result;
+    return rest;
+  }
+  return result;
 }
 
 export function resolveBedPickerOptions(guestStay: GuestStayConfig | undefined): BedPickerOption[] {

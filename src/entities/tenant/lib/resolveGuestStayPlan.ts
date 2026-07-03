@@ -9,7 +9,9 @@ import { resolveRoomBounds } from '@/entities/room/model/room-layout';
 import type { GuestStayPlan, GuestStayStep, GuestStayConfig, StayBed, StayFloor, StayRoom } from '../model/guestStay';
 import type { TenantSettings } from '../model/settings';
 
-function normalizeGuestStay(config: GuestStayConfig | undefined): Required<GuestStayConfig> {
+type GuestStayLayout = Required<Pick<GuestStayConfig, 'floors' | 'rooms' | 'beds'>>;
+
+function normalizeGuestStay(config: GuestStayConfig | undefined): GuestStayLayout {
   const floors =
     config?.floors
       ?.filter((floor) => floor.id?.trim())
@@ -50,7 +52,7 @@ function normalizeGuestStay(config: GuestStayConfig | undefined): Required<Guest
   return { floors, rooms, beds };
 }
 
-function findBed(stay: Required<GuestStayConfig>, bedId: string): StayBed | null {
+function findBed(stay: GuestStayLayout, bedId: string): StayBed | null {
   return (
     stay.beds.find(
       (bed) => bed.id === bedId || bed.topId === bedId || bed.bottomId === bedId
@@ -58,15 +60,15 @@ function findBed(stay: Required<GuestStayConfig>, bedId: string): StayBed | null
   );
 }
 
-function findRoom(stay: Required<GuestStayConfig>, roomId: string): StayRoom | null {
+function findRoom(stay: GuestStayLayout, roomId: string): StayRoom | null {
   return stay.rooms.find((room) => room.id === roomId) ?? null;
 }
 
-function findFloor(stay: Required<GuestStayConfig>, floorId: string): StayFloor | null {
+function findFloor(stay: GuestStayLayout, floorId: string): StayFloor | null {
   return stay.floors.find((floor) => floor.id === floorId) ?? null;
 }
 
-function resolveLayoutBedsForRoom(stay: Required<GuestStayConfig>, roomId: string): RoomLayoutBed[] {
+function resolveLayoutBedsForRoom(stay: GuestStayLayout, roomId: string): RoomLayoutBed[] {
   const layoutBeds: RoomLayoutBed[] = [];
 
   for (const bed of stay.beds) {

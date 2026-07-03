@@ -15,6 +15,7 @@ import {
 import type { AccessPoint, ArrivalLayoutKind, TenantSettings } from '@/entities/tenant';
 import { isBookingProvider } from '@/entities/tenant';
 import { normalizeGuestStayForSave } from '@/entities/tenant/lib/resolveBedDisplay';
+import { finalizeGuestStayForSave } from '@/entities/tenant/lib/normalizeGuestStaySettings';
 import {
   assertAdminAuthenticated,
   clearAdminSession,
@@ -277,6 +278,8 @@ function parseHostelJson(formData: FormData): TenantHostelSettings | undefined {
 
 function readSettings(formData: FormData): TenantSettings {
   const roomMapEnabled = String(formData.get('roomMapEnabled') || '').trim() === 'true';
+  const tourismRegistrationRequired =
+    String(formData.get('tourismRegistrationRequired') || '').trim() === 'true';
   const houseRules = parseHouseRules(formData);
 
   let guestStay = parseGuestStay(formData);
@@ -284,6 +287,12 @@ function readSettings(formData: FormData): TenantSettings {
   if (roomMapEnabled && guestStay) {
     guestStay = normalizeGuestStayForSave(guestStay);
   }
+
+  guestStay = finalizeGuestStayForSave({
+    roomMapEnabled,
+    guestStay: roomMapEnabled ? guestStay : undefined,
+    tourismRegistrationRequired,
+  });
 
   const arrivalAccessInput = readArrivalAccess(formData);
   const accessPoints = arrivalAccessInput.accessPoints ?? [];
@@ -316,7 +325,7 @@ function readSettings(formData: FormData): TenantSettings {
     logoUrl: String(formData.get('logoUrl') || '') || undefined,
     landing: parseLanding(formData),
     hostel,
-    guestStay: roomMapEnabled ? guestStay : undefined,
+    guestStay,
     arrivalAccess: {
       layoutKind: arrivalAccessInput.layoutKind,
       dayMode: arrivalAccessInput.dayMode,

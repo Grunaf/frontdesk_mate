@@ -4,6 +4,7 @@ import { getHouseRules } from '@/entities/house-rules';
 import type { TenantSettings } from '@/entities/tenant';
 import { resolveCityTaxAmount, resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
+import { resolveTourismRegistrationRequired } from '@/entities/tenant/lib/normalizeGuestStaySettings';
 import {
   parseArrivalWalkByRouteJson,
   parseArrivalWalkToHostelJson,
@@ -46,6 +47,9 @@ export function TenantFormHiddenPayload({
 }: TenantFormHiddenPayloadProps) {
   const roomMapEnabled = roomMapEnabledOverride ?? isRoomMapModuleEnabled(mergedSettings);
   const houseRules = getHouseRules(mergedSettings);
+  const tourismRegistrationRequired = resolveTourismRegistrationRequired(mergedSettings);
+  const guestStayJson =
+    roomMapEnabled && mergedSettings.guestStay ? JSON.stringify(mergedSettings.guestStay) : '';
 
   return (
     <div aria-hidden className="hidden">
@@ -67,9 +71,10 @@ export function TenantFormHiddenPayload({
       <input type="hidden" name="roomMapEnabled" value={roomMapEnabled ? 'true' : 'false'} />
       <input
         type="hidden"
-        name="guestStayJson"
-        value={roomMapEnabled && mergedSettings.guestStay ? JSON.stringify(mergedSettings.guestStay) : ''}
+        name="tourismRegistrationRequired"
+        value={tourismRegistrationRequired ? 'true' : 'false'}
       />
+      <input type="hidden" name="guestStayJson" value={guestStayJson} />
       <input
         type="hidden"
         name="arrivalWalkToHostelJson"

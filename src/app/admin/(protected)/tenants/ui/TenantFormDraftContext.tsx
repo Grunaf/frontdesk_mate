@@ -9,6 +9,11 @@ import type { RouteId } from '@/entities/hostel';
 import type { LocalizedField } from '@/entities/city-pack/model/types';
 import type { HostelPlace } from '@/entities/tenant/model/hostelPlaces';
 import { getHouseRules, migrateActiveRulesKeys } from '@/entities/house-rules';
+import {
+  finalizeGuestStayForSave,
+  resolveTourismRegistrationRequired,
+} from '@/entities/tenant/lib/normalizeGuestStaySettings';
+import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 
 export interface TenantFormDraft {
   logoUrl?: string;
@@ -20,6 +25,7 @@ export interface TenantFormDraft {
   landing?: TenantLandingSettings;
   hostel?: TenantHostelSettings;
   roomMapEnabled?: boolean;
+  tourismRegistrationRequired?: boolean;
   launchBookingPath?: 'engine' | 'wa';
   arrivalWalkToHostel?: LocalizedField;
   arrivalWalkToHostelByRoute?: Partial<Record<RouteId, LocalizedField>>;
@@ -75,13 +81,6 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       : {}),
   };
 
-  if (draft.roomMapEnabled === false) {
-    merged = {
-      ...merged,
-      guestStay: undefined,
-    };
-  }
-
   if (draft.houseRules !== undefined) {
     merged = {
       ...merged,
@@ -94,6 +93,19 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       houseRules: migrateActiveRulesKeys(merged.activeRulesKeys),
     };
   }
+
+  const tourismRegistrationRequired =
+    draft.tourismRegistrationRequired ?? resolveTourismRegistrationRequired(base);
+  const roomMapEnabled = draft.roomMapEnabled ?? isRoomMapModuleEnabled(merged);
+
+  merged = {
+    ...merged,
+    guestStay: finalizeGuestStayForSave({
+      roomMapEnabled,
+      guestStay: merged.guestStay,
+      tourismRegistrationRequired,
+    }),
+  };
 
   return merged;
 }

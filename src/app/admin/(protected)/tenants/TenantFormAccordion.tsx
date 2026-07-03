@@ -58,6 +58,7 @@ import {
 import { TenantReadinessChecklist } from './ui/TenantReadinessChecklist';
 import { TenantCommandBar } from './ui/TenantCommandBar';
 import { TenantFormHiddenPayload } from './ui/TenantFormHiddenPayload';
+import { resolveTourismRegistrationRequired } from '@/entities/tenant/lib/normalizeGuestStaySettings';
 
 interface TenantFormAccordionProps {
   originalSlug: string;
@@ -87,6 +88,35 @@ interface SubscriptionState {
   subscriptionEndsAt: string;
 }
 
+function GuestTourismRegistrationComplianceField({
+  mergedSettings,
+}: {
+  mergedSettings: TenantSettings;
+}) {
+  const { draft, updateDraft } = useTenantFormDraft();
+  const checked =
+    draft.tourismRegistrationRequired ?? resolveTourismRegistrationRequired(mergedSettings);
+
+  return (
+    <label className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200/60 bg-amber-50/40 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => updateDraft({ tourismRegistrationRequired: event.target.checked })}
+        className="mt-0.5 size-4 shrink-0 rounded border"
+      />
+      <span>
+        <span className="block text-sm font-medium">Require guest tourism registration (Montenegro)</span>
+        <span className="mt-0.5 block text-xs text-muted-foreground">
+          When on, guests must submit passport photos, entry stamp, and a WhatsApp contact before
+          settlement (Wi‑Fi, bed map). Reception can mark submissions as sent to the tourism
+          organization.
+        </span>
+      </span>
+    </label>
+  );
+}
+
 function SectionPanel({
   sectionId,
   initial,
@@ -100,6 +130,7 @@ function SectionPanel({
   cityPackOptions,
   cityPackGateSnapshot,
   cityPackContentsById,
+  mergedSettings,
 }: {
   sectionId: AdminSectionId;
   initial: TenantFormAccordionProps['initial'];
@@ -113,6 +144,7 @@ function SectionPanel({
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
   cityPackContentsById: Record<string, CityPackContent>;
+  mergedSettings: TenantSettings;
 }) {
   const s = initial.settings;
 
@@ -165,14 +197,17 @@ function SectionPanel({
       );
     case 'guest-app':
       return (
-        <GuestAppFields
-          tenantSlug={identity.slug}
-          settings={s}
-          cityPackId={identity.cityPackId}
-          cityPackGateSnapshot={cityPackGateSnapshot}
-          readinessInput={readinessInput}
-          onJumpToSection={onJumpToSection}
-        />
+        <>
+          <GuestTourismRegistrationComplianceField mergedSettings={mergedSettings} />
+          <GuestAppFields
+            tenantSlug={identity.slug}
+            settings={s}
+            cityPackId={identity.cityPackId}
+            cityPackGateSnapshot={cityPackGateSnapshot}
+            readinessInput={readinessInput}
+            onJumpToSection={onJumpToSection}
+          />
+        </>
       );
     case 'wifi':
       return <WifiFields settings={s} readinessInput={readinessInput} />;
@@ -806,6 +841,7 @@ function TenantFormAccordionInner({
                         cityPackOptions={cityPackOptions}
                         cityPackGateSnapshot={cityPackGateSnapshot}
                         cityPackContentsById={cityPackContentsById}
+                        mergedSettings={mergedSettings}
                       />
                     </div>
                   </div>
