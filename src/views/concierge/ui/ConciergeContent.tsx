@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { resolveGuestExtrasLayout } from '@/entities/guest-extra';
 import { getHouseRules, resolveHouseRulesForDisplay } from '@/entities/house-rules';
 import { useTenant } from '@/entities/tenant';
-import { GuestAccessPanel, useIsGuestRegistered } from '@/features/guest-check-in';
+import { CrossHostelStrip, useIsGuestRegistered } from '@/features/guest-check-in';
 import { GuestIssueReportCard } from '@/features/guest-issue-report';
 import { GuestExtrasBlock } from '@/features/guest-services';
 import { HostelRules } from '@/features/hostel-rules';
@@ -51,7 +51,7 @@ export function ConciergeContent() {
         )}
       >
         {/* Zone: guest access */}
-        {!isRegistered ? <GuestAccessPanel /> : null}
+        {!isRegistered ? <CrossHostelStrip /> : null}
 
         {/* Zone: arrival essentials */}
         <StayEssentialsBridges />

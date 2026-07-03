@@ -103,7 +103,6 @@ Data model (`settings.guestStay`):
 }
 ```
 
-- **`highlightedBedId`** — active guest bed (demo until PMS sync)
 - **`bedType`**: `single` | `bunk` | `double`
 - **`mapWidth` / `mapHeight`**: room floor size on the SVG (140–320 × 120–280, step 10). Drag the corner handle in admin.
 - **`rotation`**: `0 | 90 | 180 | 270` (degrees, bed center)
@@ -112,14 +111,13 @@ Data model (`settings.guestStay`):
 
 **Guest app modules** — grouped UX:
 
-1. **Guest preview** — active bed ID only
-2. **Floors** (collapsed) — wayfinding hints per floor
-3. **Rooms** — one card per room:
+1. **Floors** (collapsed) — wayfinding hints per floor
+2. **Rooms** — one card per room:
    - Header: name · floor · bed count
    - **Room details** (collapsed): ID, label, floor, door photo
    - **Bed map** (collapsed): place beds, rotate, drag; **drag room corner** to resize floor
 
-Guests always see the map when beds have coordinates.
+Guests see their assigned bed on the map after check-in (PIN / magic link session).
 
 Key files:
 

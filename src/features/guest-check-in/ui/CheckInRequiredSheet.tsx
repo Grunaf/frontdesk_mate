@@ -97,7 +97,7 @@ export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredShee
                     currentHostel: name,
                   })}
                 </p>
-                <p className="text-[11px] leading-snug text-amber-900/85">{tCross('sheetHint')}</p>
+                <p className="text-sm leading-snug text-amber-900/85">{tCross('sheetHint')}</p>
                 {registeredUrl ? (
                   <a
                     href={registeredUrl}

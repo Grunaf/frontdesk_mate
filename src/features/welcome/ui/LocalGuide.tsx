@@ -95,7 +95,7 @@ function MapCard({
                 {t('mapCard.title', { hostelName })}
                 <span className="bg-primary inline-block h-1.5 w-1.5 animate-pulse rounded-full" />
               </h4>
-              <p className="text-muted-foreground truncate pr-2 text-[11px]">
+              <p className="text-muted-foreground truncate pr-2 text-sm">
                 {t('mapCard.description')}
               </p>
             </div>

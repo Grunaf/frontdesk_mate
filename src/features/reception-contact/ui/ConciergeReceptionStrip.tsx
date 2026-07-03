@@ -53,11 +53,11 @@ export function ConciergeReceptionStrip() {
           <span className="hidden short-viewport:inline">{receptionLabels.call}</span>
         </TouchLink>
       ) : null}
-      <p className="mt-1 text-center text-[11px] leading-relaxed text-muted-foreground short-viewport:hidden">
+      <p className="mt-1 text-center text-sm leading-relaxed text-muted-foreground short-viewport:hidden">
         {t('receptionStripHint')}
       </p>
       {contact.availabilityHint ? (
-        <p className="mt-0.5 text-center text-[11px] leading-relaxed text-muted-foreground short-viewport:hidden">
+        <p className="mt-0.5 text-center text-sm leading-relaxed text-muted-foreground short-viewport:hidden">
           {contact.availabilityHint}
         </p>
       ) : null}

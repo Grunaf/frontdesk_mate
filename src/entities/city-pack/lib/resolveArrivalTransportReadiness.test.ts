@@ -15,6 +15,19 @@ describe('resolveArrivalWalkReadiness', () => {
     routes: buildCityPackRoutesFromCode('sarajevo'),
   };
 
+  it('is incomplete when pack has no enabled arrival routes', () => {
+    expect(
+      resolveArrivalWalkReadiness({
+        cityPackId: 'custom-pack',
+        settings: {},
+        cityPackContent: { enabledRoutes: [], routes: {}, places: [] },
+      })
+    ).toEqual({
+      complete: false,
+      detail: 'City pack has no arrival routes enabled.',
+    });
+  });
+
   it('is incomplete when only city templates exist (tenant must fill last mile)', () => {
     expect(
       resolveArrivalWalkReadiness({

@@ -564,6 +564,10 @@
   },
   "pages": {
     "arrivalJourney": {
+      "guestCheckIn": {
+        "hint": "Trip tips and directions are open to everyone. Door codes and your bed map unlock after check-in — tap",
+        "link": "Check in"
+      },
       "tabs": {
         "info": "Preparation",
         "route": "Route To Hostel",
@@ -572,7 +576,7 @@
       },
       "preTrip": {
         "title": "Before Your Trip",
-        "description": "Important information to prepare for your arrival and check-in process.",
+        "description": "From landing in the country to check-in at the hostel and finding your bed — start here before you travel.",
         "actionButton": "View Directions",
         "sections": {
           "beforeTravel": {
@@ -584,7 +588,7 @@
         },
         "checkInReady": {
           "title": "Check-in link or PIN",
-          "description": "Reception sends a personal link, QR, or 6-digit PIN after your bed is assigned. Keep it on this phone for door codes and concierge."
+          "description": "After reception assigns your bed, tap Check in on Concierge (top right) or Check in in this guide to enter your PIN or link. Door codes and your room map unlock once you're signed in."
         },
         "luggage": {
           "title": "Luggage Storage",
@@ -628,7 +632,8 @@
           "walkToHostel": "Walk to hostel",
           "onFootRoute": "On foot"
         },
-        "actionButton": "How to Enter"
+        "actionButton": "How to Enter",
+        "checkInToContinue": "Check in to continue"
       },
       "arrival": {
         "title": "Arrival Info",
@@ -707,13 +712,13 @@
       },
       "intent": {
         "metaTitle": "Where are you now?",
-        "metaDescription": "Choose where you are so we open the right part of your arrival guide.",
+        "metaDescription": "Choose where you are — we'll open the right step in your arrival guide, from travel prep to your bed.",
         "eyebrow": "Almost there",
         "title": "Where are you now?",
-        "description": "We'll open the right part of your arrival guide.",
+        "description": "Pick what matches your situation. We'll jump to the right part of your guide — before travel, at the door, or at reception.",
         "options": {
-          "planning": "Still on my way",
-          "at_door": "At the door",
+          "planning": "Still traveling",
+          "at_door": "At the hostel door",
           "at_desk": "At reception"
         }
       },
@@ -744,16 +749,6 @@
           }
         }
       },
-      "registrationPrompt": {
-        "eyebrow": "Check-in required",
-        "title": "Get your check-in link",
-        "description": "Your concierge, room map, and door codes unlock after reception assigns your bed and you open your personal link.",
-        "welcomeDescription": "Door codes and settlement steps unlock after you open the personal check-in link reception sent you.",
-        "openWelcomeButton": "View arrival guide",
-        "footerLocked": "Open your check-in link to continue",
-        "backToRoute": "Back to directions",
-        "backToInfo": "Back to trip info"
-      },
       "crossHostel": {
         "title": "Checked in elsewhere",
         "description": "You are registered at {registeredHostel} (bed {bed}). You are viewing {currentHostel} now.",
@@ -775,8 +770,7 @@
         "callReception": "Call reception",
         "signIn": "Sign in",
         "whatsappMessage": "Hi, I need my check-in link for {hostelName}",
-        "noContact": "Contact reception when your bed is assigned to get your check-in link.",
-        "openSheetButton": "How to get your check-in link"
+        "noContact": "Contact reception when your bed is assigned to get your check-in link."
       },
       "wrongHostel": {
         "title": "Wrong hostel link",
@@ -816,14 +810,14 @@
       },
       "postWhatsapp": {
         "title": "Already sorted with reception?",
-        "description": "Open the arrival guide for directions and check-in info. WiFi and door codes unlock after check-in.",
+        "description": "Open the arrival guide for directions and trip prep. After reception sends your PIN or link, use Check in (top right on Concierge) to unlock Wi‑Fi and door codes.",
         "openGuestApp": "Open arrival guide",
         "keepBrowsing": "Keep browsing rooms",
         "dismiss": "Dismiss"
       },
       "arrivalCallout": {
         "arrivalTitle": "Arriving soon?",
-        "arrivalDescription": "See how to get here and what to expect on check-in.",
+        "arrivalDescription": "Directions, reception hours, and what to expect before and during check-in.",
         "arrivalCta": "How to get here",
         "exploreTitle": "Planning ahead?",
         "exploreDescription": "Browse the guest app for city tips before you arrive.",
@@ -860,7 +854,8 @@
       "notFound": {
         "title": "Hostel not found",
         "description": "This link does not match an active hostel. Check the address or return to the home page.",
-        "backButton": "Find your hostel"
+        "backButton": "Find your hostel",
+        "directoryTitle": "Other hostels you can open now"
       },
       "offline": {
         "metaDescription": "Online check-in info is unavailable. Contact the hostel for arrival details.",
@@ -985,6 +980,7 @@
     },
     "stayEssentials": {
       "bridges": {
+        "arrivalGuide": "Arrival guide",
         "wifi": "Wi‑Fi",
         "checkout": "Check-out",
         "nightAccess": "Night access",
@@ -1038,6 +1034,10 @@
       "title": "House rules",
       "tapHint": "Tap a rule for details",
       "openDetail": "{rule} — open details"
+    },
+    "guestCheckInChip": {
+      "chipLabel": "Check in",
+      "openSheet": "Check in — open check-in instructions"
     },
     "guestStayChip": {
       "chipLabel": "My stay",

@@ -26,7 +26,7 @@ export const BookingField = forwardRef<HTMLDivElement, BookingFieldProps>(
           {icon}
         </div>
         <div className="pointer-events-none z-0 flex w-full min-w-0 flex-col items-start justify-center text-left">
-          <Label className="text-[11px] font-bold tracking-wider uppercase">{label}</Label>
+          <Label className="text-xs font-bold tracking-wider uppercase">{label}</Label>
           <div className="relative mt-1.5 flex w-full items-center">{value}</div>
         </div>
         {children}

@@ -54,7 +54,7 @@ export function FileZone({ files, previewURLs, onChange, onRemove }: FileZonePro
               title={t('addMoreTitle')}
             >
               <span className="text-2xl font-light">+</span>
-              <span className="mt-1 text-[10px] tracking-wide uppercase">{t('addMore')}</span>
+              <span className="mt-1 text-xs tracking-wide uppercase">{t('addMore')}</span>
             </Label>
           </div>
         )}

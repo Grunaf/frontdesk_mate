@@ -4,7 +4,6 @@ import {
   normalizeGuestStayForSave,
   normalizeGuestStayLabels,
   normalizeStayLabel,
-  remapHighlightedBedIdAfterDedupe,
   resolveBedDisplayLabel,
   resolveBedMapDisplayLabel,
   resolveBedPickerOptions,
@@ -50,13 +49,13 @@ describe('resolveBedPickerOptions', () => {
 describe('resolveBedDisplayLabel', () => {
   it('returns slot number for single bed', () => {
     expect(
-      resolveBedDisplayLabel({ guestStay, highlightedBedId: 'vega_bed_2' }, 'vega_bed_2')
+      resolveBedDisplayLabel({ guestStay }, 'vega_bed_2')
     ).toBe('2');
   });
 
   it('returns slot and tier for bunk', () => {
     expect(
-      resolveBedDisplayLabel({ guestStay, highlightedBedId: 'vega_bed_1-Top' }, 'vega_bed_1-Top')
+      resolveBedDisplayLabel({ guestStay }, 'vega_bed_1-Top')
     ).toBe('1 · Upper');
   });
 
@@ -86,19 +85,6 @@ describe('dedupeGuestStayBedIds', () => {
     expect(after.beds?.[2]?.id).toBe('bed_3');
     expect(new Set(after.beds?.map((bed) => bed.id)).size).toBe(3);
   });
-
-  it('remaps highlighted bed when its id was deduped', () => {
-    const before = {
-      beds: [
-        { id: 'bed_2', roomId: 'room_1' },
-        { id: 'bed_2', roomId: 'room_2' },
-      ],
-    };
-    const after = dedupeGuestStayBedIds(before);
-
-    expect(remapHighlightedBedIdAfterDedupe('bed_2', before, after)).toBe('bed_2');
-    expect(after.beds?.[1]?.id).toBe('room_2_bed_1');
-  });
 });
 
 describe('normalizeStayLabel', () => {
@@ -122,7 +108,7 @@ describe('normalizeGuestStayLabels', () => {
 });
 
 describe('normalizeGuestStayForSave', () => {
-  it('combines label normalization, dedupe, and highlighted bed remap', () => {
+  it('combines label normalization and dedupe', () => {
     const guestStayInput = {
       floors: [{ id: '1', label: 'Floor 1' }],
       rooms: [
@@ -135,12 +121,11 @@ describe('normalizeGuestStayForSave', () => {
       ],
     };
 
-    const result = normalizeGuestStayForSave(guestStayInput, 'bed_2');
+    const result = normalizeGuestStayForSave(guestStayInput);
 
-    expect(result.guestStay.floors?.[0]?.label).toBe('1');
-    expect(result.guestStay.rooms?.[0]?.label).toBe('A');
-    expect(result.guestStay.beds?.[1]?.id).toBe('room_2_bed_1');
-    expect(result.highlightedBedId).toBe('bed_2');
+    expect(result.floors?.[0]?.label).toBe('1');
+    expect(result.rooms?.[0]?.label).toBe('A');
+    expect(result.beds?.[1]?.id).toBe('room_2_bed_1');
   });
 });
 

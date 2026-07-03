@@ -1,5 +1,8 @@
-import { TenantNotFoundContent } from '@/views/platform/ui/TenantNotFoundContent';
+import { getLocale } from 'next-intl/server';
+import { TenantNotFoundView } from '@/views/platform/ui/TenantNotFoundView';
 
-export default function AppTenantNotFound() {
-  return <TenantNotFoundContent />;
+export default async function AppTenantNotFound() {
+  const locale = await getLocale();
+
+  return <TenantNotFoundView site="app" locale={locale} />;
 }

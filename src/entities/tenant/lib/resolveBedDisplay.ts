@@ -81,20 +81,9 @@ export function normalizeGuestStayLabels(guestStay: GuestStayConfig): GuestStayC
   };
 }
 
-export function normalizeGuestStayForSave(
-  guestStay: GuestStayConfig,
-  highlightedBedId?: string
-): { guestStay: GuestStayConfig; highlightedBedId?: string } {
+export function normalizeGuestStayForSave(guestStay: GuestStayConfig): GuestStayConfig {
   const labeled = normalizeGuestStayLabels(guestStay);
-  const deduped = dedupeGuestStayBedIds(labeled);
-  const remapped = highlightedBedId?.trim()
-    ? remapHighlightedBedIdAfterDedupe(highlightedBedId, labeled, deduped)
-    : highlightedBedId;
-
-  return {
-    guestStay: deduped,
-    highlightedBedId: remapped?.trim() || undefined,
-  };
+  return dedupeGuestStayBedIds(labeled);
 }
 
 export function resolveBedPickerOptions(guestStay: GuestStayConfig | undefined): BedPickerOption[] {
@@ -202,33 +191,6 @@ export function dedupeGuestStayBedIds(guestStay: GuestStayConfig): GuestStayConf
   });
 
   return { ...guestStay, beds: normalizedBeds };
-}
-
-export function remapHighlightedBedIdAfterDedupe(
-  highlightedBedId: string | undefined,
-  before: GuestStayConfig,
-  after: GuestStayConfig
-): string {
-  if (!highlightedBedId?.trim()) return '';
-
-  const oldId = highlightedBedId.trim();
-  const oldBeds = before.beds ?? [];
-  const newBeds = after.beds ?? [];
-  const oldIndex = oldBeds.findIndex(
-    (bed) => bed.id === oldId || bed.topId === oldId || bed.bottomId === oldId
-  );
-
-  if (oldIndex < 0) return oldId;
-
-  const oldBed = oldBeds[oldIndex];
-  const newBed = newBeds[oldIndex];
-  if (!oldBed || !newBed) return oldId;
-
-  if (oldBed.topId === oldId && newBed.topId) return newBed.topId;
-  if (oldBed.bottomId === oldId && newBed.bottomId) return newBed.bottomId;
-  if (oldBed.id === oldId) return newBed.id;
-
-  return oldId;
 }
 
 export function resolveBedDisplayLabel(

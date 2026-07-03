@@ -11,8 +11,8 @@ export async function completeGuestIntentIfShown(page: Page, config: E2eConfig):
 
   if (!isIntentVisible) return;
 
-  await page.getByRole('button', { name: 'Still on my way' }).click();
-  await page.waitForURL(/\/welcome\?.*step=route/, { timeout: config.navTimeoutMs * 2 });
+  await page.getByRole('button', { name: /Still traveling|Ещё в пути/i }).click();
+  await page.waitForURL(/\/welcome\?.*step=info/, { timeout: config.navTimeoutMs * 2 });
 }
 
 export async function checkInWithPin(page: Page, config: E2eConfig): Promise<void> {
@@ -24,7 +24,7 @@ export async function checkInWithPin(page: Page, config: E2eConfig): Promise<voi
   await page.getByLabel('Check-in PIN').fill(config.guestPin);
   await page.waitForURL(/\/(check-in\/intent|welcome)/, { timeout: config.navTimeoutMs * 2 });
   await completeGuestIntentIfShown(page, config);
-  await page.waitForURL(/\/welcome\?.*step=route/, { timeout: config.navTimeoutMs * 2 });
+  await page.waitForURL(/\/welcome\?.*step=info/, { timeout: config.navTimeoutMs * 2 });
 }
 
 export async function openGuestRouteStep(page: Page, config: E2eConfig): Promise<void> {
@@ -36,4 +36,9 @@ export async function openGuestRouteStep(page: Page, config: E2eConfig): Promise
 
 export async function openConcierge(page: Page, config: E2eConfig): Promise<void> {
   await page.goto(e2eGuestAppUrl(config, '/'));
+}
+
+export async function openAnonymousConcierge(page: Page, config: E2eConfig): Promise<void> {
+  await page.context().clearCookies();
+  await openConcierge(page, config);
 }

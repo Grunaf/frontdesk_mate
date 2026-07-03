@@ -27,6 +27,8 @@ const HIGHLIGHT_BED = {
 function BedLabel({
   readable,
   highlighted,
+  editorLabel = false,
+  selected = false,
   x,
   y,
   label,
@@ -36,6 +38,8 @@ function BedLabel({
 }: {
   readable: boolean;
   highlighted: boolean;
+  editorLabel?: boolean;
+  selected?: boolean;
   x: number;
   y: number;
   label: string | undefined;
@@ -47,6 +51,25 @@ function BedLabel({
 
   const uprightTransform =
     readable && counterRotation !== 0 ? `rotate(${-counterRotation}, ${x}, ${y})` : undefined;
+
+  if (readable && editorLabel) {
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill="var(--foreground)"
+        fontSize={10}
+        fontWeight={selected ? 600 : 500}
+        opacity={selected ? 1 : 0.85}
+        transform={uprightTransform}
+        className="select-none pointer-events-none"
+      >
+        {label}
+      </text>
+    );
+  }
 
   if (readable) {
     return (
@@ -75,7 +98,7 @@ function BedLabel({
       y={y}
       textAnchor="middle"
       fill={guestFill}
-      className={`text-[10px] select-none ${guestClass}`}
+      className={`text-xs select-none ${guestClass}`}
       transform="rotate(-30) skewX(30) scale(1.1)"
     >
       {label}
@@ -136,24 +159,25 @@ export function Bed({
   const pivotY = height / 2;
   const pillowHeight = isDouble ? DOUBLE_BERTH_PILLOW_HEIGHT : 35;
 
-  const isTopHighlighted = topId === highlightedBedId;
-  const isBottomHighlighted = bottomId === highlightedBedId || (isHighlighted && !isBunk);
+  const isTopHighlighted = !editorMode && topId === highlightedBedId;
+  const isBottomHighlighted =
+    !editorMode && (bottomId === highlightedBedId || (isHighlighted && !isBunk));
 
   const getBottomColors = () => {
-    if (isBottomHighlighted) {
-      return {
-        bed: HIGHLIGHT_BED.bed,
-        pillow: HIGHLIGHT_BED.pillow,
-        textFill: '#ffffff',
-        textClass: 'font-bold',
-      };
-    }
     if (editorMode) {
       return {
         bed: 'fill-muted stroke-border',
         pillow: 'fill-muted-foreground/30',
         textFill: 'var(--foreground)',
         textClass: 'font-medium',
+      };
+    }
+    if (isBottomHighlighted) {
+      return {
+        bed: HIGHLIGHT_BED.bed,
+        pillow: HIGHLIGHT_BED.pillow,
+        textFill: '#ffffff',
+        textClass: 'font-bold',
       };
     }
     return isNightMode
@@ -172,20 +196,20 @@ export function Bed({
   };
 
   const getTopColors = () => {
-    if (isTopHighlighted) {
-      return {
-        bed: HIGHLIGHT_BED.bed,
-        pillow: HIGHLIGHT_BED.pillow,
-        textFill: '#ffffff',
-        textClass: 'font-bold',
-      };
-    }
     if (editorMode) {
       return {
         bed: 'fill-muted stroke-border',
         pillow: 'fill-muted-foreground/30',
         textFill: 'var(--foreground)',
         textClass: 'font-medium',
+      };
+    }
+    if (isTopHighlighted) {
+      return {
+        bed: HIGHLIGHT_BED.bed,
+        pillow: HIGHLIGHT_BED.pillow,
+        textFill: '#ffffff',
+        textClass: 'font-bold',
       };
     }
     return isNightMode
@@ -261,6 +285,8 @@ export function Bed({
         <BedLabel
           readable={labelReadable}
           highlighted={isBottomHighlighted}
+          editorLabel={editorMode}
+          selected={selected}
           x={labelReadable ? labelCenterX : labelX}
           y={labelReadable ? labelCenterY : 26}
           label={isBunk ? (bottomLabel ?? bottomId) : (unitLabel ?? id)}
@@ -314,6 +340,8 @@ export function Bed({
             <BedLabel
               readable={labelReadable}
               highlighted={isTopHighlighted}
+              editorLabel={editorMode}
+              selected={selected}
               x={labelReadable ? BED_WIDTH / 2 : 40}
               y={labelReadable ? BED_HEIGHT / 2 : 26}
               label={topLabel ?? topId}

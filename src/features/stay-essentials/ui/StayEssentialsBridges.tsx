@@ -9,6 +9,7 @@ import {
 } from '@/entities/tenant/lib/resolveGuestFieldPresentation';
 import { useGuestSession, useIsGuestRegistered } from '@/features/guest-check-in';
 import { useNightMode } from '@/shared/lib';
+import { resolveAnonymousStayEssentialBridgeIds } from '../model/resolveAnonymousStayEssentialBridges';
 import { readNightAccessDismissed, persistNightAccessDismissed } from '../model/nightAccessDismiss';
 import { resolveShowNightAccessBridge } from '../model/resolveShowNightAccessBridge';
 import { STAY_ESSENTIAL_BRIDGE_ORDER } from '../model/types';
@@ -152,7 +153,7 @@ export function StayEssentialsBridges() {
 
   const visibleBridges = useMemo(() => {
     if (!isRegistered) {
-      return [];
+      return resolveAnonymousStayEssentialBridgeIds(hasReceptionContent);
     }
 
     return STAY_ESSENTIAL_BRIDGE_ORDER.filter((bridgeId) => {

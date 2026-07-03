@@ -36,7 +36,6 @@ export {
   type ResolvedLandingRooms,
 } from './lib/resolveLandingRooms';
 export {
-  readGuestBedIdFromSearchParams,
   resolveGuestBedId,
 } from './lib/resolveGuestBedId';
 export type { LandingRoomType, TenantLandingSettings } from './model/landing';
@@ -67,3 +66,9 @@ export {
   readBookingSettings,
   resolveBookingConfig,
 } from './lib/resolveBookingConfig';
+export {
+  DEFAULT_GUEST_ACCESS_MESSAGE_TEMPLATE,
+  DEFAULT_GUEST_ACCESS_PIN_MISSING_TEXT,
+  resolveGuestAccessMessageTemplate,
+  resolveGuestAccessPinMissingText,
+} from './lib/guestAccessMessage';

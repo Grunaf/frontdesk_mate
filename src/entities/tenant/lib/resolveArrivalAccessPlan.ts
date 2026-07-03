@@ -153,10 +153,11 @@ function buildAccessSteps(
 export function resolveArrivalAccessPlan(
   settings: TenantSettings,
   _hostel: HostelConfig,
-  isNightMode: boolean
+  isNightMode: boolean,
+  guestBedId?: string | null
 ): ArrivalAccessPlan {
   const allPoints = normalizeAccessPoints(settings);
-  const guestFloor = resolveGuestFloor(settings);
+  const guestFloor = resolveGuestFloor(settings, guestBedId);
   const points = filterAccessPointsForGuest(allPoints, guestFloor);
   const layoutKind = resolveLayoutKind(settings, allPoints);
   const landmarkSrc = resolveArrivalLandmark(settings);

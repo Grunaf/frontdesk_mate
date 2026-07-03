@@ -30,7 +30,7 @@ export function StayStepsCarousel({ steps }: StayStepsCarouselProps) {
     <div className="space-y-3">
       {visibleSteps.length > 1 && (
         <div className="flex justify-end">
-          <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground uppercase">
+          <span className="rounded bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground uppercase">
             {activePhoto + 1} / {visibleSteps.length}
           </span>
         </div>
@@ -53,14 +53,14 @@ export function StayStepsCarousel({ steps }: StayStepsCarouselProps) {
               <div
                 className={`space-y-2 transition-all duration-300 ${isActive ? 'scale-100' : 'scale-95 opacity-60'}`}
               >
-                <p className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                   {step.label}
                 </p>
 
                 <div className="group relative overflow-hidden rounded-xl">
                   <ImageLandmark src={step.imageSrc!} alt={step.label} />
                   {isActive && step.hint && (
-                    <div className="animate-fade-in absolute top-3 right-3 left-3 z-10 rounded-lg border border-border/40 bg-foreground/80 p-2.5 text-[11px] leading-relaxed text-background backdrop-blur-md">
+                    <div className="animate-fade-in absolute top-3 right-3 left-3 z-10 rounded-lg border border-border/40 bg-foreground/80 p-2.5 text-sm leading-relaxed text-background backdrop-blur-md">
                       <p>{step.hint}</p>
                     </div>
                   )}

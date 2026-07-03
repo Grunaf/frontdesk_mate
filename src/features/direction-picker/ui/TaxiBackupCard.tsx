@@ -16,7 +16,7 @@ function TaxiRouteSummary({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1 text-[11px] text-foreground/90">
+      <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1 text-xs text-foreground/90">
         <Icon icon={Banknote} className="h-3.5 w-3.5 text-muted-foreground" />
         {directions('labels.taxiPrice', {
           minKM: taxiPriceKM.min,
@@ -25,7 +25,7 @@ function TaxiRouteSummary({
           maxEUR: taxiPriceEUR.max,
         })}
       </span>
-      <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1 text-[11px] text-foreground/90">
+      <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1 text-xs text-foreground/90">
         <Icon icon={Clock3} className="h-3.5 w-3.5 text-muted-foreground" />
         {directions('labels.taxiDuration', {
           min: taxiDurationMin.min,

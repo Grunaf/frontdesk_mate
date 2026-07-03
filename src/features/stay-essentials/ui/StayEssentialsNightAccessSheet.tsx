@@ -31,11 +31,11 @@ export function StayEssentialsNightAccessSheet({
   const t = useTranslations('components.stayEssentials');
   const nightT = useTranslations('components.nightAccess');
   const hostel = useHostelConfig();
-  const { settings } = useTenant();
+  const { settings, guestBedId } = useTenant();
   const isNightMode = useNightMode();
   const locale = useLocale();
   const router = useRouter();
-  const plan = resolveArrivalAccessPlan(settings, hostel, isNightMode);
+  const plan = resolveArrivalAccessPlan(settings, hostel, isNightMode, guestBedId);
   const codedSteps = plan.steps.filter((step) => step.code);
 
   if (codedSteps.length === 0) {
@@ -64,7 +64,7 @@ export function StayEssentialsNightAccessSheet({
           <div className={`grid gap-3 ${codedSteps.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {codedSteps.map((step) => (
               <div key={step.id} className="rounded-lg border bg-muted/40 p-3">
-                <Badge variant="outline" className="mb-2 text-[10px] uppercase">
+                <Badge variant="outline" className="mb-2 text-xs uppercase">
                   {step.label}
                 </Badge>
                 <p className="font-mono text-sm font-bold text-foreground">{step.code}</p>

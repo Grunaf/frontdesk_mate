@@ -36,7 +36,7 @@ export function PreviewCard({ file, src, index, onRemove }: PreviewCardProps) {
 
           <Badge
             variant="secondary"
-            className="pointer-events-none absolute bottom-1.5 left-1.5 gap-1 text-[10px] uppercase"
+            className="pointer-events-none absolute bottom-1.5 left-1.5 gap-1 text-xs uppercase"
           >
             <Video className="h-3 w-3" />
             <span>{t('video')}</span>

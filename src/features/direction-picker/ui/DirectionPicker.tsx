@@ -83,7 +83,7 @@ export function DirectionPicker() {
             <TabsTrigger
               key={id}
               value={id}
-              className="flex-col gap-1 px-2 py-2 text-[11px] leading-snug sm:flex-row sm:gap-2 sm:py-1.5 sm:text-xs sm:whitespace-nowrap"
+              className="flex-col gap-1 px-2 py-2 text-xs leading-snug sm:flex-row sm:gap-2 sm:py-1.5 sm:whitespace-nowrap"
             >
               <Icon icon={icon} className="h-4 w-4 shrink-0" />
               <span className="max-w-full text-center leading-snug">{routes(labelKey)}</span>
@@ -137,12 +137,12 @@ export function DirectionPicker() {
 
         <TaxiBackupCard route={currentRoute} onTaxiClick={() => setTaxiSheetOpen(true)} />
 
-        <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+        <p className="text-center text-sm leading-relaxed text-muted-foreground">
           {directions('trustDisclaimer')}
         </p>
 
         {hostel.contacts.feedbackPhone.raw && (
-          <p className="flex justify-center text-[11px] leading-relaxed text-muted-foreground">
+          <p className="flex justify-center text-sm leading-relaxed text-muted-foreground">
             <ExternalServiceTouchLink service="whatsapp" href={routeFeedbackLink}>
               {directions('routeFeedbackLink')}
             </ExternalServiceTouchLink>

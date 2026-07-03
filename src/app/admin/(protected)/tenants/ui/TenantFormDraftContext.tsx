@@ -13,7 +13,6 @@ import { getHouseRules, migrateActiveRulesKeys } from '@/entities/house-rules';
 export interface TenantFormDraft {
   logoUrl?: string;
   heroBgUrl?: string;
-  highlightedBedId?: string;
   houseRules?: HouseRule[];
   guestExtras?: GuestExtraConfig[];
   guestStay?: GuestStayConfig;
@@ -47,7 +46,6 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
     ...base,
     ...(draft.logoUrl !== undefined ? { logoUrl: draft.logoUrl || undefined } : {}),
     ...(draft.heroBgUrl !== undefined ? { heroBgUrl: draft.heroBgUrl || undefined } : {}),
-    ...(draft.highlightedBedId !== undefined ? { highlightedBedId: draft.highlightedBedId } : {}),
     ...(draft.houseRules !== undefined ? { houseRules: draft.houseRules } : {}),
     ...(draft.guestExtras !== undefined ? { guestExtras: draft.guestExtras } : {}),
     ...(draft.guestStay !== undefined ? { guestStay: draft.guestStay } : {}),
@@ -80,7 +78,6 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
   if (draft.roomMapEnabled === false) {
     merged = {
       ...merged,
-      highlightedBedId: undefined,
       guestStay: undefined,
     };
   }

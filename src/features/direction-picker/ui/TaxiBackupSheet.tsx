@@ -109,7 +109,7 @@ export function TaxiBackupSheet({
 
             {hasReception && receptionBackup ? (
               <section className="space-y-1.5">
-                <p className="flex flex-wrap items-center justify-center gap-x-1 text-center text-[11px] leading-relaxed text-muted-foreground">
+                <p className="flex flex-wrap items-center justify-center gap-x-1 text-center text-sm leading-relaxed text-muted-foreground">
                   {taxiActions('needHelpTitle')}{' '}
                   <ReceptionContactActions
                     contact={receptionBackup}

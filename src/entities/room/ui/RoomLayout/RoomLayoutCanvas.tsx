@@ -150,7 +150,7 @@ export function RoomLayoutCanvas({
                   : undefined
               }
               className={cn(
-                'text-[10px] font-semibold tracking-wider uppercase',
+                'text-xs font-semibold tracking-wider uppercase',
                 isGuest ? 'fill-muted-foreground' : 'fill-primary/80',
                 canMoveEntrance && 'pointer-events-none'
               )}

@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation';
-import { notFound } from 'next/navigation';
 import { getTenantRecord, resolveTenantSlug } from '@/entities/tenant/server';
 import { isReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
 import { listActiveGuestStays } from '@/entities/guest-stay/server';
 import { listGuestIssues } from '@/entities/guest-issue/server';
 import { ReceptionCheckInPanel } from '@/features/guest-registration';
+import { ReceptionUnknownHostelContent } from '@/views/reception/ui/ReceptionUnknownHostelContent';
 
 export default async function ReceptionDeskPage() {
   const tenantSlug = await resolveTenantSlug();
@@ -26,7 +26,7 @@ export default async function ReceptionDeskPage() {
 
   const tenant = await getTenantRecord(tenantSlug);
   if (!tenant) {
-    notFound();
+    return <ReceptionUnknownHostelContent />;
   }
 
   const stays = await listActiveGuestStays(tenantSlug);

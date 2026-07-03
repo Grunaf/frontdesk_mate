@@ -3,7 +3,6 @@ import type { CityPackGateSnapshot } from '@/entities/city-pack';
 import type { CityPackContent } from '@/entities/city-pack/model/types';
 import { resolveCityPackHasPlacesForTenant } from '@/entities/city-pack/lib/resolveCityPackGateForTenant';
 import type { CityPackId } from '@/entities/hostel';
-import { isRoomMapModuleEnabled } from './resolveGuestModuleToggles';
 import { hasDoorAccessConfigured } from './resolveArrivalAccessPlan';
 import { readBookingSettings } from './resolveBookingConfig';
 import { resolveCapabilities } from './resolveCapabilities';
@@ -58,7 +57,6 @@ export type TenantCriticalField =
   | 'address'
   | 'bookingEngineId'
   | 'bookingUrl'
-  | 'highlightedBedId'
   | 'houseRules';
 
 export interface TenantReadinessInput {
@@ -212,7 +210,7 @@ export function resolveTenantReadiness(input: TenantReadinessInput): TenantReadi
       id: 'arrival-walk',
       sectionId: 'arrival-journey',
       label: 'Arrival walk directions',
-      tier: 'recommended',
+      tier: 'blocker',
       complete: arrivalWalkReadiness.complete,
       detail: arrivalWalkReadiness.detail,
     }),
@@ -414,9 +412,6 @@ export function isTenantFieldMissing(field: TenantCriticalField, input: TenantRe
       return booking.provider !== 'none' && !booking.engineId?.trim() && !booking.url?.trim();
     case 'bookingUrl':
       return booking.provider !== 'none' && !booking.engineId?.trim() && !booking.url?.trim();
-    case 'highlightedBedId':
-      if (!isRoomMapModuleEnabled(settings)) return false;
-      return !settings.highlightedBedId?.trim();
     case 'houseRules':
       if (settings.houseRules === undefined && !settings.activeRulesKeys?.length) {
         return false;

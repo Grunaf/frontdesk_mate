@@ -3,12 +3,35 @@
 import { useContext, useMemo } from 'react';
 import { useLocale } from '@/shared/i18n';
 import { useTenantCityPack } from '../model/tenant-config';
-import { resolveCapabilities } from '../lib/resolveCapabilities';
-import { resolveGuestBedId } from '../lib/resolveGuestBedId';
 import { resolveGuestStayPlan } from '../lib/resolveGuestStayPlan';
 import { useGuestRuntimeBedId } from './GuestRuntimeProvider';
 import { TenantContext } from './tenant-context';
 import type { AppLocale } from '@/entities/city-pack/model/types';
+import type { ModuleStatus } from '../model/capabilities';
+
+function resolveGuestRoomMapCapability(
+  tenantRoomMap: ModuleStatus,
+  settings: import('../model/settings').TenantSettings,
+  guestBedId: string | null
+): ModuleStatus {
+  if (tenantRoomMap === 'hidden') {
+    return 'hidden';
+  }
+
+  if (!guestBedId) {
+    return 'hidden';
+  }
+
+  const plan = resolveGuestStayPlan(settings, guestBedId);
+  if (
+    plan.bedId &&
+    (plan.layoutBeds.length > 0 || plan.room?.doorImage || plan.floor?.pathHint || plan.floor?.pathImage)
+  ) {
+    return 'ready';
+  }
+
+  return tenantRoomMap === 'ready' ? 'preview' : tenantRoomMap;
+}
 
 export function TenantProvider({
   config,
@@ -37,50 +60,30 @@ export function useTenant() {
     context.cityPackStatus
   );
 
-  const settings = useMemo(() => {
-    const effectiveBedId = resolveGuestBedId(context.settings, guestBedId);
-    if (!effectiveBedId) {
-      return context.settings;
+  const settings = context.settings;
+
+  const capabilities = useMemo(() => {
+    const roomMap = resolveGuestRoomMapCapability(
+      context.capabilities.roomMap,
+      settings,
+      guestBedId
+    );
+
+    if (roomMap === context.capabilities.roomMap) {
+      return context.capabilities;
     }
 
     return {
-      ...context.settings,
-      highlightedBedId: effectiveBedId,
+      ...context.capabilities,
+      roomMap,
     };
-  }, [context.settings, guestBedId]);
-
-  const capabilities = useMemo(() => {
-    if (context.capabilities.roomMap === 'ready') {
-      return context.capabilities;
-    }
-
-    const plan = resolveGuestStayPlan(settings);
-    if (
-      plan.bedId &&
-      (plan.layoutBeds.length > 0 || plan.room?.doorImage || plan.floor?.pathHint || plan.floor?.pathImage)
-    ) {
-      return {
-        ...context.capabilities,
-        roomMap: 'ready' as const,
-      };
-    }
-
-    if (!guestBedId) {
-      return context.capabilities;
-    }
-
-    return resolveCapabilities({
-      cityPackId: context.cityPackId,
-      settings,
-      lifecycleStatus: context.lifecycleStatus,
-      cityPackHasPlaces: context.cityPackHasPlaces,
-    });
-  }, [context.capabilities, context.cityPackId, guestBedId, settings]);
+  }, [context.capabilities, guestBedId, settings]);
 
   return {
     ...context,
     cityPack,
     settings,
+    guestBedId,
     capabilities,
     routes: cityPack.routes,
     routeCategories: cityPack.categories,

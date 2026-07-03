@@ -48,16 +48,14 @@ describe('filterAccessPointsForGuest', () => {
 
   it('resolves guest floor from bed map', () => {
     const settings: TenantSettings = {
-      highlightedBedId: '4B',
       arrivalAccess: { bedFloorMap: { '4B': '2' } },
     };
 
-    expect(resolveGuestFloor(settings)).toBe('2');
+    expect(resolveGuestFloor(settings, '4B')).toBe('2');
   });
 
   it('prefers guest stay bed → room → floor over bedFloorMap', () => {
     const settings: TenantSettings = {
-      highlightedBedId: '4B',
       arrivalAccess: { bedFloorMap: { '4B': '1' } },
       guestStay: {
         rooms: [{ id: 'vega', label: 'Vega', floorId: '2' }],
@@ -65,12 +63,11 @@ describe('filterAccessPointsForGuest', () => {
       },
     };
 
-    expect(resolveGuestFloor(settings)).toBe('2');
+    expect(resolveGuestFloor(settings, '4B')).toBe('2');
   });
 
   it('resolves floor from bunk tier in guest stay', () => {
     const settings: TenantSettings = {
-      highlightedBedId: '4A-Top',
       guestStay: {
         rooms: [{ id: 'vega', label: 'Vega', floorId: '2' }],
         beds: [
@@ -87,6 +84,6 @@ describe('filterAccessPointsForGuest', () => {
       },
     };
 
-    expect(resolveGuestFloor(settings)).toBe('2');
+    expect(resolveGuestFloor(settings, '4A-Top')).toBe('2');
   });
 });

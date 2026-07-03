@@ -44,8 +44,8 @@ const baseSettings: TenantSettings = {
     rooms: [{ id: 'r1', label: 'Room', floorId: '1' }],
     beds: [{ id: '4B', roomId: 'r1', x: 20, y: 20, bedType: 'single' }],
   },
-  highlightedBedId: '4B',
   booking: { provider: 'none' },
+  arrivalWalkToHostel: { en: 'Walk from the hub to {address}.' },
 };
 
 const baseInput = {
@@ -144,6 +144,21 @@ describe('resolveGuestPathGate', () => {
     });
 
     expect(blocked.incompleteMust.some((item) => item.id === 'identity-city-pack-places')).toBe(true);
+  });
+
+  it('requires hostel walk directions for pack routes', () => {
+    const gate = resolveGuestPathGate({
+      ...baseInput,
+      bookingPath: 'wa',
+      settings: {
+        ...baseSettings,
+        arrivalWalkToHostel: undefined,
+        arrivalWalkToHostelByRoute: undefined,
+      },
+    });
+
+    expect(gate.ready).toBe(false);
+    expect(gate.incompleteMust.some((item) => item.id === 'arrival-walk-directions')).toBe(true);
   });
 
   it('fails house rules gate when quiet hours have no times', () => {

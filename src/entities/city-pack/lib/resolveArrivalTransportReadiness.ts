@@ -72,7 +72,10 @@ export function resolveArrivalWalkReadiness(input: {
 }): { complete: boolean; detail?: string } {
   const enabledRoutes = resolveAdminCityPackEnabledRoutes(input.cityPackId, input.cityPackContent);
   if (enabledRoutes.length === 0) {
-    return { complete: true };
+    return {
+      complete: false,
+      detail: 'City pack has no arrival routes enabled.',
+    };
   }
 
   const hasGlobalWalk = hasLocalizedValue(input.settings.arrivalWalkToHostel);

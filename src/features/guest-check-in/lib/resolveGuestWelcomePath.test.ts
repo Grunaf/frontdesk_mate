@@ -19,9 +19,12 @@ describe('parseGuestEntryParam', () => {
 });
 
 describe('resolveWelcomeStep', () => {
-  it('defaults to route for planning', () => {
+  it('defaults to route for unknown entry', () => {
     expect(resolveWelcomeStep({})).toBe('route');
-    expect(resolveWelcomeStep({ entry: 'remote' })).toBe('route');
+  });
+
+  it('maps remote to preparation', () => {
+    expect(resolveWelcomeStep({ entry: 'remote' })).toBe('info');
   });
 
   it('maps door and onsite to arrival', () => {

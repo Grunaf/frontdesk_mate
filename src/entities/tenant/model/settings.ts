@@ -50,6 +50,10 @@ export interface TenantSettings {
     availabilityHint?: string;
     /** Hashed PIN for reception desk login ({slug}.reception.domain) */
     deskPinHash?: string;
+    /** Message template for Booking / chat (placeholders: {sendLink}, {pin}, {pinOrHelp}, …) */
+    guestAccessMessageTemplate?: string;
+    /** Substituted for {pinOrHelp} when PIN is not available at copy time */
+    guestAccessPinMissingText?: string;
   };
   recommendationMap?: string;
   wifi?: {
@@ -78,7 +82,6 @@ export interface TenantSettings {
     radius?: string;
   };
   logoUrl?: string;
-  highlightedBedId?: string;
   landing?: TenantLandingSettings;
   /** Check-in policy, currency, and structured city tax. */
   hostel?: TenantHostelSettings;

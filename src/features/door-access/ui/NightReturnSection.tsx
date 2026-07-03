@@ -23,7 +23,7 @@ function NightCodesOnly() {
       <div className={`grid gap-3 ${codedSteps.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {codedSteps.map((step) => (
           <div key={step.id} className="space-y-1">
-            <p className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
               {step.label}
             </p>
             <p className="font-mono text-sm font-bold">{step.code}</p>
