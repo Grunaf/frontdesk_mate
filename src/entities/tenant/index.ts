@@ -41,6 +41,10 @@ export {
 export type { LandingRoomType, TenantLandingSettings } from './model/landing';
 export type { CityPackId, TenantRecord, TenantSettings } from './model/settings';
 export {
+  applyCityPackNeedNowPlaceIds,
+  resolveCityPackNeedNowPlaceIdsForAdmin,
+} from './lib/applyCityPackNeedNowPlaceIds';
+export {
   resolveGuestStayPlan,
   resolveGuestFloorFromStay,
   hasGuestStayConfigured,

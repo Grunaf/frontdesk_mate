@@ -14,7 +14,7 @@ import {
 
 const samplePlace: Place = {
   id: 'zeljo-cevapi',
-  category: 'food',
+  category: 'restaurants',
   name: 'Željo',
   descriptionKey: 'places.zeljo.desc',
   googleMapsUrl: 'https://maps.example/zeljo',
@@ -80,7 +80,7 @@ describe('guestRecommendation', () => {
         id: '1',
         scope: 'city',
         name: 'Test',
-        category: 'food',
+        category: 'restaurants',
         walkHint: '2 min walk',
       })
     ).toBe('2 min walk');
@@ -93,7 +93,7 @@ describe('guestRecommendation', () => {
           id: '1',
           scope: 'city',
           name: 'Test',
-          category: 'food',
+          category: 'restaurants',
           walkHint: '5 min walk',
         },
         { activeTab: 'all', categoryLabel: 'Food' }
@@ -123,7 +123,7 @@ describe('guestRecommendation', () => {
         id: 'zeljo',
         scope: 'city',
         name: 'Željo',
-        category: 'food',
+        category: 'restaurants',
         needNow: false,
       },
     ]);
@@ -145,7 +145,7 @@ describe('guestRecommendation', () => {
         id: 'a',
         scope: 'city',
         name: 'Alpha',
-        category: 'food',
+        category: 'restaurants',
         isTopPick: true,
       },
     ]);
@@ -159,7 +159,7 @@ describe('limitRecommendationsForAllTab', () => {
     id: `place-${index}`,
     scope: 'city' as const,
     name: `Place ${index}`,
-    category: 'food',
+    category: 'restaurants',
   }));
 
   it('limits all tab until expanded', () => {
@@ -172,12 +172,12 @@ describe('limitRecommendationsForAllTab', () => {
 
 describe('local guide tabs', () => {
   const recommendations = [
-    { id: '1', scope: 'city' as const, name: 'Food A', category: 'food' },
+    { id: '1', scope: 'city' as const, name: 'Food A', category: 'restaurants' },
     { id: '2', scope: 'city' as const, name: 'Bar A', category: 'bars' },
   ];
 
   it('hides empty category tabs', () => {
-    expect(getVisibleTabIds(recommendations)).toEqual(['all', 'food', 'bars']);
+    expect(getVisibleTabIds(recommendations)).toEqual(['all', 'restaurants', 'bars']);
   });
 
   it('hides essential tab when all essential places are utilities', () => {
@@ -191,18 +191,18 @@ describe('local guide tabs', () => {
         iconId: 'atm',
       },
       {
-        id: 'food',
+        id: 'restaurants',
         scope: 'city',
         name: 'Željo',
-        category: 'food',
+        category: 'restaurants',
         needNow: false,
       },
     ]);
 
-    expect(getVisibleTabIds(explore)).toEqual(['all', 'food']);
+    expect(getVisibleTabIds(explore)).toEqual(['all', 'restaurants']);
   });
 
   it('falls back from empty preferred tab to first populated category', () => {
-    expect(resolveActiveLocalGuideTab('food', ['all', 'bars'], 'food')).toBe('bars');
+    expect(resolveActiveLocalGuideTab('restaurants', ['all', 'bars'], 'restaurants')).toBe('bars');
   });
 });

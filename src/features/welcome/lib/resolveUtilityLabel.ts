@@ -23,10 +23,3 @@ export function resolveUtilityShortLabel(
   const firstWord = recommendation.name.trim().split(/\s+/)[0];
   return firstWord || recommendation.name;
 }
-
-export function buildUtilityTriggerLabel(
-  utilities: GuestRecommendation[],
-  translate: TranslateFn
-): string {
-  return utilities.map((utility) => resolveUtilityShortLabel(utility, translate)).join(' · ');
-}

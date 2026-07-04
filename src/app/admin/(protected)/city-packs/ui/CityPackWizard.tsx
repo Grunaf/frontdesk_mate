@@ -125,7 +125,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   );
 
   const placesCount = countGatePlaces(content);
-  const routesGateMet = hasRouteGate(content);
+  const routesGateMet = hasRouteGate(content, pack.id);
   const gateContentMet = isPackReadyForTenants({
     status: 'ready',
     content,
@@ -164,9 +164,8 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
       {
         id: createPlaceId(),
         name: '',
-        category: 'food',
+        category: 'restaurants',
         isTopPick: false,
-        needNow: false,
       },
     ]);
   };
@@ -330,24 +329,14 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
                     rows={2}
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                   />
-                  <div className="flex flex-wrap items-center gap-4">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={place.isTopPick ?? false}
-                        onChange={(event) => updatePlace(place.id, { isTopPick: event.target.checked })}
-                      />
-                      Top pick
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={place.needNow ?? false}
-                        onChange={(event) => updatePlace(place.id, { needNow: event.target.checked })}
-                      />
-                      Need now (first visit)
-                    </label>
-                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={place.isTopPick ?? false}
+                      onChange={(event) => updatePlace(place.id, { isTopPick: event.target.checked })}
+                    />
+                    Top pick
+                  </label>
                   <button
                     type="button"
                     onClick={() => removePlace(place.id)}

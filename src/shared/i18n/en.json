@@ -185,7 +185,7 @@
             "title": "Local Guide by {hostelName}",
             "subtitle": "Handpicked places in Sarajevo to help you experience the city like a local without overpaying.",
             "essentials": {
-              "title": "Essentials nearby",
+              "title": "Important nearby",
               "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
               "expand": "Show",
               "collapse": "Hide",
@@ -208,7 +208,7 @@
             "tabs": {
               "all": "All",
               "essential": "Info",
-              "food": "Food",
+              "restaurants": "Restaurants",
               "bars": "Bars",
               "cafes": "Cafes",
               "sights": "Sights"
@@ -348,7 +348,7 @@
             "title": "Local Guide by {hostelName}",
             "subtitle": "Curated places around Kotor Bay — coming soon.",
             "essentials": {
-              "title": "Essentials nearby",
+              "title": "Important nearby",
               "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
               "expand": "Show",
               "collapse": "Hide",
@@ -371,7 +371,7 @@
             "tabs": {
               "all": "All",
               "essential": "Info",
-              "food": "Food",
+              "restaurants": "Restaurants",
               "bars": "Bars",
               "cafes": "Cafes",
               "sights": "Sights"
@@ -411,7 +411,7 @@
             "title": "Local Guide by {hostelName}",
             "subtitle": "Curated places around town — from your city pack.",
             "essentials": {
-              "title": "Essentials nearby",
+              "title": "Important nearby",
               "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
               "expand": "Show",
               "collapse": "Hide",
@@ -434,7 +434,7 @@
             "tabs": {
               "all": "All",
               "essential": "Info",
-              "food": "Food",
+              "restaurants": "Restaurants",
               "bars": "Bars",
               "cafes": "Cafes",
               "sights": "Sights"

@@ -14,6 +14,7 @@ import {
   isCodeCityPackRouteSeedAvailable,
 } from './buildCityPackRouteContentFromCode';
 import { mergeDbRouteOntoCodeRoute } from './buildRouteGuestCopy';
+import { resolveCityPackTransportReadiness } from './resolveCityPackTransportReadiness';
 import type { AppLocale, CityPackContent, CityPackContentWarnings, CityPackStatus } from '../model/types';
 import { resolveLocalizedText } from '../model/localized';
 
@@ -162,21 +163,27 @@ export function resolveCityPackForGuest(input: {
 }): CityPack {
   const base = getCityPack(input.packId);
   const packIsReady = input.packStatus === 'ready';
-  const enabledRoutes = packIsReady ? (input.enabledRoutes ?? []) : [];
-  const contentRoutes = packIsReady ? resolveContentRoutes(input.packId, input.content) : {};
-  const warnings = packIsReady ? resolveContentWarnings(input.packId, input.content) : undefined;
+  const transportReady =
+    packIsReady &&
+    resolveCityPackTransportReadiness({
+      packId: input.packId,
+      content: input.content,
+    }).ready;
+  const enabledRoutes = transportReady ? (input.enabledRoutes ?? []) : [];
+  const contentRoutes = transportReady ? resolveContentRoutes(input.packId, input.content) : {};
+  const warnings = transportReady ? resolveContentWarnings(input.packId, input.content) : undefined;
 
   const withMergedRoutes: CityPack = {
     ...base,
     places: input.places ?? [],
-    recommendedTaxi: packIsReady
+    recommendedTaxi: transportReady
       ? mergeRecommendedTaxi(base.recommendedTaxi, input.content?.recommendedTaxi)
       : base.recommendedTaxi,
     preTripTips: input.content?.preTripTips ?? base.preTripTips,
-    routes: packIsReady
+    routes: transportReady
       ? mergeRoutesWithContent(base.routes, contentRoutes, input.locale)
       : base.routes,
-    guestWarnings: packIsReady ? resolveGuestWarnings(warnings, input.locale) : undefined,
+    guestWarnings: transportReady ? resolveGuestWarnings(warnings, input.locale) : undefined,
   };
 
   if (!enabledRoutes.length) {

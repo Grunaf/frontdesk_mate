@@ -87,6 +87,19 @@ describe('resolveCityPackForGuest', () => {
     expect(pack.categories).toEqual([]);
   });
 
+  it('returns empty routes when enabled routes lack guest-ready content', () => {
+    const pack = resolveCityPackForGuest({
+      packId: 'tivat',
+      locale: 'en',
+      packStatus: 'ready',
+      enabledRoutes: ['airport', 'bus_central'],
+      content: { enabledRoutes: ['airport', 'bus_central'] },
+    });
+
+    expect(pack.routes).toEqual({});
+    expect(pack.categories).toEqual([]);
+  });
+
   it('keeps code categories filtered by enabled routes', () => {
     const base = getCityPack('sarajevo');
     const pack = resolveCityPackForGuest({

@@ -1,4 +1,4 @@
-export type PlaceCategory = 'bars' | 'food' | 'cafes' | 'sights' | 'essential';
+export type PlaceCategory = 'bars' | 'restaurants' | 'cafes' | 'sights' | 'essential';
 
 export type { PlaceIconId } from './place-icons';
 

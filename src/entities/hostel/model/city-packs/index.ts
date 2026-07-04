@@ -24,7 +24,10 @@ export {
 export {
   PLACE_CATEGORY_IDS,
   PLACE_CATEGORY_REGISTRY,
+  CITY_PACK_NEED_NOW_ELIGIBLE_CATEGORIES,
   isPlaceCategory,
+  isCityPackNeedNowEligibleCategory,
+  resolvePlaceCategoryFromLegacy,
   resolvePlaceCategoryAdminLabel,
   resolvePlaceCategoryGuideTabKey,
   resolvePlaceCategoryLucideIcon,

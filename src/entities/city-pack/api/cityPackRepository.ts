@@ -98,7 +98,7 @@ export async function listCityPacksForAdmin(): Promise<{
   const packs = (data as CityPackRow[] | null)?.map((row) => {
     const record = mapRow(row, tenantCounts[row.id] ?? 0);
     const placesCount = countGatePlaces(record.content);
-    const routesGateMet = hasRouteGate(record.content);
+    const routesGateMet = hasRouteGate(record.content, record.id);
     const gateInput = {
       status: record.status,
       content: record.content,

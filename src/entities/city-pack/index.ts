@@ -27,6 +27,11 @@ export {
   normalizeEnabledRoutes,
 } from './lib/resolveCityPackGate';
 export {
+  resolveCityPackTransportReadiness,
+  hasRouteContentGate,
+  type CityPackTransportReadinessResult,
+} from './lib/resolveCityPackTransportReadiness';
+export {
   buildCityPackGateSnapshot,
   isCityPackReadyForTenant,
   resolveCityPackHasPlacesForTenant,

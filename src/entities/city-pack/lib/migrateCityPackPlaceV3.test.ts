@@ -16,6 +16,12 @@ describe('migrateCityPackPlaceV3', () => {
     expect(resolveIsTopPickFromLegacy({ tag: 'TOP PICK' })).toBe(true);
   });
 
+  it('maps legacy food category to restaurants', () => {
+    expect(migrateCityPackAdminPlaceV3({ id: 'a', category: 'food' }).category).toBe(
+      'restaurants'
+    );
+  });
+
   it('prefers explicit needNow over legacy isSurvival and tag', () => {
     expect(
       resolveNeedNowFromLegacy({ needNow: false, isSurvival: true, tag: 'LATE NIGHT BITES' })

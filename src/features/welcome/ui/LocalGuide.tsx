@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
-import { useGuestSession } from '@/features/guest-check-in';
-import { useLocalGuideArrivalMode } from '../model/useLocalGuideArrivalMode';
 import { useHostelConfig, useTenant } from '@/entities/tenant';
 import { Button, Card, CardContent, Icon, SegmentedChipBar } from '@/shared/ui';
 import { MapPin } from 'lucide-react';
@@ -117,10 +115,7 @@ export function LocalGuide({ variant = 'full' }: LocalGuideProps) {
   const isCompact = variant === 'compact';
   const { name, cityPack, settings } = useTenant();
   const t = useTranslations(cityPack.locale.guideNamespace);
-  const { session, checkInAt } = useGuestSession();
   const hostel = useHostelConfig();
-  const { isArrivalMode, utilitiesExpanded, setUtilitiesExpanded, unlockExplore } =
-    useLocalGuideArrivalMode(checkInAt, session?.stayId ?? null);
 
   const hostelPlaces = useMemo(
     () =>
@@ -214,14 +209,7 @@ export function LocalGuide({ variant = 'full' }: LocalGuideProps) {
 
         <EssentialsSection
           utilities={utilities}
-          expanded={utilitiesExpanded}
-          onExpandedChange={setUtilitiesExpanded}
-          highlight={isArrivalMode}
           limit={COMPACT_ESSENTIALS_LIMIT}
-          title={t('essentials.title')}
-          subtitle={t('essentials.subtitle')}
-          expandLabel={t('essentials.expand')}
-          collapseLabel={t('essentials.collapse')}
           openInMapsLabel={t('openInMaps')}
           t={t}
         />
@@ -231,10 +219,14 @@ export function LocalGuide({ variant = 'full' }: LocalGuideProps) {
     );
   }
 
-  const showExploreSection = !isArrivalMode;
-
   return (
     <section className="animate-fade-in space-y-5">
+      <EssentialsSection
+        utilities={utilities}
+        openInMapsLabel={t('openInMaps')}
+        t={t}
+      />
+
       {hostelPlaces.length > 0 ? (
         <div className="space-y-3">
           <div className="space-y-1">
@@ -247,93 +239,52 @@ export function LocalGuide({ variant = 'full' }: LocalGuideProps) {
         </div>
       ) : null}
 
-      <EssentialsSection
-        utilities={utilities}
-        expanded={utilitiesExpanded}
-        onExpandedChange={setUtilitiesExpanded}
-        highlight={isArrivalMode}
-        title={t('essentials.title')}
-        subtitle={t('essentials.subtitle')}
-        expandLabel={t('essentials.expand')}
-        collapseLabel={t('essentials.collapse')}
-        openInMapsLabel={t('openInMaps')}
-        t={t}
-      />
+      <div className="space-y-1">
+        <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          {hostelPlaces.length > 0
+            ? t('nearHostel.exploreCityTitle')
+            : t('title', { hostelName: name })}
+        </h3>
+        <p className="text-muted-foreground text-xs">
+          {hostelPlaces.length > 0 ? t('nearHostel.exploreCitySubtitle') : t('subtitle')}
+        </p>
+      </div>
 
-      {showExploreSection ? (
-        <>
-          <div className="space-y-1">
-            <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              {hostelPlaces.length > 0
-                ? t('nearHostel.exploreCityTitle')
-                : t('title', { hostelName: name })}
-            </h3>
-            <p className="text-muted-foreground text-xs">
-              {hostelPlaces.length > 0 ? t('nearHostel.exploreCitySubtitle') : t('subtitle')}
-            </p>
-          </div>
+      {customMapUrl ? <MapCard customMapUrl={customMapUrl} hostelName={name} t={t} /> : null}
 
-          {customMapUrl ? <MapCard customMapUrl={customMapUrl} hostelName={name} t={t} /> : null}
-
-          {visibleTabIds.length === 0 ? (
-            <RecommendationsList recommendations={[]} activeTab="all" t={t} />
-          ) : (
-            <div className="space-y-3">
-              <div className="border-border/60 bg-background/95 sticky top-0 z-10 -mx-4 border-b px-4 py-2 backdrop-blur-sm sm:mx-0 sm:px-0">
-                <SegmentedChipBar
-                  items={visibleTabIds.map((tabId) => ({
-                    id: tabId,
-                    label: t(`tabs.${tabId}`),
-                    icon: resolveGuideTabIcon(tabId),
-                  }))}
-                  value={activeTab}
-                  onValueChange={handleTabChange}
-                  ariaLabel={t('title', { hostelName: name })}
-                  className="py-0"
-                />
-              </div>
-              <RecommendationsList
-                recommendations={visibleRecommendations}
-                activeTab={activeTab}
-                t={t}
-              />
-              {hasMore ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => setAllTabExpanded(true)}
-                >
-                  {t('showAllPlaces', { count: String(total) })}
-                </Button>
-              ) : null}
-            </div>
-          )}
-        </>
+      {visibleTabIds.length === 0 ? (
+        <RecommendationsList recommendations={[]} activeTab="all" t={t} />
       ) : (
         <div className="space-y-3">
-          <div className="space-y-1">
-            <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              {t('exploreArrival.title')}
-            </h3>
-            <p className="text-muted-foreground text-xs">{t('exploreArrival.subtitle')}</p>
+          <div className="border-border/60 bg-background/95 sticky top-0 z-10 -mx-4 border-b px-4 py-2 backdrop-blur-sm sm:mx-0 sm:px-0">
+            <SegmentedChipBar
+              items={visibleTabIds.map((tabId) => ({
+                id: tabId,
+                label: t(`tabs.${tabId}`),
+                icon: resolveGuideTabIcon(tabId),
+              }))}
+              value={activeTab}
+              onValueChange={handleTabChange}
+              ariaLabel={t('title', { hostelName: name })}
+              className="py-0"
+            />
           </div>
-          <Card className="border-primary/30 bg-primary/5 shadow-sm">
-            <CardContent className="space-y-3 p-4">
-              <div className="space-y-1">
-                <h4 className="text-primary text-xs font-bold tracking-wide uppercase">
-                  {t('exploreArrival.teaserTitle')}
-                </h4>
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  {t('exploreArrival.teaserDescription')}
-                </p>
-              </div>
-              <Button onClick={unlockExplore} size="sm" className="w-full sm:w-auto">
-                {t('exploreArrival.showAllButton')}
-              </Button>
-            </CardContent>
-          </Card>
+          <RecommendationsList
+            recommendations={visibleRecommendations}
+            activeTab={activeTab}
+            t={t}
+          />
+          {hasMore ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => setAllTabExpanded(true)}
+            >
+              {t('showAllPlaces', { count: String(total) })}
+            </Button>
+          ) : null}
         </div>
       )}
     </section>

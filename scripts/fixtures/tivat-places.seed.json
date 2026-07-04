@@ -25,7 +25,7 @@
   },
   {
     "id": "pekara-gradska",
-    "category": "food",
+    "category": "restaurants",
     "name": "Pekara Gradska (bakery)",
     "googleMapsUrl": "https://maps.google.com/?q=Pekara+Gradska+Tivat",
     "isTopPick": false,
@@ -33,7 +33,7 @@
   },
   {
     "id": "konoba-bonaca",
-    "category": "food",
+    "category": "restaurants",
     "name": "Konoba Bonaća",
     "googleMapsUrl": "https://maps.google.com/?q=Konoba+Bonaca+Tivat",
     "isTopPick": true,
@@ -41,7 +41,7 @@
   },
   {
     "id": "restaurant-astoria",
-    "category": "food",
+    "category": "restaurants",
     "name": "Astoria Restaurant",
     "googleMapsUrl": "https://maps.google.com/?q=Astoria+Restaurant+Tivat",
     "isTopPick": true,

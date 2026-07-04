@@ -1,12 +1,14 @@
-import type { PlaceCategory } from '@/entities/hostel';
+import { resolvePlaceCategoryFromLegacy, type PlaceCategory } from '@/entities/hostel';
 import { migrateCityPackAdminPlaceV3 } from './migrateCityPackPlaceV3';
 import type { CityPackAdminPlace } from '../model/types';
 
 function toCityPackAdminPlace(migrated: ReturnType<typeof migrateCityPackAdminPlaceV3>): CityPackAdminPlace {
+  const category = resolvePlaceCategoryFromLegacy(migrated.category) ?? (migrated.category as PlaceCategory);
+
   return {
     id: String(migrated.id ?? ''),
     name: String(migrated.name ?? ''),
-    category: migrated.category as PlaceCategory,
+    category,
     description: typeof migrated.description === 'string' ? migrated.description : undefined,
     walkHint: typeof migrated.walkHint === 'string' ? migrated.walkHint : undefined,
     lat: typeof migrated.lat === 'number' ? migrated.lat : undefined,

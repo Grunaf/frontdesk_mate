@@ -202,6 +202,7 @@ export function LaunchSetupWizard({
                 tenantSlug={identity.slug}
                 settings={settings}
                 cityPackId={identity.cityPackId}
+                cityPackContent={cityPackContentsById[identity.cityPackId]}
                 cityPackGateSnapshot={cityPackGateSnapshot}
                 readinessInput={readinessInput}
                 scope="rules-only"

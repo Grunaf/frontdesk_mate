@@ -61,6 +61,10 @@ export function migrateCityPackAdminPlaceV3(
   migrated.isTopPick = resolveIsTopPickFromLegacy(place);
   migrated.needNow = resolveNeedNowFromLegacy(place);
 
+  if (migrated.category === 'food') {
+    migrated.category = 'restaurants';
+  }
+
   for (const key of LEGACY_CITY_PACK_PLACE_KEYS) {
     delete migrated[key];
   }

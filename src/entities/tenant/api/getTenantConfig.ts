@@ -28,6 +28,7 @@ import {
 } from '../lib/resolveTenantLifecycle';
 
 import { resolveCapabilities } from '../lib/resolveCapabilities';
+import { applyCityPackNeedNowPlaceIds } from '../lib/applyCityPackNeedNowPlaceIds';
 import {
   buildTenantGuestShell,
   resolveTenantAccessFromLookup,
@@ -109,7 +110,7 @@ function buildTenantConfig(input: {
     }),
     settings: input.settings,
     source: input.source,
-    cityPackPlaces: input.cityPackPlaces,
+    cityPackPlaces: applyCityPackNeedNowPlaceIds(input.cityPackPlaces, input.settings),
     cityPackEnabledRoutes: input.cityPackEnabledRoutes,
     cityPackContent: input.cityPackContent,
     cityPackStatus: input.cityPackStatus,

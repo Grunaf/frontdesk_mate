@@ -238,6 +238,7 @@ function SectionPanel({
             tenantSlug={identity.slug}
             settings={s}
             cityPackId={identity.cityPackId}
+            cityPackContent={cityPackContentsById[identity.cityPackId]}
             cityPackGateSnapshot={cityPackGateSnapshot}
             readinessInput={readinessInput}
             onJumpToSection={onJumpToSection}

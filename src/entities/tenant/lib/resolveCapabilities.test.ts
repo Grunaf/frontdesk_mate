@@ -82,6 +82,16 @@ describe('resolveCapabilities', () => {
     expect(resolveCapabilities({ cityPackId: 'kotor', settings: {} }).localGuide).toBe('hidden');
   });
 
+  it('hides arrival routes when city pack transport is not ready', () => {
+    expect(
+      resolveCapabilities({ cityPackId: 'sarajevo', settings: {}, cityPackHasPlaces: true }).arrivalRoutes
+    ).toBe('ready');
+    expect(
+      resolveCapabilities({ cityPackId: 'sarajevo', settings: {}, cityPackHasPlaces: false }).arrivalRoutes
+    ).toBe('hidden');
+    expect(resolveCapabilities({ cityPackId: 'tivat', settings: {} }).arrivalRoutes).toBe('hidden');
+  });
+
   it('hides booking on lead-gen landing lifecycles even when engine is configured', () => {
     const settings: TenantSettings = {
       booking: { provider: 'cloudbeds', engineId: '12345' },

@@ -1,5 +1,8 @@
 import { getCityPack, type CityPackId } from '@/entities/hostel';
 import type { CityPackContent } from '@/entities/city-pack/model/types';
+import type { CityPackGateSnapshot } from '@/entities/city-pack';
+import { isCityPackReadyForTenant } from '@/entities/city-pack/lib/resolveCityPackGateForTenant';
+import { resolveCityPackTransportReadiness } from '@/entities/city-pack/lib/resolveCityPackTransportReadiness';
 import { resolveArrivalWalkReadiness } from '@/entities/city-pack/lib/resolveArrivalTransportReadiness';
 import {
   readBookingSettings,
@@ -104,13 +107,30 @@ type AdminSectionInput = {
   name?: string;
   lifecycleStatus?: ReturnType<typeof resolveTenantLifecycleStatus>;
   cityPackContent?: CityPackContent;
+  cityPackGateSnapshot?: CityPackGateSnapshot;
 };
+
+function resolveAdminCityPackReadyForGuests(input: AdminSectionInput): boolean {
+  if (input.cityPackGateSnapshot) {
+    return isCityPackReadyForTenant(input.cityPackId, input.cityPackGateSnapshot);
+  }
+
+  return resolveCityPackTransportReadiness({
+    packId: input.cityPackId,
+    content: input.cityPackContent,
+  }).ready;
+}
 
 export function getAdminSectionStatus(
   sectionId: AdminSectionId,
   input: AdminSectionInput
 ): ModuleStatus | 'n/a' {
-  const capabilities = resolveCapabilities(input);
+  const capabilities = resolveCapabilities({
+    cityPackId: input.cityPackId,
+    settings: input.settings,
+    lifecycleStatus: input.lifecycleStatus,
+    cityPackHasPlaces: resolveAdminCityPackReadyForGuests(input),
+  });
   const settings = input.settings;
 
   switch (sectionId) {
@@ -171,7 +191,11 @@ export function getAdminSectionHint(
     case 'subscription':
       return input.lifecycleStatus ? getAdminSubscriptionHint(input.lifecycleStatus) : undefined;
     case 'guest-app': {
-      const caps = resolveCapabilities(input);
+      const caps = resolveCapabilities({
+        cityPackId: input.cityPackId,
+        settings: merged,
+        cityPackHasPlaces: resolveAdminCityPackReadyForGuests(input),
+      });
       if (caps.roomMap === 'ready' && caps.faq === 'ready' && caps.localGuide === 'ready') {
         return 'All modules live';
       }

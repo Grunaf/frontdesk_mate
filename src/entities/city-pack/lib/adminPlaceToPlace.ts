@@ -1,6 +1,7 @@
 import type { Place } from '@/entities/hostel';
 import { normalizePlaceIconId } from '@/entities/hostel';
 import type { CityPackAdminPlace } from '../model/types';
+import { normalizeCityPackAdminPlace } from './normalizeCityPackAdminPlace';
 import { sortByTopPickThenName } from './sortByTopPickThenName';
 
 export function resolvePlaceMapsUrl(place: CityPackAdminPlace): string {
@@ -13,19 +14,21 @@ export function resolvePlaceMapsUrl(place: CityPackAdminPlace): string {
 }
 
 export function adminPlaceToPlace(place: CityPackAdminPlace): Place {
+  const normalized = normalizeCityPackAdminPlace(place);
+
   return {
-    id: place.id,
-    name: place.name.trim(),
-    category: place.category,
+    id: normalized.id,
+    name: normalized.name.trim(),
+    category: normalized.category,
     descriptionKey: '',
-    description: place.description?.trim() || undefined,
-    googleMapsUrl: resolvePlaceMapsUrl(place),
-    isTopPick: place.isTopPick ?? false,
-    needNow: place.needNow ?? false,
-    walkHint: place.walkHint?.trim() || undefined,
+    description: normalized.description?.trim() || undefined,
+    googleMapsUrl: resolvePlaceMapsUrl(normalized),
+    isTopPick: normalized.isTopPick ?? false,
+    needNow: normalized.needNow ?? false,
+    walkHint: normalized.walkHint?.trim() || undefined,
     iconId:
-      place.iconId != null && place.iconId.trim() !== ''
-        ? normalizePlaceIconId(place.iconId)
+      normalized.iconId != null && String(normalized.iconId).trim() !== ''
+        ? normalizePlaceIconId(normalized.iconId)
         : undefined,
   };
 }

@@ -41,6 +41,10 @@ function resolveLocalGuideStatus(cityPackHasPlaces?: boolean): ModuleStatus {
   return cityPackHasPlaces === true ? 'ready' : 'hidden';
 }
 
+function resolveArrivalRoutesStatus(cityPackHasPlaces?: boolean): ModuleStatus {
+  return cityPackHasPlaces === true ? 'ready' : 'hidden';
+}
+
 export function resolveCapabilities(input: {
   cityPackId: CityPackId;
   settings: TenantSettings;
@@ -51,7 +55,7 @@ export function resolveCapabilities(input: {
   const bookingReady = hasBooking(settings) && !isTenantLeadGenLanding(lifecycleStatus);
 
   return {
-    arrivalRoutes: 'ready',
+    arrivalRoutes: resolveArrivalRoutesStatus(cityPackHasPlaces),
     preTripInfo: settings.checkInTime ? 'ready' : 'preview',
     doorAccess: hasDoorAccessConfigured(settings) ? 'ready' : 'hidden',
     doorPhotos:

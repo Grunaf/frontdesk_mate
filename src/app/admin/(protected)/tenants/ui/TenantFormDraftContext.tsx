@@ -23,6 +23,7 @@ export interface TenantFormDraft {
   guestExtras?: GuestExtraConfig[];
   guestStay?: GuestStayConfig;
   hostelPlaces?: HostelPlace[];
+  cityPackNeedNowPlaceIds?: string[];
   landing?: TenantLandingSettings;
   hostel?: TenantHostelSettings;
   roomMapEnabled?: boolean;
@@ -58,6 +59,9 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
     ...(draft.guestExtras !== undefined ? { guestExtras: draft.guestExtras } : {}),
     ...(draft.guestStay !== undefined ? { guestStay: draft.guestStay } : {}),
     ...(draft.hostelPlaces !== undefined ? { hostelPlaces: draft.hostelPlaces } : {}),
+    ...(draft.cityPackNeedNowPlaceIds !== undefined
+      ? { cityPackNeedNowPlaceIds: draft.cityPackNeedNowPlaceIds }
+      : {}),
     ...(draft.landing !== undefined
       ? {
           landing: {

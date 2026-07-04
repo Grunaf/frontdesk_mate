@@ -2,12 +2,12 @@ import Link from 'next/link';
 import { ROUTE_PRESETS } from '@/entities/city-pack';
 import {
   resolveAdminCityPackEnabledRoutes,
-  resolveAdminCityPackRoutes,
 } from '@/entities/city-pack/lib/resolveAdminCityPackTransport';
 import {
   isCityPackReadyForTenant,
   resolveCityPackNotReadyReasonForTenant,
 } from '@/entities/city-pack/lib/resolveCityPackGateForTenant';
+import { resolveCityPackTransportReadiness } from '@/entities/city-pack/lib/resolveCityPackTransportReadiness';
 import type { CityPackGateSnapshot } from '@/entities/city-pack';
 import type { CityPackContent } from '@/entities/city-pack/model/types';
 import { getCityPack, type CityPackId } from '@/entities/hostel';
@@ -26,9 +26,14 @@ export function CityPackInheritanceCard({
   cityPackContent,
 }: CityPackInheritanceCardProps) {
   const packReady = isCityPackReadyForTenant(cityPackId, cityPackGateSnapshot);
-  const notReadyReason = resolveCityPackNotReadyReasonForTenant(cityPackId, cityPackGateSnapshot);
+  const snapshotReason = resolveCityPackNotReadyReasonForTenant(cityPackId, cityPackGateSnapshot);
+  const transportReadiness = resolveCityPackTransportReadiness({
+    packId: cityPackId,
+    content: cityPackContent,
+  });
+  const transportDetail =
+    snapshotReason ?? transportReadiness.detail ?? 'City pack routes are not ready for guests yet.';
   const enabledRoutes = resolveAdminCityPackEnabledRoutes(cityPackId, cityPackContent);
-  const routes = resolveAdminCityPackRoutes(cityPackId, cityPackContent);
   const routeLabels = enabledRoutes
     .map((routeId) => ROUTE_PRESETS.find((route) => route.id === routeId)?.label ?? routeId)
     .join(', ');
@@ -36,7 +41,6 @@ export function CityPackInheritanceCard({
   const displayLabel = cityPackLabel ?? cityPackId;
   const taxiName =
     cityPackContent?.recommendedTaxi?.name ?? cityPack.recommendedTaxi?.name ?? 'Not set';
-  const hasRouteContent = Object.keys(routes).length > 0;
 
   return (
     <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm">
@@ -65,9 +69,9 @@ export function CityPackInheritanceCard({
           <dd className="font-medium">{taxiName}</dd>
         </div>
       </dl>
-      {!packReady || !hasRouteContent ? (
+      {!packReady ? (
         <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          {notReadyReason ?? 'City pack routes are not ready for guests yet.'}
+          {transportDetail}
         </p>
       ) : null}
       <Link

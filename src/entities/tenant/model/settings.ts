@@ -96,6 +96,11 @@ export interface TenantSettings {
   guestExtras?: GuestExtraConfig[];
   /** Spots within walking distance — shown above city pack guide. */
   hostelPlaces?: HostelPlace[];
+  /**
+   * City pack place ids shown as first-visit essentials (guest Essentials).
+   * When undefined, guest falls back to pack-level `needNow` on places.
+   */
+  cityPackNeedNowPlaceIds?: string[];
   faqPackId?: string;
   /** Hostel-specific final leg after the city pack route (overrides city default walk). */
   arrivalWalkToHostel?: LocalizedField;

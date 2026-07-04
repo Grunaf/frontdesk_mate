@@ -185,7 +185,7 @@
             "title": "Локальный гид от хостела",
             "subtitle": "Собрали для вас проверенные места в Сараево, чтобы вы не переплачивали как турист.",
             "essentials": {
-              "title": "Рядом с хостелом",
+              "title": "Важное рядом",
               "subtitle": "Банкомат, магазин, аптека и еда допоздна — открыть в Maps одним нажатием.",
               "expand": "Показать",
               "collapse": "Скрыть",
@@ -208,7 +208,7 @@
             "tabs": {
               "all": "All",
               "essential": "Info",
-              "food": "Food",
+              "restaurants": "Restaurants",
               "bars": "Bars",
               "cafes": "Cafes",
               "sights": "Sights"
@@ -348,7 +348,7 @@
             "title": "Гид от {hostelName}",
             "subtitle": "Подборка мест вокруг Которской бухты — скоро.",
             "essentials": {
-              "title": "Рядом с хостелом",
+              "title": "Важное рядом",
               "subtitle": "Банкомат, магазин, аптека и еда допоздна — открыть в Maps одним нажатием.",
               "expand": "Показать",
               "collapse": "Скрыть",
@@ -371,7 +371,7 @@
             "tabs": {
               "all": "All",
               "essential": "Info",
-              "food": "Food",
+              "restaurants": "Restaurants",
               "bars": "Bars",
               "cafes": "Cafes",
               "sights": "Sights"
@@ -411,7 +411,7 @@
             "title": "Гид от {hostelName}",
             "subtitle": "Подборка мест в городе — из вашего city pack.",
             "essentials": {
-              "title": "Рядом с хостелом",
+              "title": "Важное рядом",
               "subtitle": "Банкомат, магазин, аптека и еда — один тап до Maps.",
               "expand": "Показать",
               "collapse": "Скрыть",
@@ -434,7 +434,7 @@
             "tabs": {
               "all": "Все",
               "essential": "Инфо",
-              "food": "Еда",
+              "restaurants": "Рестораны",
               "bars": "Бары",
               "cafes": "Кафе",
               "sights": "Места"

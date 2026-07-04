@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { CityPackGateSnapshot } from '@/entities/city-pack';
+import type { CityPackContent, CityPackGateSnapshot } from '@/entities/city-pack';
 import type { CityPackId } from '@/entities/hostel';
 import type { TenantSettings } from '@/entities/tenant';
 import type { TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
@@ -9,6 +9,7 @@ import type { AdminSectionId } from '../lib/adminSections';
 import { AdminModuleStatusPanel } from '../ui/AdminModuleStatusPanel';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { cn } from '@/shared/lib/utils';
+import { CityPackNeedNowFields } from './CityPackNeedNowFields';
 import { GuestStayFields } from './GuestStayFields';
 import { GuestExtrasFields } from './GuestExtrasFields';
 import { HostelPlacesFields } from './HostelPlacesFields';
@@ -20,6 +21,7 @@ interface GuestAppFieldsProps {
   tenantSlug: string;
   settings?: TenantSettings;
   cityPackId: CityPackId;
+  cityPackContent?: CityPackContent;
   cityPackGateSnapshot?: CityPackGateSnapshot;
   readinessInput: TenantReadinessInput;
   onJumpToSection?: (sectionId: AdminSectionId) => void;
@@ -37,6 +39,7 @@ export function GuestAppFields({
   tenantSlug,
   settings,
   cityPackId,
+  cityPackContent,
   cityPackGateSnapshot,
   readinessInput,
   onJumpToSection,
@@ -50,10 +53,21 @@ export function GuestAppFields({
     [settings, draft]
   );
 
+  const nearHostelFields = (
+    <>
+      <CityPackNeedNowFields
+        settings={mergedSettings}
+        cityPackId={cityPackId}
+        cityPackContent={cityPackContent}
+      />
+      <HostelPlacesFields settings={mergedSettings} />
+    </>
+  );
+
   if (scope === 'rules-only') {
     return (
       <div className="space-y-6">
-        <HostelPlacesFields settings={mergedSettings} />
+        {nearHostelFields}
         <HouseRulesFields settings={settings} readinessInput={readinessInput} />
       </div>
     );
@@ -95,8 +109,11 @@ export function GuestAppFields({
       <div className={cn(tab !== 'extras' && 'hidden')} aria-hidden={tab !== 'extras'}>
         <GuestExtrasFields settings={mergedSettings} tenantSlug={tenantSlug} />
       </div>
-      <div className={cn(tab !== 'near-hostel' && 'hidden')} aria-hidden={tab !== 'near-hostel'}>
-        <HostelPlacesFields settings={mergedSettings} />
+      <div
+        className={cn('space-y-6', tab !== 'near-hostel' && 'hidden')}
+        aria-hidden={tab !== 'near-hostel'}
+      >
+        {nearHostelFields}
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import {
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
 import { TourismRegistrationPanel, TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
-import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
+import { resolveTourismRegistrationRequired, useModuleStatus, useTenant } from '@/entities/tenant';
 import { SettlementPhase } from './SettlementPhase';
 import { useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
@@ -67,6 +67,8 @@ export function ArrivalJourneyCoordinator({
   const t = useTranslations('pages.arrivalJourney');
   const router = useRouter();
   const { settings } = useTenant();
+  const arrivalRoutesStatus = useModuleStatus('arrivalRoutes');
+  const routesAvailable = arrivalRoutesStatus !== 'hidden';
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const isRegistered = useIsGuestRegistered();
   const { currentStep, setCurrentStep } = useCheckInState(isOnsite);
@@ -123,8 +125,13 @@ export function ArrivalJourneyCoordinator({
     }
 
     if (isRegistrationLockedStep(step, isRegistered)) {
-      setCurrentStep('route');
+      setCurrentStep(routesAvailable ? 'route' : 'arrival');
       setCheckInSheetOpen(true);
+      return;
+    }
+
+    if (step === 'route' && !routesAvailable) {
+      setCurrentStep('arrival');
       return;
     }
 
@@ -146,10 +153,17 @@ export function ArrivalJourneyCoordinator({
     setCurrentStep(target);
   }, [
     isRegistered,
+    routesAvailable,
     setCurrentStep,
     tourismRegistrationRequired,
     tourismComplete,
   ]);
+
+  useEffect(() => {
+    if (!routesAvailable && currentStep === 'route') {
+      setCurrentStep('arrival');
+    }
+  }, [routesAvailable, currentStep, setCurrentStep]);
 
   const stepsConfig: StepItem[] = useMemo(() => {
     const arrivalOnComplete = () =>
@@ -160,16 +174,20 @@ export function ArrivalJourneyCoordinator({
         id: 'info',
         label: t('tabs.info'),
         Component: PreTripInfo,
-        onComplete: () => setCurrentStep('route'),
+        onComplete: () => setCurrentStep(routesAvailable ? 'route' : 'arrival'),
         buttonKey: 'preTrip.actionButton',
       },
-      {
-        id: 'route',
-        label: t('tabs.route'),
-        Component: DirectionPicker,
-        onComplete: () => setCurrentStep('arrival'),
-        buttonKey: 'directions.actionButton',
-      },
+      ...(routesAvailable
+        ? [
+            {
+              id: 'route' as const,
+              label: t('tabs.route'),
+              Component: DirectionPicker,
+              onComplete: () => setCurrentStep('arrival'),
+              buttonKey: 'directions.actionButton',
+            },
+          ]
+        : []),
       {
         id: 'arrival',
         label: t('tabs.arrival'),
@@ -202,6 +220,7 @@ export function ArrivalJourneyCoordinator({
     return base;
   }, [
     t,
+    routesAvailable,
     tourismRegistrationRequired,
     setCurrentStep,
     router,

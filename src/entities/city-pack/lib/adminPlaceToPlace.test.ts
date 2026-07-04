@@ -2,11 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { adminPlaceToPlace, adminPlacesToPlaces } from '@/entities/city-pack/lib/adminPlaceToPlace';
 
 describe('adminPlaceToPlace', () => {
+  it('maps legacy food category to restaurants', () => {
+    const place = adminPlaceToPlace({
+      id: 'pizza',
+      name: 'Pizza',
+      category: 'food' as 'restaurants',
+      googleMapsUrl: 'https://maps.example/pizza',
+    });
+
+    expect(place.category).toBe('restaurants');
+  });
+
   it('maps admin fields to runtime place', () => {
     const place = adminPlaceToPlace({
       id: 'zeljo-cevapi',
       name: 'Željo',
-      category: 'food',
+      category: 'restaurants',
       description: 'Traditional Bosnian food',
       googleMapsUrl: 'https://maps.example/zeljo',
       isTopPick: true,
@@ -60,7 +71,7 @@ describe('adminPlacesToPlaces', () => {
   it('filters unnamed or uncategorized places', () => {
     const places = adminPlacesToPlaces([
       { id: 'a', name: 'ATM', category: 'essential' },
-      { id: 'b', name: ' ', category: 'food' },
+      { id: 'b', name: ' ', category: 'restaurants' },
       { id: 'c', name: 'Cafe', category: 'cafes' },
     ]);
 

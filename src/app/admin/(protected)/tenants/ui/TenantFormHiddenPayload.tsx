@@ -68,6 +68,13 @@ export function TenantFormHiddenPayload({
         name="hostelPlacesJson"
         value={JSON.stringify(mergedSettings.hostelPlaces ?? [])}
       />
+      {mergedSettings.cityPackNeedNowPlaceIds !== undefined ? (
+        <input
+          type="hidden"
+          name="cityPackNeedNowPlaceIdsJson"
+          value={JSON.stringify(mergedSettings.cityPackNeedNowPlaceIds)}
+        />
+      ) : null}
       <input
         type="hidden"
         name="guestExtrasJson"

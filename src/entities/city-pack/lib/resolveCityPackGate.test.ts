@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MIN_PLACES_FOR_PACK } from './constants';
+import { buildCityPackRoutesFromCode } from './buildCityPackRouteContentFromCode';
 import {
   countGatePlaces,
   hasRouteGate,
@@ -9,21 +10,23 @@ import {
 } from './resolveCityPackGate';
 
 describe('city pack gate', () => {
-  it('requires ready status and minimum places', () => {
+  it('requires ready status, minimum places, and route content', () => {
+    const sarajevoRoutes = buildCityPackRoutesFromCode('sarajevo');
     const content = {
       places: Array.from({ length: MIN_PLACES_FOR_PACK }, (_, index) => ({
         id: `p-${index}`,
         name: `Place ${index}`,
-        category: 'food' as const,
+        category: 'restaurants' as const,
       })),
       enabledRoutes: ['airport' as const],
+      routes: { airport: sarajevoRoutes.airport },
     };
 
     expect(
       resolveHasPlacesPack({
         status: 'draft',
         content,
-        packId: 'kotor',
+        packId: 'sarajevo',
       })
     ).toBe(false);
 
@@ -31,7 +34,7 @@ describe('city pack gate', () => {
       resolveHasPlacesPack({
         status: 'ready',
         content,
-        packId: 'kotor',
+        packId: 'sarajevo',
       })
     ).toBe(true);
   });
@@ -51,15 +54,25 @@ describe('city pack gate', () => {
       countGatePlaces({
         places: [
           { id: '1', name: 'ATM', category: 'essential' },
-          { id: '2', name: ' ', category: 'food' },
+          { id: '2', name: ' ', category: 'restaurants' },
         ],
       })
     ).toBe(1);
   });
 
-  it('requires enabledRoutes in DB content', () => {
-    expect(hasRouteGate({ places: [] })).toBe(false);
-    expect(hasRouteGate({ places: [], enabledRoutes: ['airport'] })).toBe(true);
+  it('requires route content for enabled routes', () => {
+    expect(hasRouteGate({ places: [] }, 'tivat')).toBe(false);
+    expect(
+      hasRouteGate({ places: [], enabledRoutes: ['airport'] }, 'tivat')
+    ).toBe(false);
+
+    const routes = buildCityPackRoutesFromCode('sarajevo');
+    expect(
+      hasRouteGate(
+        { places: [], enabledRoutes: ['airport'], routes: { airport: routes.airport } },
+        'sarajevo'
+      )
+    ).toBe(true);
   });
 
   it('marks pack ready only when places and routes gates pass', () => {
@@ -67,10 +80,10 @@ describe('city pack gate', () => {
       isPackReadyForTenants({
         status: 'ready',
         content: {
-          places: [{ id: '1', name: 'One', category: 'food' }],
+          places: [{ id: '1', name: 'One', category: 'restaurants' }],
           enabledRoutes: ['airport'],
         },
-        packId: 'demo',
+        packId: 'tivat',
       })
     ).toBe(false);
   });

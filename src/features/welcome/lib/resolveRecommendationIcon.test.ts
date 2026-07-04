@@ -8,7 +8,7 @@ describe('resolveRecommendationThumbnailIcon', () => {
     id: '1',
     scope: 'city',
     name: 'Test',
-    category: 'food',
+    category: 'restaurants',
   };
 
   it('uses preset icon when iconId is set', () => {

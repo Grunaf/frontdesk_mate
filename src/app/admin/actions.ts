@@ -160,6 +160,31 @@ function parseHostelPlaces(formData: FormData): TenantSettings['hostelPlaces'] {
   }
 }
 
+function parseCityPackNeedNowPlaceIds(
+  formData: FormData
+): TenantSettings['cityPackNeedNowPlaceIds'] {
+  if (!formData.has('cityPackNeedNowPlaceIdsJson')) {
+    return undefined;
+  }
+
+  const raw = String(formData.get('cityPackNeedNowPlaceIdsJson') || '').trim();
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      .map((id) => id.trim());
+  } catch {
+    return [];
+  }
+}
+
 function isGuestExtraPresetId(value: string): value is GuestExtraPresetId {
   return (GUEST_EXTRA_PRESET_IDS as readonly string[]).includes(value);
 }
@@ -338,6 +363,7 @@ function readSettings(formData: FormData): TenantSettings {
     houseRules,
     guestExtras,
     hostelPlaces: parseHostelPlaces(formData),
+    cityPackNeedNowPlaceIds: parseCityPackNeedNowPlaceIds(formData),
     wifi: {
       name: String(formData.get('wifiName') || '') || undefined,
       password: String(formData.get('wifiPassword') || '') || undefined,
@@ -453,6 +479,16 @@ export async function saveTenantAction(formData: FormData) {
       settings = {
         ...settings,
         guestExtras: previous.guestExtras,
+      };
+    }
+
+    if (
+      settings.cityPackNeedNowPlaceIds === undefined &&
+      previous.cityPackNeedNowPlaceIds !== undefined
+    ) {
+      settings = {
+        ...settings,
+        cityPackNeedNowPlaceIds: previous.cityPackNeedNowPlaceIds,
       };
     }
   }

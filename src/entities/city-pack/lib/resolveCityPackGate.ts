@@ -1,13 +1,17 @@
 import type { RouteId } from '@/entities/hostel';
 import { MIN_PLACES_FOR_PACK } from './constants';
 import type { CityPackContent, CityPackStatus, CityPackWizardStepId } from '../model/types';
+import {
+  hasRouteContentGate,
+  resolveCityPackTransportReadiness,
+} from './resolveCityPackTransportReadiness';
 
 export function countGatePlaces(content: CityPackContent): number {
   return (content.places ?? []).filter((place) => place.name.trim() && place.category).length;
 }
 
-export function hasRouteGate(content: CityPackContent): boolean {
-  return (content.enabledRoutes ?? []).length > 0;
+export function hasRouteGate(content: CityPackContent, packId: string): boolean {
+  return hasRouteContentGate({ packId, content });
 }
 
 export function isPackReadyForTenants(input: {
@@ -18,7 +22,7 @@ export function isPackReadyForTenants(input: {
   return (
     input.status === 'ready' &&
     countGatePlaces(input.content) >= MIN_PLACES_FOR_PACK &&
-    hasRouteGate(input.content)
+    hasRouteGate(input.content, input.packId)
   );
 }
 
@@ -43,7 +47,7 @@ export function resolveFirstIncompletePackStep(input: {
     return 'places';
   }
 
-  if (!hasRouteGate(input.content)) {
+  if (!hasRouteGate(input.content, input.packId)) {
     return 'routes';
   }
 
@@ -68,8 +72,12 @@ export function resolvePackNotReadyReason(input: {
     return `City pack needs ${MIN_PLACES_FOR_PACK} places (${placesCount}/${MIN_PLACES_FOR_PACK}).`;
   }
 
-  if (!hasRouteGate(input.content)) {
-    return 'City pack has no arrival routes enabled.';
+  if (!hasRouteGate(input.content, input.packId)) {
+    const transport = resolveCityPackTransportReadiness({
+      packId: input.packId,
+      content: input.content,
+    });
+    return transport.detail ?? 'City pack route content is not ready for guests.';
   }
 
   return 'City pack is not ready for tenants.';

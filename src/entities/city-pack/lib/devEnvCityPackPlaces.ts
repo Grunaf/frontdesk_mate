@@ -39,7 +39,7 @@ const DEV_ENV_PLACES: Partial<Record<CityPackId, Place[]>> = {
     },
     {
       id: 'u2-pizza',
-      category: 'food',
+      category: 'restaurants',
       name: 'U2 Pizza',
       descriptionKey: 'places.u2.desc',
       googleMapsUrl: 'https://maps.google.com/?q=U2+Pizza+Sarajevo',
@@ -48,7 +48,7 @@ const DEV_ENV_PLACES: Partial<Record<CityPackId, Place[]>> = {
     },
     {
       id: 'zeljo-cevapi',
-      category: 'food',
+      category: 'restaurants',
       name: 'Željo',
       descriptionKey: 'places.zeljo.desc',
       googleMapsUrl: 'https://maps.google.com/?q=Cevabdzinica+Zeljo+Sarajevo',
@@ -57,7 +57,7 @@ const DEV_ENV_PLACES: Partial<Record<CityPackId, Place[]>> = {
     },
     {
       id: 'pizzerija-mahir',
-      category: 'food',
+      category: 'restaurants',
       name: 'Pizzerija Mahir',
       descriptionKey: 'places.mahir.desc',
       googleMapsUrl: 'https://maps.google.com/?q=Pizzerija+Mahir+Sarajevo',
@@ -66,7 +66,7 @@ const DEV_ENV_PLACES: Partial<Record<CityPackId, Place[]>> = {
     },
     {
       id: 'bakehouse-edin',
-      category: 'food',
+      category: 'restaurants',
       name: 'Bakehouse Edin',
       descriptionKey: 'places.edin.desc',
       googleMapsUrl: 'https://maps.google.com/?q=Pekara+Edin+Sarajevo',
