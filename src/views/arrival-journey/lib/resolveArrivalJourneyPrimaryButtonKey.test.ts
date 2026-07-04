@@ -3,22 +3,44 @@ import { resolveArrivalJourneyPrimaryButtonKey } from './resolveArrivalJourneyPr
 
 describe('resolveArrivalJourneyPrimaryButtonKey', () => {
   it('uses check-in CTA on route when guest is not registered', () => {
-    expect(resolveArrivalJourneyPrimaryButtonKey('route', false)).toBe(
+    expect(
+      resolveArrivalJourneyPrimaryButtonKey('route', false, true, false)
+    ).toBe('directions.checkInToContinue');
+  });
+
+  it('keeps route enter CTA when registered', () => {
+    expect(resolveArrivalJourneyPrimaryButtonKey('route', true, true, false)).toBe(
+      'directions.actionButton'
+    );
+  });
+
+  it('uses view directions on preparation when routes are available', () => {
+    expect(resolveArrivalJourneyPrimaryButtonKey('info', false, true, false)).toBe(
+      'preTrip.actionButton'
+    );
+    expect(resolveArrivalJourneyPrimaryButtonKey('info', true, true, false)).toBe(
+      'preTrip.actionButton'
+    );
+  });
+
+  it('uses check-in CTA on preparation when routes hidden and guest is not registered', () => {
+    expect(resolveArrivalJourneyPrimaryButtonKey('info', false, false, false)).toBe(
       'directions.checkInToContinue'
     );
   });
 
-  it('keeps route enter CTA when registered', () => {
-    expect(resolveArrivalJourneyPrimaryButtonKey('route', true)).toBe('directions.actionButton');
+  it('uses how to enter on preparation when routes hidden and guest is registered', () => {
+    expect(resolveArrivalJourneyPrimaryButtonKey('info', true, false, false)).toBe(
+      'arrival.actionButton'
+    );
   });
 
-  it('keeps step-specific keys for other steps', () => {
-    expect(resolveArrivalJourneyPrimaryButtonKey('info', false)).toBe('preTrip.actionButton');
-    expect(resolveArrivalJourneyPrimaryButtonKey('arrival', true)).toBe('arrival.actionButton');
-    expect(resolveArrivalJourneyPrimaryButtonKey('register', true)).toBe('register.actionButton');
-  });
-
-  it('keeps register CTA when guest is not registered yet', () => {
-    expect(resolveArrivalJourneyPrimaryButtonKey('register', false)).toBe('register.actionButton');
+  it('keeps step-specific keys for other steps when registered', () => {
+    expect(resolveArrivalJourneyPrimaryButtonKey('arrival', true, true, false)).toBe(
+      'arrival.actionButton'
+    );
+    expect(resolveArrivalJourneyPrimaryButtonKey('register', true, true, true)).toBe(
+      'register.actionButton'
+    );
   });
 });

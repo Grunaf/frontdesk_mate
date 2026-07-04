@@ -18,6 +18,10 @@ import { SITE_CONFIG } from '@/shared/config';
 import { Button, SegmentedChipBar } from '@/shared/ui';
 import { useCheckInState, type Step } from '../model/useCheckInState';
 import { resolveArrivalJourneyPrimaryButtonKey } from '../lib/resolveArrivalJourneyPrimaryButtonKey';
+import {
+  resolveNextArrivalJourneyStep,
+  resolvePublicArrivalJourneyTab,
+} from '../lib/resolveNextArrivalJourneyStep';
 
 interface ArrivalJourneyCoordinatorProps {
   isOnsite: boolean;
@@ -125,13 +129,13 @@ export function ArrivalJourneyCoordinator({
     }
 
     if (isRegistrationLockedStep(step, isRegistered)) {
-      setCurrentStep(routesAvailable ? 'route' : 'arrival');
+      setCurrentStep(resolvePublicArrivalJourneyTab(routesAvailable));
       setCheckInSheetOpen(true);
       return;
     }
 
     if (step === 'route' && !routesAvailable) {
-      setCurrentStep('arrival');
+      setCurrentStep(resolvePublicArrivalJourneyTab(false));
       return;
     }
 
@@ -161,20 +165,56 @@ export function ArrivalJourneyCoordinator({
 
   useEffect(() => {
     if (!routesAvailable && currentStep === 'route') {
-      setCurrentStep('arrival');
+      setCurrentStep(resolvePublicArrivalJourneyTab(false));
     }
   }, [routesAvailable, currentStep, setCurrentStep]);
 
+  const navigateToStep = useCallback(
+    (step: Step) => {
+      if (isRegistrationLockedStep(step, isRegistered)) {
+        openCheckInSheet();
+        return;
+      }
+      if (
+        isSettlementTourismLocked(
+          step,
+          tourismRegistrationRequired,
+          tourismComplete,
+          isRegistered
+        )
+      ) {
+        openTourismGateSheet();
+        return;
+      }
+      setCurrentStep(step);
+    },
+    [
+      isRegistered,
+      tourismRegistrationRequired,
+      tourismComplete,
+      setCurrentStep,
+    ]
+  );
+
   const stepsConfig: StepItem[] = useMemo(() => {
-    const arrivalOnComplete = () =>
-      setCurrentStep(tourismRegistrationRequired ? 'register' : 'settlement');
+    const goToNextFrom = (fromStep: Step) => {
+      const next = resolveNextArrivalJourneyStep(
+        fromStep,
+        routesAvailable,
+        tourismRegistrationRequired
+      );
+      if (next === null) {
+        return;
+      }
+      navigateToStep(next);
+    };
 
     const base: StepItem[] = [
       {
         id: 'info',
         label: t('tabs.info'),
         Component: PreTripInfo,
-        onComplete: () => setCurrentStep(routesAvailable ? 'route' : 'arrival'),
+        onComplete: () => goToNextFrom('info'),
         buttonKey: 'preTrip.actionButton',
       },
       ...(routesAvailable
@@ -183,7 +223,7 @@ export function ArrivalJourneyCoordinator({
               id: 'route' as const,
               label: t('tabs.route'),
               Component: DirectionPicker,
-              onComplete: () => setCurrentStep('arrival'),
+              onComplete: () => goToNextFrom('route'),
               buttonKey: 'directions.actionButton',
             },
           ]
@@ -192,7 +232,7 @@ export function ArrivalJourneyCoordinator({
         id: 'arrival',
         label: t('tabs.arrival'),
         Component: DoorAccessPanel,
-        onComplete: arrivalOnComplete,
+        onComplete: () => goToNextFrom('arrival'),
         buttonKey: 'arrival.actionButton',
       },
     ];
@@ -222,7 +262,7 @@ export function ArrivalJourneyCoordinator({
     t,
     routesAvailable,
     tourismRegistrationRequired,
-    setCurrentStep,
+    navigateToStep,
     router,
     handleTourismRegistrationComplete,
   ]);
@@ -278,28 +318,36 @@ export function ArrivalJourneyCoordinator({
   };
 
   const handlePrimaryAction = () => {
-    if (!isRegistered && activeStep.id === 'route') {
-      openCheckInSheet();
-      return;
-    }
-
     if (isRegistrationLockedStep(activeStep.id, isRegistered)) {
       openCheckInSheet();
       return;
     }
 
-    if (
-      activeStep.id === 'settlement' &&
-      !canAccessSettlement
-    ) {
+    if (activeStep.id === 'settlement' && !canAccessSettlement) {
       openTourismGateSheet();
       return;
     }
 
-    activeStep.onComplete();
+    const nextStep = resolveNextArrivalJourneyStep(
+      activeStep.id,
+      routesAvailable,
+      tourismRegistrationRequired
+    );
+
+    if (nextStep === null) {
+      activeStep.onComplete();
+      return;
+    }
+
+    navigateToStep(nextStep);
   };
 
-  const primaryButtonKey = resolveArrivalJourneyPrimaryButtonKey(currentStep, isRegistered);
+  const primaryButtonKey = resolveArrivalJourneyPrimaryButtonKey(
+    currentStep,
+    isRegistered,
+    routesAvailable,
+    tourismRegistrationRequired
+  );
   const showPrimaryButton = activeStep.id !== 'register';
 
   return (
