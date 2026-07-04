@@ -1,4 +1,4 @@
-import type { RouteId } from '@/entities/hostel';
+import type { RouteCategory, RouteId } from '@/entities/hostel';
 import type {
   CityPackContent,
   CityPackContentWarnings,
@@ -7,72 +7,49 @@ import type {
 } from '../model/types';
 import { toLocalizedText, type LocalizedText } from '../model/localized';
 
-function trimLocalized(value: LocalizedText | undefined): LocalizedText | undefined {
-  if (!value) {
-    return undefined;
-  }
+const ROUTE_CATEGORY: Record<RouteId, RouteCategory> = {
+  airport: 'airport',
+  bus_central: 'bus',
+  bus_istochno: 'bus',
+  train_station: 'train',
+};
 
-  return toLocalizedText(value);
+function softLocalized(value: LocalizedText | undefined): LocalizedText {
+  return toLocalizedText(value) ?? { en: '' };
 }
 
-function trimCopy(copy: CityPackRouteCopy | undefined): CityPackRouteCopy | undefined {
-  if (!copy) {
-    return undefined;
-  }
-
-  const publicTitle = trimLocalized(copy.publicTitle);
-  const publicSummary = trimLocalized(copy.publicSummary);
-  const publicPreview = trimLocalized(copy.publicPreview);
-  const publicText = trimLocalized(copy.publicText);
-  const publicGetOffAt = trimLocalized(copy.publicGetOffAt);
-  const publicWalkToHostel = trimLocalized(copy.publicWalkToHostel);
-  const taxiCost = trimLocalized(copy.taxiCost);
-  const taxiPickupPoint = trimLocalized(copy.taxiPickupPoint);
-
-  if (
-    !publicTitle ||
-    !publicSummary ||
-    !publicPreview ||
-    !publicText ||
-    !publicGetOffAt ||
-    !publicWalkToHostel ||
-    !taxiCost ||
-    !taxiPickupPoint
-  ) {
-    return undefined;
-  }
-
+function softCopy(copy: CityPackRouteCopy | undefined): CityPackRouteCopy {
   return {
-    publicTitle,
-    publicSummary,
-    publicPreview,
-    publicText,
-    publicGetOffAt,
-    publicWalkToHostel,
-    taxiCost,
-    taxiPickupPoint,
+    publicTitle: softLocalized(copy?.publicTitle),
+    publicSummary: softLocalized(copy?.publicSummary),
+    publicPreview: softLocalized(copy?.publicPreview),
+    publicText: softLocalized(copy?.publicText),
+    publicGetOffAt: softLocalized(copy?.publicGetOffAt),
+    publicWalkToHostel: softLocalized(copy?.publicWalkToHostel),
+    taxiCost: softLocalized(copy?.taxiCost),
+    taxiPickupPoint: softLocalized(copy?.taxiPickupPoint),
   };
 }
 
-function normalizeRouteContent(route: CityPackRouteContent): CityPackRouteContent | undefined {
-  const copy = trimCopy(route.copy);
-  if (!copy || !route.category || !route.transit?.durationMin) {
-    return undefined;
-  }
+function normalizeRouteContent(
+  route: CityPackRouteContent,
+  routeId: RouteId
+): CityPackRouteContent {
+  const category = route.category ?? ROUTE_CATEGORY[routeId];
 
   return {
-    category: route.category,
+    category,
     routeMode: route.routeMode,
     isActive: route.isActive,
-    hint: trimLocalized(route.hint),
-    locationLabel: trimLocalized(route.locationLabel) ?? { en: route.category },
-    copy,
+    hint: toLocalizedText(route.hint),
+    locationLabel: softLocalized(route.locationLabel),
+    copy: softCopy(route.copy),
     transit: {
-      durationMin: Number(route.transit.durationMin) || 0,
-      stops: route.transit.stops != null ? Number(route.transit.stops) : undefined,
-      ticketPrice: route.transit.ticketPrice,
-      fareLabel: trimLocalized(route.transit.fareLabel),
-      officialRouteUrl: route.transit.officialRouteUrl?.trim() || undefined,
+      durationMin: Number(route.transit?.durationMin) || 0,
+      stops: route.transit?.stops != null ? Number(route.transit.stops) : undefined,
+      ticketPrice: route.transit?.ticketPrice,
+      fareLabel: toLocalizedText(route.transit?.fareLabel),
+      officialRouteUrl: route.transit?.officialRouteUrl?.trim() || undefined,
     },
     taxi: {
       priceKM: {
@@ -105,10 +82,11 @@ export function normalizeCityPackRoutes(
       continue;
     }
 
-    const next = normalizeRouteContent(route);
-    if (next) {
-      normalized[routeId] = next;
+    if (!ROUTE_CATEGORY[routeId]) {
+      continue;
     }
+
+    normalized[routeId] = normalizeRouteContent(route, routeId);
   }
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;
@@ -122,9 +100,9 @@ export function normalizeCityPackWarnings(
   }
 
   const next = {
-    taxiStand: trimLocalized(warnings.taxiStand),
-    taxiMeter: trimLocalized(warnings.taxiMeter),
-    busClarification: trimLocalized(warnings.busClarification),
+    taxiStand: toLocalizedText(warnings.taxiStand),
+    taxiMeter: toLocalizedText(warnings.taxiMeter),
+    busClarification: toLocalizedText(warnings.busClarification),
   };
 
   if (!next.taxiStand && !next.taxiMeter && !next.busClarification) {

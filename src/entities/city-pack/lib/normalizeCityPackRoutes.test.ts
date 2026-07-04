@@ -17,7 +17,7 @@ describe('normalizeCityPackRoutes', () => {
     expect(merged.routes?.airport?.copy.publicTitle.en).toContain('Trolleybus');
   });
 
-  it('drops incomplete route copy', () => {
+  it('keeps incomplete route copy for draft persistence', () => {
     const routes = buildCityPackRoutesFromCode('sarajevo');
     const airport = routes.airport!;
     const normalized = normalizeCityPackRoutes({
@@ -26,10 +26,41 @@ describe('normalizeCityPackRoutes', () => {
         copy: {
           ...airport.copy,
           publicTitle: { en: '' },
+          publicPreview: { en: '' },
         },
       },
     });
 
-    expect(normalized?.airport).toBeUndefined();
+    expect(normalized?.airport).toBeDefined();
+    expect(normalized?.airport?.copy.publicTitle).toEqual({ en: '' });
+    expect(normalized?.airport?.copy.publicSummary.en).toBeTruthy();
+  });
+
+  it('keeps blank route shells', () => {
+    const normalized = normalizeCityPackRoutes({
+      airport: {
+        category: 'airport',
+        locationLabel: { en: '' },
+        copy: {
+          publicTitle: { en: '' },
+          publicSummary: { en: '' },
+          publicPreview: { en: '' },
+          publicText: { en: '' },
+          publicGetOffAt: { en: '' },
+          publicWalkToHostel: { en: '' },
+          taxiCost: { en: '' },
+          taxiPickupPoint: { en: '' },
+        },
+        transit: { durationMin: 0 },
+        taxi: {
+          priceKM: { min: 0, max: 0 },
+          priceEUR: { min: 0, max: 0 },
+          durationMin: { min: 0, max: 0 },
+        },
+      },
+    });
+
+    expect(normalized?.airport?.category).toBe('airport');
+    expect(normalized?.airport?.copy.publicTitle).toEqual({ en: '' });
   });
 });

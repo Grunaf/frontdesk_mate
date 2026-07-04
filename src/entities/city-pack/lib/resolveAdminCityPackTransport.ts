@@ -3,9 +3,82 @@ import {
   buildCityPackRoutesFromCode,
   isCodeCityPackRouteSeedAvailable,
 } from './buildCityPackRouteContentFromCode';
-import type { CityPackId, RouteId } from '@/entities/hostel';
+import type { CityPackId, RouteCategory, RouteId } from '@/entities/hostel';
 import type { CityPackContent, CityPackRouteContent } from '../model/types';
 import { resolveLocalizedText, toLocalizedText, type LocalizedText } from '../model/localized';
+
+const ROUTE_META: Record<RouteId, { category: RouteCategory }> = {
+  airport: { category: 'airport' },
+  bus_central: { category: 'bus' },
+  bus_istochno: { category: 'bus' },
+  train_station: { category: 'train' },
+};
+
+function emptyLocalized(): LocalizedText {
+  return { en: '' };
+}
+
+export function createBlankCityPackRouteContent(routeId: RouteId): CityPackRouteContent {
+  const meta = ROUTE_META[routeId];
+
+  return {
+    category: meta.category,
+    routeMode: 'transit',
+    locationLabel: emptyLocalized(),
+    copy: {
+      publicTitle: emptyLocalized(),
+      publicSummary: emptyLocalized(),
+      publicPreview: emptyLocalized(),
+      publicText: emptyLocalized(),
+      publicGetOffAt: emptyLocalized(),
+      publicWalkToHostel: emptyLocalized(),
+      taxiCost: emptyLocalized(),
+      taxiPickupPoint: emptyLocalized(),
+    },
+    transit: { durationMin: 0 },
+    taxi: {
+      priceKM: { min: 0, max: 0 },
+      priceEUR: { min: 0, max: 0 },
+      durationMin: { min: 0, max: 0 },
+    },
+  };
+}
+
+export function resolveCodeCityPackRouteSeed(
+  packId: string,
+  routeId: RouteId
+): CityPackRouteContent | undefined {
+  if (!isCodeCityPackRouteSeedAvailable(packId)) {
+    return undefined;
+  }
+
+  return buildCityPackRoutesFromCode(packId)[routeId];
+}
+
+/** Prefer current body, then per-route code seed, then blank shell. */
+export function ensureCityPackRouteContent(
+  packId: string,
+  routeId: RouteId,
+  current?: CityPackRouteContent
+): CityPackRouteContent {
+  if (current) {
+    return current;
+  }
+
+  return resolveCodeCityPackRouteSeed(packId, routeId) ?? createBlankCityPackRouteContent(routeId);
+}
+
+export function ensureEnabledCityPackRoutes(
+  packId: string,
+  enabledRoutes: RouteId[],
+  routes: Partial<Record<RouteId, CityPackRouteContent>>
+): Partial<Record<RouteId, CityPackRouteContent>> {
+  const next = { ...routes };
+  for (const routeId of enabledRoutes) {
+    next[routeId] = ensureCityPackRouteContent(packId, routeId, next[routeId]);
+  }
+  return next;
+}
 
 export function resolveAdminCityPackRoutes(
   packId: CityPackId,

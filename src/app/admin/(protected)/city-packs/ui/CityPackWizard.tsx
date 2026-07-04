@@ -7,9 +7,9 @@ import type { PlaceCategory } from '@/entities/hostel';
 import { PLACE_CATEGORY_IDS, resolvePlaceCategoryAdminLabel } from '@/entities/hostel';
 import {
   countGatePlaces,
-  hasRouteGate,
   isPackReadyForTenants,
   MIN_PLACES_FOR_PACK,
+  resolveCityPackTransportReadiness,
   resolveFirstIncompletePackStep,
   type CityPackAdminPlace,
   type CityPackContent,
@@ -24,6 +24,7 @@ import {
   isCodeCityPackRouteSeedAvailable,
 } from '@/entities/city-pack/lib/buildCityPackRouteContentFromCode';
 import {
+  ensureEnabledCityPackRoutes,
   resolveAdminCityPackEnabledRoutes,
   resolveAdminCityPackRoutes,
 } from '@/entities/city-pack/lib/resolveAdminCityPackTransport';
@@ -84,9 +85,11 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   const [enabledRoutes, setEnabledRoutes] = useState<RouteId[]>(() =>
     resolveAdminCityPackEnabledRoutes(pack.id, pack.content)
   );
-  const [routes, setRoutes] = useState<Partial<Record<RouteId, CityPackRouteContent>>>(() =>
-    resolveAdminCityPackRoutes(pack.id, pack.content)
-  );
+  const [routes, setRoutes] = useState<Partial<Record<RouteId, CityPackRouteContent>>>(() => {
+    const enabled = resolveAdminCityPackEnabledRoutes(pack.id, pack.content);
+    const base = resolveAdminCityPackRoutes(pack.id, pack.content);
+    return ensureEnabledCityPackRoutes(pack.id, enabled, base);
+  });
   const [warnings, setWarnings] = useState<CityPackContentWarnings>(() => initialWarnings(pack));
   const [preTripSundayClosure, setPreTripSundayClosure] = useState(
     () =>
@@ -125,7 +128,11 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   );
 
   const placesCount = countGatePlaces(content);
-  const routesGateMet = hasRouteGate(content, pack.id);
+  const transportReadiness = useMemo(
+    () => resolveCityPackTransportReadiness({ packId: pack.id, content }),
+    [content, pack.id]
+  );
+  const routesGateMet = transportReadiness.ready;
   const gateContentMet = isPackReadyForTenants({
     status: 'ready',
     content,
@@ -179,16 +186,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   };
 
   const handleEnabledRoutesChange = (next: RouteId[]) => {
-    const seedRoutes = resolveAdminCityPackRoutes(pack.id, pack.content);
-    setRoutes((current) => {
-      const merged = { ...current };
-      for (const routeId of next) {
-        if (!merged[routeId] && seedRoutes[routeId]) {
-          merged[routeId] = seedRoutes[routeId]!;
-        }
-      }
-      return merged;
-    });
+    setRoutes((current) => ensureEnabledCityPackRoutes(pack.id, next, current));
     setEnabledRoutes(next);
   };
 
@@ -383,9 +381,15 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
           <div className="space-y-4">
             <ul className="space-y-2 text-sm">
               <li>
-                Places: {placesCount}/{MIN_PLACES_FOR_PACK} {placesCount >= MIN_PLACES_FOR_PACK ? '✓' : '—'}
+                Places: {placesCount}/{MIN_PLACES_FOR_PACK}{' '}
+                {placesCount >= MIN_PLACES_FOR_PACK ? '✓' : '—'}
               </li>
-              <li>Routes: {routesGateMet ? '✓' : '—'}</li>
+              <li>
+                Routes: {routesGateMet ? '✓' : '—'}
+                {!routesGateMet && transportReadiness.detail ? (
+                  <span className="mt-1 block text-amber-800">{transportReadiness.detail}</span>
+                ) : null}
+              </li>
               <li>Status: {pack.status}</li>
             </ul>
             <p className="text-sm text-muted-foreground">

@@ -3,10 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
-  countGatePlaces,
-  hasRouteGate,
   isPackReadyForTenants,
   normalizeEnabledRoutes,
+  resolvePackNotReadyReason,
   type CityPackAdminPlace,
   type CityPackContent,
   type CityPackStatus,
@@ -16,6 +15,7 @@ import {
   parseCityPackRoutesJson,
   parseCityPackWarningsJson,
 } from '@/entities/city-pack/lib/normalizeCityPackRoutes';
+import { ensureEnabledCityPackRoutes } from '@/entities/city-pack/lib/resolveAdminCityPackTransport';
 import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
 import { resolveStoredPhoneMask } from '@/shared/lib/phoneDisplay';
 import type { RouteId } from '@/entities/hostel';
@@ -34,10 +34,10 @@ function parsePlaces(raw: string): CityPackAdminPlace[] {
   }
 }
 
-function readContent(formData: FormData): CityPackContent {
+function readContent(formData: FormData, packId: string): CityPackContent {
   const places = parsePlaces(String(formData.get('placesJson') || '[]'));
   const enabledRoutesRaw = String(formData.get('enabledRoutesJson') || '[]');
-  let enabledRoutes: CityPackContent['enabledRoutes'] = [];
+  let enabledRoutes: RouteId[] = [];
   try {
     enabledRoutes = normalizeEnabledRoutes(JSON.parse(enabledRoutesRaw));
   } catch {
@@ -54,7 +54,11 @@ function readContent(formData: FormData): CityPackContent {
     taxiPhoneMaskInput,
     taxiPhoneFormatPreset ?? 'auto'
   );
-  const routes = parseCityPackRoutesJson(String(formData.get('routesJson') || '{}'));
+  const routes = ensureEnabledCityPackRoutes(
+    packId,
+    enabledRoutes,
+    parseCityPackRoutesJson(String(formData.get('routesJson') || '{}'))
+  );
   const warnings = parseCityPackWarningsJson(String(formData.get('warningsJson') || '{}'));
   let preTripTips: CityPackContent['preTripTips'];
   try {
@@ -80,7 +84,7 @@ function readContent(formData: FormData): CityPackContent {
       : undefined,
   };
 
-  return mergeCityPackContentForSave(base, enabledRoutes as RouteId[]);
+  return mergeCityPackContentForSave(base, enabledRoutes);
 }
 
 export async function saveCityPackAction(formData: FormData) {
@@ -89,14 +93,14 @@ export async function saveCityPackAction(formData: FormData) {
   const id = String(formData.get('id') || '').trim();
   const label = String(formData.get('label') || '').trim();
   const publish = String(formData.get('publish') || '') === 'true';
-  const content = readContent(formData);
+  const content = readContent(formData, id);
 
   if (!id || !label) {
     redirect(`/admin/city-packs/${id || 'new'}?error=missing-fields`);
   }
 
-  const status: CityPackStatus =
-    publish && isPackReadyForTenants({ status: 'ready', content, packId: id }) ? 'ready' : 'draft';
+  const readyToPublish = isPackReadyForTenants({ status: 'ready', content, packId: id });
+  const status: CityPackStatus = publish && readyToPublish ? 'ready' : 'draft';
 
   const { ok, error } = await upsertCityPack({ id, label, status, content });
   if (!ok) {
@@ -106,6 +110,14 @@ export async function saveCityPackAction(formData: FormData) {
   revalidatePath('/admin/city-packs');
   revalidatePath(`/admin/city-packs/${id}`);
   revalidatePath('/admin/tenants');
+
+  if (publish && !readyToPublish) {
+    const reason =
+      resolvePackNotReadyReason({ status: 'ready', content, packId: id }) ??
+      'City pack is not ready to publish.';
+    redirect(`/admin/city-packs/${id}?error=${encodeURIComponent(reason)}`);
+  }
+
   redirect(`/admin/city-packs/${id}?saved=1`);
 }
 

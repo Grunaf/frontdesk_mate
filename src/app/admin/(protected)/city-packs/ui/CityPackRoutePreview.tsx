@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import type { RouteId } from '@/entities/hostel';
-import { ROUTE_PRESETS, type CityPackContent } from '@/entities/city-pack';
+import {
+  ROUTE_PRESETS,
+  resolveCityPackTransportReadiness,
+  type CityPackContent,
+} from '@/entities/city-pack';
 import type { AppLocale } from '@/entities/city-pack/model/types';
 import { resolveCityPackForGuest } from '@/entities/city-pack/lib/resolveCityPackForGuest';
 import { applyTemplate } from '@/entities/city-pack/model/localized';
@@ -34,17 +38,40 @@ export function CityPackRoutePreview({
   const enabledRoutes = content.enabledRoutes ?? [];
   const [activeRouteId, setActiveRouteId] = useState<RouteId | null>(enabledRoutes[0] ?? null);
 
+  const readiness = useMemo(
+    () => resolveCityPackTransportReadiness({ packId, content }),
+    [content, packId]
+  );
+
   const resolvedPack = useMemo(
     () =>
-      resolveCityPackForGuest({
-        packId,
-        locale,
-        content,
-        packStatus: 'ready',
-        enabledRoutes,
-      }),
-    [content, enabledRoutes, locale, packId]
+      readiness.ready
+        ? resolveCityPackForGuest({
+            packId,
+            locale,
+            content,
+            packStatus: 'ready',
+            enabledRoutes,
+          })
+        : null,
+    [content, enabledRoutes, locale, packId, readiness.ready]
   );
+
+  if (enabledRoutes.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed px-4 py-4 text-center text-sm text-muted-foreground">
+        Enable at least one hub to preview guest arrival cards.
+      </p>
+    );
+  }
+
+  if (!readiness.ready || !resolvedPack) {
+    return (
+      <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50 px-4 py-4 text-center text-sm text-amber-900">
+        {readiness.detail ?? 'Fill route content for enabled hubs.'}
+      </p>
+    );
+  }
 
   const routeIds = enabledRoutes.filter((routeId) => resolvedPack.routes[routeId]);
   const activeRoute =
@@ -53,14 +80,6 @@ export function CityPackRoutePreview({
       : routeIds[0]
         ? resolvedPack.routes[routeIds[0]]
         : undefined;
-
-  if (routeIds.length === 0) {
-    return (
-      <p className="rounded-lg border border-dashed px-4 py-4 text-center text-sm text-muted-foreground">
-        Enable at least one hub to preview guest arrival cards.
-      </p>
-    );
-  }
 
   const copy = activeRoute?.guestCopy;
   const RouteIcon = activeRoute ? getRouteIcon(activeRoute) : Bus;

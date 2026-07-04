@@ -256,8 +256,12 @@ function CityPackRoutesStepBody({
 
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Routes</p>
-        {activeRouteEditors.length === 0 ? (
+        {enabledRoutes.length === 0 ? (
           <p className="text-sm text-muted-foreground">Enable at least one hub to edit route copy.</p>
+        ) : activeRouteEditors.length === 0 ? (
+          <p className="text-sm text-amber-800">
+            Route bodies are missing for enabled hubs. Toggle a hub off and on, or save draft to repair.
+          </p>
         ) : (
           activeRouteEditors.map((routeId) => (
             <RouteAccordionItem
