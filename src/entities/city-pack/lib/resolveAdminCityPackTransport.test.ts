@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildCityPackRoutesFromCode } from './buildCityPackRouteContentFromCode';
 import {
+  autofillCityPackRouteLocationLabel,
   createBlankCityPackRouteContent,
   ensureCityPackRouteContent,
   ensureEnabledCityPackRoutes,
@@ -26,6 +27,23 @@ describe('ensureCityPackRouteContent', () => {
 
     expect(blank.category).toBe('bus');
     expect(blank.copy.publicTitle).toEqual({ en: '' });
+    expect(blank.locationLabel.en).toBe('Bus station');
+  });
+
+  it('autofills location label from preset when EN is empty', () => {
+    const route = createBlankCityPackRouteContent('train_station');
+    const filled = autofillCityPackRouteLocationLabel('demo-city', 'train_station', route);
+
+    expect(filled.locationLabel.en).toBe('Train station');
+  });
+
+  it('autofills location label from code seed when available', () => {
+    const route = createBlankCityPackRouteContent('airport');
+    const filled = autofillCityPackRouteLocationLabel('sarajevo', 'airport', route);
+
+    expect(filled.locationLabel.en).toBe(
+      buildCityPackRoutesFromCode('sarajevo').airport!.locationLabel.en
+    );
   });
 
   it('fills missing enabled routes without replacing existing ones', () => {

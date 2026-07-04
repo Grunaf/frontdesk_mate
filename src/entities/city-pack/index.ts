@@ -29,7 +29,12 @@ export {
 export {
   resolveCityPackTransportReadiness,
   hasRouteContentGate,
+  resolveRouteGateMissingFields,
+  isRouteGuestReadyEn,
+  formatRouteGateStatus,
+  ROUTE_GATE_FIELDS,
   type CityPackTransportReadinessResult,
+  type RouteGateFieldId,
 } from './lib/resolveCityPackTransportReadiness';
 export {
   buildCityPackGateSnapshot,

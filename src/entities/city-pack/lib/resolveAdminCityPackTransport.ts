@@ -6,6 +6,8 @@ import {
 import type { CityPackId, RouteCategory, RouteId } from '@/entities/hostel';
 import type { CityPackContent, CityPackRouteContent } from '../model/types';
 import { resolveLocalizedText, toLocalizedText, type LocalizedText } from '../model/localized';
+import { ROUTE_PRESETS } from './constants';
+import { isLocalizedFilled } from './resolveLocalizedLocaleStatus';
 
 const ROUTE_META: Record<RouteId, { category: RouteCategory }> = {
   airport: { category: 'airport' },
@@ -55,17 +57,52 @@ export function resolveCodeCityPackRouteSeed(
   return buildCityPackRoutesFromCode(packId)[routeId];
 }
 
+function routePresetLabel(routeId: RouteId): string {
+  return ROUTE_PRESETS.find((entry) => entry.id === routeId)?.label ?? routeId;
+}
+
+/** Fills EN hub label from code seed or route preset when empty (not a publish gate field). */
+export function autofillCityPackRouteLocationLabel(
+  packId: string,
+  routeId: RouteId,
+  route: CityPackRouteContent
+): CityPackRouteContent {
+  if (isLocalizedFilled(route.locationLabel, 'en')) {
+    return route;
+  }
+
+  const seed = resolveCodeCityPackRouteSeed(packId, routeId);
+  const seedEn = seed?.locationLabel?.en?.trim();
+  if (seedEn) {
+    return {
+      ...route,
+      locationLabel: {
+        en: seedEn,
+        ru: route.locationLabel.ru?.trim() || seed.locationLabel?.ru,
+      },
+    };
+  }
+
+  const presetEn = routePresetLabel(routeId);
+  return {
+    ...route,
+    locationLabel: {
+      en: presetEn,
+      ru: route.locationLabel.ru,
+    },
+  };
+}
+
 /** Prefer current body, then per-route code seed, then blank shell. */
 export function ensureCityPackRouteContent(
   packId: string,
   routeId: RouteId,
   current?: CityPackRouteContent
 ): CityPackRouteContent {
-  if (current) {
-    return current;
-  }
+  const body =
+    current ?? resolveCodeCityPackRouteSeed(packId, routeId) ?? createBlankCityPackRouteContent(routeId);
 
-  return resolveCodeCityPackRouteSeed(packId, routeId) ?? createBlankCityPackRouteContent(routeId);
+  return autofillCityPackRouteLocationLabel(packId, routeId, body);
 }
 
 export function ensureEnabledCityPackRoutes(

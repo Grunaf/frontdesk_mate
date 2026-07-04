@@ -1,6 +1,54 @@
 import { describe, expect, it } from 'vitest';
 import { buildCityPackRoutesFromCode } from './buildCityPackRouteContentFromCode';
-import { resolveCityPackTransportReadiness } from './resolveCityPackTransportReadiness';
+import { createBlankCityPackRouteContent } from './resolveAdminCityPackTransport';
+import {
+  formatRouteGateStatus,
+  resolveCityPackTransportReadiness,
+  resolveRouteGateMissingFields,
+} from './resolveCityPackTransportReadiness';
+
+describe('resolveRouteGateMissingFields', () => {
+  it('lists all gate fields when route is missing', () => {
+    expect(resolveRouteGateMissingFields(undefined)).toEqual([
+      'Card title',
+      'Card summary',
+      'Step-by-step',
+      'Get off at',
+    ]);
+  });
+
+  it('lists only empty EN gate fields', () => {
+    const route = createBlankCityPackRouteContent('airport');
+    route.copy.publicTitle = { en: 'Title' };
+
+    expect(resolveRouteGateMissingFields(route)).toEqual([
+      'Card summary',
+      'Step-by-step',
+      'Get off at',
+    ]);
+  });
+
+  it('skips Get off at for walk-only hubs', () => {
+    const route = createBlankCityPackRouteContent('airport');
+    route.routeMode = 'walk_only';
+    route.copy.publicTitle = { en: 'Title' };
+    route.copy.publicSummary = { en: 'Summary' };
+    route.copy.publicText = { en: 'Steps' };
+
+    expect(resolveRouteGateMissingFields(route)).toEqual([]);
+  });
+
+  it('formats Ready vs Missing status', () => {
+    const routes = buildCityPackRoutesFromCode('sarajevo');
+    expect(formatRouteGateStatus(routes.airport)).toMatchObject({
+      statusLabel: 'Ready',
+      shortLabel: 'Ready',
+    });
+    const blank = formatRouteGateStatus(createBlankCityPackRouteContent('airport'));
+    expect(blank.statusLabel).toMatch(/^Missing:/);
+    expect(blank.shortLabel).toBe('Missing (4)');
+  });
+});
 
 describe('resolveCityPackTransportReadiness', () => {
   it('is false when enabled routes are missing', () => {
