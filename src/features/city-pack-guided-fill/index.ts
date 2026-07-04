@@ -21,9 +21,4 @@ export {
 } from './lib/guidedRouteInterview';
 export { guidedRouteFillAction } from './api/guidedRouteFillAction';
 export { CityPackRouteGuidedPanel } from './ui/CityPackRouteGuidedPanel';
-export { checkGuidedFillRateLimit } from './lib/guidedFillRateLimit';
-export {
-  createGuidedFillLanguageModel,
-  isGuidedFillLlmConfigured,
-} from './lib/createGuidedFillLanguageModel';
 export { isGuidedPreviewGateReady, resolveRouteAfterGuidedPreview } from './lib/guidedPreviewGate';

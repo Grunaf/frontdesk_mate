@@ -9,17 +9,21 @@ import {
   compileInterviewToSourceText,
   getGuidedInterviewQuestions,
   getInterviewProgress,
-  guidedRouteFillAction,
-  guidedRouteFillFieldLabel,
-  isGuidedPreviewGateReady,
   isInterviewQuestionResolved,
-  resolveRouteAfterGuidedPreview,
   type GuidedInterviewAnswerMap,
   type GuidedInterviewQuestion,
-  type GuidedRouteFillFieldKey,
-  type GuidedRouteFillPreview,
-  type GuidedRouteOpenQuestion,
-} from '@/features/city-pack-guided-fill';
+} from '../lib/guidedRouteInterview';
+import { guidedRouteFillFieldLabel } from '../lib/buildGuidedRouteFillPrompt';
+import {
+  isGuidedPreviewGateReady,
+  resolveRouteAfterGuidedPreview,
+} from '../lib/guidedPreviewGate';
+import { guidedRouteFillAction } from '../api/guidedRouteFillAction';
+import type {
+  GuidedRouteFillFieldKey,
+  GuidedRouteFillPreview,
+  GuidedRouteOpenQuestion,
+} from '../model/types';
 
 const ERROR_LABEL: Record<string, string> = {
   unauthorized: 'Sign in to admin again.',

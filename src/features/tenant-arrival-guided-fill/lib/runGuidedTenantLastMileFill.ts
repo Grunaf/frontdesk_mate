@@ -4,7 +4,7 @@ import { generateObject } from 'ai';
 import {
   createGuidedFillLanguageModel,
   isGuidedFillLlmConfigured,
-} from '@/features/city-pack-guided-fill';
+} from '@/features/city-pack-guided-fill/lib/createGuidedFillLanguageModel';
 import {
   buildTenantLastMileUserPrompt,
   tenantLastMileSystemPrompt,

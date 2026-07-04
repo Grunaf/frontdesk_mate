@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { assertAdminAuthenticated } from '@/app/admin/lib/adminSession';
-import { checkGuidedFillRateLimit } from '@/features/city-pack-guided-fill';
+import { checkGuidedFillRateLimit } from '@/features/city-pack-guided-fill/lib/guidedFillRateLimit';
 import { runGuidedTenantLastMileFill } from '../lib/runGuidedTenantLastMileFill';
 import type { TenantLastMileFillRequest, TenantLastMileFillResult } from '../model/types';
 
