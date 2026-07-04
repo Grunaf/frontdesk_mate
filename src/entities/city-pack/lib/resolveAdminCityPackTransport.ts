@@ -78,7 +78,7 @@ export function autofillCityPackRouteLocationLabel(
       ...route,
       locationLabel: {
         en: seedEn,
-        ru: route.locationLabel.ru?.trim() || seed.locationLabel?.ru,
+        ru: route.locationLabel.ru?.trim() || seed?.locationLabel?.ru,
       },
     };
   }

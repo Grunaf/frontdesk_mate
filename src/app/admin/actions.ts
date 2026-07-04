@@ -22,6 +22,7 @@ import {
   setAdminSession,
 } from './lib/adminSession';
 import {
+  parseArrivalRouteTipsByRouteJson,
   parseArrivalWalkByRouteJson,
   parseArrivalWalkToHostelJson,
 } from './(protected)/tenants/lib/parseArrivalTransportSettings';
@@ -409,6 +410,9 @@ function readSettings(formData: FormData): TenantSettings {
       (String(formData.get('arrivalWalkToHostel') || '').trim() || undefined),
     arrivalWalkToHostelByRoute: parseArrivalWalkByRouteJson(
       String(formData.get('arrivalWalkByRouteJson') || '')
+    ),
+    arrivalRouteTipsByRoute: parseArrivalRouteTipsByRouteJson(
+      String(formData.get('arrivalRouteTipsByRouteJson') || '')
     ),
   };
 }

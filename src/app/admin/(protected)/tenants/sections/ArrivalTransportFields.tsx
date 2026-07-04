@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { RouteId } from '@/entities/hostel';
 import type { CityPackContent } from '@/entities/city-pack/model/types';
 import {
@@ -15,6 +15,8 @@ import {
 import type { CityPackId, TenantSettings } from '@/entities/tenant';
 import { ROUTE_PRESETS } from '@/entities/city-pack';
 import type { LocalizedField, LocalizedText } from '@/entities/city-pack/model/types';
+import { MAX_ROUTE_TIPS } from '@/entities/city-pack';
+import { copyTenantArrivalWalkEnToRu } from '@/entities/tenant/lib/copyTenantArrivalWalkEnToRu';
 import {
   AdminLocalizedInput,
   AdminLocalizedPreview,
@@ -25,6 +27,13 @@ import {
   useAdminEditingLocale,
 } from '../../city-packs/ui/AdminLocaleEditContext';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
+import {
+  buildTenantRouteCityContextForRouteId,
+  TenantRouteLastMileGuidedPanel,
+} from '@/features/tenant-arrival-guided-fill';
+import { cn } from '@/shared/lib/utils';
+
+type RouteEditMode = 'manual' | 'guided';
 
 function readLocalizedField(value: LocalizedField | undefined): LocalizedText {
   if (!value) {
@@ -39,16 +48,21 @@ function readLocalizedField(value: LocalizedField | undefined): LocalizedText {
 }
 
 function ArrivalTransportFieldsBody({
+  tenantSlug,
   settings,
   cityPackId,
   cityPackContent,
 }: {
+  tenantSlug: string;
   settings?: TenantSettings;
   cityPackId: CityPackId;
   cityPackContent?: CityPackContent;
 }) {
   const { draft, updateDraft } = useTenantFormDraft();
   const { locale } = useAdminEditingLocale();
+  const [editModeByRoute, setEditModeByRoute] = useState<Partial<Record<RouteId, RouteEditMode>>>(
+    {}
+  );
   const merged = useMemo(() => mergeDraftSettings(settings ?? {}, draft), [draft, settings]);
 
   const enabledRoutes = useMemo(
@@ -62,11 +76,21 @@ function ArrivalTransportFieldsBody({
 
   const globalWalk = readLocalizedField(merged.arrivalWalkToHostel);
   const walkByRoute = merged.arrivalWalkToHostelByRoute ?? {};
+  const tipsByRoute = merged.arrivalRouteTipsByRoute ?? {};
 
   const updateWalkByRoute = (routeId: RouteId, next: LocalizedText) => {
     updateDraft({
       arrivalWalkToHostelByRoute: {
         ...walkByRoute,
+        [routeId]: next,
+      },
+    });
+  };
+
+  const updateTipsByRoute = (routeId: RouteId, next: LocalizedText[]) => {
+    updateDraft({
+      arrivalRouteTipsByRoute: {
+        ...tipsByRoute,
         [routeId]: next,
       },
     });
@@ -106,6 +130,14 @@ function ArrivalTransportFieldsBody({
 
       <AdminEditingLocaleSwitcher label="Editing language" />
 
+      <button
+        type="button"
+        onClick={() => updateDraft(copyTenantArrivalWalkEnToRu(merged))}
+        className="rounded-md border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/50"
+      >
+        Copy EN → RU (walk + hostel tips)
+      </button>
+
       {emptyRouteCount > 0 ? (
         <button
           type="button"
@@ -136,11 +168,43 @@ function ArrivalTransportFieldsBody({
               const preset = ROUTE_PRESETS.find((route) => route.id === routeId);
               const cityDefault = resolveCityDefaultWalkLabel(cityRoutes, routeId, locale);
               const hasTemplate = Boolean(readCityRouteWalkTemplate(cityRoutes, routeId));
+              const editMode = editModeByRoute[routeId] ?? 'manual';
+              const cityContext = buildTenantRouteCityContextForRouteId(cityRoutes, routeId);
 
               return (
                 <div key={routeId} className="rounded-lg border p-3">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium">{preset?.label ?? routeId}</p>
+                    <div className="inline-flex rounded-md border p-0.5 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditModeByRoute((current) => ({ ...current, [routeId]: 'manual' }))
+                        }
+                        className={cn(
+                          'rounded px-2 py-0.5 font-medium',
+                          editMode === 'manual'
+                            ? 'bg-foreground text-background'
+                            : 'text-muted-foreground'
+                        )}
+                      >
+                        Manual
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditModeByRoute((current) => ({ ...current, [routeId]: 'guided' }))
+                        }
+                        className={cn(
+                          'rounded px-2 py-0.5 font-medium',
+                          editMode === 'guided'
+                            ? 'bg-violet-700 text-white'
+                            : 'text-muted-foreground'
+                        )}
+                      >
+                        Guided
+                      </button>
+                    </div>
                     {cityDefault ? (
                       <AdminLocalizedPreview
                         label="City template"
@@ -158,13 +222,68 @@ function ArrivalTransportFieldsBody({
                       Use city template
                     </button>
                   ) : null}
-                  <AdminLocalizedInput
-                    label="Hostel walk directions"
-                    value={readLocalizedField(walkByRoute[routeId])}
-                    onChange={(next) => updateWalkByRoute(routeId, next)}
-                    multiline
-                    rows={2}
-                  />
+                  {editMode === 'guided' ? (
+                    <TenantRouteLastMileGuidedPanel
+                      key={`${routeId}-guided`}
+                      tenantSlug={tenantSlug}
+                      routeId={routeId}
+                      hubLabel={preset?.label ?? routeId}
+                      cityContext={cityContext}
+                      onApply={({ walkEn, tipsEn }) => {
+                        const current = readLocalizedField(walkByRoute[routeId]);
+                        updateWalkByRoute(routeId, {
+                          en: walkEn,
+                          ru: current.ru?.trim() ? current.ru : undefined,
+                        });
+                        if (tipsEn?.length) {
+                          updateTipsByRoute(
+                            routeId,
+                            tipsEn.map((en) => ({ en }))
+                          );
+                        }
+                      }}
+                    />
+                  ) : (
+                    <>
+                    <AdminLocalizedInput
+                      label="Hostel walk directions"
+                      value={readLocalizedField(walkByRoute[routeId])}
+                      onChange={(next) => updateWalkByRoute(routeId, next)}
+                      multiline
+                      rows={2}
+                    />
+                    <div className="mt-2 space-y-2 border-t border-dashed pt-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        Hostel tips (optional, max {MAX_ROUTE_TIPS})
+                      </p>
+                      {(tipsByRoute[routeId] ?? []).map((tip, index) => (
+                        <AdminLocalizedInput
+                          key={index}
+                          label={`Tip ${index + 1}`}
+                          value={tip}
+                          onChange={(value) => {
+                            const next = [...(tipsByRoute[routeId] ?? [])];
+                            next[index] = value;
+                            updateTipsByRoute(routeId, next);
+                          }}
+                          multiline
+                          rows={2}
+                        />
+                      ))}
+                      {(tipsByRoute[routeId]?.length ?? 0) < MAX_ROUTE_TIPS ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateTipsByRoute(routeId, [...(tipsByRoute[routeId] ?? []), { en: '' }])
+                          }
+                          className="rounded-md border border-dashed px-2 py-1 text-[11px] text-muted-foreground"
+                        >
+                          Add tip
+                        </button>
+                      ) : null}
+                    </div>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -180,10 +299,12 @@ function ArrivalTransportFieldsBody({
 }
 
 export function ArrivalTransportFields({
+  tenantSlug,
   settings,
   cityPackId,
   cityPackContent,
 }: {
+  tenantSlug: string;
   settings?: TenantSettings;
   cityPackId: CityPackId;
   cityPackContent?: CityPackContent;
@@ -191,6 +312,7 @@ export function ArrivalTransportFields({
   return (
     <AdminEditingLocaleProvider>
       <ArrivalTransportFieldsBody
+        tenantSlug={tenantSlug}
         settings={settings}
         cityPackId={cityPackId}
         cityPackContent={cityPackContent}

@@ -1,5 +1,5 @@
 import type { CityPackId } from '@/entities/hostel';
-import type { LocalizedField } from '@/entities/city-pack/model/types';
+import type { LocalizedField, LocalizedText } from '@/entities/city-pack/model/types';
 import type { ArrivalAccessConfig } from './accessPoints';
 import type { TenantBookingSettings } from './booking';
 import type { GuestStayConfig } from './guestStay';
@@ -106,6 +106,8 @@ export interface TenantSettings {
   arrivalWalkToHostel?: LocalizedField;
   /** Per-route overrides for the final walk-to-hostel step. */
   arrivalWalkToHostelByRoute?: Partial<Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', LocalizedField>>;
+  /** Hostel-specific tips merged with city pack tips in guest modal (max 5 total). */
+  arrivalRouteTipsByRoute?: Partial<Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', LocalizedText[]>>;
 }
 
 export interface TenantRecord {

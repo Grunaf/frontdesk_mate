@@ -109,17 +109,20 @@ export function PublicRouteItinerary({
   routes,
   directions,
   walkToHostel,
+  routeTips,
 }: {
   route: RouteConfig;
   routes: ReturnType<typeof useTranslations>;
   directions: ReturnType<typeof useTranslations<'pages.arrivalJourney.directions'>>;
   walkToHostel: string;
+  /** City pack + tenant tips merged for locale. */
+  routeTips?: string[];
 }) {
   const walkOnly = isWalkOnlyRoute(route);
   const TransitIcon = getRouteDisplayIcon(route);
   const getOffAt = resolveRouteCopyField(route, 'publicGetOffAt', routes).trim();
   const showGetOffLeg = !walkOnly && getOffAt.length > 0;
-  const routeTips = route.guestCopy?.tips;
+  const tips = routeTips ?? route.guestCopy?.tips;
 
   if (walkOnly) {
     return (
@@ -138,8 +141,8 @@ export function PublicRouteItinerary({
             <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
           </RouteTimelineLeg>
         </div>
-        {routeTips?.length ? (
-          <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={routeTips} />
+        {tips?.length ? (
+          <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={tips} />
         ) : null}
       </>
     );
@@ -173,8 +176,8 @@ export function PublicRouteItinerary({
         <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
       </RouteTimelineLeg>
       </div>
-      {routeTips?.length ? (
-        <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={routeTips} />
+      {tips?.length ? (
+        <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={tips} />
       ) : null}
     </>
   );

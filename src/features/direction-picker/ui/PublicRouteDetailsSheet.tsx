@@ -15,6 +15,7 @@ import {
 } from '@/shared/ui';
 import { ExternalLink } from 'lucide-react';
 import { hasOfficialRouteSchedule, type RouteConfig } from '@/entities/hostel';
+import { mergeArrivalRouteTipsForGuest, readTenantRouteTips } from '@/entities/tenant/lib/mergeArrivalRouteTipsForGuest';
 import {
   getRouteDisplayIcon,
   PublicRouteItinerary,
@@ -50,6 +51,12 @@ export function PublicRouteDetailsSheet({
     locale,
   });
 
+  const routeTips = mergeArrivalRouteTipsForGuest({
+    cityPackTips: route.guestCopy?.tips,
+    tenantTips: readTenantRouteTips(settings.arrivalRouteTipsByRoute, route.id),
+    locale,
+  });
+
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
       <BottomSheetContent size="large" className="px-0 pb-0">
@@ -71,6 +78,7 @@ export function PublicRouteDetailsSheet({
             routes={routes}
             directions={directions}
             walkToHostel={walkToHostel}
+            routeTips={routeTips}
           />
         </BottomSheetBody>
 

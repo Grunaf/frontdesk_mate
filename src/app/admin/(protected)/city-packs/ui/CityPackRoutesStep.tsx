@@ -244,6 +244,8 @@ function CityPackRoutesStepBody({
             </div>
           </div>
           <CityPackRouteEditor
+            key={activeRouteId}
+            packId={packId}
             routeId={activeRouteId}
             route={activeRoute}
             onChange={(next) => updateRoute(activeRouteId, next)}

@@ -2,9 +2,12 @@ import type { RouteConfig, RouteGuestCopy } from '@/entities/hostel';
 
 type RoutesTranslator = (key: string, values?: Record<string, string>) => string;
 
-type RouteCopyField = keyof RouteGuestCopy;
+type RouteCopyTranslatableField = Exclude<keyof RouteGuestCopy, 'tips' | 'fareLabel' | 'hint'>;
 
-const TRANSLATION_KEY_BY_FIELD: Record<RouteCopyField, keyof RouteConfig['translationKeys']> = {
+const TRANSLATION_KEY_BY_FIELD: Record<
+  RouteCopyTranslatableField,
+  keyof RouteConfig['translationKeys']
+> = {
   publicTitle: 'publicTitle',
   publicSummary: 'publicSummary',
   publicPreview: 'publicPreview',
@@ -13,18 +16,16 @@ const TRANSLATION_KEY_BY_FIELD: Record<RouteCopyField, keyof RouteConfig['transl
   publicWalkToHostel: 'publicWalkToHostel',
   taxiCost: 'taxiCost',
   taxiPickupPoint: 'taxiPickupPoint',
-  fareLabel: 'publicTitle',
-  hint: 'publicTitle',
 };
 
 export function resolveRouteCopyField(
   route: RouteConfig,
-  field: RouteCopyField,
+  field: RouteCopyTranslatableField,
   translate: RoutesTranslator,
   templateValues?: Record<string, string>
 ): string {
   const inline = route.guestCopy?.[field];
-  if (inline) {
+  if (typeof inline === 'string' && inline) {
     return inline;
   }
 

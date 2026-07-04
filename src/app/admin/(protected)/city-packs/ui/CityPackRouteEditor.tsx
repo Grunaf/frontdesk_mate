@@ -13,6 +13,7 @@ import { cn } from '@/shared/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { Icon } from '@/shared/ui';
 import { AdminLocalizedInput } from './AdminLocalizedInput';
+import { CityPackRouteGuidedPanel } from '@/features/city-pack-guided-fill';
 
 function CollapsibleBlock({
   title,
@@ -70,13 +71,17 @@ function hasOptionalGuestCopy(route: CityPackRouteContent): boolean {
   );
 }
 
+type EditorMode = 'manual' | 'guided';
+
 export function CityPackRouteEditor({
+  packId,
   routeId,
   route,
   onChange,
   embedded = false,
   showHubHint = false,
 }: {
+  packId: string;
   routeId: RouteId;
   route: CityPackRouteContent;
   onChange: (next: CityPackRouteContent) => void;
@@ -84,6 +89,7 @@ export function CityPackRouteEditor({
   /** Both bus hubs enabled — show per-hub hint field on bus routes. */
   showHubHint?: boolean;
 }) {
+  const [editorMode, setEditorMode] = useState<EditorMode>('manual');
   const preset = ROUTE_PRESETS.find((entry) => entry.id === routeId);
   const gateReady = formatRouteGateStatus(route).ready;
   const getOffAtRequired = route.routeMode !== 'walk_only';
@@ -111,8 +117,34 @@ export function CityPackRouteEditor({
     onChange({ ...route, tips: next.length > 0 ? next : undefined });
   };
 
+  const modeToggle = (
+    <div className="inline-flex rounded-md border p-0.5 text-[11px]">
+      <button
+        type="button"
+        onClick={() => setEditorMode('manual')}
+        className={cn(
+          'rounded px-2 py-0.5 font-medium',
+          editorMode === 'manual' ? 'bg-foreground text-background' : 'text-muted-foreground'
+        )}
+      >
+        Manual
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditorMode('guided')}
+        className={cn(
+          'rounded px-2 py-0.5 font-medium',
+          editorMode === 'guided' ? 'bg-violet-700 text-white' : 'text-muted-foreground'
+        )}
+      >
+        Guided
+      </button>
+    </div>
+  );
+
   const toolbar = (
     <div className="flex flex-wrap items-center justify-end gap-2">
+      {modeToggle}
       <button
         type="button"
         onClick={() => onChange(copyRouteEnToRu(route))}
@@ -120,6 +152,7 @@ export function CityPackRouteEditor({
       >
         Copy EN → RU
       </button>
+      {editorMode === 'manual' ? (
       <select
         value={route.routeMode ?? 'transit'}
         onChange={(event) =>
@@ -130,6 +163,7 @@ export function CityPackRouteEditor({
         <option value="transit">Transit</option>
         <option value="walk_only">Walk only</option>
       </select>
+      ) : null}
     </div>
   );
 
@@ -144,6 +178,18 @@ export function CityPackRouteEditor({
         toolbar
       )}
 
+      {editorMode === 'guided' ? (
+        <CityPackRouteGuidedPanel
+          packId={packId}
+          routeId={routeId}
+          hubLabel={preset?.label ?? routeId}
+          route={route}
+          onApply={onChange}
+        />
+      ) : null}
+
+      {editorMode === 'manual' ? (
+        <>
       <div className="space-y-2.5 rounded-md border border-amber-200/80 bg-amber-50/30 p-3">
         <div className="space-y-0.5">
           <p className="text-[11px] font-medium uppercase tracking-wide text-amber-900">
@@ -270,6 +316,8 @@ export function CityPackRouteEditor({
             ) : null}
           </div>
         </CollapsibleBlock>
+      ) : null}
+        </>
       ) : null}
     </div>
   );

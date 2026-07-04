@@ -59,6 +59,7 @@ export function ArrivalJourneyFields({
           <div className="space-y-4 border-t pt-8">
             <SectionHeading>Last mile to the door</SectionHeading>
             <ArrivalTransportFields
+              tenantSlug={tenantSlug}
               settings={settings}
               cityPackId={cityPackId}
               cityPackContent={cityPackContent}

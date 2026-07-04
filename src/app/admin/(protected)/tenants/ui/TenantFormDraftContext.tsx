@@ -6,7 +6,7 @@ import type { HouseRule } from '@/entities/house-rules';
 import type { GuestStayConfig, TenantLandingSettings, TenantSettings } from '@/entities/tenant';
 import type { TenantHostelSettings } from '@/entities/tenant/model/hostelSettings';
 import type { RouteId } from '@/entities/hostel';
-import type { LocalizedField } from '@/entities/city-pack/model/types';
+import type { LocalizedField, LocalizedText } from '@/entities/city-pack/model/types';
 import type { HostelPlace } from '@/entities/tenant/model/hostelPlaces';
 import { getHouseRules, migrateActiveRulesKeys } from '@/entities/house-rules';
 import {
@@ -32,6 +32,7 @@ export interface TenantFormDraft {
   launchBookingPath?: 'engine' | 'wa';
   arrivalWalkToHostel?: LocalizedField;
   arrivalWalkToHostelByRoute?: Partial<Record<RouteId, LocalizedField>>;
+  arrivalRouteTipsByRoute?: Partial<Record<RouteId, LocalizedText[]>>;
 }
 
 interface UpdateDraftOptions {
@@ -84,6 +85,9 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       : {}),
     ...(draft.arrivalWalkToHostelByRoute !== undefined
       ? { arrivalWalkToHostelByRoute: draft.arrivalWalkToHostelByRoute }
+      : {}),
+    ...(draft.arrivalRouteTipsByRoute !== undefined
+      ? { arrivalRouteTipsByRoute: draft.arrivalRouteTipsByRoute }
       : {}),
   };
 
