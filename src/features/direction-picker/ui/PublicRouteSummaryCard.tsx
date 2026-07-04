@@ -65,12 +65,6 @@ export function PublicRouteSummaryCard({
 
         <TransitLegMeta route={route} routes={routes} directions={directions} />
 
-        {!walkOnly && (
-          <p className="text-xs font-medium text-foreground">
-            {resolveRouteCopyField(route, 'publicGetOffAt', routes)}
-          </p>
-        )}
-
         {walkOnly && (
           <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
         )}

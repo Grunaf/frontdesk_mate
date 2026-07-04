@@ -638,6 +638,7 @@
         "legs": {
           "walkToStop": "Walk to stop",
           "boardAndRide": "Board & ride",
+          "getOff": "Get off",
           "walkToHostel": "Walk to hostel",
           "onFootRoute": "On foot"
         },

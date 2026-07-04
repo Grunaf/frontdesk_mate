@@ -2,7 +2,7 @@
 
 import { useTranslations } from '@/shared/i18n';
 import { Icon } from '@/shared/ui';
-import { Bus, Clock3, Footprints, Route, Ticket, Train, type LucideIcon } from 'lucide-react';
+import { Bus, Clock3, Footprints, MapPin, Route, Ticket, Train, type LucideIcon } from 'lucide-react';
 import {
   isWalkOnlyRoute,
   type RouteConfig,
@@ -102,6 +102,8 @@ export function PublicRouteItinerary({
 }) {
   const walkOnly = isWalkOnlyRoute(route);
   const TransitIcon = getRouteDisplayIcon(route);
+  const getOffAt = resolveRouteCopyField(route, 'publicGetOffAt', routes).trim();
+  const showGetOffLeg = !walkOnly && getOffAt.length > 0;
 
   if (walkOnly) {
     return (
@@ -136,11 +138,14 @@ export function PublicRouteItinerary({
             {resolveRouteCopyField(route, 'publicText', routes)}
           </p>
           <TransitLegMeta route={route} routes={routes} directions={directions} />
-          <p className="text-xs font-medium text-foreground">
-            {resolveRouteCopyField(route, 'publicGetOffAt', routes)}
-          </p>
         </div>
       </RouteTimelineLeg>
+
+      {showGetOffLeg && (
+        <RouteTimelineLeg icon={MapPin} title={directions('legs.getOff')}>
+          <p className="text-xs leading-relaxed text-foreground/90">{getOffAt}</p>
+        </RouteTimelineLeg>
+      )}
 
       <RouteTimelineLeg icon={Footprints} isLast title={directions('legs.walkToHostel')}>
         <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>

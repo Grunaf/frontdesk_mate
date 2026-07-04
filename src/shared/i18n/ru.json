@@ -638,6 +638,7 @@
         "legs": {
           "walkToStop": "До остановки",
           "boardAndRide": "Садитесь и едьте",
+          "getOff": "Выход",
           "walkToHostel": "До хостела",
           "onFootRoute": "Пешком"
         },
