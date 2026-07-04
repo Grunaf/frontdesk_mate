@@ -72,6 +72,8 @@ export interface RouteGuestCopy {
   taxiPickupPoint: string;
   fareLabel?: string;
   hint?: string;
+  /** Resolved hub tips for active locale (city pack / tenant). */
+  tips?: string[];
 }
 
 export interface RouteConfig {

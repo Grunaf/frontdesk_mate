@@ -6,6 +6,7 @@ import type {
   CityPackRouteCopy,
 } from '../model/types';
 import { toLocalizedText, type LocalizedText } from '../model/localized';
+import { MAX_ROUTE_TIPS } from './constants';
 
 const ROUTE_CATEGORY: Record<RouteId, RouteCategory> = {
   airport: 'airport',
@@ -31,6 +32,18 @@ function softCopy(copy: CityPackRouteCopy | undefined): CityPackRouteCopy {
   };
 }
 
+function softRouteTips(tips: LocalizedText[] | undefined): LocalizedText[] | undefined {
+  if (tips == null) {
+    return undefined;
+  }
+
+  if (!Array.isArray(tips)) {
+    return undefined;
+  }
+
+  return tips.slice(0, MAX_ROUTE_TIPS).map((tip) => softLocalized(tip));
+}
+
 function normalizeRouteContent(
   route: CityPackRouteContent,
   routeId: RouteId
@@ -44,6 +57,7 @@ function normalizeRouteContent(
     hint: toLocalizedText(route.hint),
     locationLabel: softLocalized(route.locationLabel),
     copy: softCopy(route.copy),
+    tips: softRouteTips(route.tips),
     transit: {
       durationMin: Number(route.transit?.durationMin) || 0,
       stops: route.transit?.stops != null ? Number(route.transit.stops) : undefined,

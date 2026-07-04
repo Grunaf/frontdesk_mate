@@ -2,6 +2,9 @@ import type { RouteId } from '@/entities/hostel';
 
 export const MIN_PLACES_FOR_PACK = 5;
 
+/** Max optional tips per arrival hub (guest «Good to know»). */
+export const MAX_ROUTE_TIPS = 5;
+
 export const CITY_PACK_WIZARD_STEPS = [
   { id: 'identity', label: 'Identity' },
   { id: 'places', label: 'Places' },

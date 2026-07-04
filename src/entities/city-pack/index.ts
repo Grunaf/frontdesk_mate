@@ -9,7 +9,7 @@ export type {
   CityPackStatus,
   CityPackWizardStepId,
 } from './model/types';
-export { MIN_PLACES_FOR_PACK, CITY_PACK_WIZARD_STEPS, ROUTE_PRESETS } from './lib/constants';
+export { MIN_PLACES_FOR_PACK, MAX_ROUTE_TIPS, CITY_PACK_WIZARD_STEPS, ROUTE_PRESETS } from './lib/constants';
 export {
   contentHasLegacyCityPackPlaces,
   findLegacyCityPackPlaceKeys,

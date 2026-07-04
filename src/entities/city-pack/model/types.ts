@@ -67,6 +67,8 @@ export interface CityPackRouteContent {
   hint?: LocalizedText;
   locationLabel: LocalizedText;
   copy: CityPackRouteCopy;
+  /** Optional short tips for guest modal (max 5); not part of publish gate. */
+  tips?: LocalizedText[];
   transit: CityPackRouteTransit;
   taxi: CityPackRouteTaxi;
 }

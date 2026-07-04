@@ -66,5 +66,6 @@ export function copyRouteEnToRu(route: CityPackRouteContent): CityPackRouteConte
         ? copyLocalizedEnToRu(route.transit.fareLabel)
         : route.transit.fareLabel,
     },
+    tips: route.tips?.map((tip) => copyLocalizedEnToRu(tip)),
   };
 }

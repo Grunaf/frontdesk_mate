@@ -7,7 +7,8 @@ import {
   copyRouteEnToRu,
   isLocalizedFilled,
 } from '@/entities/city-pack/lib/resolveLocalizedLocaleStatus';
-import { formatRouteGateStatus, ROUTE_PRESETS } from '@/entities/city-pack';
+import { formatRouteGateStatus, MAX_ROUTE_TIPS, ROUTE_PRESETS } from '@/entities/city-pack';
+import type { LocalizedText } from '@/entities/city-pack/model/types';
 import { cn } from '@/shared/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { Icon } from '@/shared/ui';
@@ -49,8 +50,13 @@ function CollapsibleBlock({
   );
 }
 
+function hasRouteTips(route: CityPackRouteContent): boolean {
+  return Boolean(route.tips?.some((tip) => isLocalizedFilled(tip, 'en') || isLocalizedFilled(tip, 'ru')));
+}
+
 function hasOptionalGuestCopy(route: CityPackRouteContent): boolean {
   return (
+    hasRouteTips(route) ||
     isLocalizedFilled(route.copy.publicPreview, 'en') ||
     isLocalizedFilled(route.copy.publicPreview, 'ru') ||
     isLocalizedFilled(route.copy.publicWalkToHostel, 'en') ||
@@ -87,6 +93,23 @@ export function CityPackRouteEditor({
   const patch = (partial: Partial<CityPackRouteContent>) => onChange({ ...route, ...partial });
   const patchCopy = (partial: Partial<CityPackRouteContent['copy']>) =>
     onChange({ ...route, copy: { ...route.copy, ...partial } });
+
+  const tips = route.tips ?? [];
+  const patchTip = (index: number, value: LocalizedText) => {
+    const next = [...tips];
+    next[index] = value;
+    onChange({ ...route, tips: next });
+  };
+  const addTip = () => {
+    if (tips.length >= MAX_ROUTE_TIPS) {
+      return;
+    }
+    onChange({ ...route, tips: [...tips, { en: '' }] });
+  };
+  const removeTip = (index: number) => {
+    const next = tips.filter((_, i) => i !== index);
+    onChange({ ...route, tips: next.length > 0 ? next : undefined });
+  };
 
   const toolbar = (
     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -208,6 +231,44 @@ export function CityPackRouteEditor({
             value={route.copy.taxiPickupPoint}
             onChange={(taxiPickupPoint) => patchCopy({ taxiPickupPoint })}
           />
+          <div className="space-y-2 border-t border-dashed pt-3">
+            <div className="space-y-0.5">
+              <p className="text-xs font-medium text-foreground">Good to know (optional)</p>
+              <p className="text-[11px] text-muted-foreground">
+                Short tips shown under the step-by-step modal (max {MAX_ROUTE_TIPS}). Not required for
+                publish.
+              </p>
+            </div>
+            {tips.map((tip, index) => (
+              <div key={index} className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <AdminLocalizedInput
+                    label={`Tip ${index + 1}`}
+                    value={tip}
+                    onChange={(value) => patchTip(index, value)}
+                    multiline
+                    rows={2}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeTip(index)}
+                  className="mt-5 shrink-0 rounded-md border px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/50"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            {tips.length < MAX_ROUTE_TIPS ? (
+              <button
+                type="button"
+                onClick={addTip}
+                className="rounded-md border border-dashed px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted/40"
+              >
+                Add tip
+              </button>
+            ) : null}
+          </div>
         </CollapsibleBlock>
       ) : null}
     </div>

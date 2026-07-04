@@ -89,6 +89,21 @@ export function getRouteDisplayIcon(route: RouteConfig): LucideIcon {
   return route.category === 'train' ? Train : Bus;
 }
 
+function PublicRouteGoodToKnow({ title, tips }: { title: string; tips: string[] }) {
+  return (
+    <div className="mt-4 border-t border-border/60 pt-4">
+      <p className="text-xs font-semibold text-foreground">{title}</p>
+      <ul className="mt-2 list-disc space-y-1.5 pl-4">
+        {tips.map((tip, index) => (
+          <li key={index} className="text-xs leading-relaxed text-foreground/90">
+            {tip}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function PublicRouteItinerary({
   route,
   routes,
@@ -104,28 +119,35 @@ export function PublicRouteItinerary({
   const TransitIcon = getRouteDisplayIcon(route);
   const getOffAt = resolveRouteCopyField(route, 'publicGetOffAt', routes).trim();
   const showGetOffLeg = !walkOnly && getOffAt.length > 0;
+  const routeTips = route.guestCopy?.tips;
 
   if (walkOnly) {
     return (
-      <div className="pt-1">
-        <RouteTimelineLeg icon={Footprints} title={directions('legs.onFootRoute')}>
-          <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
-            <p className="text-xs leading-relaxed text-foreground/90">
-              {resolveRouteCopyField(route, 'publicText', routes)}
-            </p>
-            <TransitLegMeta route={route} routes={routes} directions={directions} />
-          </div>
-        </RouteTimelineLeg>
+      <>
+        <div className="pt-1">
+          <RouteTimelineLeg icon={Footprints} title={directions('legs.onFootRoute')}>
+            <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
+              <p className="text-xs leading-relaxed text-foreground/90">
+                {resolveRouteCopyField(route, 'publicText', routes)}
+              </p>
+              <TransitLegMeta route={route} routes={routes} directions={directions} />
+            </div>
+          </RouteTimelineLeg>
 
-        <RouteTimelineLeg icon={Footprints} isLast title={directions('legs.walkToHostel')}>
-          <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
-        </RouteTimelineLeg>
-      </div>
+          <RouteTimelineLeg icon={Footprints} isLast title={directions('legs.walkToHostel')}>
+            <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
+          </RouteTimelineLeg>
+        </div>
+        {routeTips?.length ? (
+          <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={routeTips} />
+        ) : null}
+      </>
     );
   }
 
   return (
-    <div className="pt-1">
+    <>
+      <div className="pt-1">
       <RouteTimelineLeg icon={Footprints} title={directions('legs.walkToStop')}>
         <p className="text-xs leading-relaxed text-foreground/90">
           {resolveRouteCopyField(route, 'publicPreview', routes)}
@@ -150,7 +172,11 @@ export function PublicRouteItinerary({
       <RouteTimelineLeg icon={Footprints} isLast title={directions('legs.walkToHostel')}>
         <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
       </RouteTimelineLeg>
-    </div>
+      </div>
+      {routeTips?.length ? (
+        <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={routeTips} />
+      ) : null}
+    </>
   );
 }
 
