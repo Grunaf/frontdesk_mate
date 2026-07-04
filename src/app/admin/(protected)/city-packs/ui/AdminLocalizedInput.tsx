@@ -2,6 +2,7 @@
 
 import type { LocalizedText } from '@/entities/city-pack/model/types';
 import type { AppLocale } from '@/entities/city-pack/model/types';
+import { isLocalizedFilled } from '@/entities/city-pack/lib/resolveLocalizedLocaleStatus';
 import { cn } from '@/shared/lib/utils';
 import { useAdminEditingLocale } from './AdminLocaleEditContext';
 
@@ -40,6 +41,8 @@ export function AdminLocalizedInput({
   placeholder,
   hint,
   required = false,
+  /** EN publish-gate field: Required badge only in EN; amber when EN empty. */
+  gateRequired = false,
   compact = true,
 }: {
   label: string;
@@ -50,20 +53,33 @@ export function AdminLocalizedInput({
   placeholder?: string;
   hint?: string;
   required?: boolean;
+  gateRequired?: boolean;
   compact?: boolean;
 }) {
   const { locale } = useAdminEditingLocale();
   const currentValue = readLocalizedValue(value, locale);
+  const enMissing = gateRequired && !isLocalizedFilled(value, 'en');
+  const showRequiredMark = gateRequired ? locale === 'en' : required;
   const inputClass = cn(
     'w-full rounded-md border bg-background px-2.5 text-sm',
-    compact ? 'py-1.5' : 'py-2'
+    compact ? 'py-1.5' : 'py-2',
+    enMissing && 'border-amber-400 bg-amber-50/40'
   );
 
   return (
     <div className={cn(compact ? 'space-y-1' : 'space-y-1.5')}>
-      <span className="text-xs font-medium text-foreground">
+      <span className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-foreground">
         {label}
-        {required ? <span className="text-amber-700"> *</span> : null}
+        {showRequiredMark ? (
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-900">
+            Required
+          </span>
+        ) : null}
+        {gateRequired && locale === 'ru' ? (
+          <span className="text-[10px] font-normal text-muted-foreground">
+            {enMissing ? 'EN still needed for publish' : 'EN ok · RU optional'}
+          </span>
+        ) : null}
       </span>
       {hint ? <p className="text-[11px] leading-snug text-muted-foreground">{hint}</p> : null}
       {multiline ? (

@@ -7,10 +7,11 @@ import type { PlaceCategory } from '@/entities/hostel';
 import { PLACE_CATEGORY_IDS, resolvePlaceCategoryAdminLabel } from '@/entities/hostel';
 import {
   countGatePlaces,
+  formatRouteGateStatus,
   isPackReadyForTenants,
   MIN_PLACES_FOR_PACK,
-  resolveCityPackTransportReadiness,
   resolveFirstIncompletePackStep,
+  ROUTE_PRESETS,
   type CityPackAdminPlace,
   type CityPackContent,
   type CityPackContentWarnings,
@@ -128,11 +129,6 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   );
 
   const placesCount = countGatePlaces(content);
-  const transportReadiness = useMemo(
-    () => resolveCityPackTransportReadiness({ packId: pack.id, content }),
-    [content, pack.id]
-  );
-  const routesGateMet = transportReadiness.ready;
   const gateContentMet = isPackReadyForTenants({
     status: 'ready',
     content,
@@ -379,23 +375,55 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
 
         {stepId === 'preview' ? (
           <div className="space-y-4">
-            <ul className="space-y-2 text-sm">
-              <li>
-                Places: {placesCount}/{MIN_PLACES_FOR_PACK}{' '}
-                {placesCount >= MIN_PLACES_FOR_PACK ? '✓' : '—'}
-              </li>
-              <li>
-                Routes: {routesGateMet ? '✓' : '—'}
-                {!routesGateMet && transportReadiness.detail ? (
-                  <span className="mt-1 block text-amber-800">{transportReadiness.detail}</span>
-                ) : null}
-              </li>
-              <li>Status: {pack.status}</li>
-            </ul>
             <p className="text-sm text-muted-foreground">
-              Publish sets status to Ready only when the must checklist is green. Save draft keeps current tenants
-              on a previously published pack unchanged until you publish again.
+              Confirm checklist, then publish. Save draft anytime — tenants stay on the last published
+              pack until you publish again.
             </p>
+            <ul className="space-y-3 text-sm">
+              <li className="flex flex-wrap items-baseline justify-between gap-2 border-b pb-2">
+                <span className="font-medium">Places</span>
+                <span
+                  className={
+                    placesCount >= MIN_PLACES_FOR_PACK ? 'text-green-800' : 'text-amber-800'
+                  }
+                >
+                  {placesCount >= MIN_PLACES_FOR_PACK
+                    ? `Ready (${placesCount}/${MIN_PLACES_FOR_PACK})`
+                    : `Missing (${placesCount}/${MIN_PLACES_FOR_PACK})`}
+                </span>
+              </li>
+              {enabledRoutes.length === 0 ? (
+                <li className="text-amber-800">Arrival hubs: Missing (turn on at least one)</li>
+              ) : (
+                enabledRoutes.map((routeId) => {
+                  const label =
+                    ROUTE_PRESETS.find((preset) => preset.id === routeId)?.label ?? routeId;
+                  const gate = formatRouteGateStatus(routes[routeId]);
+                  return (
+                    <li
+                      key={routeId}
+                      className="flex flex-wrap items-baseline justify-between gap-2 border-b pb-2"
+                    >
+                      <span className="font-medium">{label}</span>
+                      <span className={gate.ready ? 'text-green-800' : 'text-amber-800'}>
+                        {gate.statusLabel}
+                      </span>
+                    </li>
+                  );
+                })
+              )}
+              <li className="flex flex-wrap items-baseline justify-between gap-2 pt-1">
+                <span className="font-medium">Pack status</span>
+                <span className="text-muted-foreground">{pack.status}</span>
+              </li>
+            </ul>
+            {!gateContentMet ? (
+              <p className="text-sm text-amber-800">
+                Publish unlocks when places and every enabled hub are Ready.
+              </p>
+            ) : (
+              <p className="text-sm text-green-800">All checks Ready — you can publish.</p>
+            )}
           </div>
         ) : null}
 

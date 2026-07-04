@@ -3,74 +3,43 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { RouteId } from '@/entities/hostel';
 import {
+  formatRouteGateStatus,
   ROUTE_PRESETS,
   type CityPackContent,
   type CityPackContentWarnings,
   type CityPackRouteContent,
 } from '@/entities/city-pack';
-import { resolveRouteLocaleStatus } from '@/entities/city-pack/lib/resolveLocalizedLocaleStatus';
+import { isLocalizedFilled } from '@/entities/city-pack/lib/resolveLocalizedLocaleStatus';
 import { cn } from '@/shared/lib/utils';
 import type { PhoneDisplayPresetId } from '@/shared/lib/phoneDisplay';
 import { AdminPhoneFieldInline } from '../../tenants/ui/AdminPhoneField';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import { Icon } from '@/shared/ui';
 import { AdminLocalizedInput } from './AdminLocalizedInput';
 import {
   AdminEditingLocaleProvider,
   AdminEditingLocaleSwitcher,
-  LocaleStatusDots,
   useAdminEditingLocale,
 } from './AdminLocaleEditContext';
 import { CityPackRouteEditor } from './CityPackRouteEditor';
 import { CityPackRoutePreview } from './CityPackRoutePreview';
 
-function RouteAccordionItem({
-  routeId,
-  route,
-  open,
-  onToggle,
-  onChange,
-}: {
-  routeId: RouteId;
-  route: CityPackRouteContent;
-  open: boolean;
-  onToggle: () => void;
-  onChange: (next: CityPackRouteContent) => void;
-}) {
-  const preset = ROUTE_PRESETS.find((entry) => entry.id === routeId);
-  const localeStatus = resolveRouteLocaleStatus(route);
-  const modeLabel = route.routeMode === 'walk_only' ? 'Walk' : 'Transit';
-
+function hasCityWideContent(
+  warnings: CityPackContentWarnings,
+  taxiName: string,
+  taxiPhone: string,
+  preTripSundayClosure: boolean
+): boolean {
   return (
-    <div className="overflow-hidden rounded-lg border bg-background">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/30"
-      >
-        <Icon
-          icon={ChevronDown}
-          className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">{preset?.label ?? routeId}</span>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
-              {modeLabel}
-            </span>
-          </div>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {route.copy.publicTitle.en || route.copy.publicTitle.ru || 'No title yet'}
-          </p>
-        </div>
-        <LocaleStatusDots en={localeStatus.en} ru={localeStatus.ru} />
-      </button>
-      {open ? (
-        <div className="border-t px-3 py-3">
-          <CityPackRouteEditor routeId={routeId} route={route} onChange={onChange} embedded />
-        </div>
-      ) : null}
-    </div>
+    Boolean(taxiName.trim()) ||
+    Boolean(taxiPhone.trim()) ||
+    preTripSundayClosure ||
+    isLocalizedFilled(warnings.taxiStand, 'en') ||
+    isLocalizedFilled(warnings.taxiStand, 'ru') ||
+    isLocalizedFilled(warnings.taxiMeter, 'en') ||
+    isLocalizedFilled(warnings.taxiMeter, 'ru') ||
+    isLocalizedFilled(warnings.busClarification, 'en') ||
+    isLocalizedFilled(warnings.busClarification, 'ru')
   );
 }
 
@@ -112,20 +81,22 @@ function CityPackRoutesStepBody({
   onTaxiPresetChange: (value: PhoneDisplayPresetId) => void;
 }) {
   const { locale } = useAdminEditingLocale();
-  const activeRouteEditors = useMemo(
+  const editableRoutes = useMemo(
     () => enabledRoutes.filter((routeId) => routes[routeId]),
     [enabledRoutes, routes]
   );
-  const [openRouteId, setOpenRouteId] = useState<RouteId | null>(activeRouteEditors[0] ?? null);
-  const [warningsOpen, setWarningsOpen] = useState(false);
+  const [activeRouteId, setActiveRouteId] = useState<RouteId | null>(editableRoutes[0] ?? null);
+  const [cityWideOpen, setCityWideOpen] = useState(() =>
+    hasCityWideContent(warnings, taxiName, taxiPhone, preTripSundayClosure)
+  );
 
   useEffect(() => {
-    if (openRouteId && activeRouteEditors.includes(openRouteId)) {
+    if (activeRouteId && editableRoutes.includes(activeRouteId)) {
       return;
     }
 
-    setOpenRouteId(activeRouteEditors[0] ?? null);
-  }, [activeRouteEditors, openRouteId]);
+    setActiveRouteId(editableRoutes[0] ?? null);
+  }, [activeRouteId, editableRoutes]);
 
   const previewContent = useMemo<CityPackContent>(
     () => ({
@@ -145,82 +116,196 @@ function CityPackRoutesStepBody({
     [enabledRoutes, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, taxiPreset, warnings]
   );
 
-  const toggleRoute = (routeId: RouteId) => {
-    if (enabledRoutes.includes(routeId)) {
-      onEnabledRoutesChange(enabledRoutes.filter((id) => id !== routeId));
-      return;
+  const selectHub = (routeId: RouteId) => {
+    if (!enabledRoutes.includes(routeId)) {
+      onEnabledRoutesChange([...enabledRoutes, routeId]);
     }
+    setActiveRouteId(routeId);
+  };
 
-    onEnabledRoutesChange([...enabledRoutes, routeId]);
+  const disableHub = (routeId: RouteId) => {
+    onEnabledRoutesChange(enabledRoutes.filter((id) => id !== routeId));
   };
 
   const updateRoute = (routeId: RouteId, next: CityPackRouteContent) => {
     onRoutesChange({ ...routes, [routeId]: next });
   };
 
+  const activeRoute = activeRouteId ? routes[activeRouteId] : undefined;
+  const activeGate = formatRouteGateStatus(activeRoute);
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Shared transport for pack <code className="text-xs">{packId}</code>. Switch language once — all
-        text fields below follow <span className="font-medium uppercase">{locale}</span>.
+        Arrival hubs for <code className="text-xs">{packId}</code>. Click a hub to enable and edit.
+        Fill required EN fields, then optional details. Save draft anytime.
       </p>
 
-      <div className="sticky top-0 z-10 space-y-3 rounded-lg border bg-background/95 p-3 backdrop-blur">
-        <AdminEditingLocaleSwitcher label="Editing language" />
-        <CityPackRoutePreview packId={packId} content={previewContent} />
+      <AdminEditingLocaleSwitcher
+        label={
+          locale === 'en' ? 'Editing: EN — required for publish' : 'Editing: RU — optional'
+        }
+      />
+
+      <div className="space-y-2">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Arrival hubs
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Click to edit · × to turn off. Guests pick one on arrival.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {ROUTE_PRESETS.map((preset) => {
+            const enabled = enabledRoutes.includes(preset.id);
+            const gate = formatRouteGateStatus(routes[preset.id]);
+            const active = activeRouteId === preset.id;
+
+            return (
+              <div
+                key={preset.id}
+                className={cn(
+                  'inline-flex items-stretch overflow-hidden rounded-full border text-sm',
+                  !enabled && 'border-dashed border-border bg-background text-muted-foreground',
+                  enabled &&
+                    active &&
+                    'border-foreground bg-foreground text-background',
+                  enabled &&
+                    !active &&
+                    gate.ready &&
+                    'border-border bg-background text-foreground',
+                  enabled &&
+                    !active &&
+                    !gate.ready &&
+                    'border-amber-300 bg-amber-50 text-amber-950'
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => selectHub(preset.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-left"
+                >
+                  <span className="font-medium">{preset.label}</span>
+                  <span
+                    className={cn(
+                      'text-[10px] font-medium uppercase tracking-wide',
+                      !enabled && 'text-muted-foreground',
+                      enabled && active && 'text-background/80',
+                      enabled && !active && gate.ready && 'text-green-700',
+                      enabled && !active && !gate.ready && 'text-amber-800'
+                    )}
+                  >
+                    {enabled ? gate.shortLabel : 'Off'}
+                  </span>
+                </button>
+                {enabled ? (
+                  <button
+                    type="button"
+                    aria-label={`Turn off ${preset.label}`}
+                    onClick={() => disableHub(preset.id)}
+                    className={cn(
+                      'border-l px-2 text-muted-foreground hover:bg-black/5',
+                      active && 'border-background/20 text-background/80 hover:bg-background/10'
+                    )}
+                  >
+                    <Icon icon={X} className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2 sm:col-span-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Enabled hubs</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {ROUTE_PRESETS.map((route) => (
-              <label key={route.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={enabledRoutes.includes(route.id)}
-                  onChange={() => toggleRoute(route.id)}
-                />
-                {route.label}
-              </label>
-            ))}
+      {enabledRoutes.length === 0 ? (
+        <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+          Turn on at least one hub to edit arrival copy.
+        </p>
+      ) : editableRoutes.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-900">
+          Route bodies are missing. Turn a hub off and on, or save draft to repair.
+        </p>
+      ) : activeRouteId && activeRoute ? (
+        <div className="space-y-3 rounded-lg border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium">
+                {ROUTE_PRESETS.find((entry) => entry.id === activeRouteId)?.label ?? activeRouteId}
+              </p>
+              <p
+                className={cn(
+                  'text-[11px]',
+                  activeGate.ready ? 'text-green-800' : 'text-amber-800'
+                )}
+              >
+                {activeGate.statusLabel}
+              </p>
+            </div>
           </div>
-        </div>
-        <label className="block space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Taxi name</span>
-          <input
-            value={taxiName}
-            onChange={(event) => onTaxiNameChange(event.target.value)}
-            className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
+          <CityPackRouteEditor
+            routeId={activeRouteId}
+            route={activeRoute}
+            onChange={(next) => updateRoute(activeRouteId, next)}
+            embedded
+            showHubHint={
+              enabledRoutes.includes('bus_central') && enabledRoutes.includes('bus_istochno')
+            }
           />
-        </label>
-        <AdminPhoneFieldInline
-          label="Taxi phone"
-          raw={taxiPhone}
-          mask={taxiMask}
-          preset={taxiPreset}
-          onRawChange={onTaxiPhoneChange}
-          onMaskChange={onTaxiMaskChange}
-          onPresetChange={onTaxiPresetChange}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Select a hub to edit.</p>
+      )}
+
+      {enabledRoutes.length > 0 ? (
+        <CityPackRoutePreview
+          packId={packId}
+          content={previewContent}
+          activeRouteId={activeRouteId}
         />
-      </div>
+      ) : null}
 
       <div className="rounded-lg border">
         <button
           type="button"
-          onClick={() => setWarningsOpen((current) => !current)}
+          onClick={() => setCityWideOpen((current) => !current)}
           className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
         >
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            City warnings & tips
-          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              City-wide (optional)
+            </p>
+            <p className="text-[11px] text-muted-foreground">Taxi, warnings, and pre-trip tips</p>
+          </div>
           <Icon
             icon={ChevronDown}
-            className={cn('h-4 w-4 text-muted-foreground transition-transform', warningsOpen && 'rotate-180')}
+            className={cn(
+              'h-4 w-4 text-muted-foreground transition-transform',
+              cityWideOpen && 'rotate-180'
+            )}
           />
         </button>
-        {warningsOpen ? (
-          <div className="space-y-2.5 border-t px-3 py-3">
+        {cityWideOpen ? (
+          <div className="space-y-3 border-t px-3 py-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Taxi name</span>
+                <input
+                  value={taxiName}
+                  onChange={(event) => onTaxiNameChange(event.target.value)}
+                  className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
+                />
+              </label>
+              <AdminPhoneFieldInline
+                label="Taxi phone"
+                raw={taxiPhone}
+                mask={taxiMask}
+                preset={taxiPreset}
+                onRawChange={onTaxiPhoneChange}
+                onMaskChange={onTaxiMaskChange}
+                onPresetChange={onTaxiPresetChange}
+              />
+            </div>
             <AdminLocalizedInput
               label="Taxi stand warning"
               value={warnings.taxiStand}
@@ -252,28 +337,6 @@ function CityPackRoutesStepBody({
             </label>
           </div>
         ) : null}
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Routes</p>
-        {enabledRoutes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Enable at least one hub to edit route copy.</p>
-        ) : activeRouteEditors.length === 0 ? (
-          <p className="text-sm text-amber-800">
-            Route bodies are missing for enabled hubs. Toggle a hub off and on, or save draft to repair.
-          </p>
-        ) : (
-          activeRouteEditors.map((routeId) => (
-            <RouteAccordionItem
-              key={routeId}
-              routeId={routeId}
-              route={routes[routeId]!}
-              open={openRouteId === routeId}
-              onToggle={() => setOpenRouteId((current) => (current === routeId ? null : routeId))}
-              onChange={(next) => updateRoute(routeId, next)}
-            />
-          ))
-        )}
       </div>
     </div>
   );
