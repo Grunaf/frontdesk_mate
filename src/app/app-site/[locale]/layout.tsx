@@ -5,7 +5,7 @@ import { GuestAppRuntime } from '@/entities/tenant/ui/GuestAppRuntime';
 import { TenantOfflineContent } from '@/views/platform/ui/TenantOfflineContent';
 import { TenantNotFoundView } from '@/views/platform/ui/TenantNotFoundView';
 import { AnalyticsProvider } from '@/shared/lib/analytics';
-import { AppHeaderShell, BaseHeader } from '@/shared/ui';
+import { AppHeaderScrollProvider, AppHeaderShell, BaseHeader } from '@/shared/ui';
 import { getRouteTranslations } from '@/shared/lib/getRouteTranslations';
 
 interface AppLayoutProps {
@@ -48,10 +48,12 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
           sessionBedId={session?.bedId ?? null}
         >
           <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-            <AppHeaderShell>
-              <BaseHeader translatedTitles={translatedTitles} />
-            </AppHeaderShell>
-            <main className="flex flex-1 flex-col">{children}</main>
+            <AppHeaderScrollProvider>
+              <AppHeaderShell>
+                <BaseHeader translatedTitles={translatedTitles} />
+              </AppHeaderShell>
+              <main className="flex flex-1 flex-col">{children}</main>
+            </AppHeaderScrollProvider>
           </div>
         </GuestAppRuntime>
       </AnalyticsProvider>

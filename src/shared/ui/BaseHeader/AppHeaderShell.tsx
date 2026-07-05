@@ -1,40 +1,17 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
-import { getCleanPath } from '@/shared/config';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
-import { resolveAppHeaderMode, shouldAutoHideAppHeader } from './resolveAppHeaderMode';
-import { useAppHeaderScrollVisibility } from './useAppHeaderScrollVisibility';
+import { useAppHeaderScroll } from './AppHeaderScrollContext';
 
 interface AppHeaderShellProps {
   children: ReactNode;
 }
 
 export function AppHeaderShell({ children }: AppHeaderShellProps) {
-  const pathname = usePathname();
-  const cleanPath = getCleanPath(pathname);
-  const headerMode = resolveAppHeaderMode(cleanPath);
-  const autoHideEnabled = shouldAutoHideAppHeader(headerMode);
-  const { visible } = useAppHeaderScrollVisibility({
-    enabled: autoHideEnabled,
-    resetKey: cleanPath,
-  });
+  const { visible, headerHeight, setHeaderHeight, prefersReducedMotion } = useAppHeaderScroll();
 
   const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useLayoutEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const updateMotionPreference = () => setPrefersReducedMotion(media.matches);
-    updateMotionPreference();
-    media.addEventListener('change', updateMotionPreference);
-
-    return () => {
-      media.removeEventListener('change', updateMotionPreference);
-    };
-  }, []);
 
   useLayoutEffect(() => {
     const node = headerRef.current;
@@ -54,7 +31,7 @@ export function AppHeaderShell({ children }: AppHeaderShellProps) {
     return () => {
       observer.disconnect();
     };
-  }, [children, cleanPath]);
+  }, [children, setHeaderHeight]);
 
   return (
     <>

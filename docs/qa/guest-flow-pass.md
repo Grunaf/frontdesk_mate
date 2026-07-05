@@ -106,6 +106,9 @@ Use **Copy send link** / **Copy QR link** on reception after issuing access, or 
 | C5 | In sheet, tap primary **Sign in** | Navigates to `/en/check-in` | ☐ | ☐ | |
 | C6 | Close sheet (backdrop / dismiss) | Remains on welcome; URL still `/welcome` | ☐ | ☐ | |
 | C7 | On **Route** tab, tap bottom primary CTA **without** session | Opens check-in sheet (not silent redirect) | ☐ | ☐ | |
+| C8 | **Tenant without routes** (no Route chip), **no session**, Preparation tab | Bottom CTA is **Check in to continue** (not View Directions) | ☐ | ☐ | |
+| C9 | Same tenant, tap Preparation bottom CTA | Check-in sheet; chip stays **Preparation**; no Access & Doors content | ☐ | ☐ | |
+| C10 | **Tenant without routes**, open `/en/welcome?step=arrival` | **Preparation** tab active; check-in sheet (not Access content) | ☐ | ☐ | |
 
 ### D. Arrival guide tabs (after check-in)
 
