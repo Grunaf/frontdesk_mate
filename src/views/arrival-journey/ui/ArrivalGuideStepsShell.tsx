@@ -6,9 +6,14 @@ import { useAppHeaderScroll } from '@/shared/ui';
 
 interface ArrivalGuideStepsShellProps {
   children: ReactNode;
+  /** In-flow chips (no fixed spacer); use on arrival stage to avoid extra scroll height. */
+  stepsLayout?: 'scrollLinked' | 'inline';
 }
 
-export function ArrivalGuideStepsShell({ children }: ArrivalGuideStepsShellProps) {
+export function ArrivalGuideStepsShell({
+  children,
+  stepsLayout = 'scrollLinked',
+}: ArrivalGuideStepsShellProps) {
   const { visible, prefersReducedMotion, autoHideEnabled } = useAppHeaderScroll();
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState(0);
@@ -33,8 +38,8 @@ export function ArrivalGuideStepsShell({ children }: ArrivalGuideStepsShellProps
     };
   }, [children]);
 
-  if (!autoHideEnabled) {
-    return <>{children}</>;
+  if (stepsLayout === 'inline' || !autoHideEnabled) {
+    return <div className="shrink-0">{children}</div>;
   }
 
   return (

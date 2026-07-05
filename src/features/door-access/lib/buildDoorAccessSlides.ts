@@ -14,27 +14,62 @@ export const DOOR_ACCESS_LANDMARK_BANNER: ArrivalBannerKeys = {
 
 export type DoorAccessSlideMedia = 'photo' | 'text';
 
+/** Message resolved via `useTranslations('domains.hostel.enter')`. */
+export type DoorAccessEnterMessage = {
+  key: string;
+  params?: Record<string, string>;
+};
+
+/** Message resolved via `useTranslations('domains.hostel.enter.doors')`. */
+export type DoorAccessDoorsMessage = {
+  key: string;
+  params?: Record<string, string>;
+};
+
+export type DoorAccessSheetTitle =
+  | DoorAccessEnterMessage
+  | DoorAccessDoorsMessage
+  | { literal: string };
+
+export type DoorAccessSheetBody =
+  | DoorAccessEnterMessage
+  | DoorAccessDoorsMessage
+  | null;
+
+export type DoorAccessSlideSheet = {
+  sheetTitle: DoorAccessSheetTitle;
+  sheetBody: DoorAccessSheetBody;
+  sheetContext: 'landmark' | 'firstAccess' | 'access';
+};
+
 export type DoorAccessLandmarkSlide = {
   kind: 'landmark';
   landmark: ArrivalLandmark;
   banner: ArrivalBannerKeys;
+  sheet: DoorAccessSlideSheet;
 };
 
 export type DoorAccessAccessSlide = {
   kind: 'access';
   step: ArrivalAccessStep;
   media: DoorAccessSlideMedia;
+  sheet: DoorAccessSlideSheet;
 };
 
 export type DoorAccessSlide = DoorAccessLandmarkSlide | DoorAccessAccessSlide;
 
 export interface BuildDoorAccessSlidesFlags {
   isNightMode: boolean;
+  /** Night section title interpolation (`{time}`), same as `ArrivalBanner`. */
+  checkInTime?: string;
 }
 
 export interface DoorAccessSlidesResult {
   slides: DoorAccessSlide[];
-  /** Day or night section banner; not repeated on each slide. */
+  /**
+   * Day or night section banner; not repeated on each slide.
+   * @deprecated Prefer per-slide `sheet` on the first access slide (`sheetContext: 'firstAccess'`).
+   */
   sectionBanner: ArrivalBannerKeys | null;
 }
 
@@ -63,29 +98,91 @@ function resolveAccessSlideMedia(step: ArrivalAccessStep, isNightMode: boolean):
   return null;
 }
 
+function enterTitleParams(titleKey: string, checkInTime?: string): Record<string, string> | undefined {
+  const needsTime = titleKey.includes('night') || titleKey.includes('nightPreview');
+  if (!needsTime) return undefined;
+  return { time: checkInTime ?? '' };
+}
+
+function enterMessageFromBannerTitle(
+  banner: ArrivalBannerKeys,
+  checkInTime?: string
+): DoorAccessEnterMessage {
+  const params = enterTitleParams(banner.titleKey, checkInTime);
+  return params ? { key: banner.titleKey, params } : { key: banner.titleKey };
+}
+
+function buildLandmarkSheet(): DoorAccessSlideSheet {
+  return {
+    sheetContext: 'landmark',
+    sheetTitle: { key: DOOR_ACCESS_LANDMARK_BANNER.titleKey },
+    sheetBody: { key: DOOR_ACCESS_LANDMARK_BANNER.bannerKey },
+  };
+}
+
+function buildFirstAccessSheet(
+  sectionBanner: ArrivalBannerKeys,
+  checkInTime?: string
+): DoorAccessSlideSheet {
+  return {
+    sheetContext: 'firstAccess',
+    sheetTitle: enterMessageFromBannerTitle(sectionBanner, checkInTime),
+    sheetBody: { key: sectionBanner.bannerKey },
+  };
+}
+
+/** Step title: admin label when set, otherwise i18n under `enter.doors`. */
+function buildAccessStepSheetTitle(step: ArrivalAccessStep): DoorAccessSheetTitle {
+  if (step.label.trim()) {
+    return { literal: step.label };
+  }
+  return { key: step.titleKey };
+}
+
+function buildAccessStepSheet(step: ArrivalAccessStep): DoorAccessSlideSheet {
+  return {
+    sheetContext: 'access',
+    sheetTitle: buildAccessStepSheetTitle(step),
+    sheetBody: step.guideKey ? { key: step.guideKey } : null,
+  };
+}
+
 export function buildDoorAccessSlides(
   plan: ArrivalAccessPlan,
   flags: BuildDoorAccessSlidesFlags
 ): DoorAccessSlidesResult {
-  const { isNightMode } = flags;
+  const { isNightMode, checkInTime } = flags;
   const slides: DoorAccessSlide[] = [];
+  const sectionBanner = resolveSectionBanner(plan, isNightMode);
+
+  // first access в built slides: first `kind: 'access'` entry in this array (panel filters must not recompute section banner against a filtered list).
+  let firstAccessInBuiltSlides = true;
 
   if (plan.landmark) {
     slides.push({
       kind: 'landmark',
       landmark: plan.landmark,
       banner: DOOR_ACCESS_LANDMARK_BANNER,
+      sheet: buildLandmarkSheet(),
     });
   }
 
   for (const step of resolveAccessSteps(plan, isNightMode)) {
     const media = resolveAccessSlideMedia(step, isNightMode);
     if (!media) continue;
-    slides.push({ kind: 'access', step, media });
+
+    const sheet =
+      firstAccessInBuiltSlides && sectionBanner
+        ? buildFirstAccessSheet(sectionBanner, checkInTime)
+        : buildAccessStepSheet(step);
+
+    firstAccessInBuiltSlides = false;
+
+    slides.push({ kind: 'access', step, media, sheet });
   }
 
   return {
     slides,
-    sectionBanner: resolveSectionBanner(plan, isNightMode),
+    sectionBanner,
   };
 }

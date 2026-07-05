@@ -7,23 +7,28 @@ import {
   DOOR_ACCESS_LANDMARK_BANNER,
 } from './buildDoorAccessSlides';
 
-function slidesFor(settings: TenantSettings, isNightMode: boolean) {
+function slidesFor(
+  settings: TenantSettings,
+  isNightMode: boolean,
+  checkInTime?: string
+) {
   const plan = resolveArrivalAccessPlan(settings, buildHostelConfig(settings), isNightMode);
-  return buildDoorAccessSlides(plan, { isNightMode });
+  return buildDoorAccessSlides(plan, { isNightMode, checkInTime });
 }
 
 describe('buildDoorAccessSlides', () => {
-  it('landmark plus two door slides in day order', () => {
+  it('landmark plus two door slides in day order with walk-in section only on first access sheet', () => {
     const settings: TenantSettings = {
       arrivalAccess: {
-        layoutKind: 'building_then_zones',
+        layoutKind: 'direct_to_floor',
+        dayMode: 'walk_in',
         landmark: '/images/facade.jpg',
         accessPoints: [
           {
-            id: 'building_entrance',
-            kind: 'outside',
-            label: 'Building entrance',
-            image: '/images/entrance.jpg',
+            id: 'hostel_door',
+            kind: 'zone',
+            label: 'Hostel door',
+            image: '/images/door.jpg',
           },
           {
             id: 'floor_1',
@@ -42,21 +47,37 @@ describe('buildDoorAccessSlides', () => {
       kind: 'landmark',
       landmark: { imageSrc: '/images/facade.jpg' },
       banner: DOOR_ACCESS_LANDMARK_BANNER,
+      sheet: {
+        sheetContext: 'landmark',
+        sheetTitle: { key: 'sections.find.title' },
+        sheetBody: { key: 'sections.find.banner' },
+      },
     });
     expect(slides[1]).toMatchObject({
       kind: 'access',
       media: 'photo',
-      step: { id: 'building_entrance', label: 'Building entrance' },
+      step: { id: 'hostel_door', label: 'Hostel door' },
+      sheet: {
+        sheetContext: 'firstAccess',
+        sheetTitle: { key: 'guide.day.standalone.walkIn.title' },
+        sheetBody: { key: 'guide.day.standalone.walkIn.banner' },
+      },
     });
     expect(slides[2]).toMatchObject({
       kind: 'access',
       media: 'photo',
       step: { id: 'floor_1', label: 'Floor 1' },
+      sheet: {
+        sheetContext: 'access',
+        sheetTitle: { literal: 'Floor 1' },
+        sheetBody: null,
+      },
     });
-    expect(sectionBanner?.titleKey).toBe('guide.day.title');
+    expect(sectionBanner?.titleKey).toBe('guide.day.standalone.walkIn.title');
+    expect(slides[0].sheet.sheetContext).not.toBe('firstAccess');
   });
 
-  it('two access slides only when landmark is missing', () => {
+  it('two access slides only when landmark is missing; first slide carries section banner', () => {
     const settings: TenantSettings = {
       arrivalAccess: {
         accessPoints: [
@@ -70,13 +91,25 @@ describe('buildDoorAccessSlides', () => {
 
     expect(slides.every((slide) => slide.kind === 'access')).toBe(true);
     expect(slides).toHaveLength(2);
-    expect(slides.map((slide) => slide.kind === 'access' && slide.step.id)).toEqual([
-      'building_entrance',
-      'floor_1',
-    ]);
+    expect(slides[0]).toMatchObject({
+      step: { id: 'building_entrance' },
+      sheet: {
+        sheetContext: 'firstAccess',
+        sheetTitle: { key: 'guide.day.title' },
+        sheetBody: { key: 'guide.day.banner' },
+      },
+    });
+    expect(slides[1]).toMatchObject({
+      step: { id: 'floor_1' },
+      sheet: {
+        sheetContext: 'access',
+        sheetTitle: { literal: 'Floor 1' },
+        sheetBody: null,
+      },
+    });
   });
 
-  it('night mode with codes and no photos yields text access slides', () => {
+  it('night mode with codes adds time param on first access sheet title', () => {
     const settings: TenantSettings = {
       arrivalAccess: {
         accessPoints: [
@@ -86,19 +119,55 @@ describe('buildDoorAccessSlides', () => {
       },
     };
 
-    const { slides, sectionBanner } = slidesFor(settings, true);
+    const { slides, sectionBanner } = slidesFor(settings, true, '22:00');
 
     expect(slides).toHaveLength(2);
     expect(slides[0]).toMatchObject({
       kind: 'access',
       media: 'text',
       step: { id: 'building_entrance', showCode: true, code: 'A123#' },
+      sheet: {
+        sheetContext: 'firstAccess',
+        sheetTitle: { key: 'guide.night.title', params: { time: '22:00' } },
+        sheetBody: { key: 'guide.night.banner' },
+      },
     });
     expect(slides[1]).toMatchObject({
       kind: 'access',
       media: 'text',
       step: { id: 'floor_1', showCode: true, code: '1111*' },
+      sheet: {
+        sheetContext: 'access',
+        sheetTitle: { literal: 'Floor 1' },
+        sheetBody: null,
+      },
     });
     expect(sectionBanner?.titleKey).toBe('guide.night.title');
+  });
+
+  it('access sheet body uses guideKey under doors namespace', () => {
+    const settings: TenantSettings = {
+      arrivalAccess: {
+        accessPoints: [
+          { id: 'building_entrance', label: 'Entrance', image: '/images/entrance.jpg' },
+          {
+            id: 'floor_1',
+            label: 'Floor 1',
+            image: '/images/floor1.jpg',
+            guideKey: 'subDoor.guide',
+          },
+        ],
+      },
+    };
+
+    const { slides } = slidesFor(settings, false);
+
+    expect(slides[1]).toMatchObject({
+      step: { id: 'floor_1' },
+      sheet: {
+        sheetContext: 'access',
+        sheetBody: { key: 'subDoor.guide' },
+      },
+    });
   });
 });

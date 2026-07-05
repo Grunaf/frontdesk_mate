@@ -16,7 +16,8 @@ import { ArrivalGuideStepsShell } from './ArrivalGuideStepsShell';
 import { SettlementPhase } from './SettlementPhase';
 import { useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
-import { Button, SegmentedChipBar } from '@/shared/ui';
+import { Button, SegmentedChipBar, useAppHeaderScroll } from '@/shared/ui';
+import { cn } from '@/shared/lib/utils';
 import { useCheckInState, type Step } from '../model/useCheckInState';
 import { resolveArrivalJourneyPrimaryButtonKey } from '../lib/resolveArrivalJourneyPrimaryButtonKey';
 import {
@@ -80,6 +81,29 @@ export function ArrivalJourneyCoordinator({
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
   const [tourismGateSheetOpen, setTourismGateSheetOpen] = useState(false);
   const [tourismComplete, setTourismComplete] = useState(initialTourismComplete);
+  const [arrivalHideMainPrimary, setArrivalHideMainPrimary] = useState(false);
+  const { setSuppressAutoHide } = useAppHeaderScroll();
+
+  const isArrival = currentStep === 'arrival';
+
+  useEffect(() => {
+    setSuppressAutoHide(isArrival);
+    return () => setSuppressAutoHide(false);
+  }, [isArrival, setSuppressAutoHide]);
+
+  useEffect(() => {
+    if (!isArrival) {
+      return;
+    }
+
+    const { documentElement } = document;
+    const previousOverflow = documentElement.style.overflow;
+    documentElement.style.overflow = 'hidden';
+
+    return () => {
+      documentElement.style.overflow = previousOverflow;
+    };
+  }, [isArrival]);
 
   useEffect(() => {
     setTourismComplete(initialTourismComplete);
@@ -197,6 +221,27 @@ export function ArrivalJourneyCoordinator({
     ]
   );
 
+  const handleArrivalPrimaryAction = useCallback(() => {
+    if (isRegistrationLockedStep('arrival', isRegistered)) {
+      openCheckInSheet();
+      return;
+    }
+    const next = resolveNextArrivalJourneyStep(
+      'arrival',
+      routesAvailable,
+      tourismRegistrationRequired
+    );
+    if (next === null) {
+      return;
+    }
+    navigateToStep(next);
+  }, [
+    isRegistered,
+    routesAvailable,
+    tourismRegistrationRequired,
+    navigateToStep,
+  ]);
+
   const stepsConfig: StepItem[] = useMemo(() => {
     const goToNextFrom = (fromStep: Step) => {
       const next = resolveNextArrivalJourneyStep(
@@ -232,7 +277,9 @@ export function ArrivalJourneyCoordinator({
       {
         id: 'arrival',
         label: t('tabs.arrival'),
-        Component: DoorAccessPanel,
+        Component: function ArrivalGuidePlaceholder() {
+          return null;
+        },
         onComplete: () => goToNextFrom('arrival'),
         buttonKey: 'arrival.actionButton',
       },
@@ -266,6 +313,7 @@ export function ArrivalJourneyCoordinator({
     navigateToStep,
     router,
     handleTourismRegistrationComplete,
+    handleArrivalPrimaryAction,
   ]);
 
   const activeStep =
@@ -349,25 +397,50 @@ export function ArrivalJourneyCoordinator({
     routesAvailable,
     tourismRegistrationRequired
   );
-  const showPrimaryButton = activeStep.id !== 'register';
+  const showPrimaryButton =
+    activeStep.id !== 'register' &&
+    !(activeStep.id === 'arrival' && arrivalHideMainPrimary);
+
+  const arrivalGuideChipsOverlay = (
+    <div className="bg-gradient-to-b from-black/70 via-black/45 to-transparent pb-5 pt-1">
+      <SegmentedChipBar
+        bleed={false}
+        className="mt-4 px-4"
+        items={chipItems}
+        value={currentStep}
+        onValueChange={handleStepChange}
+        onLockedClick={handleLockedChipClick}
+        ariaLabel="Arrival guide steps"
+      />
+    </div>
+  );
 
   return (
-    <div className="flex min-h-screen w-full max-w-md flex-col bg-background">
-      <ArrivalGuideStepsShell>
-        <SegmentedChipBar
-          bleed={false}
-          className="mt-4"
-          items={chipItems}
-          value={currentStep}
-          onValueChange={handleStepChange}
-          onLockedClick={handleLockedChipClick}
-          ariaLabel="Arrival guide steps"
-        />
-      </ArrivalGuideStepsShell>
+    <div
+      className={cn(
+        'flex w-full flex-col bg-background',
+        isArrival ? 'min-h-0 flex-1 overflow-x-hidden overflow-y-hidden' : 'min-h-screen'
+      )}
+    >
+      {!isArrival ? (
+        <ArrivalGuideStepsShell stepsLayout="scrollLinked">
+          <SegmentedChipBar
+            bleed
+            className="mt-4"
+            items={chipItems}
+            value={currentStep}
+            onValueChange={handleStepChange}
+            onLockedClick={handleLockedChipClick}
+            ariaLabel="Arrival guide steps"
+          />
+        </ArrivalGuideStepsShell>
+      ) : null}
 
-      <CrossHostelStrip showRoutesHint={currentStep === 'route'} className="mx-4 mt-3" />
+      {!isArrival ? (
+        <CrossHostelStrip showRoutesHint={currentStep === 'route'} className="mx-4 mt-3" />
+      ) : null}
 
-      {!isRegistered ? (
+      {!isArrival && !isRegistered ? (
         <p className="mx-4 mt-3 text-xs leading-relaxed text-muted-foreground">
           {t('guestCheckIn.hint')}{' '}
           <button
@@ -380,10 +453,32 @@ export function ArrivalJourneyCoordinator({
         </p>
       ) : null}
 
-      <main className="flex flex-col justify-between gap-y-6 bg-background px-4 pb-8 pt-4">
-        <ActiveComponent />
+      <main
+        className={cn(
+          'flex flex-col bg-background',
+          isArrival
+            ? 'min-h-0 flex-1 overflow-hidden px-0 pt-0 pb-0'
+            : 'justify-between gap-y-6 px-4 pt-4 pb-8'
+        )}
+      >
+        {isArrival ? (
+          <DoorAccessPanel
+            mediaTopOverlay={arrivalGuideChipsOverlay}
+            primaryAction={{
+              label: t('arrival.actionButton'),
+              onClick: handleArrivalPrimaryAction,
+            }}
+            onHideMainPrimaryChange={setArrivalHideMainPrimary}
+          />
+        ) : (
+          <ActiveComponent />
+        )}
         {showPrimaryButton ? (
-          <Button size="lg" className="w-full" onClick={handlePrimaryAction}>
+          <Button
+            size="lg"
+            className={cn('w-full', isArrival && 'mx-4 mb-4 shrink-0')}
+            onClick={handlePrimaryAction}
+          >
             {t(primaryButtonKey)}
           </Button>
         ) : null}

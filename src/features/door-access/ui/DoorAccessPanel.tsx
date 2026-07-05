@@ -1,20 +1,33 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { useHostelConfig, useModuleStatus } from '@/entities/tenant';
-import { shouldShowTimedGuestBanner } from '@/entities/tenant/lib/resolveGuestFieldPresentation';
 import { useNightMode } from '@/shared/lib';
+import { cn } from '@/shared/lib/utils';
 import { useTranslations } from '@/shared/i18n';
 import { FeatureGate } from '@/shared/ui';
-import {
-  buildDoorAccessSlides,
-  DOOR_ACCESS_LANDMARK_BANNER,
-} from '../lib/buildDoorAccessSlides';
+import { buildDoorAccessSlides } from '../lib/buildDoorAccessSlides';
 import { useArrivalAccessPlan } from '../lib/useArrivalAccessPlan';
-import { ArrivalBanner } from './ArrivalBanner';
-import { DoorAccessCarousel } from './DoorAccessCarousel';
+import { DoorAccessCarousel, type DoorAccessPrimaryAction } from './DoorAccessCarousel';
 
-export function DoorAccessPanel() {
+export type { DoorAccessPrimaryAction };
+
+export interface DoorAccessPanelProps {
+  primaryAction?: DoorAccessPrimaryAction;
+  /** When true, arrival journey should hide the main step footer button. */
+  onHideMainPrimaryChange?: (hide: boolean) => void;
+  /** Shown over the top of door-access photos (arrival guide chips). */
+  mediaTopOverlay?: ReactNode;
+}
+
+const mutedHintClassName =
+  'rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground';
+
+export function DoorAccessPanel({
+  primaryAction,
+  onHideMainPrimaryChange,
+  mediaTopOverlay,
+}: DoorAccessPanelProps) {
   const isNightMode = useNightMode();
   const plan = useArrivalAccessPlan();
   const hostel = useHostelConfig();
@@ -28,9 +41,13 @@ export function DoorAccessPanel() {
     plan.dayAccess ||
     (plan.nightAccess?.hasAnyCode || plan.nightAccess?.steps.some((s) => s.imageSrc));
 
-  const { slides: builtSlides, sectionBanner } = useMemo(
-    () => buildDoorAccessSlides(plan, { isNightMode }),
-    [plan, isNightMode]
+  const builtSlides = useMemo(
+    () =>
+      buildDoorAccessSlides(plan, {
+        isNightMode,
+        checkInTime: hostel.selfCheckInTimeAfter,
+      }).slides,
+    [plan, isNightMode, hostel.selfCheckInTimeAfter]
   );
 
   const slides = useMemo(() => {
@@ -50,12 +67,22 @@ export function DoorAccessPanel() {
     return next;
   }, [builtSlides, doorPhotosStatus, doorAccessStatus]);
 
+  const hideMainPrimary = slides.length > 0;
+
+  useEffect(() => {
+    onHideMainPrimaryChange?.(hideMainPrimary);
+  }, [hideMainPrimary, onHideMainPrimaryChange]);
+
+  useEffect(() => {
+    return () => {
+      onHideMainPrimaryChange?.(false);
+    };
+  }, [onHideMainPrimaryChange]);
+
   if (!hasContent) {
     return (
-      <div className="space-y-6 pt-5">
-        <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-          {doors('emptyState')}
-        </p>
+      <div className="space-y-6">
+        <p className={mutedHintClassName}>{doors('emptyState')}</p>
       </div>
     );
   }
@@ -64,34 +91,14 @@ export function DoorAccessPanel() {
     (slide) => slide.kind === 'access' && slide.media === 'photo'
   );
 
-  const showLandmarkPhotosHidden =
+  const dayPhotosHiddenWithAccess =
+    !isNightMode &&
+    doorPhotosStatus === 'hidden' &&
+    hasPhotoAccessSlides &&
+    Boolean(plan.dayAccess);
+
+  const showLandmarkPhotosHiddenHint =
     doorPhotosStatus === 'hidden' && Boolean(plan.landmark);
-
-  if (!isNightMode && doorPhotosStatus === 'hidden' && hasPhotoAccessSlides && plan.dayAccess) {
-    return (
-      <div className="space-y-3 pt-5">
-        {showLandmarkPhotosHidden && (
-          <>
-            <ArrivalBanner variant="landmark" keys={DOOR_ACCESS_LANDMARK_BANNER} />
-            <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-              {sectionT('find.photosHiddenHint')}
-            </p>
-          </>
-        )}
-        <ArrivalBanner variant="day" keys={plan.dayAccess.banner} />
-        <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-          {doors('photosOnlyHint')}
-        </p>
-      </div>
-    );
-  }
-
-  const showTimedNightBanner =
-    isNightMode &&
-    sectionBanner &&
-    shouldShowTimedGuestBanner(hostel.selfCheckInTimeAfter);
-
-  const showDaySectionBanner = !isNightMode && Boolean(sectionBanner);
 
   const slidesEmpty = slides.length === 0;
   const nightNoAccessUi =
@@ -100,46 +107,35 @@ export function DoorAccessPanel() {
     !plan.nightAccess.hasAnyCode &&
     !plan.nightAccess.steps.some((step) => step.imageSrc);
 
-  const showAccessSection = Boolean(isNightMode ? plan.nightAccess : plan.dayAccess);
-
   return (
-    <div className="space-y-3 pt-5">
-      {showLandmarkPhotosHidden && (
-        <>
-          <ArrivalBanner variant="landmark" keys={DOOR_ACCESS_LANDMARK_BANNER} />
-          <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-            {sectionT('find.photosHiddenHint')}
-          </p>
-        </>
-      )}
+    <div className="flex min-h-0 flex-1 flex-col">
+      {slides.length > 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DoorAccessCarousel
+            slides={slides}
+            useModuleGates
+            primaryAction={primaryAction}
+            navigateViaSheetOnly
+            mediaTopOverlay={mediaTopOverlay}
+          />
+        </div>
+      ) : mediaTopOverlay ? (
+        <div className="shrink-0">{mediaTopOverlay}</div>
+      ) : null}
 
-      {showAccessSection && (
+      {slidesEmpty && showLandmarkPhotosHiddenHint ? (
+        <p className={cn(mutedHintClassName, 'mx-4')}>{sectionT('find.photosHiddenHint')}</p>
+      ) : null}
+
+      {slidesEmpty && dayPhotosHiddenWithAccess ? (
+        <p className={cn(mutedHintClassName, 'mx-4')}>{doors('photosOnlyHint')}</p>
+      ) : null}
+
+      {slidesEmpty && nightNoAccessUi ? (
         <FeatureGate module="doorAccess" showPreviewBadge={false}>
-          <div className="space-y-3">
-            {showDaySectionBanner && sectionBanner && (
-              <ArrivalBanner variant="day" keys={sectionBanner} />
-            )}
-
-            {showTimedNightBanner && sectionBanner && (
-              <ArrivalBanner
-                variant="night"
-                keys={sectionBanner}
-                checkInTime={hostel.selfCheckInTimeAfter ?? ''}
-              />
-            )}
-
-            {slidesEmpty && nightNoAccessUi && (
-              <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-                {doors('noCodeHint')}
-              </p>
-            )}
-          </div>
+          <p className={cn(mutedHintClassName, 'mx-4')}>{doors('noCodeHint')}</p>
         </FeatureGate>
-      )}
-
-      {slides.length > 0 && (
-        <DoorAccessCarousel slides={slides} accessBanner={null} useModuleGates />
-      )}
+      ) : null}
     </div>
   );
 }

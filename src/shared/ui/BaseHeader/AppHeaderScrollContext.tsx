@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useLayoutEffect,
   useMemo,
@@ -21,6 +22,8 @@ interface AppHeaderScrollContextValue {
   setHeaderHeight: (height: number) => void;
   prefersReducedMotion: boolean;
   autoHideEnabled: boolean;
+  /** When true, header stays visible (auto-hide ignored). */
+  setSuppressAutoHide: (suppress: boolean) => void;
 }
 
 const AppHeaderScrollContext = createContext<AppHeaderScrollContextValue | null>(null);
@@ -36,8 +39,13 @@ export function AppHeaderScrollProvider({ children }: { children: ReactNode }) {
   });
   const [headerHeight, setHeaderHeight] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [suppressAutoHide, setSuppressAutoHideState] = useState(false);
 
-  const visible = autoHideEnabled ? scrollVisible : true;
+  const setSuppressAutoHide = useCallback((suppress: boolean) => {
+    setSuppressAutoHideState(suppress);
+  }, []);
+
+  const visible = suppressAutoHide ? true : autoHideEnabled ? scrollVisible : true;
 
   useLayoutEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -65,8 +73,9 @@ export function AppHeaderScrollProvider({ children }: { children: ReactNode }) {
       setHeaderHeight,
       prefersReducedMotion,
       autoHideEnabled,
+      setSuppressAutoHide,
     }),
-    [visible, headerHeight, prefersReducedMotion, autoHideEnabled]
+    [visible, headerHeight, prefersReducedMotion, autoHideEnabled, setSuppressAutoHide]
   );
 
   return (

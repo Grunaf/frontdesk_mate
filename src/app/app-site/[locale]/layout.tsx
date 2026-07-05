@@ -47,12 +47,12 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
           currentTenantSlug={tenantSlug}
           sessionBedId={session?.bedId ?? null}
         >
-          <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
+          <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-md flex-col overflow-hidden bg-background">
             <AppHeaderScrollProvider>
               <AppHeaderShell>
                 <BaseHeader translatedTitles={translatedTitles} />
               </AppHeaderShell>
-              <main className="flex flex-1 flex-col">{children}</main>
+              <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</main>
             </AppHeaderScrollProvider>
           </div>
         </GuestAppRuntime>

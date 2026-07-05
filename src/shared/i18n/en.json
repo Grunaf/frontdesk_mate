@@ -650,6 +650,7 @@
         "title": "Arrival Info",
         "visuals": "Visual landmarks:",
         "actionButton": "Settling In",
+        "nextSlide": "Next",
         "sections": {
           "find": {
             "heading": "Find your hostel",
