@@ -61,7 +61,7 @@ export function isStaySetupStepLocked(
   completion: StaySetupCompletion
 ): boolean {
   if (!isRegistered) {
-    return true;
+    return false;
   }
 
   if (step === 'register') {

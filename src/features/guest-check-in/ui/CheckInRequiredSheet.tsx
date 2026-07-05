@@ -28,9 +28,15 @@ import { ArrowLeftRight } from 'lucide-react';
 interface CheckInRequiredSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When false, swipe/overlay/close button cannot dismiss the sheet (vaul `dismissible`). */
+  dismissible?: boolean;
 }
 
-export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredSheetProps) {
+export function CheckInRequiredSheet({
+  open,
+  onOpenChange,
+  dismissible = true,
+}: CheckInRequiredSheetProps) {
   const { name, hostel, slug } = useTenant();
   const { currentTenantSlug } = useGuestSession();
   const foreignRegistration = useForeignGuestRegistration();
@@ -56,8 +62,8 @@ export function CheckInRequiredSheet({ open, onOpenChange }: CheckInRequiredShee
     : null;
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange}>
-      <BottomSheetContent>
+    <BottomSheet open={open} onOpenChange={onOpenChange} dismissible={dismissible}>
+      <BottomSheetContent showCloseButton={dismissible} showDragHandle={dismissible}>
         <BottomSheetHeader>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t('eyebrow')}</p>
           <BottomSheetTitle>{t('title')}</BottomSheetTitle>

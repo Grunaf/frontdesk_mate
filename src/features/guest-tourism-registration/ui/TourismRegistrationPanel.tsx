@@ -22,9 +22,14 @@ import { TourismGuestList } from './TourismGuestList';
 
 type TourismGuestsRegistrationPanelProps = {
   onComplete: () => void;
+  /** When false, show preview UI without fetching or submitting (stay-setup before check-in). */
+  interactionEnabled?: boolean;
 };
 
-export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegistrationPanelProps) {
+export function TourismGuestsRegistrationPanel({
+  onComplete,
+  interactionEnabled = true,
+}: TourismGuestsRegistrationPanelProps) {
   const t = useTranslations('pages.staySetup.register');
   const { slug: tenantSlug, settings } = useTenant();
   const { session } = useGuestSession();
@@ -58,6 +63,12 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
   }, [tenantSlug, t]);
 
   useEffect(() => {
+    if (!interactionEnabled) {
+      setIsLoadingList(false);
+      setLoadError(null);
+      return;
+    }
+
     let cancelled = false;
 
     (async () => {
@@ -81,7 +92,7 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
     return () => {
       cancelled = true;
     };
-  }, [tenantSlug, t]);
+  }, [tenantSlug, t, interactionEnabled]);
 
   const handleGuestAdded = useCallback(async () => {
     setIsGuestUploadPending(true);
@@ -93,6 +104,7 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
   }, [refreshGuests]);
 
   const completeDisabled =
+    !interactionEnabled ||
     registrationComplete ||
     guests.length < 1 ||
     !everyoneListed ||
@@ -116,6 +128,10 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
   };
 
   const handleComplete = () => {
+    if (!interactionEnabled) {
+      return;
+    }
+
     setCompleteError(null);
 
     startCompleteTransition(async () => {
@@ -130,7 +146,7 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
     });
   };
 
-  if (isLoadingList) {
+  if (interactionEnabled && isLoadingList) {
     return (
       <div className="flex items-center gap-2 pt-5 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -139,7 +155,7 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
     );
   }
 
-  if (loadError) {
+  if (interactionEnabled && loadError) {
     return (
       <div className="pt-5">
         <Alert variant="destructive">
@@ -204,7 +220,7 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
       <AddTourismGuestForm
         tenantSlug={tenantSlug}
         requiredDocumentKinds={profile?.requiredDocumentKinds ?? ['passport', 'entry_stamp']}
-        disabled={isGuestUploadPending}
+        disabled={!interactionEnabled || isGuestUploadPending}
         onUploadPendingChange={setIsGuestUploadPending}
         onGuestAdded={handleGuestAdded}
       />
@@ -213,7 +229,7 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
         <label
           className={cn(
             'flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-foreground',
-            isCompleting && 'pointer-events-none opacity-60'
+            (isCompleting || !interactionEnabled) && 'pointer-events-none opacity-60'
           )}
         >
           <input
@@ -221,7 +237,7 @@ export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegi
             className="mt-1 size-4 shrink-0 rounded border border-input accent-primary"
             checked={everyoneListed}
             onChange={(e) => setEveryoneListed(e.target.checked)}
-            disabled={isCompleting}
+            disabled={isCompleting || !interactionEnabled}
           />
           <span>{t('finish.confirmLabel')}</span>
         </label>

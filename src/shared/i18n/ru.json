@@ -760,7 +760,7 @@
       "back": "Назад",
       "backToConcierge": "Назад к консьержу",
       "goToConcierge": "К консьержу",
-      "staySetup": "Регистрация и контакт"
+      "staySetup": "Данные гостей"
     },
     "memories": {
       "title": "Share your memories",
@@ -1217,7 +1217,7 @@
         "checkout": "Выезд",
         "nightAccess": "Ночной доступ",
         "reception": "О ресепшене",
-        "staySetup": "Регистрация и контакт"
+        "staySetup": "Данные гостей"
       },
       "bridgeAriaLabelUnread": "{title} — не просмотрено",
       "bridgeAriaLabelRead": "{title} — просмотрено",

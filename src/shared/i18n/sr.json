@@ -760,7 +760,7 @@
       "back": "Back",
       "backToConcierge": "Back to Concierge",
       "goToConcierge": "Go to Concierge",
-      "staySetup": "Registration & contact"
+      "staySetup": "Podaci o gostu"
     },
     "memories": {
       "title": "Share your memories",
@@ -1406,7 +1406,7 @@
         "checkout": "Check-out",
         "nightAccess": "Night access",
         "reception": "About reception",
-        "staySetup": "Registration & contact"
+        "staySetup": "Podaci o gostu"
       },
       "bridgeAriaLabelUnread": "{title} — not viewed",
       "bridgeAriaLabelRead": "{title} — viewed",

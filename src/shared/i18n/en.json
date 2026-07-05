@@ -863,7 +863,7 @@
       "home": "Home",
       "concierge": "Concierge",
       "arrivalGuide": "Arrival Guide",
-      "staySetup": "Registration & contact",
+      "staySetup": "Guest details",
       "guide": "Local guide",
       "services": "Services",
       "faq": "FAQ",
@@ -1396,7 +1396,7 @@
     "stayEssentials": {
       "bridges": {
         "arrivalGuide": "Arrival guide",
-        "staySetup": "Registration & contact",
+        "staySetup": "Guest details",
         "wifi": "Wi‑Fi",
         "checkout": "Check-out",
         "nightAccess": "Night access",

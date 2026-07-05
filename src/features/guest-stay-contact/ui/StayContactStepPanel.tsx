@@ -11,12 +11,14 @@ type StayContactStepPanelProps = {
   tenantSlug: string;
   initialContactWhatsapp?: string | null;
   onComplete: () => void;
+  interactionEnabled?: boolean;
 };
 
 export function StayContactStepPanel({
   tenantSlug,
   initialContactWhatsapp,
   onComplete,
+  interactionEnabled = true,
 }: StayContactStepPanelProps) {
   const t = useTranslations('pages.staySetup.contact');
   const [contactWhatsapp, setContactWhatsapp] = useState(initialContactWhatsapp ?? '');
@@ -25,6 +27,10 @@ export function StayContactStepPanel({
   const [isSaving, startSaveTransition] = useTransition();
 
   const handleSave = useCallback(() => {
+    if (!interactionEnabled) {
+      return;
+    }
+
     setSaveError(null);
     setWhatsappError(null);
 
@@ -47,7 +53,7 @@ export function StayContactStepPanel({
 
       onComplete();
     });
-  }, [contactWhatsapp, onComplete, t, tenantSlug]);
+  }, [contactWhatsapp, interactionEnabled, onComplete, t, tenantSlug]);
 
   return (
     <div className="space-y-6 pt-5">
@@ -77,7 +83,7 @@ export function StayContactStepPanel({
               setWhatsappError(t('errors.invalidWhatsapp'));
             }
           }}
-          disabled={isSaving}
+          disabled={!interactionEnabled || isSaving}
           aria-invalid={Boolean(whatsappError)}
         />
         {whatsappError ? <p className="text-xs text-destructive">{whatsappError}</p> : null}
@@ -90,7 +96,12 @@ export function StayContactStepPanel({
         </Alert>
       ) : null}
 
-      <Button size="lg" className="w-full" disabled={isSaving} onClick={handleSave}>
+      <Button
+        size="lg"
+        className="w-full"
+        disabled={!interactionEnabled || isSaving}
+        onClick={handleSave}
+      >
         {isSaving ? (
           <>
             <Loader2 className="size-4 animate-spin" aria-hidden />

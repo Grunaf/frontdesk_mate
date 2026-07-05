@@ -182,7 +182,7 @@ export function StayEssentialsBridges() {
     <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="flex w-max snap-x snap-mandatory gap-2 pr-4">
         <StayEssentialsArrivalTile />
-        <StayEssentialsStaySetupTile />
+        {isRegistered ? <StayEssentialsStaySetupTile /> : null}
         {visibleBridges.map((bridgeId) => (
           <StayEssentialBridgeItem
             key={bridgeId}

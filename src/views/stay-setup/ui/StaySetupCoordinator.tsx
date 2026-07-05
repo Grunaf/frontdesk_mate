@@ -13,7 +13,7 @@ import {
 } from '@/features/guest-tourism-registration';
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { ArrivalGuideStepsShell, SettlementPhase } from '@/views/arrival-journey';
-import { useTranslations, useLocale } from '@/shared/i18n';
+import { useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
 import { Button, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
@@ -79,8 +79,38 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   }, [initial.tourismComplete, initial.contactComplete, initial.stayContactWhatsapp]);
 
   useEffect(() => {
+    if (isRegistered) {
+      setCheckInSheetOpen(false);
+      return;
+    }
+
+    setCheckInSheetOpen(true);
+  }, [isRegistered]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const step = params.get('step');
+
+    if (!isRegistered) {
+      if (step === 'settlement') {
+        setCurrentStep('settlement');
+        return;
+      }
+      if (step === 'contact') {
+        setCurrentStep('contact');
+        return;
+      }
+      if (step === 'register' && tourismRegistrationRequired) {
+        setCurrentStep('register');
+        return;
+      }
+      if (!step) {
+        setCurrentStep(
+          resolveFirstIncompleteStaySetupStep(tourismRegistrationRequired, completion)
+        );
+      }
+      return;
+    }
 
     if (!step) {
       setCurrentStep(resolveFirstIncompleteStaySetupStep(tourismRegistrationRequired, completion));
@@ -102,10 +132,6 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     }
 
     if (step === 'settlement') {
-      if (isRegistrationLockedStep('settlement', isRegistered)) {
-        setCheckInSheetOpen(true);
-        return;
-      }
       if (tourismRegistrationRequired && !tourismComplete) {
         setCurrentStep('register');
         return;
@@ -123,11 +149,6 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     }
 
     const target = step as StaySetupStep;
-
-    if (isRegistrationLockedStep(target, isRegistered)) {
-      setCheckInSheetOpen(true);
-      return;
-    }
 
     setCurrentStep(target);
   }, [
@@ -157,8 +178,8 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   const navigateToStep = useCallback(
     (step: StaySetupStep) => {
-      if (isRegistrationLockedStep(step, isRegistered)) {
-        openCheckInSheet();
+      if (!isRegistered) {
+        setCurrentStep(step);
         return;
       }
 
@@ -203,7 +224,12 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         id: 'register',
         label: t('tabs.register'),
         showPrimary: false,
-        render: () => <TourismGuestsRegistrationPanel onComplete={handleTourismComplete} />,
+        render: () => (
+          <TourismGuestsRegistrationPanel
+            onComplete={handleTourismComplete}
+            interactionEnabled={isRegistered}
+          />
+        ),
         onComplete: handleTourismComplete,
       });
     }
@@ -218,6 +244,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
             tenantSlug={tenantSlug}
             initialContactWhatsapp={stayContactWhatsapp}
             onComplete={handleContactComplete}
+            interactionEnabled={isRegistered}
           />
         ),
         onComplete: handleContactComplete,
@@ -243,6 +270,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     stayContactWhatsapp,
     router,
     visibleSteps,
+    isRegistered,
   ]);
 
   const activeStep = stepsConfig.find((step) => step.id === currentStep) ?? stepsConfig[0];
@@ -333,19 +361,6 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         />
       </ArrivalGuideStepsShell>
 
-      {!isRegistered ? (
-        <p className="mx-4 mt-3 text-xs leading-relaxed text-muted-foreground">
-          {t('guestCheckIn.hint')}{' '}
-          <button
-            type="button"
-            className="font-medium text-primary underline underline-offset-2"
-            onClick={openCheckInSheet}
-          >
-            {t('guestCheckIn.link')}
-          </button>
-        </p>
-      ) : null}
-
       <main className="flex flex-col justify-between gap-y-6 px-4 pt-4 pb-8">
         {activeStep?.render()}
         {showPrimaryButton ? (
@@ -355,7 +370,14 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         ) : null}
       </main>
 
-      <CheckInRequiredSheet open={checkInSheetOpen} onOpenChange={setCheckInSheetOpen} />
+      <CheckInRequiredSheet
+        open={checkInSheetOpen}
+        dismissible={isRegistered}
+        onOpenChange={(next) => {
+          if (!isRegistered && !next) return;
+          setCheckInSheetOpen(next);
+        }}
+      />
       <TourismRegistrationRequiredSheet
         open={tourismGateSheetOpen}
         onOpenChange={setTourismGateSheetOpen}

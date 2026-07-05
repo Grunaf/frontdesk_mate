@@ -31,16 +31,25 @@ function bottomSheetSizeClassName(size: BottomSheetSize): string {
 
 const BottomSheetSizeContext = React.createContext<BottomSheetSize>(BOTTOM_SHEET_SIZES.medium);
 
-type BottomSheetProps = React.ComponentProps<typeof DrawerPrimitive.Root>;
+const BottomSheetChromeContext = React.createContext(false);
+
+type BottomSheetProps = React.ComponentProps<typeof DrawerPrimitive.Root> & {
+  /** When true, dim overlay starts below `--app-header-height` so the app header stays visible and clickable. */
+  preserveAppHeaderAccess?: boolean;
+};
 
 function BottomSheet({
   shouldScaleBackground = false,
   noBodyStyles = true,
   open,
   onOpenChange,
+  dismissible,
+  preserveAppHeaderAccess: preserveAppHeaderAccessProp,
   ...props
 }: BottomSheetProps) {
   useRegisterBottomSheetOpen(open);
+
+  const preserveAppHeaderAccess = preserveAppHeaderAccessProp ?? dismissible === false;
 
   const handleOpenChange = React.useCallback(
     (next: boolean) => {
@@ -50,14 +59,17 @@ function BottomSheet({
   );
 
   return (
-    <DrawerPrimitive.Root
-      data-slot="bottom-sheet"
-      shouldScaleBackground={shouldScaleBackground}
-      noBodyStyles={noBodyStyles}
-      open={open}
-      onOpenChange={handleOpenChange}
-      {...props}
-    />
+    <BottomSheetChromeContext.Provider value={preserveAppHeaderAccess}>
+      <DrawerPrimitive.Root
+        data-slot="bottom-sheet"
+        shouldScaleBackground={shouldScaleBackground}
+        noBodyStyles={noBodyStyles}
+        open={open}
+        onOpenChange={handleOpenChange}
+        dismissible={dismissible}
+        {...props}
+      />
+    </BottomSheetChromeContext.Provider>
   );
 }
 
@@ -77,11 +89,14 @@ function BottomSheetOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Overlay>) {
+  const preserveAppHeaderAccess = React.useContext(BottomSheetChromeContext);
+
   return (
     <DrawerPrimitive.Overlay
       data-slot="bottom-sheet-overlay"
       className={cn(
-        'fixed inset-0 z-50 bg-black/80 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',
+        'fixed inset-x-0 bottom-0 z-50 bg-black/80 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',
+        preserveAppHeaderAccess ? 'top-[var(--app-header-height,0px)]' : 'top-0',
         className
       )}
       {...props}
@@ -93,10 +108,12 @@ function BottomSheetContent({
   className,
   children,
   showCloseButton = true,
+  showDragHandle = true,
   size = BOTTOM_SHEET_SIZES.medium,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content> & {
   showCloseButton?: boolean;
+  showDragHandle?: boolean;
   size?: BottomSheetSize;
 }) {
   return (
@@ -109,13 +126,16 @@ function BottomSheetContent({
           className={cn(
             'fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl border bg-popover text-popover-foreground shadow-lg outline-none',
             bottomSheetSizeClassName(size),
+            !showDragHandle && 'pt-5',
             className
           )}
           {...props}
         >
-          <DrawerPrimitive.Handle className="mx-auto mt-3 flex w-full shrink-0 cursor-grab justify-center py-1 active:cursor-grabbing">
-            <span className="h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden="true" />
-          </DrawerPrimitive.Handle>
+          {showDragHandle ? (
+            <DrawerPrimitive.Handle className="mx-auto mt-3 flex w-full shrink-0 cursor-grab justify-center py-1 active:cursor-grabbing">
+              <span className="h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden="true" />
+            </DrawerPrimitive.Handle>
+          ) : null}
           {children}
           {showCloseButton ? (
             <BottomSheetClose asChild>
