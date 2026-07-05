@@ -31,6 +31,7 @@ import { resolveStoredPhoneMask } from '@/shared/lib/phoneDisplay';
 import { normalizeTimeValue } from '@/shared/lib/time';
 import type { TenantHostelSettings } from '@/entities/tenant/model/hostelSettings';
 import { resolveCityTaxDisplay } from '@/entities/tenant/lib/resolveHostelMoney';
+import { mergeTenantSettingsWithPrevious } from './(protected)/tenants/lib/mergeTenantSettingsWithPrevious';
 
 function parseAccessPoints(formData: FormData): AccessPoint[] | undefined {
   const raw = String(formData.get('accessPointsJson') || '').trim();
@@ -455,83 +456,22 @@ export async function saveTenantAction(formData: FormData) {
 
   const lookupSlug = originalSlug || slug;
   const previousTenant = lookupSlug ? await getTenantRecord(lookupSlug) : null;
-  let settings = readSettings(formData);
-
-  if (previousTenant) {
-    const previous = previousTenant.settings;
-
-    if (!settings.hostel && previous.hostel) {
-      settings = { ...settings, hostel: previous.hostel };
-    }
-
-    if (!settings.landing?.roomTypes?.length && previous.landing?.roomTypes?.length) {
-      settings = {
-        ...settings,
-        landing: {
-          ...previous.landing,
-          ...settings.landing,
-          roomTypes: previous.landing.roomTypes,
-        },
-      };
-    }
-
-    if (
-      settings.guestExtras === undefined &&
-      previous.guestExtras &&
-      previous.guestExtras.length > 0
-    ) {
-      settings = {
-        ...settings,
-        guestExtras: previous.guestExtras,
-      };
-    }
-
-    if (
-      settings.cityPackNeedNowPlaceIds === undefined &&
-      previous.cityPackNeedNowPlaceIds !== undefined
-    ) {
-      settings = {
-        ...settings,
-        cityPackNeedNowPlaceIds: previous.cityPackNeedNowPlaceIds,
-      };
-    }
-  }
+  let settings = mergeTenantSettingsWithPrevious(
+    formData,
+    readSettings(formData),
+    previousTenant?.settings
+  );
 
   settings = {
     ...settings,
     cityTax: resolveCityTaxDisplay(settings) || previousTenant?.settings.cityTax,
   };
 
-  if (
-    previousTenant?.settings.houseRules?.length &&
-    (!settings.houseRules || settings.houseRules.length === 0)
-  ) {
-    settings = {
-      ...settings,
-      houseRules: previousTenant.settings.houseRules,
-    };
-  }
   const deskPin = String(formData.get('receptionDeskPin') || '').trim();
   const previousHash = previousTenant?.settings.reception?.deskPinHash;
-  const previousReception = previousTenant?.settings.reception;
 
   if (deskPin && !isNewDeskPinValid(deskPin)) {
     throw new Error(`Reception desk PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`);
-  }
-
-  if (previousReception) {
-    if (!formData.has('guestAccessMessageTemplate') && previousReception.guestAccessMessageTemplate) {
-      settings.reception = {
-        ...settings.reception,
-        guestAccessMessageTemplate: previousReception.guestAccessMessageTemplate,
-      };
-    }
-    if (!formData.has('guestAccessPinMissingText') && previousReception.guestAccessPinMissingText) {
-      settings.reception = {
-        ...settings.reception,
-        guestAccessPinMissingText: previousReception.guestAccessPinMissingText,
-      };
-    }
   }
 
   if (deskPin) {

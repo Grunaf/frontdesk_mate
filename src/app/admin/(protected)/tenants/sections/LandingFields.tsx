@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { LandingRoomType, TenantLandingSettings, TenantSettings } from '@/entities/tenant';
 import { needsLandingBookingEngine } from '@/entities/tenant/lib/resolveLandingBookingGap';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
@@ -168,6 +168,16 @@ export function LandingFields({
   );
   const heroBgUrl = mergedSettings.heroBgUrl ?? '';
 
+  const patchLanding = (patch: Partial<TenantLandingSettings>) => {
+    updateDraft({
+      landing: {
+        ...mergedSettings.landing,
+        roomTypes: mergedSettings.landing?.roomTypes ?? [],
+        ...patch,
+      },
+    });
+  };
+
   const heroField = (
     <AdminImageField
       label="Hero image"
@@ -189,21 +199,15 @@ export function LandingFields({
     () => resolveTenantCurrency(mergedSettings).primary,
     [mergedSettings]
   );
-  const initial = useMemo(() => resolveLandingRooms(mergedSettings), [mergedSettings]);
-  const showEngineId = shouldShowEngineRoomTypeId(settings ?? {});
-  const [roomTypes, setRoomTypes] = useState<LandingRoomType[]>(
-    draft.landing?.roomTypes ?? (initial.roomTypes.length > 0 ? initial.roomTypes : [])
-  );
-  const showBookingGap = needsLandingBookingEngine(settings ?? {});
+  const fallbackRooms = useMemo(() => resolveLandingRooms(mergedSettings), [mergedSettings]);
+  const roomTypes =
+    mergedSettings.landing?.roomTypes ??
+    (fallbackRooms.roomTypes.length > 0 ? fallbackRooms.roomTypes : []);
+  const showEngineId = shouldShowEngineRoomTypeId(mergedSettings);
+  const showBookingGap = needsLandingBookingEngine(mergedSettings);
 
-  const syncLanding = (nextRooms: LandingRoomType[]) => {
-    setRoomTypes(nextRooms);
-    const landing: TenantLandingSettings = {
-      roomsSectionTitle: settings?.landing?.roomsSectionTitle,
-      roomsSectionSubtitle: settings?.landing?.roomsSectionSubtitle,
-      roomTypes: nextRooms,
-    };
-    updateDraft({ landing });
+  const syncRoomTypes = (nextRooms: LandingRoomType[]) => {
+    patchLanding({ roomTypes: nextRooms });
   };
 
   if (scope === 'launch-hero') {
@@ -217,7 +221,7 @@ export function LandingFields({
         <button
           type="button"
           className="text-xs text-primary hover:underline"
-          onClick={() => syncLanding([...roomTypes, emptyRoom(roomTypes.length)])}
+          onClick={() => syncRoomTypes([...roomTypes, emptyRoom(roomTypes.length)])}
         >
           Add room type
         </button>
@@ -238,9 +242,9 @@ export function LandingFields({
           showDescription={scope === 'full'}
           tenantSlug={tenantSlug}
           onChange={(next) =>
-            syncLanding(roomTypes.map((item, i) => (i === index ? next : item)))
+            syncRoomTypes(roomTypes.map((item, i) => (i === index ? next : item)))
           }
-          onRemove={() => syncLanding(roomTypes.filter((_, i) => i !== index))}
+          onRemove={() => syncRoomTypes(roomTypes.filter((_, i) => i !== index))}
         />
       ))}
     </div>
@@ -272,14 +276,14 @@ export function LandingFields({
       {heroField}
       <AdminField
         label="Rooms section title"
-        name="landingRoomsSectionTitle"
-        defaultValue={settings?.landing?.roomsSectionTitle}
+        value={mergedSettings.landing?.roomsSectionTitle ?? ''}
+        onChange={(value) => patchLanding({ roomsSectionTitle: value || undefined })}
         placeholder="Choose your stay"
       />
       <AdminField
         label="Rooms section subtitle"
-        name="landingRoomsSectionSubtitle"
-        defaultValue={settings?.landing?.roomsSectionSubtitle}
+        value={mergedSettings.landing?.roomsSectionSubtitle ?? ''}
+        onChange={(value) => patchLanding({ roomsSectionSubtitle: value || undefined })}
         placeholder="Select between dorm beds and private rooms"
       />
       {roomList}

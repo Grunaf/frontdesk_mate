@@ -211,18 +211,18 @@ function SectionPanel({
       return (
         <LandingFields
           tenantSlug={identity.slug}
-          settings={s}
+          settings={mergedSettings}
           readinessInput={readinessInput}
           onJumpToSection={onJumpToSection}
         />
       );
     case 'booking':
-      return <BookingEngineFields settings={s} readinessInput={readinessInput} />;
+      return <BookingEngineFields settings={mergedSettings} readinessInput={readinessInput} />;
     case 'arrival-journey':
       return (
         <ArrivalJourneyFields
           tenantSlug={identity.slug}
-          settings={s}
+          settings={mergedSettings}
           cityPackId={identity.cityPackId}
           cityPackLabel={cityPackOptions.find((pack) => pack.id === identity.cityPackId)?.label}
           cityPackGateSnapshot={cityPackGateSnapshot}
@@ -236,7 +236,7 @@ function SectionPanel({
           <GuestTourismRegistrationComplianceField mergedSettings={mergedSettings} />
           <GuestAppFields
             tenantSlug={identity.slug}
-            settings={s}
+            settings={mergedSettings}
             cityPackId={identity.cityPackId}
             cityPackContent={cityPackContentsById[identity.cityPackId]}
             cityPackGateSnapshot={cityPackGateSnapshot}
@@ -246,9 +246,9 @@ function SectionPanel({
         </>
       );
     case 'wifi':
-      return <WifiFields settings={s} readinessInput={readinessInput} />;
+      return <WifiFields settings={mergedSettings} readinessInput={readinessInput} />;
     case 'contacts':
-      return <ContactsFields settings={s} readinessInput={readinessInput} />;
+      return <ContactsFields settings={mergedSettings} readinessInput={readinessInput} />;
   }
 }
 
@@ -658,12 +658,6 @@ function TenantFormAccordionInner({
       <input type="hidden" name="slug" value={identity.slug} />
       <input type="hidden" name="name" value={identity.name} />
       <input type="hidden" name="cityPackId" value={identity.cityPackId} />
-      <TenantFormHiddenPayload
-        subscriptionStartsAt={subscription.subscriptionStartsAt}
-        subscriptionEndsAt={subscription.subscriptionEndsAt}
-        mergedSettings={mergedSettings}
-        roomMapEnabled={draft.roomMapEnabled ?? isRoomMapModuleEnabled(mergedSettings)}
-      />
 
       {toast ? (
         <AdminToast
@@ -880,6 +874,13 @@ function TenantFormAccordionInner({
         </div>
       </div>
       )}
+
+      <TenantFormHiddenPayload
+        subscriptionStartsAt={subscription.subscriptionStartsAt}
+        subscriptionEndsAt={subscription.subscriptionEndsAt}
+        mergedSettings={mergedSettings}
+        roomMapEnabled={draft.roomMapEnabled ?? isRoomMapModuleEnabled(mergedSettings)}
+      />
     </form>
     </>
   );

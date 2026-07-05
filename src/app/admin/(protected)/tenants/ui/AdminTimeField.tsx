@@ -6,8 +6,10 @@ import { adminFieldWidthClass, type AdminFieldWidth } from './AdminField';
 
 interface AdminTimeFieldProps {
   label: string;
-  name: string;
+  name?: string;
   defaultValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
   hint?: string;
   missing?: boolean;
   width?: AdminFieldWidth;
@@ -17,11 +19,15 @@ export function AdminTimeField({
   label,
   name,
   defaultValue,
+  value,
+  onChange,
   hint,
   missing = false,
   width = 'xs',
 }: AdminTimeFieldProps) {
-  const invalid = Boolean(defaultValue?.trim()) && !isValidTimeValue(defaultValue);
+  const isControlled = value !== undefined;
+  const displayValue = isControlled ? value : defaultValue;
+  const invalid = Boolean(displayValue?.trim()) && !isValidTimeValue(displayValue);
 
   return (
     <label className="block space-y-1.5">
@@ -33,9 +39,11 @@ export function AdminTimeField({
       </span>
       {hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
       <input
-        name={name}
+        {...(name ? { name } : {})}
         type="time"
-        defaultValue={defaultValue}
+        value={isControlled ? value : undefined}
+        defaultValue={isControlled ? undefined : defaultValue}
+        onChange={isControlled ? (event) => onChange?.(event.target.value) : undefined}
         className={cn(
           'rounded-md border bg-background px-3 py-2 text-sm',
           adminFieldWidthClass(width),

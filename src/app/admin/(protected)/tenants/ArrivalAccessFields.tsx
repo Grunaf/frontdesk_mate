@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AccessPoint, ArrivalLayoutKind, TenantSettings } from '@/entities/tenant';
 import { isArrivalAccessMissing } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { normalizeAccessPoints } from '@/entities/tenant/lib/normalizeAccessPoints';
 import { AdminField } from './ui/AdminField';
 import { AdminImageField } from './ui/AdminImageField';
+import { useTenantFormDraft } from './ui/TenantFormDraftContext';
 
 interface ArrivalAccessFieldsProps {
   tenantSlug: string;
@@ -167,6 +168,7 @@ function AccessPointRow({
 }
 
 export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessFieldsProps) {
+  const { updateDraft } = useTenantFormDraft();
   const initialPoints = useMemo(() => normalizeAccessPoints(settings ?? {}), [settings]);
   const showAccessGap = isArrivalAccessMissing(settings ?? {});
   const [landmark, setLandmark] = useState(settings?.arrivalAccess?.landmark ?? '');
@@ -176,9 +178,42 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
         ? 'building_then_zones'
         : 'direct_to_floor')
   );
+  const [dayMode, setDayMode] = useState<
+    '' | NonNullable<TenantSettings['arrivalAccess']>['dayMode']
+  >(settings?.arrivalAccess?.dayMode ?? '');
+  const [bedFloorMapJson, setBedFloorMapJson] = useState(
+    settings?.arrivalAccess?.bedFloorMap
+      ? JSON.stringify(settings.arrivalAccess.bedFloorMap, null, 2)
+      : ''
+  );
   const [points, setPoints] = useState<AccessPoint[]>(
     initialPoints.length > 0 ? initialPoints : [emptyPoint(0, layoutKind)]
   );
+
+  useEffect(() => {
+    let bedFloorMap: Record<string, string> | undefined;
+    const trimmed = bedFloorMapJson.trim();
+    if (trimmed) {
+      try {
+        const parsed = JSON.parse(trimmed) as Record<string, string>;
+        if (parsed && typeof parsed === 'object') {
+          bedFloorMap = parsed;
+        }
+      } catch {
+        bedFloorMap = settings?.arrivalAccess?.bedFloorMap;
+      }
+    }
+
+    updateDraft({
+      arrivalAccess: {
+        layoutKind,
+        dayMode: dayMode || undefined,
+        landmark: landmark || undefined,
+        accessPoints: points,
+        bedFloorMap,
+      },
+    });
+  }, [bedFloorMapJson, dayMode, landmark, layoutKind, points, settings?.arrivalAccess?.bedFloorMap, updateDraft]);
 
   return (
     <div className="space-y-4">
@@ -188,13 +223,10 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
           can enter the hostel.
         </p>
       ) : null}
-      <input type="hidden" name="accessPointsJson" value={JSON.stringify(points)} />
-      <input type="hidden" name="arrivalLandmark" value={landmark} />
 
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">Arrival layout</span>
         <select
-          name="arrivalLayoutKind"
           value={layoutKind}
           onChange={(event) => setLayoutKind(event.target.value as ArrivalLayoutKind)}
           className="w-full rounded-md border bg-background px-3 py-2 text-sm"
@@ -213,8 +245,10 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">Day check-in mode</span>
         <select
-          name="arrivalDayMode"
-          defaultValue={settings?.arrivalAccess?.dayMode ?? ''}
+          value={dayMode}
+          onChange={(event) =>
+            setDayMode(event.target.value as '' | NonNullable<TenantSettings['arrivalAccess']>['dayMode'])
+          }
           className="w-full rounded-md border bg-background px-3 py-2 text-sm"
         >
           <option value="">Auto</option>
@@ -270,12 +304,8 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
 
       <AdminField
         label="Bed → floor map (JSON)"
-        name="bedFloorMapJson"
-        defaultValue={
-          settings?.arrivalAccess?.bedFloorMap
-            ? JSON.stringify(settings.arrivalAccess.bedFloorMap, null, 2)
-            : ''
-        }
+        value={bedFloorMapJson}
+        onChange={setBedFloorMapJson}
         placeholder='{"4B": "2"}'
         hint="Filters access points by the guest session bed floor when checked in."
       />

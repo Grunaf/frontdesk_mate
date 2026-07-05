@@ -140,7 +140,6 @@ export function LaunchSetupWizard({
                 <BookingEngineFields settings={settings} readinessInput={readinessInput} />
               ) : (
                 <>
-                  <input type="hidden" name="bookingProvider" value="none" />
                   <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm">
                     <p className="text-muted-foreground">
                       Guests book via your reception WhatsApp. Room cards use the same number unless

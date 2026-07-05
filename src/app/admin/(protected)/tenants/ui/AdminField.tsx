@@ -46,7 +46,7 @@ export function AdminField({
   width = 'full',
 }: {
   label: string;
-  name: string;
+  name?: string;
   defaultValue?: string;
   value?: string;
   onChange?: (value: string) => void;
@@ -67,7 +67,7 @@ export function AdminField({
       </span>
       {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
       <input
-        name={name}
+        {...(name ? { name } : {})}
         type={type}
         value={isControlled ? value : undefined}
         defaultValue={isControlled ? undefined : defaultValue}
@@ -87,19 +87,25 @@ export function AdminTextarea({
   label,
   name,
   defaultValue,
+  value,
+  onChange,
   placeholder,
   hint,
   rows = 3,
   missing = false,
 }: {
   label: string;
-  name: string;
+  name?: string;
   defaultValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
   hint?: string;
   rows?: number;
   missing?: boolean;
 }) {
+  const isControlled = value !== undefined;
+
   return (
     <label className="block space-y-1.5">
       <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
@@ -108,10 +114,12 @@ export function AdminTextarea({
       </span>
       {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
       <textarea
-        name={name}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
+        {...(name ? { name } : {})}
         rows={rows}
+        value={isControlled ? value : undefined}
+        defaultValue={isControlled ? undefined : defaultValue}
+        onChange={isControlled ? (event) => onChange?.(event.target.value) : undefined}
+        placeholder={placeholder}
         className={cn(
           'w-full rounded-md border bg-background px-3 py-2 text-sm',
           missing && 'border-amber-400 ring-1 ring-amber-200'
@@ -184,20 +192,30 @@ export function AdminCheckbox({
   label,
   name,
   defaultChecked,
+  checked,
+  onCheckedChange,
   hint,
 }: {
   label: string;
-  name: string;
+  name?: string;
   defaultChecked?: boolean;
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
   hint?: string;
 }) {
+  const isControlled = checked !== undefined;
+
   return (
     <label className="flex items-start gap-2 text-sm">
       <input
         type="checkbox"
-        name={name}
+        {...(name ? { name } : {})}
         value="true"
-        defaultChecked={defaultChecked}
+        checked={isControlled ? checked : undefined}
+        defaultChecked={isControlled ? undefined : defaultChecked}
+        onChange={
+          isControlled ? (event) => onCheckedChange?.(event.target.checked) : undefined
+        }
         className="mt-0.5 size-4 shrink-0 rounded border"
       />
       <span>

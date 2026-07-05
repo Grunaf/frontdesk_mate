@@ -6,6 +6,7 @@ import type { CityPackId, TenantSettings } from '@/entities/tenant';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { ArrivalAccessFields } from '../ArrivalAccessFields';
 import { AdminField } from '../ui/AdminField';
+import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { ArrivalTransportFields } from './ArrivalTransportFields';
 
 export type ArrivalJourneyScope = 'full' | 'launch-core';
@@ -35,7 +36,17 @@ export function ArrivalJourneyFields({
   readinessInput,
   scope = 'full',
 }: ArrivalJourneyFieldsProps) {
+  const { updateDraft } = useTenantFormDraft();
   const isLaunch = scope === 'launch-core';
+
+  const patchContacts = (patch: NonNullable<TenantSettings['contacts']>) => {
+    updateDraft({
+      contacts: {
+        ...settings?.contacts,
+        ...patch,
+      },
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -43,12 +54,16 @@ export function ArrivalJourneyFields({
         <SectionHeading>Find the building</SectionHeading>
         <AdminField
           label="Property address"
-          name="address"
-          defaultValue={settings?.contacts?.address}
+          value={settings?.contacts?.address ?? ''}
+          onChange={(value) => patchContacts({ address: value || undefined })}
           missing={isTenantFieldMissing('address', readinessInput)}
           hint="Substituted into walk directions as {address}."
         />
-        <AdminField label="Google Maps URL" name="mapsUrl" defaultValue={settings?.contacts?.mapsUrl} />
+        <AdminField
+          label="Google Maps URL"
+          value={settings?.contacts?.mapsUrl ?? ''}
+          onChange={(value) => patchContacts({ mapsUrl: value || undefined })}
+        />
         <p className="text-sm text-muted-foreground">
           Phones and reception hours are in <strong>Reception & hostel</strong>.
         </p>

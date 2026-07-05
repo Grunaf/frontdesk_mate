@@ -7,12 +7,16 @@ import {
   DEFAULT_GUEST_ACCESS_PIN_MISSING_TEXT,
 } from '@/entities/tenant';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
-import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
+import {
+  normalizePhoneDisplayPreset,
+  type PhoneDisplayPresetId,
+} from '@/shared/lib/phone-display-presets';
 import { shouldShowReceptionWhatsappToggles } from '../lib/tenantAdminFieldSpecs';
 import { AdminCheckbox, AdminField, AdminTextarea } from '../ui/AdminField';
-import { AdminPhoneField } from '../ui/AdminPhoneField';
+import { AdminPhoneFieldInline } from '../ui/AdminPhoneField';
 import { AdminTimeField } from '../ui/AdminTimeField';
 import { AdminFieldRow } from '../ui/AdminField';
+import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { HostelPolicyFields } from './HostelPolicyFields';
 
 export type ContactsFieldsScope = 'full' | 'launch-core';
@@ -36,15 +40,75 @@ function hasPhoneChannelOverrides(settings: TenantSettings): boolean {
   );
 }
 
+function useContactsDraft(settings: TenantSettings | undefined) {
+  const { updateDraft } = useTenantFormDraft();
+
+  const patchContacts = (patch: NonNullable<TenantSettings['contacts']>) => {
+    updateDraft({
+      contacts: {
+        ...settings?.contacts,
+        ...patch,
+      },
+    });
+  };
+
+  const patchReception = (patch: Omit<NonNullable<TenantSettings['reception']>, 'deskPinHash'>) => {
+    updateDraft({
+      reception: {
+        ...settings?.reception,
+        ...patch,
+      },
+    });
+  };
+
+  return { patchContacts, patchReception };
+}
+
+function ReceptionPhoneField({
+  settings,
+  readinessInput,
+}: {
+  settings?: TenantSettings;
+  readinessInput: TenantReadinessInput;
+}) {
+  const { patchContacts } = useContactsDraft(settings);
+  const raw = settings?.contacts?.phoneRaw ?? '';
+  const mask = settings?.contacts?.phoneMask ?? '';
+  const preset = normalizePhoneDisplayPreset(settings?.contacts?.phoneFormatPreset) as PhoneDisplayPresetId;
+
+  return (
+    <AdminPhoneFieldInline
+      label="Reception phone"
+      raw={raw}
+      mask={mask}
+      preset={preset}
+      onRawChange={(value) =>
+        patchContacts({
+          phoneRaw: value || undefined,
+          phoneMask: mask || undefined,
+          phoneFormatPreset: preset,
+        })
+      }
+      onMaskChange={(value) => patchContacts({ phoneMask: value || undefined })}
+      onPresetChange={(value) => patchContacts({ phoneFormatPreset: value })}
+      collapseWhenEmpty={false}
+      hint="Used for reception desk, WhatsApp, and landing booking when no override is set."
+    />
+  );
+}
+
 export function ContactsFields({
   settings,
   readinessInput,
   scope = 'full',
 }: ContactsFieldsProps) {
+  const { patchContacts, patchReception } = useContactsDraft(settings);
   const showReceptionToggles = shouldShowReceptionWhatsappToggles(settings ?? {});
   const [overridesOpen, setOverridesOpen] = useState(() =>
     hasPhoneChannelOverrides(settings ?? {})
   );
+
+  const receptionPhoneMissing = isTenantFieldMissing('phoneRaw', readinessInput);
 
   if (scope === 'launch-core') {
     return (
@@ -53,20 +117,39 @@ export function ContactsFields({
           Reception phone and stay policy live here. Landing hero and room cards are in the next
           blocks. Property address is in Arrival journey.
         </p>
-        <AdminPhoneField
-          label="Reception phone"
-          rawName="phoneRaw"
-          maskName="phoneMask"
-          presetName="phoneFormatPreset"
-          defaultRaw={settings?.contacts?.phoneRaw}
-          defaultMask={settings?.contacts?.phoneMask}
-          defaultPreset={normalizePhoneDisplayPreset(settings?.contacts?.phoneFormatPreset)}
-          missing={isTenantFieldMissing('phoneRaw', readinessInput)}
-        />
+        <div>
+          {receptionPhoneMissing ? (
+            <span className="text-xs font-normal text-amber-700">Required for guests</span>
+          ) : null}
+          <AdminPhoneFieldInline
+            label="Reception phone"
+            raw={settings?.contacts?.phoneRaw ?? ''}
+            mask={settings?.contacts?.phoneMask ?? ''}
+            preset={
+              normalizePhoneDisplayPreset(settings?.contacts?.phoneFormatPreset) as PhoneDisplayPresetId
+            }
+            onRawChange={(value) =>
+              patchContacts({
+                phoneRaw: value || undefined,
+                phoneMask: settings?.contacts?.phoneMask,
+                phoneFormatPreset: settings?.contacts?.phoneFormatPreset,
+              })
+            }
+            onMaskChange={(value) => patchContacts({ phoneMask: value || undefined })}
+            onPresetChange={(value) => patchContacts({ phoneFormatPreset: value })}
+            collapseWhenEmpty={false}
+          />
+        </div>
         <HostelPolicyFields settings={settings} readinessInput={readinessInput} scope="launch-core" />
       </div>
     );
   }
+
+  const taxiRaw = settings?.contacts?.taxiPhoneRaw ?? '';
+  const taxiMask = settings?.contacts?.taxiPhoneMask ?? '';
+  const taxiPreset = normalizePhoneDisplayPreset(
+    settings?.contacts?.taxiPhoneFormatPreset
+  ) as PhoneDisplayPresetId;
 
   return (
     <div className="space-y-6">
@@ -77,19 +160,19 @@ export function ContactsFields({
         <AdminFieldRow>
           <AdminTimeField
             label="Reception open"
-            name="receptionOpen"
-            defaultValue={settings?.reception?.open}
+            value={settings?.reception?.open ?? ''}
+            onChange={(value) => patchReception({ open: value || undefined })}
           />
           <AdminTimeField
             label="Reception close"
-            name="receptionClose"
-            defaultValue={settings?.reception?.close}
+            value={settings?.reception?.close ?? ''}
+            onChange={(value) => patchReception({ close: value || undefined })}
           />
         </AdminFieldRow>
         <AdminField
           label="Reception availability hint"
-          name="receptionAvailabilityHint"
-          defaultValue={settings?.reception?.availabilityHint}
+          value={settings?.reception?.availabilityHint ?? ''}
+          onChange={(value) => patchReception({ availabilityHint: value || undefined })}
           placeholder="Replies on WhatsApp during reception hours."
           width="lg"
         />
@@ -105,13 +188,13 @@ export function ContactsFields({
           <>
             <AdminCheckbox
               label="Reception reachable on WhatsApp"
-              name="receptionWhatsappEnabled"
-              defaultChecked={settings?.reception?.whatsappEnabled !== false}
+              checked={settings?.reception?.whatsappEnabled !== false}
+              onCheckedChange={(checked) => patchReception({ whatsappEnabled: checked })}
             />
             <AdminCheckbox
               label="Reception can help book a taxi"
-              name="receptionCanHelpWithTaxi"
-              defaultChecked={settings?.reception?.canHelpWithTaxi !== false}
+              checked={settings?.reception?.canHelpWithTaxi !== false}
+              onCheckedChange={(checked) => patchReception({ canHelpWithTaxi: checked })}
             />
           </>
         ) : null}
@@ -131,16 +214,18 @@ export function ContactsFields({
         </p>
         <AdminTextarea
           label="Message template"
-          name="guestAccessMessageTemplate"
           rows={10}
-          defaultValue={settings?.reception?.guestAccessMessageTemplate ?? ''}
+          value={settings?.reception?.guestAccessMessageTemplate ?? ''}
+          onChange={(value) =>
+            patchReception({ guestAccessMessageTemplate: value.trim() || undefined })
+          }
           placeholder={DEFAULT_GUEST_ACCESS_MESSAGE_TEMPLATE}
           hint="Empty uses the built-in default (see placeholder). Edit to match your Booking messages."
         />
         <AdminField
           label="PIN missing text"
-          name="guestAccessPinMissingText"
-          defaultValue={settings?.reception?.guestAccessPinMissingText ?? ''}
+          value={settings?.reception?.guestAccessPinMissingText ?? ''}
+          onChange={(value) => patchReception({ guestAccessPinMissingText: value.trim() || undefined })}
           placeholder={DEFAULT_GUEST_ACCESS_PIN_MISSING_TEXT}
           hint="Used for {pinOrHelp} when reception no longer has the PIN (e.g. from the access list)."
           width="lg"
@@ -151,17 +236,7 @@ export function ContactsFields({
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Phones & email
         </p>
-        <AdminPhoneField
-          label="Reception phone"
-          rawName="phoneRaw"
-          maskName="phoneMask"
-          presetName="phoneFormatPreset"
-          defaultRaw={settings?.contacts?.phoneRaw}
-          defaultMask={settings?.contacts?.phoneMask}
-          defaultPreset={normalizePhoneDisplayPreset(settings?.contacts?.phoneFormatPreset)}
-          missing={isTenantFieldMissing('phoneRaw', readinessInput)}
-          hint="Used for reception desk, WhatsApp, and landing booking when no override is set."
-        />
+        <ReceptionPhoneField settings={settings} readinessInput={readinessInput} />
 
         <details
           open={overridesOpen}
@@ -177,32 +252,40 @@ export function ContactsFields({
           <div className="mt-4 space-y-4">
             <AdminField
               label="Reception WhatsApp"
-              name="receptionWhatsappPhoneRaw"
-              defaultValue={settings?.reception?.whatsappPhoneRaw}
+              value={settings?.reception?.whatsappPhoneRaw ?? ''}
+              onChange={(value) => patchReception({ whatsappPhoneRaw: value || undefined })}
               hint="Defaults to reception phone when empty."
               width="md"
             />
             <AdminField
               label="Booking WhatsApp"
-              name="bookingWhatsappPhoneRaw"
-              defaultValue={settings?.contacts?.bookingWhatsappPhoneRaw}
+              value={settings?.contacts?.bookingWhatsappPhoneRaw ?? ''}
+              onChange={(value) => patchContacts({ bookingWhatsappPhoneRaw: value || undefined })}
               hint="Landing hero and room cards use this when set; otherwise reception phone."
               width="md"
             />
-            <AdminPhoneField
+            <AdminPhoneFieldInline
               label="Taxi phone override"
-              rawName="taxiPhoneRaw"
-              maskName="taxiPhoneMask"
-              presetName="taxiPhoneFormatPreset"
-              defaultRaw={settings?.contacts?.taxiPhoneRaw}
-              defaultMask={settings?.contacts?.taxiPhoneMask}
-              defaultPreset={normalizePhoneDisplayPreset(settings?.contacts?.taxiPhoneFormatPreset)}
+              raw={taxiRaw}
+              mask={taxiMask}
+              preset={taxiPreset}
+              onRawChange={(value) =>
+                patchContacts({
+                  taxiPhoneRaw: value || undefined,
+                  taxiPhoneMask: taxiMask || undefined,
+                  taxiPhoneFormatPreset: taxiPreset,
+                })
+              }
+              onMaskChange={(value) => patchContacts({ taxiPhoneMask: value || undefined })}
+              onPresetChange={(value: PhoneDisplayPresetId) =>
+                patchContacts({ taxiPhoneFormatPreset: value })
+              }
               hint="Overrides the city pack recommended taxi number."
             />
             <AdminField
               label="Route feedback WhatsApp"
-              name="feedbackPhoneRaw"
-              defaultValue={settings?.contacts?.feedbackPhoneRaw}
+              value={settings?.contacts?.feedbackPhoneRaw ?? ''}
+              onChange={(value) => patchContacts({ feedbackPhoneRaw: value || undefined })}
               width="md"
             />
           </div>
@@ -210,9 +293,9 @@ export function ContactsFields({
 
         <AdminField
           label="Email"
-          name="email"
           type="email"
-          defaultValue={settings?.contacts?.email}
+          value={settings?.contacts?.email ?? ''}
+          onChange={(value) => patchContacts({ email: value || undefined })}
           width="md"
         />
       </div>
