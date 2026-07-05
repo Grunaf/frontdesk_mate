@@ -1,7 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-vi.mock('server-only', () => ({}));
-
 const upsertTenantMock = vi.fn();
 const getCityPackForAdminMock = vi.fn();
 

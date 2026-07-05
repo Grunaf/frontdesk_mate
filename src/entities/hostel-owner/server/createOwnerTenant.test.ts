@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@/entities/tenant-audit', () => ({
+  insertTenantAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/shared/lib/db/admin', () => ({
   getSupabaseAdmin: vi.fn(),
 }));

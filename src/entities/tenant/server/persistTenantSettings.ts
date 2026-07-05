@@ -34,12 +34,16 @@ export type PersistTenantSettingsResult =
   | { ok: true; slug: string }
   | { ok: false; code: 'validation' | 'forbidden' | 'db'; message: string };
 
+type MergeReceptionDeskPinResult =
+  | { ok: false; code: 'validation'; message: string }
+  | { ok: true; settings: TenantSettings };
+
 function mergeReceptionDeskPinFromForm(
   settings: TenantSettings,
   formData: FormData,
   slug: string,
   previousHash: string | undefined
-): PersistTenantSettingsResult | { ok: true; settings: TenantSettings } {
+): MergeReceptionDeskPinResult {
   const deskPin = String(formData.get('receptionDeskPin') || '').trim();
 
   if (deskPin && !isNewDeskPinValid(deskPin)) {
