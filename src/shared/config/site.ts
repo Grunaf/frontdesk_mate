@@ -42,12 +42,15 @@ export const SITE_CONFIG = {
     app: 'app',
     landing: 'landing',
     reception: 'reception',
+    /** Owner portal: dashboard.{baseDomain} / dashboard.localhost (dev). */
+    dashboard: 'dashboard',
   },
   internalFolders: {
     app: 'app-site',
     landing: 'landing-site',
     platform: 'platform-site',
     reception: 'reception-site',
+    owner: 'owner-site',
   },
   routes: {
     landing: {
@@ -82,4 +85,13 @@ export function getSubdomainUrl(
 
   const sub = SITE_CONFIG.subdomains[subdomain];
   return `${protocol}${sub}.${base}/${locale}${routePath}`;
+}
+
+/** Public URL on dashboard.{baseDomain} (owner portal). Path should include locale when using i18n, e.g. `/en/login`. */
+export function getOwnerPortalUrl(path = '/'): string {
+  const protocol = getPublicProtocol();
+  const base = SITE_CONFIG.baseDomain;
+  const sub = SITE_CONFIG.subdomains.dashboard;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${protocol}${sub}.${base}${normalized}`;
 }

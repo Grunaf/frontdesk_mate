@@ -2,11 +2,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { resolveTenantSlugFromHost } from '@/entities/tenant/lib/resolveTenantSlugFromHost';
+import { resolveOwnerPortalFromHost } from '@/entities/tenant/lib/resolveOwnerPortalFromHost';
 import { SITE_CONFIG } from './shared/config/site';
 import { isProd } from './shared/lib/env';
 
 const handleI18nRouting = createMiddleware({
   locales: ['en', 'ru'],
+  defaultLocale: 'en',
+  localePrefix: 'always',
+});
+
+/** Owner portal (dashboard host): en + sr structure; sr copy in module 4. */
+const handleOwnerI18nRouting = createMiddleware({
+  locales: ['en', 'sr'],
   defaultLocale: 'en',
   localePrefix: 'always',
 });
@@ -70,6 +78,26 @@ export function proxy(request: NextRequest) {
   }
 
   const hostname = request.headers.get('host') || '';
+  const ownerPortal = resolveOwnerPortalFromHost(hostname);
+
+  if (ownerPortal?.site === 'dashboard') {
+    const ownerFolder = SITE_CONFIG.internalFolders.owner;
+
+    if (pathname.startsWith(`/${ownerFolder}`)) {
+      return NextResponse.next();
+    }
+
+    const response = handleOwnerI18nRouting(request);
+    if (response.status === 307 || response.status === 308) {
+      return response;
+    }
+
+    const pathnameWithLocale = request.nextUrl.pathname;
+    const targetPath = `/${ownerFolder}${pathnameWithLocale}`;
+
+    return NextResponse.rewrite(new URL(targetPath, request.url));
+  }
+
   const hostResolution = resolveTenantSlugFromHost(hostname);
 
   if (hostResolution.site === 'reception') {
@@ -101,7 +129,8 @@ export function proxy(request: NextRequest) {
     pathnameWithLocale.startsWith(`/${internalFolders.app}`) ||
     pathnameWithLocale.startsWith(`/${internalFolders.landing}`) ||
     pathnameWithLocale.startsWith(`/${internalFolders.platform}`) ||
-    pathnameWithLocale.startsWith(`/${internalFolders.reception}`)
+    pathnameWithLocale.startsWith(`/${internalFolders.reception}`) ||
+    pathnameWithLocale.startsWith(`/${internalFolders.owner}`)
   ) {
     return response;
   }

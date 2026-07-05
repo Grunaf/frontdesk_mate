@@ -66,4 +66,18 @@ describe('resolveTenantSlugFromHost', () => {
       site: 'landing',
     });
   });
+
+  it('ignores reserved dashboard label (owner portal host)', () => {
+    expect(resolveTenantSlugFromHost('dashboard.frontdeskmate.com', BASE)).toEqual({
+      tenantSlug: null,
+      site: 'landing',
+    });
+  });
+
+  it('ignores dashboard.localhost as tenant slug', () => {
+    expect(resolveTenantSlugFromHost('dashboard.localhost:3000', 'localhost:3000')).toEqual({
+      tenantSlug: null,
+      site: 'landing',
+    });
+  });
 });
