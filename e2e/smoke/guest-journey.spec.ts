@@ -27,7 +27,16 @@ test.describe('guest journey smoke', () => {
   test('concierge shows local guide essentials', async ({ page }) => {
     await checkInWithPin(page, config);
     await openConcierge(page, config);
-    await expect(page.getByRole('heading', { name: 'Essentials nearby' }).first()).toBeVisible();
+    const localGuideHeading = page.getByRole('heading', {
+      name: /Local guide|Городской гид/,
+    });
+    await localGuideHeading.scrollIntoViewIfNeeded();
+    await expect(localGuideHeading).toBeVisible();
+    const essentialChip = page
+      .getByText(/^(ATM|Shop|Pharmacy|Late food|Банкомат|Магазин|Аптека)$/i)
+      .first();
+    await essentialChip.scrollIntoViewIfNeeded();
+    await expect(essentialChip).toBeVisible();
   });
 
   test('wrong PIN shows error', async ({ page }) => {
