@@ -1129,6 +1129,19 @@
           "saveFailed": "Could not save settings. Try again."
         }
       },
+      "cityPack": {
+        "inheritedTitle": "City transport (inherited)",
+        "inheritedDescription": "Hub routes and transit copy are shared for your city. You only customize address and last-mile walk for your hostel.",
+        "managedHint": "City pack content is managed by Frontdesk Mate.",
+        "noPlaces": "No places in your city pack yet.",
+        "requestCityLink": "Request city support →",
+        "statusReady": "Ready",
+        "statusNotReady": "Not ready",
+        "enabledRoutes": "Enabled routes",
+        "cityTaxi": "City taxi",
+        "packLabel": "Pack",
+        "none": "None"
+      },
       "cityRequest": {
         "title": "Request a new city",
         "description": "City pack requests are not available yet. This flow ships in Module 9 — we will collect your city and contact you when a pack is ready.",

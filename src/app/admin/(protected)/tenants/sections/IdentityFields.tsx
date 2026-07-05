@@ -11,6 +11,7 @@ import { TenantBrand } from '@/entities/tenant/ui/TenantBrand';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { normalizeTenantSlugInput } from '@/shared/config';
 import { cn } from '@/shared/lib/utils';
+import { OwnerCityPackSummaryCard } from '@/features/owner-city-pack';
 import { AdminImageField } from '../ui/AdminImageField';
 import { CityPackInheritanceCard } from '../ui/CityPackInheritanceCard';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
@@ -28,6 +29,7 @@ interface IdentityFieldsProps {
   onChange: (next: { slug: string; name: string; cityPackId: CityPackId }) => void;
   slugReadOnly?: boolean;
   cityPackReadOnly?: boolean;
+  ownerLocale?: string;
 }
 
 export function IdentityFields({
@@ -43,6 +45,7 @@ export function IdentityFields({
   onChange,
   slugReadOnly = false,
   cityPackReadOnly = false,
+  ownerLocale,
 }: IdentityFieldsProps) {
   const { draft, updateDraft } = useTenantFormDraft();
   const mergedSettings = useMemo(
@@ -106,10 +109,22 @@ export function IdentityFields({
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">City pack</span>
         {cityPackReadOnly ? (
-          <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
-            <span className="font-medium">{selectedPackLabel ?? cityPackId}</span>
-            <span className="ml-2 font-mono text-xs text-muted-foreground">{cityPackId}</span>
-          </p>
+          <div className="space-y-3">
+            <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <span className="font-medium">{selectedPackLabel ?? cityPackId}</span>
+              <span className="ml-2 font-mono text-xs text-muted-foreground">{cityPackId}</span>
+            </p>
+            {ownerLocale ? (
+              <OwnerCityPackSummaryCard
+                locale={ownerLocale}
+                compact
+                cityPackId={cityPackId}
+                cityPackLabel={selectedPackLabel}
+                cityPackGateSnapshot={cityPackGateSnapshot}
+                cityPackContent={cityPackContent}
+              />
+            ) : null}
+          </div>
         ) : (
           <>
         <span className="block text-xs text-muted-foreground">

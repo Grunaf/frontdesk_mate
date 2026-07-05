@@ -50,6 +50,7 @@ export interface TenantAdminSectionPanelProps {
   cityPackContentsById: Record<string, CityPackContent>;
   mergedSettings: TenantSettings;
   readOnly?: boolean;
+  locale?: string;
 }
 
 function GuestTourismRegistrationComplianceField({
@@ -128,6 +129,7 @@ export function TenantAdminSectionPanel({
   cityPackContentsById,
   mergedSettings,
   readOnly = false,
+  locale = 'en',
 }: TenantAdminSectionPanelProps) {
   const s = initialSettings;
   const isOwner = surface === 'owner';
@@ -160,6 +162,7 @@ export function TenantAdminSectionPanel({
           cityPackContent={cityPackContentsById[identity.cityPackId]}
           slugReadOnly={isOwner}
           cityPackReadOnly={isOwner}
+          ownerLocale={isOwner ? locale : undefined}
         />
       );
     case 'subscription':
@@ -205,6 +208,8 @@ export function TenantAdminSectionPanel({
             cityPackGateSnapshot={cityPackGateSnapshot}
             readinessInput={readinessInput}
             onJumpToSection={onJumpToSection}
+            surface={isOwner ? 'owner' : 'platform'}
+            locale={locale}
           />
         </>
       );

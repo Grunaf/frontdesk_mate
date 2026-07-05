@@ -14,6 +14,7 @@ import { GuestStayFields } from './GuestStayFields';
 import { GuestExtrasFields } from './GuestExtrasFields';
 import { HostelPlacesFields } from './HostelPlacesFields';
 import { HouseRulesFields } from './HouseRulesFields';
+import type { CityPackInheritanceSurface } from '../ui/CityPackInheritanceCard';
 
 type GuestAppTab = 'room-map' | 'rules' | 'extras' | 'near-hostel';
 
@@ -26,6 +27,8 @@ interface GuestAppFieldsProps {
   readinessInput: TenantReadinessInput;
   onJumpToSection?: (sectionId: AdminSectionId) => void;
   scope?: 'full' | 'rules-only';
+  surface?: CityPackInheritanceSurface;
+  locale?: string;
 }
 
 const TAB_LABELS: Record<GuestAppTab, string> = {
@@ -44,6 +47,8 @@ export function GuestAppFields({
   readinessInput,
   onJumpToSection,
   scope = 'full',
+  surface = 'platform',
+  locale = 'en',
 }: GuestAppFieldsProps) {
   const { draft } = useTenantFormDraft();
   const [tab, setTab] = useState<GuestAppTab>(scope === 'rules-only' ? 'rules' : 'room-map');
@@ -59,6 +64,8 @@ export function GuestAppFields({
         settings={mergedSettings}
         cityPackId={cityPackId}
         cityPackContent={cityPackContent}
+        surface={surface}
+        locale={locale}
       />
       <HostelPlacesFields settings={mergedSettings} />
     </>
@@ -80,6 +87,7 @@ export function GuestAppFields({
         cityPackGateSnapshot={cityPackGateSnapshot}
         settings={mergedSettings}
         onJumpToSection={onJumpToSection}
+        surface={surface}
       />
 
       <div className="flex flex-wrap gap-1 rounded-lg border bg-muted/20 p-1">

@@ -1129,6 +1129,19 @@
           "saveFailed": "Čuvanje nije uspelo. Pokušajte ponovo."
         }
       },
+      "cityPack": {
+        "inheritedTitle": "Gradski prevoz (nasleđeno)",
+        "inheritedDescription": "Hub rute i tekstovi prevoza su zajednički za vaš grad. Vi prilagodite samo adresu i poslednji deo hoda do hostela.",
+        "managedHint": "Sadržaj city pack-a održava Frontdesk Mate.",
+        "noPlaces": "Još nema mesta u vašem city pack-u.",
+        "requestCityLink": "Zatražite podršku za grad →",
+        "statusReady": "Spremno",
+        "statusNotReady": "Nije spremno",
+        "enabledRoutes": "Uključene rute",
+        "cityTaxi": "Gradski taksi",
+        "packLabel": "Paket",
+        "none": "Nema"
+      },
       "cityRequest": {
         "title": "Zatražite novi grad",
         "description": "Zahtevi za city pack još nisu dostupni. Ovaj tok stiže u Modulu 9 — prikupićemo vaš grad i javiti kada pack bude spreman.",

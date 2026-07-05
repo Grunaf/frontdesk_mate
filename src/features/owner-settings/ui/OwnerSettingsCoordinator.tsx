@@ -534,6 +534,7 @@ function OwnerSettingsCoordinatorInner({
                     cityPackContentsById={cityPackContentsById}
                     mergedSettings={mergedSettings}
                     readOnly={fieldsDisabled}
+                    locale={locale}
                   />
                 </div>
               ) : null}

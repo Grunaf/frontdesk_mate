@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import {
@@ -29,6 +28,7 @@ import { WifiFields } from '@/app/admin/(protected)/tenants/sections/WifiFields'
 import { LaunchBookingFork } from './LaunchBookingFork';
 import { LaunchPreviewStep } from './LaunchPreviewStep';
 import { LaunchStepChecklist } from './LaunchStepChecklist';
+import { OwnerCityPackSummaryCard } from '@/features/owner-city-pack';
 import { getLaunchStepDefinition, LAUNCH_STEPS } from './launchSteps';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/ui';
@@ -146,6 +146,7 @@ export function LaunchSetupWizard({
               onChange={onIdentityChange}
               slugReadOnly={isOwner}
               cityPackReadOnly={isOwner}
+              ownerLocale={isOwner ? locale : undefined}
             />
             {isOwner ? (
               <OwnerIdentitySubscriptionHint message={labels?.subscriptionSeeAbove ?? ''} />
@@ -230,34 +231,34 @@ export function LaunchSetupWizard({
       case 'rules-wifi':
         return (
           <>
-            <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm">
-              <p className="font-medium">Local guide</p>
-              <p className="mt-1 text-muted-foreground">
-                City pack:{' '}
-                <span className="font-medium text-foreground">{cityPack?.label ?? identity.cityPackId}</span>
-                {packReady
-                  ? isOwner && labels
-                    ? ` — ${labels.cityPackReady}`
-                    : ' — ready for guests (places + routes).'
-                  : ` — ${packNotReadyReason ?? (isOwner && labels ? labels.cityPackNotReady : 'not ready yet.')} `}
-                {!packReady && isOwner && labels ? (
-                  <>
-                    {' '}
-                    <Link
-                      href={`/${locale}/onboarding/city-request`}
+            {isOwner ? (
+              <OwnerCityPackSummaryCard
+                locale={locale}
+                cityPackId={identity.cityPackId}
+                cityPackLabel={cityPack?.label}
+                cityPackGateSnapshot={cityPackGateSnapshot}
+                cityPackContent={cityPackContentsById[identity.cityPackId]}
+              />
+            ) : (
+              <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm">
+                <p className="font-medium">Local guide</p>
+                <p className="mt-1 text-muted-foreground">
+                  City pack:{' '}
+                  <span className="font-medium text-foreground">{cityPack?.label ?? identity.cityPackId}</span>
+                  {packReady
+                    ? ' — ready for guests (places + routes).'
+                    : ` — ${packNotReadyReason ?? 'not ready yet.'} `}
+                  {!packReady ? (
+                    <a
+                      href={`/admin/city-packs/${identity.cityPackId}`}
                       className="font-semibold text-primary underline"
                     >
-                      {labels.cityPackRequestLink}
-                    </Link>
-                  </>
-                ) : null}
-                {!packReady && !isOwner ? (
-                  <a href={`/admin/city-packs/${identity.cityPackId}`} className="font-semibold text-primary underline">
-                    Edit city pack →
-                  </a>
-                ) : null}
-              </p>
-            </div>
+                      Edit city pack →
+                    </a>
+                  ) : null}
+                </p>
+              </div>
+            )}
             <div className="mt-6 border-t pt-6">
               <GuestAppFields
                 tenantSlug={identity.slug}
@@ -267,6 +268,8 @@ export function LaunchSetupWizard({
                 cityPackGateSnapshot={cityPackGateSnapshot}
                 readinessInput={readinessInput}
                 scope="rules-only"
+                surface={isOwner ? 'owner' : 'platform'}
+                locale={locale}
               />
             </div>
             <div className="mt-6 border-t pt-6">
