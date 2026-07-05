@@ -4,6 +4,10 @@ import type { CityPackContent } from '@/entities/city-pack';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { isSupabaseAdminConfigured } from '@/shared/lib/db/admin';
 import { buildSubscriptionDefaults } from '../sections/SubscriptionFields';
+import { getTenantOwnerForAdmin } from '@/entities/hostel-owner/server/getTenantOwnerForAdmin';
+import { listTenantAuditEventsForAdmin } from '@/entities/tenant-audit/server/listTenantAuditEventsForAdmin';
+import { TenantOwnerPanel } from '@/features/platform-tenant-ops/ui/TenantOwnerPanel';
+import { TenantOwnerActivityPanel } from '@/features/platform-tenant-ops/ui/TenantOwnerActivityPanel';
 
 interface AdminTenantPageProps {
   params: Promise<{ slug: string }>;
@@ -28,13 +32,21 @@ export default async function AdminTenantPage({ params, searchParams }: AdminTen
     })
   );
 
+  const owner =
+    tenant && !isNew ? await getTenantOwnerForAdmin(tenant.id) : null;
+  const audit =
+    tenant && !isNew
+      ? await listTenantAuditEventsForAdmin(tenant.id)
+      : { events: [], error: null };
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
         <h2 className="text-xl font-semibold">{isNew ? 'New tenant' : `Edit: ${slug}`}</h2>
         {!isNew ? (
           <p className="text-sm text-muted-foreground">
-            Settings, subscription, and guest access are managed from the command bar in the form.
+            Owner edits settings in the dashboard; you control subscription and city pack here. Settings,
+            subscription, and guest access are managed from the command bar in the form.
           </p>
         ) : null}
       </div>
@@ -58,6 +70,13 @@ export default async function AdminTenantPage({ params, searchParams }: AdminTen
           Tenant not found in database. You can create it with this slug below.
         </p>
       )}
+
+      {!isNew && tenant ? (
+        <>
+          <TenantOwnerPanel tenantId={tenant.id} tenantSlug={tenant.slug} owner={owner} />
+          <TenantOwnerActivityPanel events={audit.events} error={audit.error} />
+        </>
+      ) : null}
 
       <TenantForm
         originalSlug={isNew ? '' : slug}

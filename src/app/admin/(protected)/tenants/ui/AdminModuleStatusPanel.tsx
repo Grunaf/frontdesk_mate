@@ -7,12 +7,14 @@ import type { TenantSettings } from '@/entities/tenant';
 import { resolveGuestAppModules } from '@/entities/tenant/lib/resolveGuestAppModules';
 import type { AdminSectionId } from '../lib/adminSections';
 import { AdminSectionStatusBadge } from './AdminField';
+import type { CityPackInheritanceSurface } from './CityPackInheritanceCard';
 
 interface AdminModuleStatusPanelProps {
   cityPackId: CityPackId;
   cityPackGateSnapshot?: CityPackGateSnapshot;
   settings?: TenantSettings;
   onJumpToSection?: (sectionId: AdminSectionId) => void;
+  surface?: CityPackInheritanceSurface;
 }
 
 export function AdminModuleStatusPanel({
@@ -20,6 +22,7 @@ export function AdminModuleStatusPanel({
   cityPackGateSnapshot,
   settings,
   onJumpToSection,
+  surface = 'platform',
 }: AdminModuleStatusPanelProps) {
   const modules = useMemo(
     () => resolveGuestAppModules({ cityPackId, settings: settings ?? {}, cityPackGateSnapshot }),
@@ -51,7 +54,7 @@ export function AdminModuleStatusPanel({
                   onClick={() => onJumpToSection(module.actionSectionId!)}
                   className="mt-1 text-xs font-semibold text-primary hover:underline"
                 >
-                  Go to Identity
+                  {surface === 'owner' ? 'Open Identity section' : 'Go to Identity'}
                 </button>
               ) : null}
             </div>

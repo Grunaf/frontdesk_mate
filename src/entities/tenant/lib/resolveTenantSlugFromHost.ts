@@ -1,6 +1,6 @@
 import { SITE_CONFIG } from '@/shared/config/site';
 
-const RESERVED_LABELS = new Set(['www', 'admin', 'app', 'reception']);
+const RESERVED_LABELS = new Set(['www', 'admin', 'app', 'reception', 'dashboard']);
 
 export type TenantSiteKind = 'app' | 'landing' | 'reception';
 

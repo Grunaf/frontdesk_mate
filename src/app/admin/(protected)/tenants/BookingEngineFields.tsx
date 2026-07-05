@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { TenantSettings } from '@/entities/tenant';
 import {
   BOOKING_PROVIDER_LABELS,
@@ -12,6 +12,7 @@ import { hasLandingRooms } from '@/entities/tenant/lib/resolveLandingRooms';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { AdminField } from './ui/AdminField';
 import { AdminSectionAlert } from './ui/AdminSectionAlert';
+import { useTenantFormDraft } from './ui/TenantFormDraftContext';
 
 interface BookingEngineFieldsProps {
   settings?: TenantSettings;
@@ -19,12 +20,22 @@ interface BookingEngineFieldsProps {
 }
 
 export function BookingEngineFields({ settings, readinessInput }: BookingEngineFieldsProps) {
-  const initial = useMemo(() => readBookingSettings(settings ?? {}), [settings]);
-  const [provider, setProvider] = useState<BookingProvider>(initial.provider);
+  const { updateDraft } = useTenantFormDraft();
+  const booking = useMemo(() => readBookingSettings(settings ?? {}), [settings]);
+  const provider = booking.provider;
   const hasLandingRoomCards = hasLandingRooms(settings ?? {});
   const engineMissing =
-    provider !== 'none' &&
-    isTenantFieldMissing('bookingEngineId', readinessInput);
+    provider !== 'none' && isTenantFieldMissing('bookingEngineId', readinessInput);
+
+  const patchBooking = (patch: Partial<typeof booking>) => {
+    updateDraft({
+      booking: {
+        provider: patch.provider ?? provider,
+        engineId: patch.engineId ?? booking.engineId,
+        url: patch.url ?? booking.url,
+      },
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -47,12 +58,11 @@ export function BookingEngineFields({ settings, readinessInput }: BookingEngineF
           Choose whether guests can book online and which PMS powers it.
         </span>
         <select
-          name="bookingProvider"
           value={provider}
           onChange={(event) => {
             const next = event.target.value;
             if (isBookingProvider(next)) {
-              setProvider(next);
+              patchBooking({ provider: next });
             }
           }}
           className="w-full rounded-md border bg-background px-3 py-2 text-sm"
@@ -69,8 +79,8 @@ export function BookingEngineFields({ settings, readinessInput }: BookingEngineF
         <>
           <AdminField
             label={provider === 'cloudbeds' ? 'Cloudbeds property ID' : 'Frontdesk Master property slug'}
-            name="bookingEngineId"
-            defaultValue={initial.engineId}
+            value={booking.engineId}
+            onChange={(value) => patchBooking({ engineId: value })}
             placeholder={provider === 'cloudbeds' ? 'SFTNHx' : 'kotor-demo'}
             hint={
               provider === 'cloudbeds'
@@ -82,8 +92,8 @@ export function BookingEngineFields({ settings, readinessInput }: BookingEngineF
           />
           <AdminField
             label="Custom booking URL"
-            name="bookingUrl"
-            defaultValue={initial.url}
+            value={booking.url}
+            onChange={(value) => patchBooking({ url: value })}
             placeholder="https://…"
             hint="When set, replaces the default provider URL. Query params are still appended automatically."
             width="lg"

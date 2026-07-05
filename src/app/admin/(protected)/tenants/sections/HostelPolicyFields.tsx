@@ -5,6 +5,7 @@ import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tena
 import { AdminFieldRow } from '../ui/AdminField';
 import { AdminTimeField } from '../ui/AdminTimeField';
 import { AdminCurrencyFields } from '../ui/AdminCurrencyFields';
+import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 
 export type HostelPolicyFieldsScope = 'full' | 'launch-core';
 
@@ -19,25 +20,31 @@ export function HostelPolicyFields({
   readinessInput,
   scope = 'full',
 }: HostelPolicyFieldsProps) {
+  const { updateDraft } = useTenantFormDraft();
+
+  const timeFields = (
+    <AdminFieldRow>
+      <AdminTimeField
+        label="Check-in from"
+        value={settings?.checkInTime ?? ''}
+        onChange={(value) => updateDraft({ checkInTime: value })}
+        missing={isTenantFieldMissing('checkInTime', readinessInput)}
+      />
+      <AdminTimeField
+        label="Check-out until"
+        value={settings?.checkOutTime ?? ''}
+        onChange={(value) => updateDraft({ checkOutTime: value })}
+      />
+    </AdminFieldRow>
+  );
+
   if (scope === 'launch-core') {
     return (
       <div className="space-y-4 border-t pt-6">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Stay policy
         </p>
-        <AdminFieldRow>
-          <AdminTimeField
-            label="Check-in from"
-            name="checkInTime"
-            defaultValue={settings?.checkInTime}
-            missing={isTenantFieldMissing('checkInTime', readinessInput)}
-          />
-          <AdminTimeField
-            label="Check-out until"
-            name="checkOutTime"
-            defaultValue={settings?.checkOutTime}
-          />
-        </AdminFieldRow>
+        {timeFields}
       </div>
     );
   }
@@ -47,23 +54,11 @@ export function HostelPolicyFields({
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Stay policy & money
       </p>
-      <AdminFieldRow>
-        <AdminTimeField
-          label="Check-in from"
-          name="checkInTime"
-          defaultValue={settings?.checkInTime}
-          missing={isTenantFieldMissing('checkInTime', readinessInput)}
-        />
-        <AdminTimeField
-          label="Check-out until"
-          name="checkOutTime"
-          defaultValue={settings?.checkOutTime}
-        />
-      </AdminFieldRow>
+      {timeFields}
       <AdminTimeField
         label="Self check-in after"
-        name="selfCheckInTimeAfter"
-        defaultValue={settings?.selfCheckInTimeAfter}
+        value={settings?.selfCheckInTimeAfter ?? ''}
+        onChange={(value) => updateDraft({ selfCheckInTimeAfter: value })}
         hint="Shown when guests arrive outside reception hours."
       />
       <AdminCurrencyFields settings={settings} />

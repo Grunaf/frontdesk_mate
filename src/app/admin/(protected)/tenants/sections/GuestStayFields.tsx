@@ -134,7 +134,7 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
       beds: normalized.beds ?? [],
     };
   }, [settings]);
-  const initialEnabled = useMemo(() => isRoomMapModuleEnabled(settings), [settings]);
+  const initialEnabled = useMemo(() => isRoomMapModuleEnabled(settings ?? {}), [settings]);
 
   const [roomMapEnabled, setRoomMapEnabled] = useState(initialEnabled);
   const [floors, setFloors] = useState<StayFloor[]>(

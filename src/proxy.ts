@@ -2,11 +2,23 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { resolveTenantSlugFromHost } from '@/entities/tenant/lib/resolveTenantSlugFromHost';
+import { resolveOwnerPortalFromHost } from '@/entities/tenant/lib/resolveOwnerPortalFromHost';
+import {
+  applyRefreshedAuthCookies,
+  refreshOwnerAuthSession,
+} from '@/shared/lib/db/supabase-owner-server';
 import { SITE_CONFIG } from './shared/config/site';
 import { isProd } from './shared/lib/env';
 
 const handleI18nRouting = createMiddleware({
   locales: ['en', 'ru'],
+  defaultLocale: 'en',
+  localePrefix: 'always',
+});
+
+/** Owner portal (dashboard host): en + sr structure; sr copy in module 4. */
+const handleOwnerI18nRouting = createMiddleware({
+  locales: ['en', 'sr'],
   defaultLocale: 'en',
   localePrefix: 'always',
 });
@@ -44,7 +56,7 @@ function resolveInternalFolder(site: ReturnType<typeof resolveTenantSlugFromHost
   return internalFolders.landing;
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isStaticFile = /\.[a-z0-9]+$/i.test(pathname);
@@ -70,6 +82,32 @@ export function proxy(request: NextRequest) {
   }
 
   const hostname = request.headers.get('host') || '';
+  const ownerPortal = resolveOwnerPortalFromHost(hostname);
+
+  if (ownerPortal?.site === 'dashboard') {
+    const ownerFolder = SITE_CONFIG.internalFolders.owner;
+    const authResponse = await refreshOwnerAuthSession(request);
+
+    if (pathname.startsWith(`/${ownerFolder}`)) {
+      const response = NextResponse.next();
+      applyRefreshedAuthCookies(authResponse, response);
+      return response;
+    }
+
+    const response = handleOwnerI18nRouting(request);
+    if (response.status === 307 || response.status === 308) {
+      applyRefreshedAuthCookies(authResponse, response);
+      return response;
+    }
+
+    const pathnameWithLocale = request.nextUrl.pathname;
+    const targetPath = `/${ownerFolder}${pathnameWithLocale}`;
+
+    const rewriteResponse = NextResponse.rewrite(new URL(targetPath, request.url));
+    applyRefreshedAuthCookies(authResponse, rewriteResponse);
+    return rewriteResponse;
+  }
+
   const hostResolution = resolveTenantSlugFromHost(hostname);
 
   if (hostResolution.site === 'reception') {
@@ -101,7 +139,8 @@ export function proxy(request: NextRequest) {
     pathnameWithLocale.startsWith(`/${internalFolders.app}`) ||
     pathnameWithLocale.startsWith(`/${internalFolders.landing}`) ||
     pathnameWithLocale.startsWith(`/${internalFolders.platform}`) ||
-    pathnameWithLocale.startsWith(`/${internalFolders.reception}`)
+    pathnameWithLocale.startsWith(`/${internalFolders.reception}`) ||
+    pathnameWithLocale.startsWith(`/${internalFolders.owner}`)
   ) {
     return response;
   }

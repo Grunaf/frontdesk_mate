@@ -2,6 +2,8 @@
 
 import { getHouseRules } from '@/entities/house-rules';
 import type { TenantSettings } from '@/entities/tenant';
+import { readBookingSettings } from '@/entities/tenant/lib/resolveBookingConfig';
+import { normalizeAccessPoints } from '@/entities/tenant/lib/normalizeAccessPoints';
 import { resolveCityTaxAmount, resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import {
@@ -56,6 +58,11 @@ export function TenantFormHiddenPayload({
   const tourismProfileId = tourismConfig?.profileId ?? '';
   const guestStayJson =
     roomMapEnabled && mergedSettings.guestStay ? JSON.stringify(mergedSettings.guestStay) : '';
+  const booking = readBookingSettings(mergedSettings);
+  const accessPoints = normalizeAccessPoints(mergedSettings);
+  const bedFloorMapJson = mergedSettings.arrivalAccess?.bedFloorMap
+    ? JSON.stringify(mergedSettings.arrivalAccess.bedFloorMap)
+    : '';
 
   return (
     <div aria-hidden className="hidden">
@@ -106,6 +113,78 @@ export function TenantFormHiddenPayload({
       />
       <input type="hidden" name="landingJson" value={serializeLandingJson(mergedSettings)} />
       <input type="hidden" name="hostelJson" value={serializeHostelJson(mergedSettings)} />
+      <input type="hidden" name="checkInTime" value={mergedSettings.checkInTime ?? ''} />
+      <input type="hidden" name="checkOutTime" value={mergedSettings.checkOutTime ?? ''} />
+      <input type="hidden" name="selfCheckInTimeAfter" value={mergedSettings.selfCheckInTimeAfter ?? ''} />
+      <input type="hidden" name="wifiName" value={mergedSettings.wifi?.name ?? ''} />
+      <input type="hidden" name="wifiPassword" value={mergedSettings.wifi?.password ?? ''} />
+      <input type="hidden" name="phoneRaw" value={mergedSettings.contacts?.phoneRaw ?? ''} />
+      <input type="hidden" name="phoneMask" value={mergedSettings.contacts?.phoneMask ?? ''} />
+      <input
+        type="hidden"
+        name="phoneFormatPreset"
+        value={mergedSettings.contacts?.phoneFormatPreset ?? 'auto'}
+      />
+      <input
+        type="hidden"
+        name="bookingWhatsappPhoneRaw"
+        value={mergedSettings.contacts?.bookingWhatsappPhoneRaw ?? ''}
+      />
+      <input type="hidden" name="taxiPhoneRaw" value={mergedSettings.contacts?.taxiPhoneRaw ?? ''} />
+      <input type="hidden" name="taxiPhoneMask" value={mergedSettings.contacts?.taxiPhoneMask ?? ''} />
+      <input
+        type="hidden"
+        name="taxiPhoneFormatPreset"
+        value={mergedSettings.contacts?.taxiPhoneFormatPreset ?? 'auto'}
+      />
+      <input type="hidden" name="email" value={mergedSettings.contacts?.email ?? ''} />
+      <input type="hidden" name="address" value={mergedSettings.contacts?.address ?? ''} />
+      <input type="hidden" name="mapsUrl" value={mergedSettings.contacts?.mapsUrl ?? ''} />
+      <input type="hidden" name="feedbackPhoneRaw" value={mergedSettings.contacts?.feedbackPhoneRaw ?? ''} />
+      <input type="hidden" name="receptionOpen" value={mergedSettings.reception?.open ?? ''} />
+      <input type="hidden" name="receptionClose" value={mergedSettings.reception?.close ?? ''} />
+      <input
+        type="hidden"
+        name="receptionWhatsappPhoneRaw"
+        value={mergedSettings.reception?.whatsappPhoneRaw ?? ''}
+      />
+      <input
+        type="hidden"
+        name="receptionAvailabilityHint"
+        value={mergedSettings.reception?.availabilityHint ?? ''}
+      />
+      <input
+        type="hidden"
+        name="receptionWhatsappEnabled"
+        value={mergedSettings.reception?.whatsappEnabled === false ? 'false' : 'true'}
+      />
+      <input
+        type="hidden"
+        name="receptionCanHelpWithTaxi"
+        value={mergedSettings.reception?.canHelpWithTaxi === false ? 'false' : 'true'}
+      />
+      <input
+        type="hidden"
+        name="guestAccessMessageTemplate"
+        value={mergedSettings.reception?.guestAccessMessageTemplate ?? ''}
+      />
+      <input
+        type="hidden"
+        name="guestAccessPinMissingText"
+        value={mergedSettings.reception?.guestAccessPinMissingText ?? ''}
+      />
+      <input type="hidden" name="bookingProvider" value={booking.provider} />
+      <input type="hidden" name="bookingEngineId" value={booking.engineId} />
+      <input type="hidden" name="bookingUrl" value={booking.url} />
+      <input
+        type="hidden"
+        name="arrivalLayoutKind"
+        value={mergedSettings.arrivalAccess?.layoutKind ?? ''}
+      />
+      <input type="hidden" name="arrivalDayMode" value={mergedSettings.arrivalAccess?.dayMode ?? ''} />
+      <input type="hidden" name="accessPointsJson" value={JSON.stringify(accessPoints)} />
+      <input type="hidden" name="arrivalLandmark" value={mergedSettings.arrivalAccess?.landmark ?? ''} />
+      <input type="hidden" name="bedFloorMapJson" value={bedFloorMapJson} />
     </div>
   );
 }

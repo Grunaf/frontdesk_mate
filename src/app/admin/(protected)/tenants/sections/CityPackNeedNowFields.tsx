@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { CityPackContent } from '@/entities/city-pack';
 import { normalizeCityPackAdminPlace } from '@/entities/city-pack/lib/normalizeCityPackAdminPlace';
 import {
@@ -9,20 +10,28 @@ import {
 } from '@/entities/hostel';
 import { resolveCityPackNeedNowPlaceIdsForAdmin } from '@/entities/tenant';
 import type { TenantSettings } from '@/entities/tenant';
+import { OwnerCityPackRequestLink } from '@/features/owner-city-pack';
 import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { useSyncedFormRef } from '../lib/syncTenantFormDraft';
+import type { CityPackInheritanceSurface } from '../ui/CityPackInheritanceCard';
 
 interface CityPackNeedNowFieldsProps {
   settings?: Pick<TenantSettings, 'cityPackNeedNowPlaceIds'>;
   cityPackId: string;
   cityPackContent?: CityPackContent;
+  surface?: CityPackInheritanceSurface;
+  locale?: string;
 }
 
 export function CityPackNeedNowFields({
   settings,
   cityPackId,
   cityPackContent,
+  surface = 'platform',
+  locale = 'en',
 }: CityPackNeedNowFieldsProps) {
+  const isOwner = surface === 'owner';
+  const t = useTranslations('pages.owner.cityPack');
   const { updateDraft } = useTenantFormDraft();
   const places = useMemo(
     () =>
@@ -96,7 +105,14 @@ export function CityPackNeedNowFields({
 
       {places.length === 0 ? (
         <p className="rounded-md border border-dashed px-3 py-4 text-xs text-muted-foreground">
-          No city pack places yet. Add places in the city pack admin first.
+          {isOwner ? (
+            <>
+              {t('noPlaces')}{' '}
+              <OwnerCityPackRequestLink locale={locale} packId={cityPackId} />
+            </>
+          ) : (
+            'No city pack places yet. Add places in the city pack admin first.'
+          )}
         </p>
       ) : (
         <div className="space-y-3">

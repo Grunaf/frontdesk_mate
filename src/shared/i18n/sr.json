@@ -1,0 +1,1490 @@
+{
+  "domains": {
+    "hostel": {
+      "meta": {
+        "title": "Hostel Guest App",
+        "subtitle": "Your stay companion"
+      },
+      "features": {
+        "wifi": {
+          "title": "High-Speed Wi-Fi",
+          "description": "Free stable internet connection in all rooms and the garden oasis."
+        },
+        "location": {
+          "title": "In the Very Heart",
+          "description": "Walkable central location close to main sights and transport."
+        },
+        "garden": {
+          "title": "Green Garden Lounge",
+          "description": "A relaxed common area to meet other travelers."
+        },
+        "lockers": {
+          "title": "Secure Storage",
+          "description": "Personal lockers for your peace of mind and free luggage storage anytime."
+        },
+        "flexibleAccess": {
+          "title": "No Curfew",
+          "description": "Smart lock codes grant you secure access to the building 24/7."
+        },
+        "laundry": {
+          "title": "Laundry Service",
+          "description": "Self-service washing and drying machines available on-site."
+        }
+      },
+      "rooms": {
+        "title": "Choose your stay",
+        "subtitle": "Select between social single bed dorms or comfortable private rooms",
+        "priceFrom": "from",
+        "night": "night",
+        "bookButton": "Book Now",
+        "bookAndUpgradeButton": "Book 2 beds, then upgrade",
+        "upgradeNoticeHint": "Upgrade instructions will be provided after booking completion",
+        "selectDatesButton": "View Availability",
+        "contactReceptionButton": "Contact reception",
+        "bookingUnavailableHint": "Online booking is not available — contact reception to reserve.",
+        "singleBedDorm": {
+          "title": "Single Bed in Shared Dorm",
+          "description": "Perfect for solo travelers and backpackers. Features comfortable mattresses, personal lockers, and individual power sockets next to your bed."
+        },
+        "privateRoom": {
+          "title": "Private Room",
+          "description": "Ideal for couples or digital nomads seeking privacy. Includes a spacious queen-size bed, private bathroom, and air conditioning."
+        }
+      },
+      "timing": {
+        "checkIn": "Check-in",
+        "checkInTime": "from {time}",
+        "checkOut": "Check-out",
+        "checkOutTime": "until {time}",
+        "luggageAlert": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
+      },
+      "payment": {
+        "cashOnly": "Cash only payment (EUR / BAM)",
+        "taxNote": "Local tourist tax is excluded and paid on-site: {cost} per person per night."
+      },
+      "rules": {
+        "quietHours": {
+          "type": "critical",
+          "trigger": "Quiet hours & Night access",
+          "summary": "No doorbell after 10PM",
+          "content": "Quiet hours are from 10 PM to 8 AM. It is strictly forbidden to ring the doorbell. Use the app codes."
+        },
+        "registration": {
+          "type": "critical",
+          "trigger": "Police registration",
+          "summary": "Auto-registration complete",
+          "content": "We handle all police paperwork automatically upon check-in. You don't need to do anything."
+        },
+        "smoking": {
+          "type": "info",
+          "trigger": "Smoking policy",
+          "summary": "Smoking outside only",
+          "content": "Smoking inside is forbidden. Please use the street area or inner garden."
+        },
+        "alcohol": {
+          "type": "critical",
+          "trigger": "Alcohol policy",
+          "summary": "Outside alcohol is not allowed",
+          "content": "Alcohol consumption is allowed, but bringing your own drinks from outside is prohibited. You can purchase drinks directly at our hostel bar."
+        },
+        "laundry": {
+          "type": "info",
+          "trigger": "Laundry service",
+          "summary": "Wash & dry available",
+          "content": "Washing and drying service costs {cost}. Please contact the receptionist if you need to use the laundry."
+        }
+      },
+      "cityPacks": {
+        "sarajevo": {
+          "routes": {
+            "from": {
+              "airport": "Airport",
+              "busStation": "Bus Station",
+              "train": "Train Station",
+              "busIstochno": "East Sarajevo (Istočno)",
+              "busMain": "Central Bus Station"
+            },
+            "bus": {
+              "clarificationQuestion": "Which direction or country did you arrive from?",
+              "istochnoHint": "Balkan routes: Serbia, Montenegro, etc.",
+              "centralHint": "EU routes, Croatia, Federation of BiH"
+            },
+            "taxiService": {
+              "title": "Official Taxi (Zuti Taxi)",
+              "noAppsInfo": "There is no Uber, Bolt, or Yandex in Sarajevo. Taxi can only be ordered via WhatsApp message or a regular phone call.",
+              "standWarning": "Take a taxi only from the official stands on the street. Never agree to fixed high prices offered by drivers waiting right by the bus platforms.",
+              "meterWarning": "Make sure the driver clears the meter and starts it at the official base rate (2.50 KM).",
+              "costTemplate": "The fair price from {location} to the hostel is around {minKM}–{maxKM} KM ({minEUR}–{maxEUR} €).",
+              "paymentInfo": "Pay in cash (KM or Euros)."
+            },
+            "airport": {
+              "locationGenitive": "the airport",
+              "public": {
+                "title": "Trolleybus №103",
+                "summary": "Cheapest option — trolleybus 103 to Čobanija, then a short walk to Dalmatinska 6.",
+                "text": "Take trolleybus №103 directly to the city center. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver (cash only). Remember to validate your ticket inside!",
+                "walkToStop": "Walk about 14 minutes (1 km) out of the airport terminal to the 'Dobrinja škola' trolleybus stop.",
+                "getOffAt": "Get off at 'Čobanija' stop.",
+                "walkToHostel": "Cross the bridge over the river, turn left onto Main Street, and walk towards Dalmatinska 6."
+              },
+              "taxi": {
+                "costEstimation": "The fair price from the airport to the hostel is around {minKM}–{maxKM} KM ({minEUR}–{maxEUR} €).",
+                "pickupPoint": "Sarajevo Airport (Terminal B)"
+              }
+            },
+            "busIstochno": {
+              "locationGenitive": "Istočno Sarajevo bus station",
+              "public": {
+                "title": "Trolleybus №103",
+                "summary": "Direct route across the entity border to Čobanija, then walk to the hostel.",
+                "text": "Take trolleybus №103 towards 'Trg Austrije'. Tickets are 1.80 KM in the kiosk or 2.00 KM from the driver in cash. Please validate it immediately.",
+                "walkToStop": "Walk about 7 minutes (500 m) from the East Sarajevo station building to the 'Dobrinja' terminal trolleybus stop.",
+                "getOffAt": "Get off at 'Čobanija' stop.",
+                "walkToHostel": "Cross the bridge over the Miljacka river and walk straight towards Dalmatinska street."
+              },
+              "taxi": {
+                "costEstimation": "A convenient way to cross the entity border directly to the hostel door. Average cost is around 15 KM.",
+                "pickupPoint": "East Sarajevo Bus Station (Lukavica)"
+              }
+            },
+            "busMain": {
+              "locationGenitive": "the main bus station",
+              "public": {
+                "title": "Tram №1",
+                "summary": "Fastest option — tram 1 to Pošta stop, hostel is around the corner.",
+                "text": "Take Tram №1 directly to the hostel area. Tickets are 1.80 KM at the kiosk or 2.00 KM from the driver (cash only).",
+                "walkToStop": "Exit the bus station and walk 1 minute (78 m) forward to the 'Željezniчка stanica' tram loop right on the square.",
+                "getOffAt": "Get off at 'Pošta' stop. You will see a massive Post Office building.",
+                "walkToHostel": "Walk up towards Dalmatinska 6 — we are right around the corner."
+              },
+              "taxi": {
+                "costEstimation": "A short ride to the hostel. The price should not exceed 7–10 KM.",
+                "pickupPoint": "Central Bus Station"
+              }
+            },
+            "train": {
+              "locationGenitive": "the railway station",
+              "public": {
+                "title": "Tram №1",
+                "summary": "Direct tram from the square to Pošta, ~3 min walk to the door.",
+                "text": "Take Tram №1 towards 'Baščaršija'. Tickets cost 1.80 KM at the kiosk or 2.00 KM from the driver in cash.",
+                "walkToStop": "Exit the railway station building. The tram loop is right in front of you on the main square (1 min walk).",
+                "getOffAt": "Get off at 'Pošta' stop.",
+                "walkToHostel": "Walk towards Dalmatinska 6 (approx. 3 minutes)."
+              },
+              "taxi": {
+                "costEstimation": "The hostel is close, so the fair ride price on the taximeter is around 7–10 KM.",
+                "pickupPoint": "Main Railway/Bus Station"
+              }
+            }
+          },
+          "payment": {
+            "cashOnly": "Cash only payment (EUR / BAM)"
+          },
+          "guide": {
+            "title": "Local Guide by {hostelName}",
+            "subtitle": "Handpicked places in Sarajevo to help you experience the city like a local without overpaying.",
+            "essentials": {
+              "title": "Important nearby",
+              "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
+              "expand": "Show",
+              "collapse": "Hide",
+              "atm": "ATM",
+              "shop": "Shop",
+              "pharmacy": "Pharmacy",
+              "lateFood": "Late food"
+            },
+            "exploreArrival": {
+              "title": "Explore the city",
+              "subtitle": "Our handpicked bars, cafes, food, and sights are ready when you are.",
+              "teaserTitle": "More recommendations waiting",
+              "teaserDescription": "Bars, coffee shops, and viewpoints are tucked away for now. Open the full city guide whenever you want.",
+              "showAllButton": "Show all recommendations"
+            },
+            "mapCard": {
+              "title": "{hostelName} Custom Google Map",
+              "description": "Opens directly in your Google Maps app with all our secret layers"
+            },
+            "tabs": {
+              "all": "All",
+              "essential": "Info",
+              "restaurants": "Restaurants",
+              "bars": "Bars",
+              "cafes": "Cafes",
+              "sights": "Sights"
+            },
+            "routeButton": "Route",
+            "openInMaps": "Open in Maps",
+            "showAllPlaces": "Show all places ({count})",
+            "topPick": "Top pick",
+            "emptyCategory": "No places found in this category.",
+            "nearHostel": {
+              "title": "Near the hostel",
+              "subtitle": "Walking distance from us",
+              "exploreCityTitle": "Explore the city",
+              "exploreCitySubtitle": "Handpicked places across the city"
+            },
+            "hostelPlaceCategories": {
+              "food": "Food",
+              "shop": "Shop / grocery",
+              "atm": "ATM",
+              "pharmacy": "Pharmacy",
+              "nightlife": "Nightlife",
+              "other": "Other"
+            },
+            "places": {
+              "atm": {
+                "desc": "Cash & ATMs — withdraw BAM (KM) at UniCredit or Raiffeisen ATMs on Dalmatinska, about a 2-minute walk from the hostel."
+              },
+              "konzum": {
+                "desc": "Grocery store — nearest Konzum for water, snacks, and basics. Open late on most days except Sunday."
+              },
+              "apoteka": {
+                "desc": "Pharmacy on Titova street for medicine, first aid, and travel essentials."
+              },
+              "u2": {
+                "desc": "Late-night food — U2 Pizza stays open late, a reliable option if you arrive hungry after reception hours."
+              },
+              "zeljo": {
+                "desc": "Traditional Bosnian food — legendary ćevapi at Baščaršija. The best local food experience in the heart of the old town."
+              },
+              "mahir": {
+                "desc": "Pizza & grill — popular local pizzeria with generous portions and fair prices, a short walk from the city center."
+              },
+              "edin": {
+                "desc": "Bakery — fresh burek, pastries, and coffee from one of Sarajevo's favourite neighbourhood bakeries."
+              },
+              "vucko": {
+                "desc": "Pub & grill — cosy gastro pub with local beer and hearty Balkan plates, great for a relaxed evening."
+              },
+              "ribica": {
+                "desc": "Hidden bar — tiny, quirky spot filled with vintage objects. A local favourite for an authentic Sarajevo night out."
+              },
+              "kinobosna": {
+                "desc": "Live music venue — legendary Monday jam sessions and concerts in an old cinema hall. Check the schedule before you go."
+              },
+              "fabrika": {
+                "desc": "Specialty coffee — third-wave roastery with excellent espresso and a calm workspace vibe."
+              },
+              "habitus": {
+                "desc": "Brunch & coffee — stylish spot with healthy bowls, great coffee, and a terrace when the weather is nice."
+              },
+              "yellowfort": {
+                "desc": "Viewpoint — stunning panoramic views. The perfect spot to watch the sunset over the entire city of Sarajevo."
+              },
+              "exchangeOffice": {
+                "name": "Exclusive Exchange Office",
+                "description": "Fair exchange rate from EUR to BAM (KM) with no hidden fees, just a 3-minute walk away."
+              },
+              "supermarket": {
+                "name": "Bingo / Konzum Supermarket",
+                "description": "The closest grocery store to buy water, snacks, or personal items at normal local prices."
+              },
+              "yellowBastion": {
+                "name": "Yellow Bastion (Žuta Tabija)",
+                "description": "Stunning panoramic viewpoint. The perfect spot to watch the sunset over the entire city of Sarajevo."
+              }
+            }
+          },
+          "preTrip": {
+            "sundayClosure": {
+              "title": "Sunday Closure",
+              "description": "Sunday in Bosnia — a non-working day. Shops, supermarkets and most establishments are closed. Plan your purchases!"
+            }
+          },
+          "marketing": {
+            "heroSubtitle": "Your green oasis in the heart of Sarajevo",
+            "heroImageAlt": "{hostelName} — hostel photo"
+          }
+        },
+        "kotor": {
+          "routes": {
+            "from": {
+              "airport": "Tivat Airport",
+              "busStation": "Bus Station",
+              "busMain": "Kotor Bus Station"
+            },
+            "taxiService": {
+              "standWarning": "At TIV there is no official taxi queue inside the terminal. Use the desk in arrivals or ask the hostel to pre-book. Avoid drivers who approach you in the parking lot with inflated fixed prices.",
+              "meterWarning": "Agree a fixed fare to Kotor old town (usually €20–35) before you leave, or confirm the meter is running. Airport taxis often quote flat rates instead of the meter."
+            },
+            "airport": {
+              "locationGenitive": "Tivat Airport",
+              "public": {
+                "title": "Bus via coastal road",
+                "summary": "No bus at the terminal — walk to the highway or Tivat bus station, then a local bus to Kotor.",
+                "fareLabel": "Bus €3–4 (cash to driver)",
+                "text": "There is no bus stop at the airport building. Walk to the Adriatic highway (E65) and take any bus heading towards Kotor or Budva, or continue to Tivat bus station (~20 min walk) for a scheduled departure. Pay the driver in cash.",
+                "walkToStop": "Exit the terminal, turn left and walk ~12 minutes along the access road until you reach the coastal highway and the bus stop.",
+                "getOffAt": "Get off at Kotor bus station (Autobuska stanica Kotor). Some seasonal services may stop closer to the old town — ask the driver for Stari Grad.",
+                "walkToHostel": "From Kotor bus station, walk downhill to Stari Grad. Continue to our hostel at {address}."
+              },
+              "taxi": {
+                "costEstimation": "A direct taxi from Tivat Airport to Kotor is usually {minEUR}–{maxEUR} € depending on season and whether you pre-book.",
+                "pickupPoint": "Tivat Airport (TIV) — arrivals hall"
+              }
+            },
+            "busMain": {
+              "locationGenitive": "Kotor bus station",
+              "public": {
+                "title": "Walk to old town",
+                "summary": "Regional buses stop at Kotor bus station — the old town is about 15 minutes downhill on foot.",
+                "fareLabel": "Free (on foot)",
+                "text": "Regional buses from Dubrovnik, Podgorica, Budva and Tivat terminate at Kotor bus station. Follow signs to Stari Grad downhill along the main road. Suitcases on wheels are fine.",
+                "walkToStop": "You are already at Kotor bus station when your intercity bus arrives.",
+                "getOffAt": "Kotor bus station — final stop for most regional routes.",
+                "walkToHostel": "Head towards the old town walls and the Sea Gate, then continue to our hostel at {address}."
+              },
+              "taxi": {
+                "costEstimation": "A short taxi from the bus station to the old town is usually {minEUR}–{maxEUR} € — handy with heavy luggage.",
+                "pickupPoint": "Kotor Bus Station (Autobuska stanica)"
+              }
+            }
+          },
+          "payment": {
+            "cashOnly": "Cash only (EUR)"
+          },
+          "guide": {
+            "title": "Local Guide by {hostelName}",
+            "subtitle": "Curated places around Kotor Bay — coming soon.",
+            "essentials": {
+              "title": "Important nearby",
+              "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
+              "expand": "Show",
+              "collapse": "Hide",
+              "atm": "ATM",
+              "shop": "Shop",
+              "pharmacy": "Pharmacy",
+              "lateFood": "Late food"
+            },
+            "exploreArrival": {
+              "title": "Explore the city",
+              "subtitle": "Our handpicked bars, cafes, food, and sights are ready when you are.",
+              "teaserTitle": "More recommendations waiting",
+              "teaserDescription": "Bars, coffee shops, and viewpoints are tucked away for now. Open the full city guide whenever you want.",
+              "showAllButton": "Show all recommendations"
+            },
+            "mapCard": {
+              "title": "{hostelName} Custom Google Map",
+              "description": "Opens directly in your Google Maps app with all our secret layers"
+            },
+            "tabs": {
+              "all": "All",
+              "essential": "Info",
+              "restaurants": "Restaurants",
+              "bars": "Bars",
+              "cafes": "Cafes",
+              "sights": "Sights"
+            },
+            "routeButton": "Route",
+            "openInMaps": "Open in Maps",
+            "showAllPlaces": "Show all places ({count})",
+            "topPick": "Top pick",
+            "emptyCategory": "No places found in this category.",
+            "nearHostel": {
+              "title": "Near the hostel",
+              "subtitle": "Walking distance from us",
+              "exploreCityTitle": "Explore the city",
+              "exploreCitySubtitle": "Curated places around Kotor Bay"
+            },
+            "hostelPlaceCategories": {
+              "food": "Food",
+              "shop": "Shop / grocery",
+              "atm": "ATM",
+              "pharmacy": "Pharmacy",
+              "nightlife": "Nightlife",
+              "other": "Other"
+            },
+            "places": {}
+          },
+          "preTrip": {},
+          "marketing": {
+            "heroSubtitle": "Your base for exploring Kotor Bay and the Adriatic coast",
+            "heroImageAlt": "{hostelName} — hostel photo"
+          }
+        },
+        "default": {
+          "payment": {
+            "cashOnly": "Cash only (EUR)"
+          },
+          "guide": {
+            "title": "Local Guide by {hostelName}",
+            "subtitle": "Curated places around town — from your city pack.",
+            "essentials": {
+              "title": "Important nearby",
+              "subtitle": "ATM, shop, pharmacy, and late food — one tap to Maps.",
+              "expand": "Show",
+              "collapse": "Hide",
+              "atm": "ATM",
+              "shop": "Shop",
+              "pharmacy": "Pharmacy",
+              "lateFood": "Late food"
+            },
+            "exploreArrival": {
+              "title": "Explore the city",
+              "subtitle": "Our handpicked bars, cafes, food, and sights are ready when you are.",
+              "teaserTitle": "More recommendations waiting",
+              "teaserDescription": "Bars, coffee shops, and viewpoints are tucked away for now. Open the full city guide whenever you want.",
+              "showAllButton": "Show all recommendations"
+            },
+            "mapCard": {
+              "title": "{hostelName} Custom Google Map",
+              "description": "Opens directly in your Google Maps app with all our secret layers"
+            },
+            "tabs": {
+              "all": "All",
+              "essential": "Info",
+              "restaurants": "Restaurants",
+              "bars": "Bars",
+              "cafes": "Cafes",
+              "sights": "Sights"
+            },
+            "routeButton": "Route",
+            "openInMaps": "Open in Maps",
+            "showAllPlaces": "Show all places ({count})",
+            "topPick": "Top pick",
+            "emptyCategory": "No places found in this category.",
+            "nearHostel": {
+              "title": "Near the hostel",
+              "subtitle": "Walking distance from us",
+              "exploreCityTitle": "Explore the city",
+              "exploreCitySubtitle": "Handpicked places across the city"
+            },
+            "hostelPlaceCategories": {
+              "food": "Food",
+              "shop": "Shop / grocery",
+              "atm": "ATM",
+              "pharmacy": "Pharmacy",
+              "nightlife": "Nightlife",
+              "other": "Other"
+            },
+            "places": {}
+          },
+          "preTrip": {},
+          "marketing": {
+            "heroSubtitle": "Your base for exploring the city",
+            "heroImageAlt": "{hostelName} — hostel photo"
+          }
+        }
+      },
+      "inside": {
+        "title": "Welcome inside!",
+        "private": {
+          "accessDataTitle": "Access Information",
+          "mainDoorLabel": "Main building entrance code",
+          "hostelDoorLabel": "Hostel door code (basement floor)",
+          "wifiCopyButton": "Copy",
+          "wifiCopiedButton": "Copied!",
+          "nightWarning": {
+            "title": "Important Information",
+            "description": "You have checked in automatically. Please visit the reception in the morning from 08:00 to complete your payment and provide your passport for mandatory tourist registration."
+          },
+          "videoTour": {
+            "title": "Video Tour Guide",
+            "description": "Short video: how to find your room, where to get bed linen, and quiet hour guidelines."
+          }
+        }
+      },
+      "enter": {
+        "sections": {
+          "find": {
+            "title": "Recognize the hostel",
+            "banner": "Compare this photo with what you see on the street — there may be no sign at night."
+          },
+          "nightPreview": {
+            "title": "For your return tonight (after {time})",
+            "banner": "Save these codes now. When reception is closed, use them instead of ringing the doorbell."
+          }
+        },
+        "guide": {
+          "day": {
+            "title": "Ring the doorbell",
+            "banner": "The doorbell button is located to the right of the entrance and is labeled with the hostel's name.",
+            "single": {
+              "title": "Ring at the entrance",
+              "banner": "Use the doorbell at the main entrance — reception will let you in."
+            },
+            "standalone": {
+              "walkIn": {
+                "title": "Walk straight in",
+                "banner": "There is no building gate or doorbell — find the hostel using the photo above and head inside during reception hours."
+              },
+              "doorbell": {
+                "title": "Ring at the hostel door",
+                "banner": "Go to the hostel door shown in the photo and ring the doorbell — reception will open for you."
+              }
+            },
+            "reception": {
+              "title": "Head to reception",
+              "banner": "Enter the building and go to reception during opening hours. If you are unsure, message us on WhatsApp."
+            },
+            "hostelOnly": {
+              "title": "Find the hostel door",
+              "banner": "There is no separate building code — go straight to the hostel door on your floor and ring the doorbell."
+            }
+          },
+          "night": {
+            "title": "Late Self Check-In (After {time})",
+            "banner": "The reception is closed. Please use the access codes below instead of the doorbell to avoid waking up other guests.",
+            "hostelOnly": {
+              "title": "Late Self Check-In (After {time})",
+              "banner": "Use the hostel door code below. There is no separate building entrance code."
+            }
+          }
+        },
+        "doors": {
+          "emptyState": "Door access is not configured yet — ring the doorbell or contact reception.",
+          "photosOnlyHint": "Follow the photos to find the door. Reception will share access codes at check-in.",
+          "noCodeHint": "Code not set yet — ask reception or check your booking message.",
+          "mainDoor": {
+            "title": "Main Entrance Door",
+            "codeLabel": "Entrance keypad code"
+          },
+          "subDoor": {
+            "title": "Hostel Door",
+            "codeLabel": "Hostel door code",
+            "guide": "Go down the stairs to the left of the main entrance, find the basement door, and enter the code.",
+            "guideDirect": "The hostel door is on your floor — use the photo to recognize it, then enter the code on the keypad."
+          }
+        }
+      },
+      "common": {
+        "timing": {
+          "checkIn": "Check-in",
+          "checkInTime": "from {time}",
+          "checkOut": "Check-out",
+          "checkOutTime": "until {time}",
+          "luggageAlert": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
+        },
+        "payment": {
+          "taxNote": "Local tourist tax is excluded and paid on-site: {cost} per person per night."
+        }
+      }
+    }
+  },
+  "pages": {
+    "arrivalJourney": {
+      "guestCheckIn": {
+        "hint": "Trip tips and directions are open to everyone. Door codes and your bed map unlock after check-in — tap",
+        "link": "Check in"
+      },
+      "tourismGate": {
+        "title": "Complete guest registration",
+        "description": "Your accommodation needs to register all guests before issuing settlement details. This is a legal requirement.",
+        "step1": "Tap \"Register\" below",
+        "step2": "Add each guest's name and document photos",
+        "step3": "Return here to view your settlement",
+        "cta": "Register now"
+      },
+      "tabs": {
+        "info": "Preparation",
+        "route": "Route To Hostel",
+        "arrival": "Access & Doors",
+        "register": "Tourist registration",
+        "settlement": "Settlement"
+      },
+      "preTrip": {
+        "title": "Before Your Trip",
+        "description": "From landing in the country to check-in at the hostel and finding your bed — start here before you travel.",
+        "actionButton": "View Directions",
+        "sections": {
+          "beforeTravel": {
+            "heading": "Before you travel"
+          },
+          "onArrival": {
+            "heading": "When you arrive"
+          }
+        },
+        "checkInReady": {
+          "title": "Check-in link or PIN",
+          "description": "After reception assigns your bed, tap Check in on Concierge (top right) or Check in in this guide to enter your PIN or link. Door codes and your room map unlock once you're signed in."
+        },
+        "luggage": {
+          "title": "Luggage Storage",
+          "description": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
+        },
+        "timing": {
+          "checkIn": "Check-in time",
+          "checkInTime": "from {time}",
+          "checkOut": "Check-out time",
+          "checkOutTime": "until {time}"
+        }
+      },
+      "directions": {
+        "fromSubtitle": "From which location are you arriving?",
+        "recommendedTitle": "Recommended route",
+        "stepByStep": "Step-by-step",
+        "otherPublicRoute": "Other public route",
+        "trustDisclaimer": "Route verified by the hostel. Use our step-by-step guide for local stops and tickets.",
+        "backupTitle": "Backup option",
+        "taxiTitle": "Taxi",
+        "routeFeedbackLink": "Route didn't work? Message us on WhatsApp",
+        "routeFeedbackMessage": "Hi! I'm following your route guide ({route}). Something seems wrong: ",
+        "officialRouteLink": "Official route source",
+        "labels": {
+          "ticket": "Ticket: {kiosk} KM kiosk / {driver} KM driver",
+          "stops": "{count} stops",
+          "duration": "~{minutes} min",
+          "freeTransit": "Free public transport",
+          "flatFare": "Fare: {amount}",
+          "taxiPrice": "{minKM}–{maxKM} KM ({minEUR}–{maxEUR} €)",
+          "taxiDuration": "~{min}–{max} min"
+        },
+        "steps": {
+          "walk": "Walk",
+          "ride": "Ride",
+          "exit": "Exit"
+        },
+        "legs": {
+          "walkToStop": "Walk to stop",
+          "boardAndRide": "Board & ride",
+          "getOff": "Get off",
+          "walkToHostel": "Walk to hostel",
+          "onFootRoute": "On foot"
+        },
+        "goodToKnow": "Good to know",
+        "actionButton": "How to Enter",
+        "checkInToContinue": "Check in to continue"
+      },
+      "arrival": {
+        "title": "Arrival Info",
+        "visuals": "Visual landmarks:",
+        "actionButton": "Settling In",
+        "sections": {
+          "find": {
+            "heading": "Find your hostel",
+            "photosHiddenHint": "Use the address from the route step and message reception if you cannot find the building."
+          },
+          "checkIn": {
+            "heading": "Check in now"
+          },
+          "night": {
+            "heading": "Late check-in"
+          },
+          "nightPreview": {
+            "heading": "Night return"
+          }
+        }
+      },
+      "register": {
+        "actionButton": "Continue to settlement",
+        "loading": "Loading registration…",
+        "intro": {
+          "title": "Tourist registration ({country})",
+          "description": "{country} requires each person staying at the accommodation to be registered separately. Upload the required identity documents for each guest."
+        },
+        "privacy": {
+          "title": "Why we collect this data",
+          "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
+        },
+        "reservationName": {
+          "label": "Name on reservation"
+        },
+        "guestList": {
+          "heading": "Added guests",
+          "photosUploaded": "Photos uploaded",
+          "empty": "No guests added yet. Add everyone who will stay in your room or bed."
+        },
+        "addGuest": {
+          "heading": "Add a guest",
+          "firstName": "First name",
+          "lastName": "Last name",
+          "passport": "Passport (photo page)",
+          "entryStamp": "Entry stamp photo",
+          "submit": "Add guest",
+          "adding": "Uploading photos…",
+          "success": "Guest added."
+        },
+        "contact": {
+          "heading": "Contact for this stay",
+          "whatsapp": "WhatsApp number",
+          "hint": "One number for the whole stay — we may contact this person about registration."
+        },
+        "finish": {
+          "confirmLabel": "Everyone staying at this accommodation is listed above",
+          "submit": "Complete registration",
+          "submitting": "Completing…"
+        },
+        "complete": {
+          "summaryTitle": "Registration complete",
+          "continue": "Continue to settlement"
+        },
+        "fieldErrors": {
+          "firstName": "Enter a first name (max 120 characters).",
+          "lastName": "Enter a last name (max 120 characters).",
+          "passport": "Choose a passport photo.",
+          "entryStamp": "Choose an entry stamp photo.",
+          "fileTooLarge": "Image is too large. Use a photo under 10 MB.",
+          "notAnImage": "File must be an image.",
+          "processingFailed": "Could not process this image. Try another photo."
+        },
+        "errors": {
+          "generic": "Something went wrong. Try again.",
+          "unauthorized": "Sign in with your check-in link or PIN first.",
+          "featureDisabled": "Tourist registration is not enabled for this hostel.",
+          "registrationClosed": "Registration is already complete — you cannot add more guests.",
+          "invalidInput": "Check names and photos, then try again.",
+          "invalidFile": "One of the photos was rejected. Use a clear JPG or PNG.",
+          "uploadFailed": "Upload failed. Check your connection and try again.",
+          "dbUnavailable": "Service is temporarily unavailable. Try again in a moment.",
+          "invalidWhatsapp": "Enter a valid WhatsApp number with country code.",
+          "noGuests": "Add at least one guest before completing."
+        }
+      },
+      "settlement": {
+        "copy": {
+          "planning": {
+            "title": "When you're inside",
+            "description": "After you enter, connect to Wi-Fi below and read the house rules. Visit reception during opening hours to pay and register your passport."
+          },
+          "atDoor": {
+            "title": "You're in!",
+            "description": "Use the door codes from the Access tab. Visit reception in the morning to pay and register your passport."
+          },
+          "atDesk": {
+            "title": "Welcome at reception",
+            "description": "Complete your payment and show your passport for mandatory tourist registration. Wi-Fi and house rules are below."
+          }
+        },
+        "actionButton": "Explore Your Stay"
+      }
+    },
+    "navigation": {
+      "home": "Home",
+      "concierge": "Concierge",
+      "arrivalGuide": "Arrival Guide",
+      "guide": "Local guide",
+      "services": "Services",
+      "faq": "FAQ",
+      "back": "Back",
+      "backToConcierge": "Back to Concierge",
+      "goToConcierge": "Go to Concierge"
+    },
+    "memories": {
+      "title": "Share your memories",
+      "subtitle": "Upload your favourite hostel photos or videos."
+    },
+    "concierge": {
+      "arrivalGuideButton": "How to get to the hostel (Guide)",
+      "sections": {
+        "services": "Services",
+        "localGuide": "Local guide",
+        "houseRules": "House rules"
+      },
+      "seeAll": "See all",
+      "seeAllGuide": "See all",
+      "seeAllRules": "All rules",
+      "viewAllServices": "All services ({count})"
+    },
+    "checkIn": {
+      "metaTitle": "Guest check-in",
+      "metaDescription": "Open your personal check-in link, scan the QR from reception, or enter the 6-digit PIN from your paper slip.",
+      "activating": "Opening your stay…",
+      "backButton": "Back",
+      "waiting": {
+        "eyebrow": "Guest check-in",
+        "title": "Open your link or enter your PIN",
+        "description": "Reception sends a personal link, QR, or a 6-digit PIN on paper after your bed is assigned. Enter the PIN here if you are offline — we sync when you are back online."
+      },
+      "intent": {
+        "metaTitle": "Where are you now?",
+        "metaDescription": "Choose where you are — we'll open the right step in your arrival guide, from travel prep to your bed.",
+        "eyebrow": "Almost there",
+        "title": "Where are you now?",
+        "description": "Pick what matches your situation. We'll jump to the right part of your guide — before travel, at the door, or at reception.",
+        "options": {
+          "planning": "Still traveling",
+          "at_door": "At the hostel door",
+          "at_desk": "At reception"
+        }
+      },
+      "pin": {
+        "label": "Check-in PIN",
+        "placeholder": "000 000",
+        "hint": "6 digits from the paper slip reception gave you",
+        "submit": "Check in",
+        "activating": "Checking PIN…",
+        "queuedTitle": "Saved offline",
+        "queuedDescription": "Your PIN is saved on this phone. We will finish check-in automatically when you are back online.",
+        "errors": {
+          "invalid_pin": {
+            "title": "PIN not recognized",
+            "description": "Double-check the 6 digits on your slip or ask reception for a new code."
+          },
+          "expired": {
+            "title": "Stay ended",
+            "description": "This PIN has expired. Visit reception if you are still staying with us."
+          },
+          "revoked": {
+            "title": "Access revoked",
+            "description": "Reception cancelled this PIN. Ask for a new one at the desk."
+          },
+          "db_unavailable": {
+            "title": "Temporary error",
+            "description": "We could not verify your PIN. Try again in a moment."
+          },
+          "too_many_attempts": {
+            "title": "Too many tries",
+            "description": "Wait about 15 minutes, then try again or ask reception for help."
+          }
+        }
+      },
+      "crossHostel": {
+        "title": "Checked in elsewhere",
+        "description": "You are registered at {registeredHostel} (bed {bed}). You are viewing {currentHostel} now.",
+        "stripSummary": "Registered at {registeredHostel} (bed {bed}) · viewing {currentHostel}",
+        "routesHint": "Directions below are for {currentHostel}.",
+        "stayHereHint": "To use this hostel's guest app, get a new check-in link from its reception.",
+        "sheetHint": "Staying here? Check in below.",
+        "goToRegisteredHostel": "Go to my hostel",
+        "dismiss": "Dismiss"
+      },
+      "checkInRequired": {
+        "eyebrow": "Guest check-in",
+        "title": "Get your check-in link",
+        "description": "Reception sends a personal link or QR after your bed is assigned. Often before you arrive — not only at the desk.",
+        "step1": "Contact reception once your bed is assigned",
+        "step2": "Ask for your check-in link, QR, or 6-digit PIN once your bed is assigned",
+        "step3": "Open the link or enter the PIN on this phone to unlock door codes and concierge",
+        "whatsappReception": "Message reception on WhatsApp",
+        "callReception": "Call reception",
+        "signIn": "Sign in",
+        "whatsappMessage": "Hi, I need my check-in link for {hostelName}",
+        "noContact": "Contact reception when your bed is assigned to get your check-in link."
+      },
+      "wrongHostel": {
+        "title": "Wrong hostel link",
+        "description": "This check-in link belongs to {hostel}. Open it on the correct guest app subdomain.",
+        "goToHostel": "Go to my hostel"
+      },
+      "errors": {
+        "invalid_token": {
+          "title": "Link not recognized",
+          "description": "This check-in link is invalid or already replaced. Ask reception for a new QR code."
+        },
+        "expired": {
+          "title": "Stay ended",
+          "description": "This check-in link has expired. Visit reception if you are still staying with us."
+        },
+        "revoked": {
+          "title": "Access revoked",
+          "description": "Reception cancelled this check-in link. Ask for a new one at the desk."
+        },
+        "wrong_hostel": {
+          "title": "Wrong hostel",
+          "description": "This link belongs to another hostel. Use the button below to open the correct guest app."
+        },
+        "db_unavailable": {
+          "title": "Temporary error",
+          "description": "We could not verify your link. Try again in a moment or ask reception for help."
+        },
+        "no_tenant": {
+          "title": "Hostel not found",
+          "description": "Open the guest app from your hostel subdomain or booking link."
+        }
+      }
+    },
+    "landing": {
+      "header": {
+        "guestAppLink": "Guest app"
+      },
+      "postWhatsapp": {
+        "title": "Already sorted with reception?",
+        "description": "Open the arrival guide for directions and trip prep. After reception sends your PIN or link, use Check in (top right on Concierge) to unlock Wi‑Fi and door codes.",
+        "openGuestApp": "Open arrival guide",
+        "keepBrowsing": "Keep browsing rooms",
+        "dismiss": "Dismiss"
+      },
+      "arrivalCallout": {
+        "arrivalTitle": "Arriving soon?",
+        "arrivalDescription": "Directions, reception hours, and what to expect before and during check-in.",
+        "arrivalCta": "How to get here",
+        "exploreTitle": "Planning ahead?",
+        "exploreDescription": "Browse the guest app for city tips before you arrive.",
+        "exploreCta": "Explore guest app"
+      },
+      "comingSoon": {
+        "title": "Coming soon",
+        "description": "Direct booking for this hostel is being set up. Contact us or use the arrival guide in the app.",
+        "contactButton": "Contact hostel"
+      },
+      "subscriptionNotice": {
+        "expired": "Online guest guide is temporarily unavailable. Contact and availability details are below.",
+        "scheduled": "Guest app opens soon. Contact the hostel for check-in until then.",
+        "scheduledWithDate": "Guest app expected from {date}. Contact the hostel for check-in until then."
+      }
+    },
+    "platform": {
+      "recovery": {
+        "metaTitle": "Find your hostel",
+        "metaDescription": "Open the link from your booking confirmation or choose your hostel to continue.",
+        "eyebrowLanding": "Hostel website",
+        "eyebrowApp": "Guest app",
+        "title": "Find your hostel",
+        "primaryHint": "Use the link from your booking confirmation, email, or QR code at the hostel. That link already points to the right place.",
+        "lookupTitle": "Know your hostel code?",
+        "slugPlaceholder": "e.g. balkanhan",
+        "slugRequired": "Enter a hostel code to continue.",
+        "openSiteButton": "Open hostel website",
+        "openAppButton": "Open guest app",
+        "lookupHint": "The code is usually in your booking link, before the domain name.",
+        "directoryTitle": "Or choose from the list",
+        "supportHint": "Still stuck? Contact your hostel directly — they can resend the correct link."
+      },
+      "notFound": {
+        "title": "Hostel not found",
+        "description": "This link does not match an active hostel. Check the address or return to the home page.",
+        "backButton": "Find your hostel",
+        "directoryTitle": "Other hostels you can open now"
+      },
+      "offline": {
+        "metaDescription": "Online check-in info is unavailable. Contact the hostel for arrival details.",
+        "eyebrowApp": "Guest app",
+        "eyebrowLanding": "Hostel website",
+        "whatsappReception": "Message reception",
+        "callReception": "Call reception",
+        "emailHostel": "Email hostel",
+        "noContact": "Contact details are not available online. If you have a booking, try the phone number from your confirmation email.",
+        "staleLinkHint": "If you saved this link from a past booking, it may no longer work.",
+        "directoryTitle": "Other hostels you can open now",
+        "whatsappMessage": "Hi, I have a booking and your guest app link doesn't work — what should I do for check-in?",
+        "whatsappMessageScheduled": "Hi, I have a booking — the guest app is not live yet. What should I do for check-in?",
+        "whatsappMessageArchived": "Hi, I have a question about my stay at your hostel.",
+        "expired": {
+          "title": "Online guest guide unavailable",
+          "description": "Check-in instructions are no longer available here. Contact the hostel to confirm your arrival and next steps."
+        },
+        "scheduled": {
+          "title": "Opening soon",
+          "description": "The guest app is not live yet. Contact the hostel for check-in details until then.",
+          "dateLabel": "Expected from {date}"
+        },
+        "archived": {
+          "title": "No longer available online",
+          "description": "This property is no longer listed here. Contact the hostel directly if you have a booking."
+        }
+      }
+    },
+    "owner": {
+      "portal": {
+        "title": "Frontdesk Mate",
+        "subtitle": "Portal za vlasnike"
+      },
+      "locale": {
+        "en": "English",
+        "sr": "Srpski"
+      },
+      "nav": {
+        "setup": "Podešavanje",
+        "settings": "Postavke",
+        "signOut": "Odjava"
+      },
+      "lifecycle": {
+        "expired": {
+          "title": "Pretplata je istekla",
+          "description": "Landing stranica ostaje online za upite. Obnovite pretplatu da biste vratili guest app."
+        },
+        "scheduled": {
+          "title": "Pretplata još nije počela",
+          "description": "Landing je aktivan za upite. Guest app se otvara na datum početka ispod."
+        },
+        "archived": {
+          "title": "Hostel je arhiviran",
+          "description": "Gosti ne mogu da otvore vaše sajtove. Kontaktirajte podršku za obnovu pristupa."
+        }
+      },
+      "subscription": {
+        "title": "Pretplata",
+        "starts": "Početak",
+        "ends": "Kraj",
+        "readOnlyHint": "Datume upravlja Frontdesk Mate. Za promenu plana kontaktirajte podršku."
+      },
+      "editAccess": {
+        "readOnlyNotice": "Izmena je onemogućena dok ne obnovite pretplatu ili ne vratite hostel. I dalje možete da pregledate podešavanja."
+      },
+      "auth": {
+        "login": {
+          "title": "Prijava",
+          "subtitle": "Portal za vlasnike vašeg hostela.",
+          "email": "Email",
+          "password": "Lozinka",
+          "emailPlaceholder": "vi@hostel.com",
+          "submit": "Prijavi se",
+          "submitPending": "Prijava…",
+          "noAccount": "Nemate nalog?",
+          "signUpLink": "Registracija",
+          "connectionError": "Prijava nije uspela. Proverite konekciju i pokušajte ponovo."
+        },
+        "signup": {
+          "title": "Kreiraj nalog",
+          "subtitle": "Registrujte se kao vlasnik hostela.",
+          "loading": "Učitavanje…",
+          "email": "Email",
+          "password": "Lozinka",
+          "emailPlaceholder": "vi@hostel.com",
+          "submit": "Registracija",
+          "submitPending": "Kreiranje naloga…",
+          "confirmEmail": "Proverite email da potvrdite nalog, zatim se prijavite.",
+          "hasAccount": "Već imate nalog?",
+          "signInLink": "Prijava",
+          "connectionError": "Registracija nije uspela. Proverite konekciju i pokušajte ponovo."
+        }
+      },
+      "onboarding": {
+        "title": "Kreirajte hostel",
+        "subtitle": "Izaberite javni slug i city pack. Datumi pretplate se postavljaju automatski kada se hostel kreira.",
+        "cityPacksError": "Nije moguće učitati city pack-ove: {message}",
+        "displayName": "Naziv za prikaz",
+        "displayNamePlaceholder": "Balkan Han Hostel",
+        "slug": "Slug",
+        "slugHint": "URL-ovi za goste: {landingHost} i {appHost}",
+        "slugPlaceholder": "balkan-han",
+        "cityPack": "City pack",
+        "cityPackHint": "Rute, lokalni vodič i podrazumevani taksi za vaš grad. Kasnije se ne može menjati.",
+        "cityPackPlaceholder": "Izaberite grad…",
+        "submit": "Kreiraj hostel",
+        "submitPending": "Kreiranje…",
+        "noCityPacks": "Trenutno nema dostupnih city pack-ova. Pokušajte kasnije ili zatražite grad ispod.",
+        "missingCity": "Ne vidite svoj grad?",
+        "requestCityLink": "Javite nam"
+      },
+      "setup": {
+        "title": "Podešavanje",
+        "slugLabel": "slug",
+        "previewTitle": "Pregled URL-ova za goste",
+        "landingLabel": "Landing",
+        "appLabel": "App",
+        "wizardTeaser": "Podešavanje se nastavlja u launch wizard-u (Modul 5). Brending, sobe, arrival access i još toga — u vođenim koracima.",
+        "goToSettings": "Idi na postavke",
+        "savedLive": "Postavke hostela sačuvane"
+      },
+      "wizard": {
+        "back": "Nazad",
+        "next": "Dalje",
+        "save": "Sačuvaj izmene",
+        "openFullSection": "Otvori punu sekciju {section} →",
+        "subscriptionSeeAbove": "Datumi pretplate su prikazani iznad — kontaktirajte podršku za promenu plana.",
+        "cityPackReady": "spreman za goste (mesta + rute).",
+        "cityPackNotReady": "još nije spreman.",
+        "cityPackRequestLink": "Zatražite podršku za grad →",
+        "toast": {
+          "savedReady": "Sačuvano — spremno za goste",
+          "savedIncomplete": "Sačuvano — još {count} obaveznih stavki na guest path-u",
+          "continueSetup": "Nastavi podešavanje",
+          "readOnly": "Izmena je onemogućena za vaš status naloga.",
+          "saveFailed": "Čuvanje nije uspelo. Pokušajte ponovo ili kontaktirajte podršku."
+        },
+        "steps": {
+          "identity": {
+            "title": "Identitet i pretplata",
+            "description": "Ime hostela i logo koje gosti vide na landing-u i u app-u.",
+            "short": "Identitet"
+          },
+          "contacts-landing": {
+            "title": "Recepcija i landing",
+            "description": "Telefon recepcije, politika boravka, hero slika i javni landing.",
+            "short": "Recepcija"
+          },
+          "booking": {
+            "title": "Put rezervacije",
+            "description": "Online engine ili WhatsApp rezervacije sa landing hero-a i kartica soba.",
+            "short": "Booking"
+          },
+          "arrival": {
+            "title": "Dolazak",
+            "description": "Adresa, hod do vrata i pristup za goste.",
+            "short": "Dolazak"
+          },
+          "room-map": {
+            "title": "Minimum mape soba",
+            "description": "Pregled kreveta, rasporeda i navigacije za settlement.",
+            "short": "Sobe"
+          },
+          "rules-wifi": {
+            "title": "Pravila, vodič i WiFi",
+            "description": "Osnovno u app-u nakon check-in-a.",
+            "short": "Pravila"
+          },
+          "preview": {
+            "title": "Pregled i objava",
+            "description": "Proverite spremnost guest path-a i podelite linkove.",
+            "short": "Pregled"
+          }
+        }
+      },
+      "settings": {
+        "title": "Postavke",
+        "subtitle": "Puna konfiguracija hostela. Za vođeno podešavanje, vratite se na",
+        "backToSetup": "Nazad na podešavanje",
+        "sectionChipsLabel": "Sekcije postavki",
+        "save": "Sačuvaj izmene",
+        "unsavedChanges": "Imate nesačuvane izmene",
+        "allChangesSaved": "Sve izmene su sačuvane",
+        "toast": {
+          "saved": "Postavke sačuvane",
+          "savedReady": "Postavke sačuvane — spremno za goste",
+          "savedIncomplete": "Sačuvano — još {count} stavki konfiguracije nije završeno",
+          "viewChecklist": "Pogledaj listu",
+          "readOnly": "Vaša pretplata ne dozvoljava izmenu postavki.",
+          "saveFailed": "Čuvanje nije uspelo. Pokušajte ponovo."
+        }
+      },
+      "receptionDesk": {
+        "title": "PIN za recepciju",
+        "description": "Osoblje koristi ovaj PIN za prijavu na sajt recepcije — ne za goste.",
+        "loginUrlLabel": "Prijava na recepciju",
+        "statusSet": "PIN postavljen",
+        "statusNotSet": "PIN nije postavljen",
+        "pinLabel": "PIN",
+        "pinHint": "Najmanje 6 karaktera. Ostavite prazno da zadržite trenutni PIN.",
+        "pinPlaceholderUnchanged": "•••••• (nepromenjeno)",
+        "pinPlaceholderNew": "Postavite PIN za osoblje",
+        "setupHint": "Prijava na recepciju koristi poseban PIN za osoblje.",
+        "setupLink": "Postavite PIN u Postavkama →"
+      },
+      "cityPack": {
+        "inheritedTitle": "Gradski prevoz (nasleđeno)",
+        "inheritedDescription": "Hub rute i tekstovi prevoza su zajednički za vaš grad. Vi prilagodite samo adresu i poslednji deo hoda do hostela.",
+        "managedHint": "Sadržaj city pack-a održava Frontdesk Mate.",
+        "noPlaces": "Još nema mesta u vašem city pack-u.",
+        "requestCityLink": "Zatražite podršku za grad →",
+        "statusReady": "Spremno",
+        "statusNotReady": "Nije spremno",
+        "enabledRoutes": "Uključene rute",
+        "cityTaxi": "Gradski taksi",
+        "packLabel": "Paket",
+        "none": "Nema"
+      },
+      "cityRequest": {
+        "title": "Zatražite podršku za grad",
+        "description": "Recite nam koji grad vam treba ili koji pack još nije spreman. Zahteve pregledamo ručno i javljamo se na email vašeg naloga.",
+        "form": {
+          "requestKind": "Vrsta zahteva",
+          "cityName": "Grad",
+          "cityNamePlaceholder": "Kotor, Novi Sad…",
+          "countryOrRegion": "Država ili region (opciono)",
+          "countryOrRegionPlaceholder": "Crna Gora",
+          "message": "Poruka (opciono)",
+          "messagePlaceholder": "Sve što nam pomaže da prioritizujemo zahtev",
+          "contactEmail": "Kontakt email",
+          "submit": "Pošalji zahtev",
+          "submitPending": "Slanje…"
+        },
+        "kind": {
+          "new_city": "Novi grad — još nije na listi",
+          "pack_not_ready": "City pack postoji, ali nije spreman za goste",
+          "other": "Ostalo"
+        },
+        "success": {
+          "title": "Zahtev je primljen",
+          "body": "Hvala — imamo vaš zahtev. Tim će vam se javiti kada imamo novost."
+        },
+        "error": {
+          "duplicate": "Već imate aktivan zahtev za ovaj grad u poslednjih 7 dana.",
+          "validation": "Proverite formu i pokušajte ponovo.",
+          "save": "Zahtev nije sačuvan. Pokušajte ponovo."
+        },
+        "backToOnboarding": "Nazad na kreiranje hostela",
+        "backToSetup": "Nazad na launch setup",
+        "backToSettings": "Nazad na podešavanja"
+      }
+    }
+  },
+  "features": {
+    "uploadMemories": {
+      "errors": {
+        "noFiles": "Please select at least one file.",
+        "fileTooLarge": "One or more files exceed the 100MB limit. Select smaller ones.",
+        "uploadFailed": "Upload failed. Please check your connection and try again.",
+        "timeout": "Upload timeout. Please try again.",
+        "unknown": "Something went wrong. Please try again."
+      },
+      "form": {
+        "upload": "Upload",
+        "uploading": "Uploading..."
+      },
+      "fileZone": {
+        "prompt": "Click to upload photos or videos",
+        "limit": "Up to 100MB per file",
+        "addMore": "Add more",
+        "addMoreTitle": "Add more files"
+      },
+      "instagram": {
+        "label": "Instagram Account (optional)",
+        "placeholder": "@username"
+      },
+      "preview": {
+        "removeFile": "Remove file",
+        "video": "Video"
+      },
+      "success": {
+        "title": "Thank you for sharing!",
+        "description": "Your memories have been successfully uploaded.",
+        "backHome": "Back to Home",
+        "uploadMore": "Upload more"
+      }
+    }
+  },
+  "components": {
+    "hero": {
+      "searchPlaceholder": "Get 10% Off for Direct Booking",
+      "checkIn": "Check-In",
+      "checkOut": "Check-Out",
+      "guests": "Guests",
+      "guestSingle": "Guest",
+      "guestPlural": "Guests",
+      "bookButton": "Book Now",
+      "whatsappSendDatesButton": "Send dates on WhatsApp",
+      "whatsappDatesHint": "Reception will reply in chat — your dates are included in the message.",
+      "selectDates": "Select dates"
+    },
+    "nightAccess": {
+      "title": "Night return access codes",
+      "description": "If you go out at night, use these codes to get back in. Do not ring the doorbell.",
+      "descriptionHostelOnly": "If you go out at night, use the hostel door code below. There is no building entrance code."
+    },
+    "roomSchema": {
+      "title": "Your bed",
+      "entrance": "Entrance"
+    },
+    "findYourBed": {
+      "title": "Find your bed",
+      "bedLabel": "Bed {bed}",
+      "roomLabel": "Room {room}",
+      "floorLabel": "Floor {floor}",
+      "bedWithTier": "{slot} · {tier}",
+      "bedTierUpper": "upper",
+      "bedTierLower": "lower",
+      "insideRoom": "Inside your room",
+      "directionsToRoom": "Directions to room",
+      "fallback": "Your bed assignment is not configured yet. Ask at reception or message us on WhatsApp.",
+      "viewFullGuide": "Room map & directions"
+    },
+    "taxi": {
+      "bookTaxiTitle": "Book a taxi",
+      "needHelpTitle": "Need help?",
+      "callTaxi": "Call {taxiName}",
+      "whatsappTaxi": "Message {taxiName} on WhatsApp",
+      "whatsappTaxiMessage": "Hello! Please send a taxi to {pickupPoint}. Destination: {address}.",
+      "askReceptionHoursHint": "Reception hours: {open}–{close}.",
+      "askReceptionOpensHint": "Reception opens at {open}.",
+      "safetyTipsTitle": "Before you call — safety tips",
+      "receptionTaxiMessage": "Hi {hostelName}! I'm at {pickupPoint} and need a taxi to {address}. Can you help me book one?",
+      "noTaxiNumber": "No taxi number configured — use WhatsApp reception to help book a ride.",
+      "noContactFallback": "Contact details are not configured yet."
+    },
+    "wifi": {
+      "title": "Wi-Fi Connection",
+      "compactTitle": "Wi‑Fi",
+      "compactCopy": "Copy password",
+      "copyLabel": "Copy Password",
+      "copiedLabel": "Password Copied!",
+      "sheetNetworkLabel": "Network",
+      "sheetPasswordLabel": "Password"
+    },
+    "stayEssentials": {
+      "bridges": {
+        "arrivalGuide": "Arrival guide",
+        "wifi": "Wi‑Fi",
+        "checkout": "Check-out",
+        "nightAccess": "Night access",
+        "reception": "About reception"
+      },
+      "bridgeAriaLabelUnread": "{title} — not viewed",
+      "bridgeAriaLabelRead": "{title} — viewed",
+      "sheetStub": "Content coming soon.",
+      "nightAccessSheet": {
+        "fullAccessGuide": "Full access guide",
+        "dismiss": "I picked up my room key"
+      },
+      "checkout": {
+        "checkOutUntil": "Check-out until {time}",
+        "packNightBefore": {
+          "title": "Pack the night before",
+          "description": "Pack your things the evening before checkout so you can leave quietly in the morning without waking roommates."
+        },
+        "personalCheckout": "Your booked checkout: {date}",
+        "luggageTitle": "Luggage after checkout",
+        "lateCheckoutHint": "Need a later checkout? Ask at reception.",
+        "lateCheckoutLink": "Late checkout details",
+        "lateCheckoutLinkWithPrice": "Late checkout details · {price}"
+      },
+      "reception": {
+        "hoursTitle": "Reception hours",
+        "hours": "Open {open}–{close}",
+        "helpWithTitle": "We can help with",
+        "helpBullets": {
+          "checkIn": "Check-in, payment, and passport registration",
+          "luggage": "Luggage storage before check-in or after checkout",
+          "laundry": "Laundry and on-site questions about your room",
+          "tours": "Tours, transfers, and local tips",
+          "lateCheckout": "Late checkout requests"
+        },
+        "taxiViaReception": "Reception can help you book a taxi when you're out and about.",
+        "luggageTitle": "Luggage storage",
+        "selfCheckInAfter": "After {time}, you can use the app door codes if reception is closed.",
+        "footerHint": "Use the button below to message reception."
+      }
+    },
+    "registrationAlert": {
+      "title": "Settle Payment & Passport.",
+      "description": "Stop by the reception tomorrow after {time} for mandatory tourist registration and payment."
+    },
+    "hostelFeatures": {
+      "title": "Why Travelers Choose Us",
+      "subtitle": "Essentials and comforts for a smooth hostel stay."
+    },
+    "rules": {
+      "title": "House rules",
+      "tapHint": "Tap a rule for details",
+      "openDetail": "{rule} — open details"
+    },
+    "guestCheckInChip": {
+      "chipLabel": "Check in",
+      "openSheet": "Check in — open check-in instructions"
+    },
+    "guestStayChip": {
+      "chipLabel": "My stay",
+      "sheetTitle": "Your stay",
+      "openDetail": "{summary} — open stay details",
+      "receptionHeading": "For reception",
+      "receptionHint": "Show this screen if reception asks who you are.",
+      "stayRefLabel": "Ref",
+      "registeredAsLabel": "Registered as",
+      "copyForReception": "Copy for reception",
+      "copiedForReception": "Copied",
+      "copyLineHostel": "{hostelName}",
+      "copyLineBed": "Bed: {bedLine}",
+      "copyLineDates": "Stay: {dateRange}",
+      "copyLineRef": "Ref: #{stayRef}",
+      "copyLineName": "Name: {guestName}",
+      "showRoomMapLink": "Show room map & directions",
+      "extendStayHeading": "Need more nights?",
+      "extendStayNotice": "Extensions are handled at reception. Your app access matches your booked nights — after extending, ask reception to refresh your access if door codes stop working.",
+      "extendStayWhatsapp": "Request to extend stay",
+      "extendStayMessage": "Hi! I'd like to extend my stay at {hostelName}. I'm in bed {bedLabel}, currently until {checkoutDate}. Ref #{stayRef}. How many nights can I add?",
+      "extendStayMessageNamed": "Hi! I'd like to extend my stay at {hostelName}. I'm in bed {bedLabel}, currently until {checkoutDate}. Ref #{stayRef}. Registered as {guestName}. How many nights can I add?"
+    },
+    "receptionContact": {
+      "messageReception": "Message reception",
+      "callReception": "Call reception",
+      "noContact": "Contact reception for help.",
+      "askReceptionHoursHint": "Reception hours: {open}–{close}.",
+      "askReceptionOpensHint": "Reception opens at {open}."
+    },
+    "conciergeContact": {
+      "receptionStripLabel": "Message {hostelName} reception",
+      "receptionStripLabelCompact": "Message reception",
+      "receptionStripHint": "Questions about your stay, laundry, or checkout",
+      "whatsappMessage": "Hi, I have a question about my stay at {hostelName}"
+    },
+    "guestIssue": {
+      "cardTitle": "Something not working?",
+      "cardDescription": "Shower, door, bed, Wi‑Fi… Reception sees it on their screen.",
+      "cardButton": "Report issue",
+      "sheetTitle": "Report an issue",
+      "sheetDescription": "Tell reception what needs fixing in your room.",
+      "sendPreviewHeading": "We'll send",
+      "stayRefLabel": "Ref",
+      "privacyNotice": "Only reception sees this. Used to fix the problem in your room — not shared publicly.",
+      "categoryLabel": "What's wrong?",
+      "noteLabel": "Details",
+      "notePlaceholder": "Optional — e.g. no hot water",
+      "noteOptional": "Optional",
+      "submitButton": "Send report",
+      "submitting": "Sending…",
+      "successTitle": "Sent to reception",
+      "successBody": "Your report was sent. Ref #{stayRef} is included.",
+      "successUrgent": "For urgent help, message reception on WhatsApp.",
+      "successWhatsappButton": "Message reception",
+      "successWhatsappMessage": "Hi, I reported an issue in my room at {hostelName}. Can you help?",
+      "successClose": "Done",
+      "myStayPrompt": "Something broken in your room?",
+      "myStayLink": "Report issue",
+      "categories": {
+        "shower": "Shower",
+        "toilet": "Toilet",
+        "door_lock": "Door",
+        "bed": "Bed",
+        "wifi": "Wi‑Fi",
+        "other": "Other"
+      },
+      "errors": {
+        "categoryRequired": "Choose a category.",
+        "unauthorized": "Sign in again to send a report.",
+        "tooManyOpen": "You already have open reports. Ask at reception if urgent.",
+        "noteTooLong": "Note is too long.",
+        "invalidCategory": "Choose a valid category.",
+        "dbUnavailable": "Could not send right now. Try again or message reception.",
+        "generic": "Something went wrong. Try again."
+      }
+    },
+    "guestExtras": {
+      "sectionTitle": "Extras",
+      "featuredLabel": "Featured",
+      "priceLabel": "{price}",
+      "priceFormatted": "{amount} {currency}",
+      "highlightPriceFrom": "from {amount} {currency}",
+      "priceAskReception": "Ask reception for price",
+      "scheduleLabel": "{schedule}",
+      "opsReceptionHint": "Ask at reception during opening hours.",
+      "externalLinkButton": "Open partner page",
+      "laundryMessage": "Hi! I'd like to use the laundry at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "earlyCheckinMessage": "Hi! I'd like to request an early check-in at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "lateCheckoutMessage": "Hi! I'd like to request a late checkout at {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}. Standard checkout is {checkoutTime}.",
+      "partnerTransferMessage": "Hi! I'd like to book a transfer from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "partnerTourMessage": "Hi! I'm interested in the tour from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "partnerGuideMessage": "Hi! I'm interested in the local guide from {hostelName}. I'm in bed {bedLabel}. Ref #{stayRef}.",
+      "laundry": {
+        "title": "Laundry",
+        "description": "Washing and drying on site. Reception will help you get started.",
+        "whatsappButton": "Message reception"
+      },
+      "earlyCheckin": {
+        "title": "Early check-in",
+        "description": "Arriving before standard check-in? Ask reception if an early room is available.",
+        "whatsappButton": "Message reception"
+      },
+      "lateCheckout": {
+        "title": "Late checkout",
+        "description": "Need a few extra hours? Message reception before checkout time.",
+        "availabilityHint": "Subject to availability on checkout day.",
+        "whatsappButton": "Message reception"
+      },
+      "partnerTransfer": {
+        "title": "Airport transfer",
+        "description": "On-demand ride with our partner. Book via WhatsApp or their page.",
+        "whatsappButton": "Book via WhatsApp"
+      },
+      "partnerTour": {
+        "title": "City tour",
+        "description": "Join a guided tour with our local partner.",
+        "whatsappButton": "Ask on WhatsApp"
+      },
+      "partnerGuide": {
+        "title": "Local guide",
+        "description": "A paid guide for your day — book with our partner.",
+        "whatsappButton": "Ask on WhatsApp"
+      }
+    },
+    "featureGate": {
+      "previewBadge": "Preview"
+    }
+  },
+  "admin": {
+    "guestCheckIn": {
+      "magicLink": {
+        "title": "Guest check-in ready",
+        "subtitle": "Bed {bed} · show this QR at reception or send the link",
+        "subtitleNamed": "{name} · bed {bed}",
+        "qrAlt": "Guest check-in QR code",
+        "linkLabel": "Magic link",
+        "pinLabel": "Paper PIN",
+        "pinHint": "Write this on the guest slip — works offline, syncs when they go online",
+        "copy": "Copy link",
+        "copied": "Copied",
+        "done": "Issue another"
+      }
+    }
+  }
+}

@@ -964,6 +964,230 @@
           "description": "This property is no longer listed here. Contact the hostel directly if you have a booking."
         }
       }
+    },
+    "owner": {
+      "portal": {
+        "title": "Frontdesk Mate",
+        "subtitle": "Owner portal"
+      },
+      "locale": {
+        "en": "English",
+        "sr": "Srpski"
+      },
+      "nav": {
+        "setup": "Setup",
+        "settings": "Settings",
+        "signOut": "Sign out"
+      },
+      "lifecycle": {
+        "expired": {
+          "title": "Subscription ended",
+          "description": "Your landing page stays online for leads. Renew to restore the full guest app."
+        },
+        "scheduled": {
+          "title": "Subscription not started yet",
+          "description": "Landing is live for leads. The guest app opens on the start date below."
+        },
+        "archived": {
+          "title": "Hostel archived",
+          "description": "Guests cannot open your sites. Contact support to restore access."
+        }
+      },
+      "subscription": {
+        "title": "Subscription",
+        "starts": "Starts",
+        "ends": "Ends",
+        "readOnlyHint": "Dates are managed by Frontdesk Mate. Contact support to change your plan."
+      },
+      "editAccess": {
+        "readOnlyNotice": "Editing is disabled until your subscription is renewed or your hostel is restored. You can still view your setup."
+      },
+      "auth": {
+        "login": {
+          "title": "Sign in",
+          "subtitle": "Owner portal for your hostel.",
+          "email": "Email",
+          "password": "Password",
+          "emailPlaceholder": "you@hostel.com",
+          "submit": "Sign in",
+          "submitPending": "Signing in…",
+          "noAccount": "No account?",
+          "signUpLink": "Sign up",
+          "connectionError": "Sign in failed. Check your connection and try again."
+        },
+        "signup": {
+          "title": "Create account",
+          "subtitle": "Register as a hostel owner.",
+          "loading": "Loading…",
+          "email": "Email",
+          "password": "Password",
+          "emailPlaceholder": "you@hostel.com",
+          "submit": "Sign up",
+          "submitPending": "Creating account…",
+          "confirmEmail": "Check your email to confirm your account, then sign in.",
+          "hasAccount": "Already have an account?",
+          "signInLink": "Sign in",
+          "connectionError": "Sign up failed. Check your connection and try again."
+        }
+      },
+      "onboarding": {
+        "title": "Create your hostel",
+        "subtitle": "Choose a public slug and city pack. Subscription dates are set automatically when your hostel is created.",
+        "cityPacksError": "Could not load city packs: {message}",
+        "displayName": "Display name",
+        "displayNamePlaceholder": "Balkan Han Hostel",
+        "slug": "Slug",
+        "slugHint": "Your guest URLs: {landingHost} and {appHost}",
+        "slugPlaceholder": "balkan-han",
+        "cityPack": "City pack",
+        "cityPackHint": "Routes, local guide, and default taxi for your city. You cannot change this later.",
+        "cityPackPlaceholder": "Select a city…",
+        "submit": "Create hostel",
+        "submitPending": "Creating…",
+        "noCityPacks": "No city packs are available right now. Try again later or request your city below.",
+        "missingCity": "Don't see your city?",
+        "requestCityLink": "Tell us"
+      },
+      "setup": {
+        "title": "Setup",
+        "slugLabel": "slug",
+        "previewTitle": "Guest preview URLs",
+        "landingLabel": "Landing",
+        "appLabel": "App",
+        "wizardTeaser": "Setup continues in the launch wizard (Module 5). You will configure branding, rooms, arrival access, and more in guided steps.",
+        "goToSettings": "Go to settings",
+        "savedLive": "Hostel settings saved"
+      },
+      "wizard": {
+        "back": "Back",
+        "next": "Next",
+        "save": "Save changes",
+        "openFullSection": "Open full {section} section →",
+        "subscriptionSeeAbove": "Subscription dates are shown above — contact support to change your plan.",
+        "cityPackReady": "ready for guests (places + routes).",
+        "cityPackNotReady": "not ready yet.",
+        "cityPackRequestLink": "Request city support →",
+        "toast": {
+          "savedReady": "Saved — ready for guests",
+          "savedIncomplete": "Saved — {count} guest-path must item(s) left",
+          "continueSetup": "Continue setup",
+          "readOnly": "Editing is disabled for your account status.",
+          "saveFailed": "Could not save. Try again or contact support."
+        },
+        "steps": {
+          "identity": {
+            "title": "Identity & subscription",
+            "description": "Your hostel name and logo guests see on landing and app.",
+            "short": "Identity"
+          },
+          "contacts-landing": {
+            "title": "Reception & landing",
+            "description": "Reception phone, stay policy, hero image, and public landing.",
+            "short": "Reception"
+          },
+          "booking": {
+            "title": "Booking path",
+            "description": "Online engine or WhatsApp-only booking from the landing hero and room cards.",
+            "short": "Booking"
+          },
+          "arrival": {
+            "title": "Arrival journey",
+            "description": "Address, walk to the door, and access for guests.",
+            "short": "Arrival"
+          },
+          "room-map": {
+            "title": "Room map minimum",
+            "description": "Preview bed, layout, and wayfinding for settlement.",
+            "short": "Room map"
+          },
+          "rules-wifi": {
+            "title": "Rules, guide & WiFi",
+            "description": "In-app essentials unlocked after guest check-in.",
+            "short": "Rules"
+          },
+          "preview": {
+            "title": "Preview & go live",
+            "description": "Check guest-path readiness and share links with guests.",
+            "short": "Preview"
+          }
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "subtitle": "Full hostel configuration. For guided setup, go back to",
+        "backToSetup": "Back to setup",
+        "sectionChipsLabel": "Settings sections",
+        "save": "Save changes",
+        "unsavedChanges": "You have unsaved changes",
+        "allChangesSaved": "All changes saved",
+        "toast": {
+          "saved": "Settings saved",
+          "savedReady": "Settings saved — ready for guests",
+          "savedIncomplete": "Saved — {count} config item(s) still incomplete",
+          "viewChecklist": "View checklist",
+          "readOnly": "Your subscription does not allow editing settings.",
+          "saveFailed": "Could not save settings. Try again."
+        }
+      },
+      "receptionDesk": {
+        "title": "Reception desk PIN",
+        "description": "Staff use this PIN to sign in at your reception desk site — not for guests.",
+        "loginUrlLabel": "Reception login",
+        "statusSet": "PIN set",
+        "statusNotSet": "PIN not set",
+        "pinLabel": "PIN",
+        "pinHint": "At least 6 characters. Leave empty to keep the current PIN.",
+        "pinPlaceholderUnchanged": "•••••• (unchanged)",
+        "pinPlaceholderNew": "Set a PIN for staff",
+        "setupHint": "Reception desk login uses a separate staff PIN.",
+        "setupLink": "Set PIN in Settings →"
+      },
+      "cityPack": {
+        "inheritedTitle": "City transport (inherited)",
+        "inheritedDescription": "Hub routes and transit copy are shared for your city. You only customize address and last-mile walk for your hostel.",
+        "managedHint": "City pack content is managed by Frontdesk Mate.",
+        "noPlaces": "No places in your city pack yet.",
+        "requestCityLink": "Request city support →",
+        "statusReady": "Ready",
+        "statusNotReady": "Not ready",
+        "enabledRoutes": "Enabled routes",
+        "cityTaxi": "City taxi",
+        "packLabel": "Pack",
+        "none": "None"
+      },
+      "cityRequest": {
+        "title": "Request city support",
+        "description": "Tell us which city you need or which pack is not ready yet. We review requests manually and will contact you at the email on your account.",
+        "form": {
+          "requestKind": "Request type",
+          "cityName": "City",
+          "cityNamePlaceholder": "Kotor, Novi Sad…",
+          "countryOrRegion": "Country or region (optional)",
+          "countryOrRegionPlaceholder": "Montenegro",
+          "message": "Message (optional)",
+          "messagePlaceholder": "Anything that helps us prioritize your request",
+          "contactEmail": "Contact email",
+          "submit": "Send request",
+          "submitPending": "Sending…"
+        },
+        "kind": {
+          "new_city": "New city — not in the list yet",
+          "pack_not_ready": "City pack exists but is not ready for guests",
+          "other": "Other"
+        },
+        "success": {
+          "title": "Request received",
+          "body": "Thanks — we have your request. Our team will reach out when we have an update."
+        },
+        "error": {
+          "duplicate": "You already have a pending request for this city from the last 7 days.",
+          "validation": "Please check the form and try again.",
+          "save": "Could not save your request. Please try again."
+        },
+        "backToOnboarding": "Back to hostel setup",
+        "backToSetup": "Back to launch setup",
+        "backToSettings": "Back to settings"
+      }
     }
   },
   "features": {

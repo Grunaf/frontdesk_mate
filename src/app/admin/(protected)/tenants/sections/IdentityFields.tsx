@@ -11,6 +11,7 @@ import { TenantBrand } from '@/entities/tenant/ui/TenantBrand';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { normalizeTenantSlugInput } from '@/shared/config';
 import { cn } from '@/shared/lib/utils';
+import { OwnerCityPackSummaryCard } from '@/features/owner-city-pack';
 import { AdminImageField } from '../ui/AdminImageField';
 import { CityPackInheritanceCard } from '../ui/CityPackInheritanceCard';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
@@ -26,6 +27,9 @@ interface IdentityFieldsProps {
   settings?: TenantSettings;
   readinessInput: TenantReadinessInput;
   onChange: (next: { slug: string; name: string; cityPackId: CityPackId }) => void;
+  slugReadOnly?: boolean;
+  cityPackReadOnly?: boolean;
+  ownerLocale?: string;
 }
 
 export function IdentityFields({
@@ -39,6 +43,9 @@ export function IdentityFields({
   settings,
   readinessInput,
   onChange,
+  slugReadOnly = false,
+  cityPackReadOnly = false,
+  ownerLocale,
 }: IdentityFieldsProps) {
   const { draft, updateDraft } = useTenantFormDraft();
   const mergedSettings = useMemo(
@@ -76,10 +83,12 @@ export function IdentityFields({
         </span>
         <input
           value={slug}
+          readOnly={slugReadOnly}
           onChange={(event) => onChange({ slug: event.target.value, name, cityPackId })}
           className={cn(
             'w-full rounded-md border bg-background px-3 py-2 text-sm',
-            missingSlug && 'border-amber-400 ring-1 ring-amber-200'
+            slugReadOnly && 'font-mono text-muted-foreground',
+            missingSlug && !slugReadOnly && 'border-amber-400 ring-1 ring-amber-200'
           )}
         />
       </label>
@@ -99,6 +108,25 @@ export function IdentityFields({
       </label>
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">City pack</span>
+        {cityPackReadOnly ? (
+          <div className="space-y-3">
+            <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <span className="font-medium">{selectedPackLabel ?? cityPackId}</span>
+              <span className="ml-2 font-mono text-xs text-muted-foreground">{cityPackId}</span>
+            </p>
+            {ownerLocale ? (
+              <OwnerCityPackSummaryCard
+                locale={ownerLocale}
+                compact
+                cityPackId={cityPackId}
+                cityPackLabel={selectedPackLabel}
+                cityPackGateSnapshot={cityPackGateSnapshot}
+                cityPackContent={cityPackContent}
+              />
+            ) : null}
+          </div>
+        ) : (
+          <>
         <span className="block text-xs text-muted-foreground">
           Routes, local guide, and default taxi for this city. Only Ready packs appear here — manage content in{' '}
           <a href="/admin/city-packs" className="underline">
@@ -133,6 +161,8 @@ export function IdentityFields({
           cityPackGateSnapshot={cityPackGateSnapshot}
           cityPackContent={cityPackContent}
         />
+          </>
+        )}
       </label>
       <AdminImageField
         label="Logo"

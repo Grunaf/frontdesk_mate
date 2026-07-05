@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { GuestExtraConfig } from '@/entities/guest-extra';
 import type { HouseRule } from '@/entities/house-rules';
 import type { GuestStayConfig, TenantLandingSettings, TenantSettings } from '@/entities/tenant';
+import type { TenantBookingSettings } from '@/entities/tenant/model/booking';
+import type { ArrivalAccessConfig } from '@/entities/tenant/model/accessPoints';
 import type { TenantHostelSettings } from '@/entities/tenant/model/hostelSettings';
 import type { RouteId } from '@/entities/hostel';
 import type { LocalizedField, LocalizedText } from '@/entities/city-pack/model/types';
@@ -33,6 +35,14 @@ export interface TenantFormDraft {
   arrivalWalkToHostel?: LocalizedField;
   arrivalWalkToHostelByRoute?: Partial<Record<RouteId, LocalizedField>>;
   arrivalRouteTipsByRoute?: Partial<Record<RouteId, LocalizedText[]>>;
+  checkInTime?: string;
+  checkOutTime?: string;
+  selfCheckInTimeAfter?: string;
+  wifi?: TenantSettings['wifi'];
+  contacts?: TenantSettings['contacts'];
+  reception?: Omit<NonNullable<TenantSettings['reception']>, 'deskPinHash'>;
+  booking?: TenantBookingSettings;
+  arrivalAccess?: ArrivalAccessConfig;
 }
 
 interface UpdateDraftOptions {
@@ -88,6 +98,51 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       : {}),
     ...(draft.arrivalRouteTipsByRoute !== undefined
       ? { arrivalRouteTipsByRoute: draft.arrivalRouteTipsByRoute }
+      : {}),
+    ...(draft.checkInTime !== undefined ? { checkInTime: draft.checkInTime || undefined } : {}),
+    ...(draft.checkOutTime !== undefined ? { checkOutTime: draft.checkOutTime || undefined } : {}),
+    ...(draft.selfCheckInTimeAfter !== undefined
+      ? { selfCheckInTimeAfter: draft.selfCheckInTimeAfter || undefined }
+      : {}),
+    ...(draft.wifi !== undefined
+      ? {
+          wifi: {
+            ...base.wifi,
+            ...draft.wifi,
+          },
+        }
+      : {}),
+    ...(draft.contacts !== undefined
+      ? {
+          contacts: {
+            ...base.contacts,
+            ...draft.contacts,
+          },
+        }
+      : {}),
+    ...(draft.reception !== undefined
+      ? {
+          reception: {
+            ...base.reception,
+            ...draft.reception,
+          },
+        }
+      : {}),
+    ...(draft.booking !== undefined
+      ? {
+          booking: {
+            ...base.booking,
+            ...draft.booking,
+          },
+        }
+      : {}),
+    ...(draft.arrivalAccess !== undefined
+      ? {
+          arrivalAccess: {
+            ...base.arrivalAccess,
+            ...draft.arrivalAccess,
+          },
+        }
       : {}),
   };
 
