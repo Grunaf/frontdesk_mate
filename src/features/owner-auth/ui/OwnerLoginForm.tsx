@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { createOwnerBrowserClient } from '@/shared/lib/db/supabase-owner-browser';
+import { useTranslations } from '@/shared/i18n';
 import { Button, Input, Label } from '@/shared/ui';
 
 interface OwnerLoginFormProps {
@@ -12,6 +13,7 @@ interface OwnerLoginFormProps {
 
 export function OwnerLoginForm({ locale }: OwnerLoginFormProps) {
   const router = useRouter();
+  const t = useTranslations('pages.owner.auth.login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function OwnerLoginForm({ locale }: OwnerLoginFormProps) {
         router.refresh();
         router.replace(`/${locale}`);
       } catch {
-        setErrorMessage('Sign in failed. Check your connection and try again.');
+        setErrorMessage(t('connectionError'));
       }
     });
   }
@@ -40,19 +42,20 @@ export function OwnerLoginForm({ locale }: OwnerLoginFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border bg-background p-6">
       <label className="block space-y-1.5">
-        <Label htmlFor="owner-login-email">Email</Label>
+        <Label htmlFor="owner-login-email">{t('email')}</Label>
         <Input
           id="owner-login-email"
           type="email"
           autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@hostel.com"
+          placeholder={t('emailPlaceholder')}
           required
+          className="min-h-11 text-base"
         />
       </label>
       <label className="block space-y-1.5">
-        <Label htmlFor="owner-login-password">Password</Label>
+        <Label htmlFor="owner-login-password">{t('password')}</Label>
         <Input
           id="owner-login-password"
           type="password"
@@ -60,6 +63,7 @@ export function OwnerLoginForm({ locale }: OwnerLoginFormProps) {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
+          className="min-h-11 text-base"
         />
       </label>
       {errorMessage ? (
@@ -67,13 +71,13 @@ export function OwnerLoginForm({ locale }: OwnerLoginFormProps) {
           {errorMessage}
         </p>
       ) : null}
-      <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? 'Signing in…' : 'Sign in'}
+      <Button type="submit" className="min-h-11 w-full text-base" disabled={isPending}>
+        {isPending ? t('submitPending') : t('submit')}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        No account?{' '}
+        {t('noAccount')}{' '}
         <Link href={`/${locale}/signup`} className="font-medium text-primary underline-offset-4 hover:underline">
-          Sign up
+          {t('signUpLink')}
         </Link>
       </p>
     </form>

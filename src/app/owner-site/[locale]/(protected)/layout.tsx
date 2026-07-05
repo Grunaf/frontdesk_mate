@@ -1,5 +1,6 @@
+import { getOwnerSession, getOwnerTenantContext } from '@/entities/hostel-owner';
+import { OwnerPortalShell } from '@/features/owner-shell';
 import { redirect } from 'next/navigation';
-import { getOwnerSession } from '@/entities/hostel-owner';
 
 interface OwnerProtectedLayoutProps {
   children: React.ReactNode;
@@ -14,5 +15,14 @@ export default async function OwnerProtectedLayout({ children, params }: OwnerPr
     redirect(`/${locale}/login`);
   }
 
-  return children;
+  const context = await getOwnerTenantContext();
+  if (!context) {
+    return children;
+  }
+
+  return (
+    <OwnerPortalShell locale={locale} context={context}>
+      {children}
+    </OwnerPortalShell>
+  );
 }

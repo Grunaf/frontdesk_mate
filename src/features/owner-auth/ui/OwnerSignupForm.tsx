@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { createOwnerBrowserClient } from '@/shared/lib/db/supabase-owner-browser';
+import { useTranslations } from '@/shared/i18n';
 import { Button, Input, Label } from '@/shared/ui';
 
 interface OwnerSignupFormProps {
@@ -12,8 +13,7 @@ interface OwnerSignupFormProps {
 
 export function OwnerSignupForm({ locale }: OwnerSignupFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const hostelStep = searchParams.get('step') === 'hostel';
+  const t = useTranslations('pages.owner.auth.signup');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,40 +43,35 @@ export function OwnerSignupForm({ locale }: OwnerSignupFormProps) {
 
         if (data.session) {
           router.refresh();
-          router.replace(`/${locale}`);
+          router.replace(`/${locale}/onboarding`);
           return;
         }
 
-        setConfirmEmailMessage('Check your email to confirm your account, then sign in.');
+        setConfirmEmailMessage(t('confirmEmail'));
       } catch {
-        setErrorMessage('Sign up failed. Check your connection and try again.');
+        setErrorMessage(t('connectionError'));
       }
     });
   }
 
   return (
     <div className="space-y-4">
-      {hostelStep ? (
-        <p className="rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-          Create your account first. Hostel setup ships in Module 3.
-        </p>
-      ) : null}
-
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border bg-background p-6">
         <label className="block space-y-1.5">
-          <Label htmlFor="owner-signup-email">Email</Label>
+          <Label htmlFor="owner-signup-email">{t('email')}</Label>
           <Input
             id="owner-signup-email"
             type="email"
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@hostel.com"
+            placeholder={t('emailPlaceholder')}
             required
+            className="min-h-11 text-base"
           />
         </label>
         <label className="block space-y-1.5">
-          <Label htmlFor="owner-signup-password">Password</Label>
+          <Label htmlFor="owner-signup-password">{t('password')}</Label>
           <Input
             id="owner-signup-password"
             type="password"
@@ -85,6 +80,7 @@ export function OwnerSignupForm({ locale }: OwnerSignupFormProps) {
             onChange={(event) => setPassword(event.target.value)}
             minLength={6}
             required
+            className="min-h-11 text-base"
           />
         </label>
         {errorMessage ? (
@@ -97,16 +93,16 @@ export function OwnerSignupForm({ locale }: OwnerSignupFormProps) {
             {confirmEmailMessage}
           </p>
         ) : null}
-        <Button type="submit" className="w-full" disabled={isPending}>
-          {isPending ? 'Creating account…' : 'Sign up'}
+        <Button type="submit" className="min-h-11 w-full text-base" disabled={isPending}>
+          {isPending ? t('submitPending') : t('submit')}
         </Button>
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          {t('hasAccount')}{' '}
           <Link
             href={`/${locale}/login`}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            Sign in
+            {t('signInLink')}
           </Link>
         </p>
       </form>

@@ -1,3 +1,5 @@
+import type { TenantLifecycleStatus } from '@/entities/tenant/lib/resolveTenantLifecycle';
+
 export type TenantOwnerRow = {
   id: string;
   user_id: string;
@@ -16,4 +18,8 @@ export type OwnerTenantContext = {
   tenantId: string;
   slug: string;
   name: string;
+  subscriptionStartsAt: string;
+  subscriptionEndsAt: string;
+  archivedAt: string | null;
+  lifecycleStatus: TenantLifecycleStatus;
 };

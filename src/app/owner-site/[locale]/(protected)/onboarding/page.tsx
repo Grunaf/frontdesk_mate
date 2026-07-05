@@ -1,4 +1,7 @@
 import { getOwnerTenantContext } from '@/entities/hostel-owner';
+import { listCityPacksForOwnerOnboarding } from '@/entities/city-pack/server';
+import { OwnerHostelOnboardingForm } from '@/features/owner-onboarding';
+import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 
 interface OwnerOnboardingPageProps {
@@ -13,16 +16,30 @@ export default async function OwnerOnboardingPage({ params }: OwnerOnboardingPag
     redirect(`/${locale}/setup`);
   }
 
+  const t = await getTranslations('pages.owner.onboarding');
+  const tNav = await getTranslations('pages.owner.nav');
+  const { packs, error } = await listCityPacksForOwnerOnboarding();
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Create your hostel</h1>
-      <p className="text-sm text-muted-foreground">
-        You are signed in. Self-service hostel creation and city pack selection ship in Module 3.
-      </p>
-      <p className="text-xs text-muted-foreground">Locale: {locale}</p>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+        {error ? (
+          <p className="text-sm text-amber-800" role="status">
+            {t('cityPacksError', { message: error })}
+          </p>
+        ) : null}
+      </div>
+
+      <OwnerHostelOnboardingForm locale={locale} cityPacks={packs} />
+
       <form action={`/${locale}/auth/logout`} method="post">
-        <button type="submit" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-          Sign out
+        <button
+          type="submit"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {tNav('signOut')}
         </button>
       </form>
     </div>

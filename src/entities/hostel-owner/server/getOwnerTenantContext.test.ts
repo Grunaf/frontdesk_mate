@@ -41,7 +41,15 @@ describe('getOwnerTenantContext', () => {
   it('returns slug and name when owner link exists', async () => {
     vi.mocked(getOwnerSession).mockResolvedValue({ id: 'user-1', email: 'owner@test.com' });
 
-    const tenantRow = { id: 'tenant-1', slug: 'kotor-demo', name: 'Kotor Demo' };
+    const tenantRow = {
+      id: 'tenant-1',
+      slug: 'kotor-demo',
+      name: 'Kotor Demo',
+      subscription_starts_at: '2026-01-01T00:00:00.000Z',
+      subscription_ends_at: '2027-01-01T23:59:59.999Z',
+      archived_at: null,
+      is_active: true,
+    };
 
     vi.mocked(createOwnerServerClient).mockResolvedValue({
       from: vi.fn((table: string) => {
@@ -63,12 +71,13 @@ describe('getOwnerTenantContext', () => {
       }),
     } as never);
 
-    await expect(getOwnerTenantContext()).resolves.toEqual({
+    await expect(getOwnerTenantContext()).resolves.toMatchObject({
       userId: 'user-1',
       email: 'owner@test.com',
       tenantId: 'tenant-1',
       slug: 'kotor-demo',
       name: 'Kotor Demo',
+      lifecycleStatus: 'active',
     });
   });
 });

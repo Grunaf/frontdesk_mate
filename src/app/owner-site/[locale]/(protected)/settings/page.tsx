@@ -1,4 +1,5 @@
 import { getOwnerTenantContext } from '@/entities/hostel-owner';
+import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 
 interface OwnerSettingsPageProps {
@@ -13,10 +14,12 @@ export default async function OwnerSettingsPage({ params }: OwnerSettingsPagePro
     redirect(`/${locale}/onboarding`);
   }
 
+  const t = await getTranslations('pages.owner.settings');
+
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Settings</h1>
-      <p className="text-sm text-muted-foreground">Hostel settings editor — Module 7+.</p>
+      <h1 className="text-xl font-semibold">{t('title')}</h1>
+      <p className="text-sm text-muted-foreground">{t('teaser')}</p>
     </div>
   );
 }

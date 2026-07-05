@@ -968,103 +968,103 @@
     "owner": {
       "portal": {
         "title": "Frontdesk Mate",
-        "subtitle": "Owner portal"
+        "subtitle": "Portal za vlasnike"
       },
       "locale": {
         "en": "English",
         "sr": "Srpski"
       },
       "nav": {
-        "setup": "Setup",
-        "settings": "Settings",
-        "signOut": "Sign out"
+        "setup": "Podešavanje",
+        "settings": "Postavke",
+        "signOut": "Odjava"
       },
       "lifecycle": {
         "expired": {
-          "title": "Subscription ended",
-          "description": "Your landing page stays online for leads. Renew to restore the full guest app."
+          "title": "Pretplata je istekla",
+          "description": "Landing stranica ostaje online za upite. Obnovite pretplatu da biste vratili guest app."
         },
         "scheduled": {
-          "title": "Subscription not started yet",
-          "description": "Landing is live for leads. The guest app opens on the start date below."
+          "title": "Pretplata još nije počela",
+          "description": "Landing je aktivan za upite. Guest app se otvara na datum početka ispod."
         },
         "archived": {
-          "title": "Hostel archived",
-          "description": "Guests cannot open your sites. Contact support to restore access."
+          "title": "Hostel je arhiviran",
+          "description": "Gosti ne mogu da otvore vaše sajtove. Kontaktirajte podršku za obnovu pristupa."
         }
       },
       "subscription": {
-        "title": "Subscription",
-        "starts": "Starts",
-        "ends": "Ends",
-        "readOnlyHint": "Dates are managed by Frontdesk Mate. Contact support to change your plan."
+        "title": "Pretplata",
+        "starts": "Početak",
+        "ends": "Kraj",
+        "readOnlyHint": "Datume upravlja Frontdesk Mate. Za promenu plana kontaktirajte podršku."
       },
       "editAccess": {
-        "readOnlyNotice": "Editing is disabled until your subscription is renewed or your hostel is restored. You can still view your setup."
+        "readOnlyNotice": "Izmena je onemogućena dok ne obnovite pretplatu ili ne vratite hostel. I dalje možete da pregledate podešavanja."
       },
       "auth": {
         "login": {
-          "title": "Sign in",
-          "subtitle": "Owner portal for your hostel.",
+          "title": "Prijava",
+          "subtitle": "Portal za vlasnike vašeg hostela.",
           "email": "Email",
-          "password": "Password",
-          "emailPlaceholder": "you@hostel.com",
-          "submit": "Sign in",
-          "submitPending": "Signing in…",
-          "noAccount": "No account?",
-          "signUpLink": "Sign up",
-          "connectionError": "Sign in failed. Check your connection and try again."
+          "password": "Lozinka",
+          "emailPlaceholder": "vi@hostel.com",
+          "submit": "Prijavi se",
+          "submitPending": "Prijava…",
+          "noAccount": "Nemate nalog?",
+          "signUpLink": "Registracija",
+          "connectionError": "Prijava nije uspela. Proverite konekciju i pokušajte ponovo."
         },
         "signup": {
-          "title": "Create account",
-          "subtitle": "Register as a hostel owner.",
-          "loading": "Loading…",
+          "title": "Kreiraj nalog",
+          "subtitle": "Registrujte se kao vlasnik hostela.",
+          "loading": "Učitavanje…",
           "email": "Email",
-          "password": "Password",
-          "emailPlaceholder": "you@hostel.com",
-          "submit": "Sign up",
-          "submitPending": "Creating account…",
-          "confirmEmail": "Check your email to confirm your account, then sign in.",
-          "hasAccount": "Already have an account?",
-          "signInLink": "Sign in",
-          "connectionError": "Sign up failed. Check your connection and try again."
+          "password": "Lozinka",
+          "emailPlaceholder": "vi@hostel.com",
+          "submit": "Registracija",
+          "submitPending": "Kreiranje naloga…",
+          "confirmEmail": "Proverite email da potvrdite nalog, zatim se prijavite.",
+          "hasAccount": "Već imate nalog?",
+          "signInLink": "Prijava",
+          "connectionError": "Registracija nije uspela. Proverite konekciju i pokušajte ponovo."
         }
       },
       "onboarding": {
-        "title": "Create your hostel",
-        "subtitle": "Choose a public slug and city pack. Subscription dates are set automatically when your hostel is created.",
-        "cityPacksError": "Could not load city packs: {message}",
-        "displayName": "Display name",
+        "title": "Kreirajte hostel",
+        "subtitle": "Izaberite javni slug i city pack. Datumi pretplate se postavljaju automatski kada se hostel kreira.",
+        "cityPacksError": "Nije moguće učitati city pack-ove: {message}",
+        "displayName": "Naziv za prikaz",
         "displayNamePlaceholder": "Balkan Han Hostel",
         "slug": "Slug",
-        "slugHint": "Your guest URLs: {landingHost} and {appHost}",
+        "slugHint": "URL-ovi za goste: {landingHost} i {appHost}",
         "slugPlaceholder": "balkan-han",
         "cityPack": "City pack",
-        "cityPackHint": "Routes, local guide, and default taxi for your city. You cannot change this later.",
-        "cityPackPlaceholder": "Select a city…",
-        "submit": "Create hostel",
-        "submitPending": "Creating…",
-        "noCityPacks": "No city packs are available right now. Try again later or request your city below.",
-        "missingCity": "Don't see your city?",
-        "requestCityLink": "Tell us"
+        "cityPackHint": "Rute, lokalni vodič i podrazumevani taksi za vaš grad. Kasnije se ne može menjati.",
+        "cityPackPlaceholder": "Izaberite grad…",
+        "submit": "Kreiraj hostel",
+        "submitPending": "Kreiranje…",
+        "noCityPacks": "Trenutno nema dostupnih city pack-ova. Pokušajte kasnije ili zatražite grad ispod.",
+        "missingCity": "Ne vidite svoj grad?",
+        "requestCityLink": "Javite nam"
       },
       "setup": {
-        "title": "Setup",
+        "title": "Podešavanje",
         "slugLabel": "slug",
-        "previewTitle": "Guest preview URLs",
+        "previewTitle": "Pregled URL-ova za goste",
         "landingLabel": "Landing",
         "appLabel": "App",
-        "wizardTeaser": "Setup continues in the launch wizard (Module 5). You will configure branding, rooms, arrival access, and more in guided steps.",
-        "goToSettings": "Go to settings"
+        "wizardTeaser": "Podešavanje se nastavlja u launch wizard-u (Modul 5). Brending, sobe, arrival access i još toga — u vođenim koracima.",
+        "goToSettings": "Idi na postavke"
       },
       "settings": {
-        "title": "Settings",
-        "teaser": "Hostel settings editor — Module 7+."
+        "title": "Postavke",
+        "teaser": "Uređivač postavki hostela — Modul 7+."
       },
       "cityRequest": {
-        "title": "Request a new city",
-        "description": "City pack requests are not available yet. This flow ships in Module 9 — we will collect your city and contact you when a pack is ready.",
-        "backLink": "Back to hostel setup"
+        "title": "Zatražite novi grad",
+        "description": "Zahtevi za city pack još nisu dostupni. Ovaj tok stiže u Modulu 9 — prikupićemo vaš grad i javiti kada pack bude spreman.",
+        "backLink": "Nazad na kreiranje hostela"
       }
     }
   },
