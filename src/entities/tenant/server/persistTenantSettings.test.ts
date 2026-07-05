@@ -13,6 +13,8 @@ vi.mock('@/entities/city-pack/server', () => ({
   getCityPackForAdmin: (...args: unknown[]) => getCityPackForAdminMock(...args),
 }));
 
+import { hashDeskPin } from '@/app/reception/lib/deskPin';
+
 import type { TenantRecord } from '../model/settings';
 
 import { persistTenantSettings } from './persistTenantSettings';
@@ -40,6 +42,7 @@ describe('persistTenantSettings owner branch', () => {
     upsertTenantMock.mockResolvedValue({ ok: true });
     getCityPackForAdminMock.mockReset();
     getCityPackForAdminMock.mockResolvedValue({ pack: null, error: null });
+    process.env.RECEPTION_SESSION_SECRET = 'test-secret';
   });
 
   it('ignores tampered slug, pack, and subscription from input', async () => {
@@ -129,6 +132,85 @@ describe('persistTenantSettings owner branch', () => {
       ok: false,
       code: 'validation',
       message: expect.any(String),
+    });
+    expect(upsertTenantMock).not.toHaveBeenCalled();
+  });
+
+  it('updates deskPinHash when owner submits a new PIN', async () => {
+    const previous = makePrevious();
+    const formData = new FormData();
+    formData.set('receptionDeskPin', '654321');
+
+    const result = await persistTenantSettings({
+      actor: { kind: 'owner', tenantId: 'tenant-uuid', userId: 'user-1' },
+      slug: 'kotor',
+      originalSlug: 'kotor',
+      name: 'Kotor Hostel',
+      cityPackId: 'kotor',
+      subscriptionStartsAt: '',
+      subscriptionEndsAt: '',
+      formData,
+      previous,
+    });
+
+    expect(result).toEqual({ ok: true, slug: 'kotor' });
+    const expectedHash = hashDeskPin('kotor', '654321');
+    expect(upsertTenantMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          reception: expect.objectContaining({ deskPinHash: expectedHash }),
+        }),
+      })
+    );
+  });
+
+  it('keeps deskPinHash when owner saves with empty PIN field', async () => {
+    const previous = makePrevious();
+    const formData = new FormData();
+    formData.set('wifiName', 'NewWifi');
+
+    const result = await persistTenantSettings({
+      actor: { kind: 'owner', tenantId: 'tenant-uuid', userId: 'user-1' },
+      slug: 'kotor',
+      originalSlug: 'kotor',
+      name: 'Kotor Hostel',
+      cityPackId: 'kotor',
+      subscriptionStartsAt: '',
+      subscriptionEndsAt: '',
+      formData,
+      previous,
+    });
+
+    expect(result).toEqual({ ok: true, slug: 'kotor' });
+    expect(upsertTenantMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          reception: expect.objectContaining({ deskPinHash: 'stored-hash' }),
+        }),
+      })
+    );
+  });
+
+  it('rejects owner PIN shorter than minimum length', async () => {
+    const formData = new FormData();
+    formData.set('receptionDeskPin', '12345');
+
+    const result = await persistTenantSettings({
+      actor: { kind: 'owner', tenantId: 'tenant-uuid', userId: 'user-1' },
+      slug: 'kotor',
+      originalSlug: 'kotor',
+      name: 'Kotor Hostel',
+      cityPackId: 'kotor',
+      subscriptionStartsAt: '',
+      subscriptionEndsAt: '',
+      formData,
+      previous: makePrevious(),
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'validation',
+      message: expect.stringContaining('6'),
     });
     expect(upsertTenantMock).not.toHaveBeenCalled();
   });

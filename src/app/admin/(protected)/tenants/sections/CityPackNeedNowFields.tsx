@@ -108,7 +108,7 @@ export function CityPackNeedNowFields({
           {isOwner ? (
             <>
               {t('noPlaces')}{' '}
-              <OwnerCityPackRequestLink locale={locale} />
+              <OwnerCityPackRequestLink locale={locale} packId={cityPackId} />
             </>
           ) : (
             'No city pack places yet. Add places in the city pack admin first.'

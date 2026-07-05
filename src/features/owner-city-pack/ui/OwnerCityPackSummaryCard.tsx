@@ -38,11 +38,23 @@ export function OwnerCityPackSummaryCard({ locale, ...cardProps }: OwnerCityPack
   );
 }
 
-export function OwnerCityPackRequestLink({ locale }: { locale: string }) {
+export function ownerCityRequestHref(locale: string, packId?: string): string {
+  const base = `/${locale}/city-request`;
+  const id = packId?.trim();
+  return id ? `${base}?pack=${encodeURIComponent(id)}` : base;
+}
+
+export function OwnerCityPackRequestLink({
+  locale,
+  packId,
+}: {
+  locale: string;
+  packId?: string;
+}) {
   const t = useTranslations('pages.owner.cityPack');
 
   return (
-    <Link href={`/${locale}/onboarding/city-request`} className="font-semibold text-primary underline">
+    <Link href={ownerCityRequestHref(locale, packId)} className="font-semibold text-primary underline">
       {t('requestCityLink')}
     </Link>
   );

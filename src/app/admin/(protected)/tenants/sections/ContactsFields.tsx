@@ -18,6 +18,7 @@ import { AdminTimeField } from '../ui/AdminTimeField';
 import { AdminFieldRow } from '../ui/AdminField';
 import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { HostelPolicyFields } from './HostelPolicyFields';
+import { ReceptionDeskPinFields } from '@/features/owner-reception-desk';
 
 export type ContactsFieldsScope = 'full' | 'launch-core';
 
@@ -25,6 +26,10 @@ interface ContactsFieldsProps {
   settings?: TenantSettings;
   readinessInput: TenantReadinessInput;
   scope?: ContactsFieldsScope;
+  surface?: 'platform' | 'owner';
+  tenantSlug?: string;
+  locale?: string;
+  readOnly?: boolean;
 }
 
 function hasPhoneChannelOverrides(settings: TenantSettings): boolean {
@@ -101,6 +106,10 @@ export function ContactsFields({
   settings,
   readinessInput,
   scope = 'full',
+  surface = 'platform',
+  tenantSlug,
+  locale = 'en',
+  readOnly = false,
 }: ContactsFieldsProps) {
   const { patchContacts, patchReception } = useContactsDraft(settings);
   const showReceptionToggles = shouldShowReceptionWhatsappToggles(settings ?? {});
@@ -176,13 +185,12 @@ export function ContactsFields({
           placeholder="Replies on WhatsApp during reception hours."
           width="lg"
         />
-        <AdminField
-          label="Reception desk PIN"
-          name="receptionDeskPin"
-          type="password"
-          placeholder={settings?.reception?.deskPinHash ? '•••••• (unchanged)' : 'Set PIN for reception desk'}
-          hint="Used at {slug}.reception.domain. At least 6 characters when changing. Leave blank to keep the current PIN."
-          width="sm"
+        <ReceptionDeskPinFields
+          surface={surface}
+          tenantSlug={tenantSlug ?? readinessInput.slug}
+          locale={locale}
+          deskPinHash={settings?.reception?.deskPinHash}
+          disabled={readOnly}
         />
         {showReceptionToggles ? (
           <>

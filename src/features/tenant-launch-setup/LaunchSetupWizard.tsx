@@ -29,6 +29,7 @@ import { LaunchBookingFork } from './LaunchBookingFork';
 import { LaunchPreviewStep } from './LaunchPreviewStep';
 import { LaunchStepChecklist } from './LaunchStepChecklist';
 import { OwnerCityPackSummaryCard } from '@/features/owner-city-pack';
+import { OwnerLaunchReceptionPinHint } from '@/features/owner-reception-desk';
 import { getLaunchStepDefinition, LAUNCH_STEPS } from './launchSteps';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/ui';
@@ -165,6 +166,7 @@ export function LaunchSetupWizard({
         return (
           <>
             <ContactsFields settings={settings} readinessInput={readinessInput} scope="launch-core" />
+            {isOwner ? <OwnerLaunchReceptionPinHint locale={locale} /> : null}
             <div className="mt-6 border-t pt-6">
               <LandingFields
                 tenantSlug={identity.slug}

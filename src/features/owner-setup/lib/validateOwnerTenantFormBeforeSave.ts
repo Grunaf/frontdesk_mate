@@ -8,5 +8,6 @@ export function validateOwnerTenantFormBeforeSave(input: {
   return validateTenantSettingsBeforeSave({
     actor: 'owner',
     mergedSettings: input.mergedSettings,
+    receptionDeskPin: input.receptionDeskPin,
   });
 }

@@ -7,10 +7,12 @@ import { upsertTenant } from '../api/getTenantConfig';
 import { applyOwnerTenantSavePolicy } from '../lib/applyOwnerTenantSavePolicy';
 import { resolveCityTaxDisplay } from '../lib/resolveHostelMoney';
 import { toDateInputValue } from '../lib/resolveTenantLifecycle';
-import type { TenantRecord } from '../model/settings';
+import type { TenantRecord, TenantSettings } from '../model/settings';
 import { getCityPackForAdmin } from '@/entities/city-pack/server';
 import { validateCityPackNeedNowPlaceIds } from '@/entities/city-pack/lib/validateOwnerCityPackPlaceSelection';
 import { parseTenantSettingsFormData } from './parseTenantSettingsFormData';
+import { diffTenantSettingsForAudit } from '../lib/diffTenantSettingsForAudit';
+import { insertTenantAuditEvent } from '@/entities/tenant-audit';
 
 export type TenantSaveActor =
   | { kind: 'platform' }
@@ -31,6 +33,51 @@ export type PersistTenantSettingsInput = {
 export type PersistTenantSettingsResult =
   | { ok: true; slug: string }
   | { ok: false; code: 'validation' | 'forbidden' | 'db'; message: string };
+
+function mergeReceptionDeskPinFromForm(
+  settings: TenantSettings,
+  formData: FormData,
+  slug: string,
+  previousHash: string | undefined
+): PersistTenantSettingsResult | { ok: true; settings: TenantSettings } {
+  const deskPin = String(formData.get('receptionDeskPin') || '').trim();
+
+  if (deskPin && !isNewDeskPinValid(deskPin)) {
+    return {
+      ok: false,
+      code: 'validation',
+      message: `Reception desk PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`,
+    };
+  }
+
+  if (deskPin) {
+    return {
+      ok: true,
+      settings: {
+        ...settings,
+        reception: {
+          ...settings.reception,
+          deskPinHash: hashDeskPin(slug, deskPin),
+        },
+      },
+    };
+  }
+
+  if (previousHash) {
+    return {
+      ok: true,
+      settings: {
+        ...settings,
+        reception: {
+          ...settings.reception,
+          deskPinHash: previousHash,
+        },
+      },
+    };
+  }
+
+  return { ok: true, settings };
+}
 
 export async function persistTenantSettings(
   input: PersistTenantSettingsInput
@@ -98,6 +145,17 @@ export async function persistTenantSettings(
         return { ok: false, code: 'validation', message: placeValidation.message };
       }
     }
+
+    const pinResult = mergeReceptionDeskPinFromForm(
+      settings,
+      input.formData,
+      slug,
+      previous.settings.reception?.deskPinHash
+    );
+    if (!pinResult.ok) {
+      return pinResult;
+    }
+    settings = pinResult.settings;
   } else {
     slug = input.slug.trim();
     originalSlug = input.originalSlug?.trim() || null;
@@ -105,28 +163,16 @@ export async function persistTenantSettings(
     subscriptionStartsAt = input.subscriptionStartsAt.trim();
     subscriptionEndsAt = input.subscriptionEndsAt.trim();
 
-    const deskPin = String(input.formData.get('receptionDeskPin') || '').trim();
-    const previousHash = input.previous?.settings.reception?.deskPinHash;
-
-    if (deskPin && !isNewDeskPinValid(deskPin)) {
-      return {
-        ok: false,
-        code: 'validation',
-        message: `Reception desk PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`,
-      };
+    const pinResult = mergeReceptionDeskPinFromForm(
+      settings,
+      input.formData,
+      slug,
+      input.previous?.settings.reception?.deskPinHash
+    );
+    if (!pinResult.ok) {
+      return pinResult;
     }
-
-    if (deskPin) {
-      settings.reception = {
-        ...settings.reception,
-        deskPinHash: hashDeskPin(slug, deskPin),
-      };
-    } else if (previousHash) {
-      settings.reception = {
-        ...settings.reception,
-        deskPinHash: previousHash,
-      };
-    }
+    settings = pinResult.settings;
   }
 
   const result = await upsertTenant({
@@ -141,6 +187,55 @@ export async function persistTenantSettings(
 
   if (!result.ok) {
     return { ok: false, code: 'db', message: result.error };
+  }
+
+  if (input.actor.kind === 'owner' && input.previous) {
+    const previous = input.previous;
+    const { changedKeys, deskPinChanged } = diffTenantSettingsForAudit(
+      previous.settings,
+      settings
+    );
+    const nameChanged = previous.name !== name;
+    const returnToRaw = String(input.formData.get('returnTo') || '').trim();
+    const returnTo = returnToRaw || undefined;
+
+    if (changedKeys.length > 0 || nameChanged || deskPinChanged) {
+      await insertTenantAuditEvent({
+        tenantId: previous.id,
+        actorKind: 'owner',
+        actorUserId: input.actor.userId,
+        eventType: 'settings_updated',
+        changedKeys,
+        flags: {
+          ...(deskPinChanged ? { deskPinChanged: true } : {}),
+          ...(nameChanged ? { nameChanged: true } : {}),
+          ...(returnTo ? { returnTo } : {}),
+        },
+      });
+    }
+  } else if (input.actor.kind === 'platform' && input.previous) {
+    const previous = input.previous;
+    const { changedKeys, deskPinChanged } = diffTenantSettingsForAudit(
+      previous.settings,
+      settings
+    );
+    const nameChanged = previous.name !== name;
+    const cityPackChanged = previous.city_pack_id !== cityPackId;
+
+    if (changedKeys.length > 0 || nameChanged || deskPinChanged || cityPackChanged) {
+      await insertTenantAuditEvent({
+        tenantId: previous.id,
+        actorKind: 'platform',
+        actorUserId: null,
+        eventType: 'settings_updated',
+        changedKeys,
+        flags: {
+          ...(deskPinChanged ? { deskPinChanged: true } : {}),
+          ...(nameChanged ? { nameChanged: true } : {}),
+          ...(cityPackChanged ? { cityPackId } : {}),
+        },
+      });
+    }
   }
 
   return { ok: true, slug };

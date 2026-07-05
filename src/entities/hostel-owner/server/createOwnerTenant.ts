@@ -9,6 +9,7 @@ import {
   validateTenantSlugInput,
 } from '@/entities/tenant/lib/validateTenantSlug';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
+import { insertTenantAuditEvent } from '@/entities/tenant-audit';
 import { revalidatePath } from 'next/cache';
 import { getOwnerSession } from './getOwnerSession';
 
@@ -220,6 +221,15 @@ export async function createOwnerTenant(input: {
   revalidatePath(`/${locale}/onboarding`);
   revalidatePath(`/${locale}/setup`);
   revalidatePath(`/${locale}`);
+
+  await insertTenantAuditEvent({
+    tenantId,
+    actorKind: 'owner',
+    actorUserId: session.id,
+    eventType: 'tenant_created',
+    changedKeys: [],
+    flags: { cityPackId },
+  });
 
   return { ok: true, slug };
 }

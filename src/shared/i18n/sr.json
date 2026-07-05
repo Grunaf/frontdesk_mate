@@ -1129,6 +1129,19 @@
           "saveFailed": "Čuvanje nije uspelo. Pokušajte ponovo."
         }
       },
+      "receptionDesk": {
+        "title": "PIN za recepciju",
+        "description": "Osoblje koristi ovaj PIN za prijavu na sajt recepcije — ne za goste.",
+        "loginUrlLabel": "Prijava na recepciju",
+        "statusSet": "PIN postavljen",
+        "statusNotSet": "PIN nije postavljen",
+        "pinLabel": "PIN",
+        "pinHint": "Najmanje 6 karaktera. Ostavite prazno da zadržite trenutni PIN.",
+        "pinPlaceholderUnchanged": "•••••• (nepromenjeno)",
+        "pinPlaceholderNew": "Postavite PIN za osoblje",
+        "setupHint": "Prijava na recepciju koristi poseban PIN za osoblje.",
+        "setupLink": "Postavite PIN u Postavkama →"
+      },
       "cityPack": {
         "inheritedTitle": "Gradski prevoz (nasleđeno)",
         "inheritedDescription": "Hub rute i tekstovi prevoza su zajednički za vaš grad. Vi prilagodite samo adresu i poslednji deo hoda do hostela.",
@@ -1143,9 +1156,37 @@
         "none": "Nema"
       },
       "cityRequest": {
-        "title": "Zatražite novi grad",
-        "description": "Zahtevi za city pack još nisu dostupni. Ovaj tok stiže u Modulu 9 — prikupićemo vaš grad i javiti kada pack bude spreman.",
-        "backLink": "Nazad na kreiranje hostela"
+        "title": "Zatražite podršku za grad",
+        "description": "Recite nam koji grad vam treba ili koji pack još nije spreman. Zahteve pregledamo ručno i javljamo se na email vašeg naloga.",
+        "form": {
+          "requestKind": "Vrsta zahteva",
+          "cityName": "Grad",
+          "cityNamePlaceholder": "Kotor, Novi Sad…",
+          "countryOrRegion": "Država ili region (opciono)",
+          "countryOrRegionPlaceholder": "Crna Gora",
+          "message": "Poruka (opciono)",
+          "messagePlaceholder": "Sve što nam pomaže da prioritizujemo zahtev",
+          "contactEmail": "Kontakt email",
+          "submit": "Pošalji zahtev",
+          "submitPending": "Slanje…"
+        },
+        "kind": {
+          "new_city": "Novi grad — još nije na listi",
+          "pack_not_ready": "City pack postoji, ali nije spreman za goste",
+          "other": "Ostalo"
+        },
+        "success": {
+          "title": "Zahtev je primljen",
+          "body": "Hvala — imamo vaš zahtev. Tim će vam se javiti kada imamo novost."
+        },
+        "error": {
+          "duplicate": "Već imate aktivan zahtev za ovaj grad u poslednjih 7 dana.",
+          "validation": "Proverite formu i pokušajte ponovo.",
+          "save": "Zahtev nije sačuvan. Pokušajte ponovo."
+        },
+        "backToOnboarding": "Nazad na kreiranje hostela",
+        "backToSetup": "Nazad na launch setup",
+        "backToSettings": "Nazad na podešavanja"
       }
     }
   },

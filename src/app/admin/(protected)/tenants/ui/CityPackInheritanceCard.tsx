@@ -124,7 +124,11 @@ export function CityPackInheritanceCard({
         <p className="mt-3 text-xs text-muted-foreground">
           {ownerLabels?.managedHint ?? 'City pack content is managed by Frontdesk Mate.'}{' '}
           <Link
-            href={`/${locale}/onboarding/city-request`}
+            href={
+              packReady
+                ? `/${locale}/city-request`
+                : `/${locale}/city-request?pack=${encodeURIComponent(cityPackId)}`
+            }
             className="font-semibold text-primary underline"
           >
             {ownerLabels?.requestCityLink ?? 'Request city support →'}

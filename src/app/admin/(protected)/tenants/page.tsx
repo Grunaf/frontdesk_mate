@@ -4,6 +4,15 @@ import {
   resolveTenantLifecycleStatus,
   toDateInputValue,
 } from '@/entities/tenant/lib/resolveTenantLifecycle';
+import { listTenantIdsWithOwnerForAdmin } from '@/entities/hostel-owner/server/getTenantOwnerForAdmin';
+
+function OwnerBadge() {
+  return (
+    <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-900">
+      Owner
+    </span>
+  );
+}
 
 function TenantStatusBadge({
   status,
@@ -32,7 +41,10 @@ function TenantStatusBadge({
 }
 
 export default async function AdminTenantsPage() {
-  const { tenants, error } = await getTenantsForAdmin();
+  const [{ tenants, error }, tenantIdsWithOwner] = await Promise.all([
+    getTenantsForAdmin(),
+    listTenantIdsWithOwnerForAdmin(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -90,6 +102,7 @@ export default async function AdminTenantsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{tenant.name}</p>
                     <TenantStatusBadge status={status} />
+                    {tenantIdsWithOwner.has(tenant.id) ? <OwnerBadge /> : null}
                   </div>
                   <p className="text-xs text-muted-foreground">{tenant.slug}</p>
                   <p className="mt-1 text-[11px] text-muted-foreground">

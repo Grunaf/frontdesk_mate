@@ -33,14 +33,14 @@ export function validateTenantSettingsBeforeSave(input: {
         message: 'Set subscription start and end dates in step 1 before saving.',
       };
     }
+  }
 
-    const deskPin = input.receptionDeskPin?.trim() ?? '';
-    if (deskPin && !isNewDeskPinValid(deskPin)) {
-      return {
-        code: 'reception_desk_pin',
-        message: `Reception desk PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`,
-      };
-    }
+  const deskPin = input.receptionDeskPin?.trim() ?? '';
+  if (deskPin && !isNewDeskPinValid(deskPin)) {
+    return {
+      code: 'reception_desk_pin',
+      message: `Reception desk PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`,
+    };
   }
 
   const missingPrice = findGuestExtrasMissingPriceLabel(input.mergedSettings.guestExtras);

@@ -1129,6 +1129,19 @@
           "saveFailed": "Could not save settings. Try again."
         }
       },
+      "receptionDesk": {
+        "title": "Reception desk PIN",
+        "description": "Staff use this PIN to sign in at your reception desk site — not for guests.",
+        "loginUrlLabel": "Reception login",
+        "statusSet": "PIN set",
+        "statusNotSet": "PIN not set",
+        "pinLabel": "PIN",
+        "pinHint": "At least 6 characters. Leave empty to keep the current PIN.",
+        "pinPlaceholderUnchanged": "•••••• (unchanged)",
+        "pinPlaceholderNew": "Set a PIN for staff",
+        "setupHint": "Reception desk login uses a separate staff PIN.",
+        "setupLink": "Set PIN in Settings →"
+      },
       "cityPack": {
         "inheritedTitle": "City transport (inherited)",
         "inheritedDescription": "Hub routes and transit copy are shared for your city. You only customize address and last-mile walk for your hostel.",
@@ -1143,9 +1156,37 @@
         "none": "None"
       },
       "cityRequest": {
-        "title": "Request a new city",
-        "description": "City pack requests are not available yet. This flow ships in Module 9 — we will collect your city and contact you when a pack is ready.",
-        "backLink": "Back to hostel setup"
+        "title": "Request city support",
+        "description": "Tell us which city you need or which pack is not ready yet. We review requests manually and will contact you at the email on your account.",
+        "form": {
+          "requestKind": "Request type",
+          "cityName": "City",
+          "cityNamePlaceholder": "Kotor, Novi Sad…",
+          "countryOrRegion": "Country or region (optional)",
+          "countryOrRegionPlaceholder": "Montenegro",
+          "message": "Message (optional)",
+          "messagePlaceholder": "Anything that helps us prioritize your request",
+          "contactEmail": "Contact email",
+          "submit": "Send request",
+          "submitPending": "Sending…"
+        },
+        "kind": {
+          "new_city": "New city — not in the list yet",
+          "pack_not_ready": "City pack exists but is not ready for guests",
+          "other": "Other"
+        },
+        "success": {
+          "title": "Request received",
+          "body": "Thanks — we have your request. Our team will reach out when we have an update."
+        },
+        "error": {
+          "duplicate": "You already have a pending request for this city from the last 7 days.",
+          "validation": "Please check the form and try again.",
+          "save": "Could not save your request. Please try again."
+        },
+        "backToOnboarding": "Back to hostel setup",
+        "backToSetup": "Back to launch setup",
+        "backToSettings": "Back to settings"
       }
     }
   },

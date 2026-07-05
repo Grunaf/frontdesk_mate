@@ -216,6 +216,15 @@ export function TenantAdminSectionPanel({
     case 'wifi':
       return <WifiFields settings={mergedSettings} readinessInput={readinessInput} />;
     case 'contacts':
-      return <ContactsFields settings={mergedSettings} readinessInput={readinessInput} />;
+      return (
+        <ContactsFields
+          settings={mergedSettings}
+          readinessInput={readinessInput}
+          surface={isOwner ? 'owner' : 'platform'}
+          tenantSlug={identity.slug}
+          locale={locale}
+          readOnly={readOnly}
+        />
+      );
   }
 }

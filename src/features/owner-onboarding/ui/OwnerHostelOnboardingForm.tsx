@@ -103,7 +103,7 @@ export function OwnerHostelOnboardingForm({ locale, cityPacks }: OwnerHostelOnbo
       <p className="text-center text-sm text-muted-foreground">
         {t('missingCity')}{' '}
         <Link
-          href={`/${locale}/onboarding/city-request`}
+          href={`/${locale}/city-request`}
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
           {t('requestCityLink')}

@@ -1,1 +1,5 @@
-export { OwnerCityPackRequestLink, OwnerCityPackSummaryCard } from './ui/OwnerCityPackSummaryCard';
+export {
+  OwnerCityPackRequestLink,
+  OwnerCityPackSummaryCard,
+  ownerCityRequestHref,
+} from './ui/OwnerCityPackSummaryCard';

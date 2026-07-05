@@ -11,7 +11,8 @@ export const OWNER_TENANT_SETTINGS_DENYLIST: (keyof TenantSettings)[] = [];
 
 /**
  * After merge, restore owner-forbidden fields from the previous snapshot.
- * Desk PIN hash stays unchanged until owner PIN UI (Module 10).
+ * Strips tampered `deskPinHash` from merged reception; `persistTenantSettings`
+ * applies a new hash only when the owner submits `receptionDeskPin`.
  */
 export function applyOwnerTenantSavePolicy(
   merged: TenantSettings,
