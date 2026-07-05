@@ -1055,11 +1055,79 @@
         "landingLabel": "Landing",
         "appLabel": "App",
         "wizardTeaser": "Podešavanje se nastavlja u launch wizard-u (Modul 5). Brending, sobe, arrival access i još toga — u vođenim koracima.",
-        "goToSettings": "Idi na postavke"
+        "goToSettings": "Idi na postavke",
+        "savedLive": "Postavke hostela sačuvane"
+      },
+      "wizard": {
+        "back": "Nazad",
+        "next": "Dalje",
+        "save": "Sačuvaj izmene",
+        "openFullSection": "Otvori punu sekciju {section} →",
+        "subscriptionSeeAbove": "Datumi pretplate su prikazani iznad — kontaktirajte podršku za promenu plana.",
+        "cityPackReady": "spreman za goste (mesta + rute).",
+        "cityPackNotReady": "još nije spreman.",
+        "cityPackRequestLink": "Zatražite podršku za grad →",
+        "toast": {
+          "savedReady": "Sačuvano — spremno za goste",
+          "savedIncomplete": "Sačuvano — još {count} obaveznih stavki na guest path-u",
+          "continueSetup": "Nastavi podešavanje",
+          "readOnly": "Izmena je onemogućena za vaš status naloga.",
+          "saveFailed": "Čuvanje nije uspelo. Pokušajte ponovo ili kontaktirajte podršku."
+        },
+        "steps": {
+          "identity": {
+            "title": "Identitet i pretplata",
+            "description": "Ime hostela i logo koje gosti vide na landing-u i u app-u.",
+            "short": "Identitet"
+          },
+          "contacts-landing": {
+            "title": "Recepcija i landing",
+            "description": "Telefon recepcije, politika boravka, hero slika i javni landing.",
+            "short": "Recepcija"
+          },
+          "booking": {
+            "title": "Put rezervacije",
+            "description": "Online engine ili WhatsApp rezervacije sa landing hero-a i kartica soba.",
+            "short": "Booking"
+          },
+          "arrival": {
+            "title": "Dolazak",
+            "description": "Adresa, hod do vrata i pristup za goste.",
+            "short": "Dolazak"
+          },
+          "room-map": {
+            "title": "Minimum mape soba",
+            "description": "Pregled kreveta, rasporeda i navigacije za settlement.",
+            "short": "Sobe"
+          },
+          "rules-wifi": {
+            "title": "Pravila, vodič i WiFi",
+            "description": "Osnovno u app-u nakon check-in-a.",
+            "short": "Pravila"
+          },
+          "preview": {
+            "title": "Pregled i objava",
+            "description": "Proverite spremnost guest path-a i podelite linkove.",
+            "short": "Pregled"
+          }
+        }
       },
       "settings": {
         "title": "Postavke",
-        "teaser": "Uređivač postavki hostela — Modul 7+."
+        "subtitle": "Puna konfiguracija hostela. Za vođeno podešavanje, vratite se na",
+        "backToSetup": "Nazad na podešavanje",
+        "sectionChipsLabel": "Sekcije postavki",
+        "save": "Sačuvaj izmene",
+        "unsavedChanges": "Imate nesačuvane izmene",
+        "allChangesSaved": "Sve izmene su sačuvane",
+        "toast": {
+          "saved": "Postavke sačuvane",
+          "savedReady": "Postavke sačuvane — spremno za goste",
+          "savedIncomplete": "Sačuvano — još {count} stavki konfiguracije nije završeno",
+          "viewChecklist": "Pogledaj listu",
+          "readOnly": "Vaša pretplata ne dozvoljava izmenu postavki.",
+          "saveFailed": "Čuvanje nije uspelo. Pokušajte ponovo."
+        }
       },
       "cityRequest": {
         "title": "Zatražite novi grad",

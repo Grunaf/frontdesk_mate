@@ -1,4 +1,5 @@
 import { getOwnerSession, getOwnerTenantContext } from '@/entities/hostel-owner';
+import { OwnerTenantFormDraftBoundary } from '@/features/owner-settings';
 import { OwnerPortalShell } from '@/features/owner-shell';
 import { redirect } from 'next/navigation';
 
@@ -22,7 +23,7 @@ export default async function OwnerProtectedLayout({ children, params }: OwnerPr
 
   return (
     <OwnerPortalShell locale={locale} context={context}>
-      {children}
+      <OwnerTenantFormDraftBoundary>{children}</OwnerTenantFormDraftBoundary>
     </OwnerPortalShell>
   );
 }

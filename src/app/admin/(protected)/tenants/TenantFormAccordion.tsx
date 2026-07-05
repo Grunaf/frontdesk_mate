@@ -25,10 +25,10 @@ import {
   writeStoredAdminTenantMode,
   type AdminTenantMode,
 } from './launch/adminTenantMode';
-import { LAUNCH_STEP_ORDER } from './launch/launchSteps';
-import { LaunchSetupWizard } from './launch/LaunchSetupWizard';
+import { LAUNCH_STEP_ORDER } from '@/features/tenant-launch-setup';
+import { LaunchSetupWizard } from '@/features/tenant-launch-setup';
+import { TenantAdminSectionPanel } from '@/features/tenant-admin-sections';
 import { cn } from '@/shared/lib/utils';
-import { BookingEngineFields } from './BookingEngineFields';
 import {
   ADMIN_SECTIONS,
   getAdminSectionHint,
@@ -41,13 +41,7 @@ import {
   getAdminSectionGuestProgress,
 } from './lib/resolveAdminSectionProgress';
 import { validateTenantFormBeforeSave } from './lib/validateTenantFormBeforeSave';
-import { ArrivalJourneyFields } from './sections/ArrivalJourneyFields';
-import { ContactsFields } from './sections/ContactsFields';
-import { GuestAppFields } from './sections/GuestAppFields';
-import { IdentityFields } from './sections/IdentityFields';
-import { LandingFields } from './sections/LandingFields';
-import { SubscriptionFields, resolveSubscriptionLifecycleStatus } from './sections/SubscriptionFields';
-import { WifiFields } from './sections/WifiFields';
+import { resolveSubscriptionLifecycleStatus } from './sections/SubscriptionFields';
 import { AdminSectionStatusBadge } from './ui/AdminField';
 import { AdminToast } from './ui/AdminToast';
 import {
@@ -58,16 +52,6 @@ import {
 import { TenantReadinessChecklist } from './ui/TenantReadinessChecklist';
 import { TenantCommandBar } from './ui/TenantCommandBar';
 import { TenantFormHiddenPayload } from './ui/TenantFormHiddenPayload';
-import {
-  resolveTourismRegistrationConfig,
-  resolveTourismRegistrationRequired,
-} from '@/entities/tenant/lib/normalizeGuestStaySettings';
-import {
-  DEFAULT_TOURISM_PROFILE_ID,
-  getTourismRegistrationProfile,
-  TOURISM_PROFILE_IDS,
-} from '@/features/guest-tourism-registration/model/tourismRegistrationProfiles';
-
 interface TenantFormAccordionProps {
   originalSlug: string;
   justSaved?: boolean;
@@ -94,162 +78,6 @@ interface IdentityState {
 interface SubscriptionState {
   subscriptionStartsAt: string;
   subscriptionEndsAt: string;
-}
-
-function GuestTourismRegistrationComplianceField({
-  mergedSettings,
-}: {
-  mergedSettings: TenantSettings;
-}) {
-  const { draft, updateDraft } = useTenantFormDraft();
-  const checked =
-    draft.tourismRegistrationRequired ?? resolveTourismRegistrationRequired(mergedSettings);
-
-  const existingConfig = resolveTourismRegistrationConfig(mergedSettings);
-  const profileId =
-    draft.tourismProfileId ?? existingConfig?.profileId ?? DEFAULT_TOURISM_PROFILE_ID;
-
-  return (
-    <div className="mb-6 rounded-xl border border-amber-200/60 bg-amber-50/40 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-      <label className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(event) => updateDraft({ tourismRegistrationRequired: event.target.checked })}
-          className="mt-0.5 size-4 shrink-0 rounded border"
-        />
-        <span>
-          <span className="block text-sm font-medium">Guest registration</span>
-          <span className="mt-0.5 block text-xs text-muted-foreground">
-            When enabled, guests must register their identity documents before accessing settlement
-            details. Required documents depend on the selected jurisdiction.
-          </span>
-        </span>
-      </label>
-
-      {checked ? (
-        <div className="ml-7 mt-3">
-          <label className="block text-xs font-medium text-muted-foreground">
-            Jurisdiction
-            <select
-              value={profileId}
-              onChange={(event) => updateDraft({ tourismProfileId: event.target.value })}
-              className="mt-1 block w-full rounded-md border bg-background px-2 py-1.5 text-sm"
-            >
-              {TOURISM_PROFILE_IDS.map((id) => {
-                const profile = getTourismRegistrationProfile(id);
-                return (
-                  <option key={id} value={id}>
-                    {profile?.countryNameKey ?? id}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SectionPanel({
-  sectionId,
-  initial,
-  identity,
-  originalSlug,
-  subscription,
-  onSubscriptionChange,
-  readinessInput,
-  onIdentityChange,
-  onJumpToSection,
-  cityPackOptions,
-  cityPackGateSnapshot,
-  cityPackContentsById,
-  mergedSettings,
-}: {
-  sectionId: AdminSectionId;
-  initial: TenantFormAccordionProps['initial'];
-  identity: IdentityState;
-  originalSlug: string;
-  subscription: SubscriptionState;
-  onSubscriptionChange: (patch: Partial<SubscriptionState>) => void;
-  readinessInput: TenantReadinessInput;
-  onIdentityChange: (next: IdentityState) => void;
-  onJumpToSection: (sectionId: AdminSectionId) => void;
-  cityPackOptions: CityPackSelectOption[];
-  cityPackGateSnapshot: CityPackGateSnapshot;
-  cityPackContentsById: Record<string, CityPackContent>;
-  mergedSettings: TenantSettings;
-}) {
-  const s = initial.settings;
-
-  switch (sectionId) {
-    case 'identity':
-      return (
-        <IdentityFields
-          slug={identity.slug}
-          originalSlug={originalSlug}
-          name={identity.name}
-          cityPackId={identity.cityPackId}
-          cityPackOptions={cityPackOptions}
-          cityPackGateSnapshot={cityPackGateSnapshot}
-          settings={s}
-          readinessInput={readinessInput}
-          onChange={onIdentityChange}
-          cityPackContent={cityPackContentsById[identity.cityPackId]}
-        />
-      );
-    case 'subscription':
-      return (
-        <SubscriptionFields
-          subscriptionStartsAt={subscription.subscriptionStartsAt}
-          subscriptionEndsAt={subscription.subscriptionEndsAt}
-          onChange={onSubscriptionChange}
-        />
-      );
-    case 'landing':
-      return (
-        <LandingFields
-          tenantSlug={identity.slug}
-          settings={mergedSettings}
-          readinessInput={readinessInput}
-          onJumpToSection={onJumpToSection}
-        />
-      );
-    case 'booking':
-      return <BookingEngineFields settings={mergedSettings} readinessInput={readinessInput} />;
-    case 'arrival-journey':
-      return (
-        <ArrivalJourneyFields
-          tenantSlug={identity.slug}
-          settings={mergedSettings}
-          cityPackId={identity.cityPackId}
-          cityPackLabel={cityPackOptions.find((pack) => pack.id === identity.cityPackId)?.label}
-          cityPackGateSnapshot={cityPackGateSnapshot}
-          cityPackContent={cityPackContentsById[identity.cityPackId]}
-          readinessInput={readinessInput}
-        />
-      );
-    case 'guest-app':
-      return (
-        <>
-          <GuestTourismRegistrationComplianceField mergedSettings={mergedSettings} />
-          <GuestAppFields
-            tenantSlug={identity.slug}
-            settings={mergedSettings}
-            cityPackId={identity.cityPackId}
-            cityPackContent={cityPackContentsById[identity.cityPackId]}
-            cityPackGateSnapshot={cityPackGateSnapshot}
-            readinessInput={readinessInput}
-            onJumpToSection={onJumpToSection}
-          />
-        </>
-      );
-    case 'wifi':
-      return <WifiFields settings={mergedSettings} readinessInput={readinessInput} />;
-    case 'contacts':
-      return <ContactsFields settings={mergedSettings} readinessInput={readinessInput} />;
-  }
 }
 
 function scrollToSectionTarget(target: HTMLElement, stickyOffset: number) {
@@ -369,10 +197,6 @@ function TenantFormAccordionInner({
   );
 
   const storageSlug = identity.slug.trim() || originalSlug || 'new';
-  const storedMode = useMemo(
-    () => readStoredAdminTenantMode(storageSlug),
-    [storageSlug]
-  );
   const queryMode = useMemo(
     () => readAdminModeFromSearchParams(searchParams),
     [searchParams]
@@ -382,7 +206,7 @@ function TenantFormAccordionInner({
     resolveDefaultAdminTenantMode({
       isNewTenant: !originalSlug,
       guestPathReady: guestPathGate.ready,
-      storedMode: queryMode ?? storedMode,
+      storedMode: queryMode,
     })
   );
 
@@ -391,15 +215,32 @@ function TenantFormAccordionInner({
   );
 
   useEffect(() => {
-    writeStoredAdminTenantMode(storageSlug, adminMode);
-  }, [adminMode, storageSlug]);
-
-  const handleAdminModeChange = useCallback((mode: AdminTenantMode) => {
-    setAdminMode(mode);
-    if (mode === 'launch') {
-      setLaunchStep(resolveFirstIncompleteLaunchStep(guestPathInput, LAUNCH_STEP_ORDER));
+    if (queryMode) {
+      return;
     }
-  }, [guestPathInput]);
+    const stored = readStoredAdminTenantMode(storageSlug);
+    if (stored) {
+      setAdminMode(stored);
+    }
+  }, [queryMode, storageSlug]);
+
+  const applyAdminMode = useCallback(
+    (mode: AdminTenantMode) => {
+      setAdminMode(mode);
+      writeStoredAdminTenantMode(storageSlug, mode);
+    },
+    [storageSlug]
+  );
+
+  const handleAdminModeChange = useCallback(
+    (mode: AdminTenantMode) => {
+      applyAdminMode(mode);
+      if (mode === 'launch') {
+        setLaunchStep(resolveFirstIncompleteLaunchStep(guestPathInput, LAUNCH_STEP_ORDER));
+      }
+    },
+    [applyAdminMode, guestPathInput]
+  );
 
   const handleBookingPathChange = useCallback(
     (path: LaunchBookingPath) => {
@@ -433,10 +274,10 @@ function TenantFormAccordionInner({
 
   const handleJumpToAdvancedSection = useCallback(
     (sectionId: AdminSectionId) => {
-      setAdminMode('advanced');
+      applyAdminMode('advanced');
       jumpToSection(sectionId);
     },
-    [jumpToSection]
+    [applyAdminMode, jumpToSection]
   );
 
   useLayoutEffect(() => {
@@ -668,7 +509,7 @@ function TenantFormAccordionInner({
             toast.actionLabel
               ? () => {
                   if (toast.actionLabel === 'Continue setup') {
-                    setAdminMode('launch');
+                    applyAdminMode('launch');
                     setLaunchStep(
                       resolveFirstIncompleteLaunchStep(guestPathInput, LAUNCH_STEP_ORDER)
                     );
@@ -845,9 +686,10 @@ function TenantFormAccordionInner({
 
                 {isOpen ? (
                   <div className="px-4 pb-5 pt-1">
-                    <SectionPanel
+                    <TenantAdminSectionPanel
+                      surface="platform"
                       sectionId={section.id}
-                      initial={initial}
+                      initialSettings={initial.settings}
                       identity={identity}
                       originalSlug={originalSlug}
                       subscription={subscription}

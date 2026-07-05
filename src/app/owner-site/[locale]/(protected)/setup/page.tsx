@@ -1,24 +1,43 @@
+import { getCityPackForAdmin, getCityPackGateSnapshotForAdmin, listCityPacksForTenantSelect } from '@/entities/city-pack/server';
+import type { CityPackContent } from '@/entities/city-pack';
 import { getOwnerTenantContext } from '@/entities/hostel-owner';
-import { getTenantPublicUrl } from '@/shared/config';
-import Link from 'next/link';
+import { getTenantRecord } from '@/entities/tenant/server';
+import { OwnerSetupWizardCoordinator } from '@/features/owner-setup';
+import { buildSubscriptionDefaults } from '@/app/admin/(protected)/tenants/sections/SubscriptionFields';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 
 interface OwnerSetupPageProps {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }
 
-export default async function OwnerSetupPage({ params }: OwnerSetupPageProps) {
+export default async function OwnerSetupPage({ params, searchParams }: OwnerSetupPageProps) {
   const { locale } = await params;
+  const { saved } = await searchParams;
   const context = await getOwnerTenantContext();
 
   if (!context) {
     redirect(`/${locale}/onboarding`);
   }
 
+  const tenant = await getTenantRecord(context.slug);
+  if (!tenant) {
+    redirect(`/${locale}/onboarding`);
+  }
+
   const t = await getTranslations('pages.owner.setup');
-  const landingPreview = getTenantPublicUrl(context.slug, 'landing', locale);
-  const appPreview = getTenantPublicUrl(context.slug, 'app', locale);
+  const subscriptionDefaults = buildSubscriptionDefaults(tenant);
+  const { options: cityPackOptions } = await listCityPacksForTenantSelect(tenant.city_pack_id);
+  const { snapshot: cityPackGateSnapshot } = await getCityPackGateSnapshotForAdmin();
+  const cityPackContentsById: Record<string, CityPackContent> = {};
+  const packIds = [...new Set(cityPackOptions.map((option) => option.id))];
+  await Promise.all(
+    packIds.map(async (packId) => {
+      const { pack } = await getCityPackForAdmin(packId);
+      cityPackContentsById[packId] = pack?.content ?? {};
+    })
+  );
 
   return (
     <div className="space-y-6">
@@ -30,44 +49,27 @@ export default async function OwnerSetupPage({ params }: OwnerSetupPageProps) {
         </p>
       </div>
 
-      <div className="space-y-3 rounded-xl border bg-background p-5 text-sm">
-        <p className="font-medium">{t('previewTitle')}</p>
-        <ul className="space-y-2 text-muted-foreground">
-          <li>
-            {t('landingLabel')}:{' '}
-            <a
-              href={landingPreview}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="break-all text-primary underline-offset-4 hover:underline"
-            >
-              {landingPreview}
-            </a>
-          </li>
-          <li>
-            {t('appLabel')}:{' '}
-            <a
-              href={appPreview}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="break-all text-primary underline-offset-4 hover:underline"
-            >
-              {appPreview}
-            </a>
-          </li>
-        </ul>
-      </div>
+      {saved === '1' ? (
+        <p className="sr-only" aria-live="polite">
+          {t('savedLive')}
+        </p>
+      ) : null}
 
-      <div className="rounded-xl border border-dashed bg-muted/30 px-5 py-4 text-sm text-muted-foreground">
-        {t('wizardTeaser')}
-      </div>
-
-      <Link
-        href={`/${locale}/settings`}
-        className="inline-flex min-h-11 items-center rounded-md border px-4 text-sm font-medium hover:bg-muted/50"
-      >
-        {t('goToSettings')}
-      </Link>
+      <OwnerSetupWizardCoordinator
+        locale={locale}
+        lifecycleStatus={context.lifecycleStatus}
+        justSaved={saved === '1'}
+        cityPackOptions={cityPackOptions}
+        cityPackGateSnapshot={cityPackGateSnapshot}
+        cityPackContentsById={cityPackContentsById}
+        initial={{
+          slug: tenant.slug,
+          name: tenant.name,
+          cityPackId: tenant.city_pack_id,
+          settings: tenant.settings,
+          ...subscriptionDefaults,
+        }}
+      />
     </div>
   );
 }
