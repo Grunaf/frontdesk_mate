@@ -20,27 +20,13 @@ export function WifiFields({ settings, readinessInput }: WifiFieldsProps) {
       <AdminField
         label="WiFi name"
         value={wifiName}
-        onChange={(value) =>
-          updateDraft({
-            wifi: {
-              name: value,
-              password: wifiPassword,
-            },
-          })
-        }
+        onChange={(value) => updateDraft({ wifi: { name: value } })}
         missing={isTenantFieldMissing('wifiName', readinessInput)}
       />
       <AdminField
         label="WiFi password"
         value={wifiPassword}
-        onChange={(value) =>
-          updateDraft({
-            wifi: {
-              name: wifiName,
-              password: value,
-            },
-          })
-        }
+        onChange={(value) => updateDraft({ wifi: { password: value } })}
         missing={isTenantFieldMissing('wifiPassword', readinessInput)}
       />
     </div>

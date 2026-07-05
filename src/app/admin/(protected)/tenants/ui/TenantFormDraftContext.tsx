@@ -179,6 +179,60 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
   return merged;
 }
 
+function mergeDraftSlice<T extends Record<string, unknown>>(
+  current: T | undefined,
+  patch: T
+): T {
+  return { ...(current ?? ({} as T)), ...patch };
+}
+
+/** Merges nested draft slices so rapid partial updates (e.g. phone raw + mask) do not clobber each other. */
+export function applyDraftPatch(
+  current: TenantFormDraft,
+  patch: Partial<TenantFormDraft>
+): TenantFormDraft {
+  const {
+    wifi,
+    contacts,
+    reception,
+    landing,
+    hostel,
+    booking,
+    arrivalAccess,
+    guestStay,
+    ...rest
+  } = patch;
+
+  const next: TenantFormDraft = { ...current, ...rest };
+
+  if (wifi !== undefined) {
+    next.wifi = mergeDraftSlice(current.wifi, wifi);
+  }
+  if (contacts !== undefined) {
+    next.contacts = mergeDraftSlice(current.contacts, contacts);
+  }
+  if (reception !== undefined) {
+    next.reception = mergeDraftSlice(current.reception, reception);
+  }
+  if (landing !== undefined) {
+    next.landing = mergeDraftSlice(current.landing, landing);
+  }
+  if (hostel !== undefined) {
+    next.hostel = mergeDraftSlice(current.hostel, hostel);
+  }
+  if (booking !== undefined) {
+    next.booking = mergeDraftSlice(current.booking, booking);
+  }
+  if (arrivalAccess !== undefined) {
+    next.arrivalAccess = mergeDraftSlice(current.arrivalAccess, arrivalAccess);
+  }
+  if (guestStay !== undefined) {
+    next.guestStay = mergeDraftSlice(current.guestStay, guestStay);
+  }
+
+  return next;
+}
+
 export function TenantFormDraftProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<TenantFormDraft>({});
   const [isDirty, setIsDirty] = useState(false);
@@ -192,7 +246,7 @@ export function TenantFormDraftProvider({ children }: { children: ReactNode }) {
   const resetDirty = useCallback(() => setIsDirty(false), []);
 
   const updateDraft = useCallback((patch: Partial<TenantFormDraft>, options?: UpdateDraftOptions) => {
-    setDraft((current) => ({ ...current, ...patch }));
+    setDraft((current) => applyDraftPatch(current, patch));
     if (!options?.silent && !isHydratingRef.current) {
       setIsDirty(true);
     }

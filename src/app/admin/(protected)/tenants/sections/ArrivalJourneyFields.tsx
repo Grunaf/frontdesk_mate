@@ -39,13 +39,8 @@ export function ArrivalJourneyFields({
   const { updateDraft } = useTenantFormDraft();
   const isLaunch = scope === 'launch-core';
 
-  const patchContacts = (patch: NonNullable<TenantSettings['contacts']>) => {
-    updateDraft({
-      contacts: {
-        ...settings?.contacts,
-        ...patch,
-      },
-    });
+  const patchContacts = (patch: Partial<NonNullable<TenantSettings['contacts']>>) => {
+    updateDraft({ contacts: patch });
   };
 
   return (

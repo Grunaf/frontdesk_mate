@@ -19,6 +19,7 @@ export function DoorAccessPanel() {
   const plan = useArrivalAccessPlan();
   const hostel = useHostelConfig();
   const doorPhotosStatus = useModuleStatus('doorPhotos');
+  const doorAccessStatus = useModuleStatus('doorAccess');
   const doors = useTranslations('domains.hostel.enter.doors');
   const sectionT = useTranslations('pages.arrivalJourney.arrival.sections');
 
@@ -31,6 +32,23 @@ export function DoorAccessPanel() {
     () => buildDoorAccessSlides(plan, { isNightMode }),
     [plan, isNightMode]
   );
+
+  const slides = useMemo(() => {
+    let next = builtSlides;
+
+    if (doorPhotosStatus === 'hidden') {
+      next = next.filter((slide) => slide.kind !== 'landmark');
+      next = next.filter(
+        (slide) => !(slide.kind === 'access' && slide.media === 'photo')
+      );
+    }
+
+    if (doorAccessStatus === 'hidden') {
+      next = next.filter((slide) => slide.kind === 'landmark');
+    }
+
+    return next;
+  }, [builtSlides, doorPhotosStatus, doorAccessStatus]);
 
   if (!hasContent) {
     return (
@@ -46,23 +64,26 @@ export function DoorAccessPanel() {
     (slide) => slide.kind === 'access' && slide.media === 'photo'
   );
 
+  const showLandmarkPhotosHidden =
+    doorPhotosStatus === 'hidden' && Boolean(plan.landmark);
+
   if (!isNightMode && doorPhotosStatus === 'hidden' && hasPhotoAccessSlides && plan.dayAccess) {
     return (
       <div className="space-y-3 pt-5">
+        {showLandmarkPhotosHidden && (
+          <>
+            <ArrivalBanner variant="landmark" keys={DOOR_ACCESS_LANDMARK_BANNER} />
+            <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
+              {sectionT('find.photosHiddenHint')}
+            </p>
+          </>
+        )}
         <ArrivalBanner variant="day" keys={plan.dayAccess.banner} />
         <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
           {doors('photosOnlyHint')}
         </p>
       </div>
     );
-  }
-
-  let slides = builtSlides;
-  const showLandmarkPhotosHidden =
-    doorPhotosStatus === 'hidden' && Boolean(plan.landmark);
-
-  if (showLandmarkPhotosHidden) {
-    slides = slides.filter((slide) => slide.kind !== 'landmark');
   }
 
   const showTimedNightBanner =
@@ -79,7 +100,9 @@ export function DoorAccessPanel() {
     !plan.nightAccess.hasAnyCode &&
     !plan.nightAccess.steps.some((step) => step.imageSrc);
 
-  const body = (
+  const showAccessSection = Boolean(isNightMode ? plan.nightAccess : plan.dayAccess);
+
+  return (
     <div className="space-y-3 pt-5">
       {showLandmarkPhotosHidden && (
         <>
@@ -90,39 +113,33 @@ export function DoorAccessPanel() {
         </>
       )}
 
-      {showDaySectionBanner && sectionBanner && (
-        <ArrivalBanner variant="day" keys={sectionBanner} />
+      {showAccessSection && (
+        <FeatureGate module="doorAccess" showPreviewBadge={false}>
+          <div className="space-y-3">
+            {showDaySectionBanner && sectionBanner && (
+              <ArrivalBanner variant="day" keys={sectionBanner} />
+            )}
+
+            {showTimedNightBanner && sectionBanner && (
+              <ArrivalBanner
+                variant="night"
+                keys={sectionBanner}
+                checkInTime={hostel.selfCheckInTimeAfter ?? ''}
+              />
+            )}
+
+            {slidesEmpty && nightNoAccessUi && (
+              <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
+                {doors('noCodeHint')}
+              </p>
+            )}
+          </div>
+        </FeatureGate>
       )}
 
-      {showTimedNightBanner && sectionBanner && (
-        <ArrivalBanner
-          variant="night"
-          keys={sectionBanner}
-          checkInTime={hostel.selfCheckInTimeAfter ?? ''}
-        />
-      )}
-
-      {slides.length > 0 && <DoorAccessCarousel slides={slides} accessBanner={null} />}
-
-      {slidesEmpty && nightNoAccessUi && (
-        <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-          {doors('noCodeHint')}
-        </p>
+      {slides.length > 0 && (
+        <DoorAccessCarousel slides={slides} accessBanner={null} useModuleGates />
       )}
     </div>
-  );
-
-  const usesLandmarkInCarousel = builtSlides.some((slide) => slide.kind === 'landmark');
-
-  return (
-    <FeatureGate module="doorAccess" showPreviewBadge={false}>
-      {usesLandmarkInCarousel && doorPhotosStatus !== 'hidden' ? (
-        <FeatureGate module="doorPhotos" showPreviewBadge={false}>
-          {body}
-        </FeatureGate>
-      ) : (
-        body
-      )}
-    </FeatureGate>
   );
 }

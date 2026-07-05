@@ -45,25 +45,17 @@ function hasPhoneChannelOverrides(settings: TenantSettings): boolean {
   );
 }
 
-function useContactsDraft(settings: TenantSettings | undefined) {
+function useContactsDraft() {
   const { updateDraft } = useTenantFormDraft();
 
-  const patchContacts = (patch: NonNullable<TenantSettings['contacts']>) => {
-    updateDraft({
-      contacts: {
-        ...settings?.contacts,
-        ...patch,
-      },
-    });
+  const patchContacts = (patch: Partial<NonNullable<TenantSettings['contacts']>>) => {
+    updateDraft({ contacts: patch });
   };
 
-  const patchReception = (patch: Omit<NonNullable<TenantSettings['reception']>, 'deskPinHash'>) => {
-    updateDraft({
-      reception: {
-        ...settings?.reception,
-        ...patch,
-      },
-    });
+  const patchReception = (
+    patch: Partial<Omit<NonNullable<TenantSettings['reception']>, 'deskPinHash'>>
+  ) => {
+    updateDraft({ reception: patch });
   };
 
   return { patchContacts, patchReception };
@@ -76,7 +68,7 @@ function ReceptionPhoneField({
   settings?: TenantSettings;
   readinessInput: TenantReadinessInput;
 }) {
-  const { patchContacts } = useContactsDraft(settings);
+  const { patchContacts } = useContactsDraft();
   const raw = settings?.contacts?.phoneRaw ?? '';
   const mask = settings?.contacts?.phoneMask ?? '';
   const preset = normalizePhoneDisplayPreset(settings?.contacts?.phoneFormatPreset) as PhoneDisplayPresetId;
@@ -87,13 +79,7 @@ function ReceptionPhoneField({
       raw={raw}
       mask={mask}
       preset={preset}
-      onRawChange={(value) =>
-        patchContacts({
-          phoneRaw: value || undefined,
-          phoneMask: mask || undefined,
-          phoneFormatPreset: preset,
-        })
-      }
+      onRawChange={(value) => patchContacts({ phoneRaw: value || undefined })}
       onMaskChange={(value) => patchContacts({ phoneMask: value || undefined })}
       onPresetChange={(value) => patchContacts({ phoneFormatPreset: value })}
       collapseWhenEmpty={false}
@@ -111,7 +97,7 @@ export function ContactsFields({
   locale = 'en',
   readOnly = false,
 }: ContactsFieldsProps) {
-  const { patchContacts, patchReception } = useContactsDraft(settings);
+  const { patchContacts, patchReception } = useContactsDraft();
   const showReceptionToggles = shouldShowReceptionWhatsappToggles(settings ?? {});
   const [overridesOpen, setOverridesOpen] = useState(() =>
     hasPhoneChannelOverrides(settings ?? {})
@@ -137,13 +123,7 @@ export function ContactsFields({
             preset={
               normalizePhoneDisplayPreset(settings?.contacts?.phoneFormatPreset) as PhoneDisplayPresetId
             }
-            onRawChange={(value) =>
-              patchContacts({
-                phoneRaw: value || undefined,
-                phoneMask: settings?.contacts?.phoneMask,
-                phoneFormatPreset: settings?.contacts?.phoneFormatPreset,
-              })
-            }
+            onRawChange={(value) => patchContacts({ phoneRaw: value || undefined })}
             onMaskChange={(value) => patchContacts({ phoneMask: value || undefined })}
             onPresetChange={(value) => patchContacts({ phoneFormatPreset: value })}
             collapseWhenEmpty={false}
@@ -282,13 +262,7 @@ export function ContactsFields({
               raw={taxiRaw}
               mask={taxiMask}
               preset={taxiPreset}
-              onRawChange={(value) =>
-                patchContacts({
-                  taxiPhoneRaw: value || undefined,
-                  taxiPhoneMask: taxiMask || undefined,
-                  taxiPhoneFormatPreset: taxiPreset,
-                })
-              }
+              onRawChange={(value) => patchContacts({ taxiPhoneRaw: value || undefined })}
               onMaskChange={(value) => patchContacts({ taxiPhoneMask: value || undefined })}
               onPresetChange={(value: PhoneDisplayPresetId) =>
                 patchContacts({ taxiPhoneFormatPreset: value })

@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { ArrivalAccessStep, ArrivalBannerKeys } from '@/entities/tenant';
 import { useTranslations } from '@/shared/i18n';
+import { FeatureGate } from '@/shared/ui';
 import type { DoorAccessSlide } from '../lib/buildDoorAccessSlides';
 import { ArrivalBanner } from './ArrivalBanner';
 import { ImageLandmark } from './ImageLandmark';
@@ -84,6 +85,8 @@ export interface DoorAccessCarouselProps {
   /** When set, shown on each access slide; landmark slides always use their own banner. */
   accessBanner?: DoorAccessCarouselAccessBanner | null;
   showSlideLabels?: boolean;
+  /** Landmark slides → `doorPhotos`; access slides → `doorAccess` (matches pre-carousel sections). */
+  useModuleGates?: boolean;
 }
 
 function slideKey(slide: DoorAccessSlideView): string {
@@ -91,10 +94,97 @@ function slideKey(slide: DoorAccessSlideView): string {
   return slide.step.id;
 }
 
+function ModuleGatedSlide({
+  slide,
+  useModuleGates,
+  children,
+}: {
+  slide: DoorAccessSlideView;
+  useModuleGates: boolean;
+  children: ReactNode;
+}) {
+  if (!useModuleGates) {
+    return <>{children}</>;
+  }
+
+  if (slide.kind === 'landmark') {
+    return (
+      <FeatureGate module="doorPhotos" showPreviewBadge={false}>
+        {children}
+      </FeatureGate>
+    );
+  }
+
+  return (
+    <FeatureGate module="doorAccess" showPreviewBadge={false}>
+      {children}
+    </FeatureGate>
+  );
+}
+
+function SlideFrame({
+  slide,
+  isActive,
+  doors,
+  accessBanner,
+  showSlideLabels,
+  useModuleGates,
+}: {
+  slide: DoorAccessSlideView;
+  isActive: boolean;
+  doors: ReturnType<typeof useTranslations<'domains.hostel.enter.doors'>>;
+  accessBanner: DoorAccessCarouselAccessBanner | null;
+  showSlideLabels: boolean;
+  useModuleGates: boolean;
+}) {
+  return (
+    <ModuleGatedSlide slide={slide} useModuleGates={useModuleGates}>
+      <div className="space-y-2">
+        {slide.kind === 'access' && showSlideLabels && (
+          <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+            {slide.step.label}
+          </p>
+        )}
+
+        {slide.kind === 'landmark' && (
+          <ArrivalBanner variant="landmark" keys={slide.banner} />
+        )}
+
+        {slide.kind === 'access' && accessBanner && (
+          <ArrivalBanner
+            variant={accessBanner.variant}
+            keys={accessBanner.keys}
+            checkInTime={accessBanner.checkInTime}
+          />
+        )}
+
+        <div className="group relative overflow-hidden rounded-xl">
+          {slide.kind === 'landmark' && (
+            <ImageLandmark src={slide.landmark.imageSrc} alt={slide.landmark.imageAlt} />
+          )}
+
+          {slide.kind === 'access' && slide.media === 'photo' && slide.step.imageSrc && (
+            <>
+              <ImageLandmark src={slide.step.imageSrc} alt={slide.step.imageAlt} />
+              {isActive && <SlideGuide slide={slide.step} doors={doors} />}
+              <SlideCode slide={slide.step} doors={doors} />
+            </>
+          )}
+
+          {slide.kind === 'access' && slide.media === 'text' && (
+            <AccessTextPanel step={slide.step} doors={doors} />
+          )}
+        </div>
+      </div>
+    </ModuleGatedSlide>
+  );
+}
+
 export function DoorAccessCarousel({
   slides,
   accessBanner = null,
   showSlideLabels = true,
+  useModuleGates = false,
 }: DoorAccessCarouselProps) {
   const doors = useTranslations('domains.hostel.enter.doors');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -137,43 +227,16 @@ export function DoorAccessCarousel({
               className="w-[85%] shrink-0 origin-center transform snap-center transition-all duration-300"
             >
               <div
-                className={`space-y-2 transition-all duration-300 ${isActive ? 'scale-100' : 'scale-95 opacity-60'}`}
+                className={`transition-all duration-300 ${isActive ? 'scale-100' : 'scale-95 opacity-60'}`}
               >
-                {slide.kind === 'access' && showSlideLabels && (
-                  <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                    {slide.step.label}
-                  </p>
-                )}
-
-                {slide.kind === 'landmark' && (
-                  <ArrivalBanner variant="landmark" keys={slide.banner} />
-                )}
-
-                {slide.kind === 'access' && accessBanner && (
-                  <ArrivalBanner
-                    variant={accessBanner.variant}
-                    keys={accessBanner.keys}
-                    checkInTime={accessBanner.checkInTime}
-                  />
-                )}
-
-                <div className="group relative overflow-hidden rounded-xl">
-                  {slide.kind === 'landmark' && (
-                    <ImageLandmark src={slide.landmark.imageSrc} alt={slide.landmark.imageAlt} />
-                  )}
-
-                  {slide.kind === 'access' && slide.media === 'photo' && (
-                    <>
-                      <ImageLandmark src={slide.step.imageSrc!} alt={slide.step.imageAlt} />
-                      {isActive && <SlideGuide slide={slide.step} doors={doors} />}
-                      <SlideCode slide={slide.step} doors={doors} />
-                    </>
-                  )}
-
-                  {slide.kind === 'access' && slide.media === 'text' && (
-                    <AccessTextPanel step={slide.step} doors={doors} />
-                  )}
-                </div>
+                <SlideFrame
+                  slide={slide}
+                  isActive={isActive}
+                  doors={doors}
+                  accessBanner={accessBanner}
+                  showSlideLabels={showSlideLabels}
+                  useModuleGates={useModuleGates}
+                />
               </div>
             </div>
           );
