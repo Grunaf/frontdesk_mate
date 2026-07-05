@@ -1,12 +1,14 @@
 import Link from 'next/link';
 import { logoutAdminAction } from './actions';
 import { isAdminAuthenticated } from './lib/adminSession';
+import { AdminShellBackground } from './ui/AdminShellBackground';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const isAuthenticated = await isAdminAuthenticated();
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <>
+      <AdminShellBackground />
       <header className="border-b bg-background px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
@@ -32,7 +34,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
-    </div>
+      <main className="mx-auto max-w-6xl px-6 pt-8 pb-4">{children}</main>
+    </>
   );
 }

@@ -127,6 +127,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  body.admin-shell-bg {
+    @apply bg-muted/30;
+  }
   html {
     @apply font-sans;
     scrollbar-gutter: stable both-edges;

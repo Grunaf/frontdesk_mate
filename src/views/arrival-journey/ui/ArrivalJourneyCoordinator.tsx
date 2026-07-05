@@ -12,6 +12,7 @@ import {
 } from '@/features/guest-check-in';
 import { TourismRegistrationPanel, TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
 import { resolveTourismRegistrationRequired, useModuleStatus, useTenant } from '@/entities/tenant';
+import { ArrivalGuideStepsShell } from './ArrivalGuideStepsShell';
 import { SettlementPhase } from './SettlementPhase';
 import { useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
@@ -352,15 +353,17 @@ export function ArrivalJourneyCoordinator({
 
   return (
     <div className="flex min-h-screen w-full max-w-md flex-col bg-background">
-      <SegmentedChipBar
-        bleed={false}
-        className="mt-4"
-        items={chipItems}
-        value={currentStep}
-        onValueChange={handleStepChange}
-        onLockedClick={handleLockedChipClick}
-        ariaLabel="Arrival guide steps"
-      />
+      <ArrivalGuideStepsShell>
+        <SegmentedChipBar
+          bleed={false}
+          className="mt-4"
+          items={chipItems}
+          value={currentStep}
+          onValueChange={handleStepChange}
+          onLockedClick={handleLockedChipClick}
+          ariaLabel="Arrival guide steps"
+        />
+      </ArrivalGuideStepsShell>
 
       <CrossHostelStrip showRoutesHint={currentStep === 'route'} className="mx-4 mt-3" />
 

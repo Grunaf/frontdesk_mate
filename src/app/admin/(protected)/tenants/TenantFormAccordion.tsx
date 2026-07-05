@@ -849,39 +849,31 @@ function TenantFormAccordionInner({
                   />
                 </button>
 
-                <div
-                  className={cn(
-                    'grid transition-[grid-template-rows] duration-200 ease-out',
-                    isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                  )}
-                  aria-hidden={!isOpen}
-                >
-                  <div className="min-h-0 overflow-hidden">
-                    <div className="px-4 pb-5 pt-1">
-                      <SectionPanel
-                        sectionId={section.id}
-                        initial={initial}
-                        identity={identity}
-                        originalSlug={originalSlug}
-                        subscription={subscription}
-                        onSubscriptionChange={(patch) => {
-                          markDirty();
-                          setSubscription((current) => ({ ...current, ...patch }));
-                        }}
-                        readinessInput={readinessInput}
-                        onIdentityChange={(next) => {
-                          markDirty();
-                          setIdentity(next);
-                        }}
-                        onJumpToSection={jumpToSection}
-                        cityPackOptions={cityPackOptions}
-                        cityPackGateSnapshot={cityPackGateSnapshot}
-                        cityPackContentsById={cityPackContentsById}
-                        mergedSettings={mergedSettings}
-                      />
-                    </div>
+                {isOpen ? (
+                  <div className="px-4 pb-5 pt-1">
+                    <SectionPanel
+                      sectionId={section.id}
+                      initial={initial}
+                      identity={identity}
+                      originalSlug={originalSlug}
+                      subscription={subscription}
+                      onSubscriptionChange={(patch) => {
+                        markDirty();
+                        setSubscription((current) => ({ ...current, ...patch }));
+                      }}
+                      readinessInput={readinessInput}
+                      onIdentityChange={(next) => {
+                        markDirty();
+                        setIdentity(next);
+                      }}
+                      onJumpToSection={jumpToSection}
+                      cityPackOptions={cityPackOptions}
+                      cityPackGateSnapshot={cityPackGateSnapshot}
+                      cityPackContentsById={cityPackContentsById}
+                      mergedSettings={mergedSettings}
+                    />
                   </div>
-                </div>
+                ) : null}
               </div>
             );
           })}
