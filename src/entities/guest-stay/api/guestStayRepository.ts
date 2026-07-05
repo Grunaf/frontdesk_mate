@@ -28,7 +28,7 @@ import type {
 } from '../model/types';
 
 const GUEST_STAY_COLUMNS =
-  'id, tenant_id, bed_id, guest_name, check_in_at, check_out_at, activated_at, revoked_at, created_at, access_token_encrypted, pin_hash, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at';
+  'id, tenant_id, bed_id, guest_name, check_in_at, check_out_at, activated_at, revoked_at, created_at, access_token_encrypted, pin_hash, tourism_contact_whatsapp, stay_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at';
 
 function mapRow(row: Record<string, unknown>, tenantSlug: string): GuestStayRecord {
   return {
@@ -44,6 +44,9 @@ function mapRow(row: Record<string, unknown>, tenantSlug: string): GuestStayReco
     created_at: String(row.created_at),
     tourism_contact_whatsapp: row.tourism_contact_whatsapp
       ? String(row.tourism_contact_whatsapp)
+      : null,
+    stay_contact_whatsapp: row.stay_contact_whatsapp
+      ? String(row.stay_contact_whatsapp)
       : null,
     tourism_registration_completed_at: row.tourism_registration_completed_at
       ? String(row.tourism_registration_completed_at)

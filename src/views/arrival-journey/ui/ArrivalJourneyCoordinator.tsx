@@ -10,13 +10,11 @@ import {
   CrossHostelStrip,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
-import { TourismRegistrationPanel, TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
-import { resolveTourismRegistrationRequired, useModuleStatus, useTenant } from '@/entities/tenant';
+import { useModuleStatus, useTenant } from '@/entities/tenant';
 import { ArrivalGuideStepsShell } from './ArrivalGuideStepsShell';
-import { SettlementPhase } from './SettlementPhase';
-import { useTranslations } from '@/shared/i18n';
+import { useTranslations, useLocale } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
-import { Button, SegmentedChipBar, useAppHeaderScroll } from '@/shared/ui';
+import { Button, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { useCheckInState, type Step } from '../model/useCheckInState';
 import { resolveArrivalJourneyPrimaryButtonKey } from '../lib/resolveArrivalJourneyPrimaryButtonKey';
@@ -27,7 +25,6 @@ import {
 
 interface ArrivalJourneyCoordinatorProps {
   isOnsite: boolean;
-  tourismRegistrationComplete?: boolean;
 }
 
 export interface StepItem {
@@ -38,58 +35,30 @@ export interface StepItem {
   buttonKey: string;
 }
 
-const REGISTRATION_LOCKED_STEPS: Step[] = ['arrival', 'register', 'settlement'];
+const REGISTRATION_LOCKED_STEPS: Step[] = ['arrival'];
 
 function isRegistrationLockedStep(step: Step, isRegistered: boolean): boolean {
   return !isRegistered && REGISTRATION_LOCKED_STEPS.includes(step);
 }
 
-function isSettlementTourismLocked(
-  step: Step,
-  tourismRegistrationRequired: boolean,
-  tourismComplete: boolean,
-  isRegistered: boolean
-): boolean {
-  if (step !== 'settlement') return false;
-  if (!tourismRegistrationRequired || !isRegistered) return false;
-  return !tourismComplete;
-}
-
-function isValidUrlStep(
-  step: string | null,
-  tourismRegistrationRequired: boolean
-): step is Step {
+function isValidUrlStep(step: string | null): step is Step {
   if (!step) return false;
-  const base: Step[] = ['info', 'route', 'arrival', 'settlement'];
-  const withRegister: Step[] = [...base.slice(0, 3), 'register', ...base.slice(3)];
-  const allowed = tourismRegistrationRequired ? withRegister : base;
-  return allowed.includes(step as Step);
+  return step === 'info' || step === 'route' || step === 'arrival';
 }
 
-export function ArrivalJourneyCoordinator({
-  isOnsite,
-  tourismRegistrationComplete: initialTourismComplete = false,
-}: ArrivalJourneyCoordinatorProps) {
+export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinatorProps) {
   const t = useTranslations('pages.arrivalJourney');
+  const locale = useLocale();
   const router = useRouter();
   const { settings } = useTenant();
   const arrivalRoutesStatus = useModuleStatus('arrivalRoutes');
   const routesAvailable = arrivalRoutesStatus !== 'hidden';
-  const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const isRegistered = useIsGuestRegistered();
   const { currentStep, setCurrentStep } = useCheckInState(isOnsite);
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
-  const [tourismGateSheetOpen, setTourismGateSheetOpen] = useState(false);
-  const [tourismComplete, setTourismComplete] = useState(initialTourismComplete);
   const [arrivalHideMainPrimary, setArrivalHideMainPrimary] = useState(false);
-  const { setSuppressAutoHide } = useAppHeaderScroll();
 
   const isArrival = currentStep === 'arrival';
-
-  useEffect(() => {
-    setSuppressAutoHide(isArrival);
-    return () => setSuppressAutoHide(false);
-  }, [isArrival, setSuppressAutoHide]);
 
   useEffect(() => {
     if (!isArrival) {
@@ -106,50 +75,9 @@ export function ArrivalJourneyCoordinator({
   }, [isArrival]);
 
   useEffect(() => {
-    setTourismComplete(initialTourismComplete);
-  }, [initialTourismComplete]);
-
-  const canAccessSettlement =
-    isRegistered && (!tourismRegistrationRequired || tourismComplete);
-
-  const openCheckInSheet = () => {
-    setCheckInSheetOpen(true);
-  };
-
-  const openTourismGateSheet = () => {
-    setTourismGateSheetOpen(true);
-  };
-
-  const goToTourismRegistration = useCallback(() => {
-    setCurrentStep('register');
-  }, [setCurrentStep]);
-
-  const handleTourismRegistrationComplete = useCallback(() => {
-    setTourismComplete(true);
-    setCurrentStep('settlement');
-  }, [setCurrentStep]);
-
-  useEffect(() => {
-    if (
-      currentStep === 'settlement' &&
-      tourismRegistrationRequired &&
-      isRegistered &&
-      !tourismComplete
-    ) {
-      setCurrentStep('register');
-    }
-  }, [
-    currentStep,
-    tourismRegistrationRequired,
-    isRegistered,
-    tourismComplete,
-    setCurrentStep,
-  ]);
-
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const step = params.get('step');
-    if (!isValidUrlStep(step, tourismRegistrationRequired)) {
+    if (!isValidUrlStep(step)) {
       return;
     }
 
@@ -164,29 +92,8 @@ export function ArrivalJourneyCoordinator({
       return;
     }
 
-    let target: Step = step;
-
-    if (step === 'register' && !tourismRegistrationRequired) {
-      target = 'settlement';
-    }
-
-    if (
-      target === 'settlement' &&
-      tourismRegistrationRequired &&
-      isRegistered &&
-      !tourismComplete
-    ) {
-      target = 'register';
-    }
-
-    setCurrentStep(target);
-  }, [
-    isRegistered,
-    routesAvailable,
-    setCurrentStep,
-    tourismRegistrationRequired,
-    tourismComplete,
-  ]);
+    setCurrentStep(step);
+  }, [isRegistered, routesAvailable, setCurrentStep]);
 
   useEffect(() => {
     if (!routesAvailable && currentStep === 'route') {
@@ -194,31 +101,23 @@ export function ArrivalJourneyCoordinator({
     }
   }, [routesAvailable, currentStep, setCurrentStep]);
 
+  const openCheckInSheet = () => {
+    setCheckInSheetOpen(true);
+  };
+
+  const goToStaySetup = useCallback(() => {
+    router.push(`/${locale}${SITE_CONFIG.routes.app.staySetup.path}`);
+  }, [locale, router]);
+
   const navigateToStep = useCallback(
     (step: Step) => {
       if (isRegistrationLockedStep(step, isRegistered)) {
         openCheckInSheet();
         return;
       }
-      if (
-        isSettlementTourismLocked(
-          step,
-          tourismRegistrationRequired,
-          tourismComplete,
-          isRegistered
-        )
-      ) {
-        openTourismGateSheet();
-        return;
-      }
       setCurrentStep(step);
     },
-    [
-      isRegistered,
-      tourismRegistrationRequired,
-      tourismComplete,
-      setCurrentStep,
-    ]
+    [isRegistered, setCurrentStep]
   );
 
   const handleArrivalPrimaryAction = useCallback(() => {
@@ -226,29 +125,12 @@ export function ArrivalJourneyCoordinator({
       openCheckInSheet();
       return;
     }
-    const next = resolveNextArrivalJourneyStep(
-      'arrival',
-      routesAvailable,
-      tourismRegistrationRequired
-    );
-    if (next === null) {
-      return;
-    }
-    navigateToStep(next);
-  }, [
-    isRegistered,
-    routesAvailable,
-    tourismRegistrationRequired,
-    navigateToStep,
-  ]);
+    goToStaySetup();
+  }, [isRegistered, goToStaySetup]);
 
   const stepsConfig: StepItem[] = useMemo(() => {
     const goToNextFrom = (fromStep: Step) => {
-      const next = resolveNextArrivalJourneyStep(
-        fromStep,
-        routesAvailable,
-        tourismRegistrationRequired
-      );
+      const next = resolveNextArrivalJourneyStep(fromStep, routesAvailable);
       if (next === null) {
         return;
       }
@@ -280,61 +162,22 @@ export function ArrivalJourneyCoordinator({
         Component: function ArrivalGuidePlaceholder() {
           return null;
         },
-        onComplete: () => goToNextFrom('arrival'),
+        onComplete: goToStaySetup,
         buttonKey: 'arrival.actionButton',
       },
     ];
 
-    if (tourismRegistrationRequired) {
-      base.push({
-        id: 'register',
-        label: t('tabs.register'),
-        Component: function RegisterStep() {
-          return <TourismRegistrationPanel onComplete={handleTourismRegistrationComplete} />;
-        },
-        onComplete: handleTourismRegistrationComplete,
-        buttonKey: 'register.actionButton',
-      });
-    }
-
-    base.push({
-      id: 'settlement',
-      label: t('tabs.settlement'),
-      Component: SettlementPhase,
-      onComplete: () => router.push(SITE_CONFIG.routes.app.concierge.path),
-      buttonKey: 'settlement.actionButton',
-    });
-
     return base;
-  }, [
-    t,
-    routesAvailable,
-    tourismRegistrationRequired,
-    navigateToStep,
-    router,
-    handleTourismRegistrationComplete,
-    handleArrivalPrimaryAction,
-  ]);
+  }, [t, routesAvailable, navigateToStep, goToStaySetup]);
 
   const activeStep =
     stepsConfig.find((step) => step.id === currentStep) || stepsConfig[0];
-  const ActiveComponent =
-    activeStep.id === 'settlement' && !canAccessSettlement
-      ? function TourismGateFallback() {
-          return <TourismRegistrationPanel onComplete={handleTourismRegistrationComplete} />;
-        }
-      : activeStep.Component;
+  const ActiveComponent = activeStep.Component;
 
   const handleStepChange = (value: string) => {
     const step = value as Step;
     if (isRegistrationLockedStep(step, isRegistered)) {
       openCheckInSheet();
-      return;
-    }
-    if (
-      isSettlementTourismLocked(step, tourismRegistrationRequired, tourismComplete, isRegistered)
-    ) {
-      openTourismGateSheet();
       return;
     }
     setCurrentStep(step);
@@ -343,26 +186,13 @@ export function ArrivalJourneyCoordinator({
   const chipItems = stepsConfig.map((step) => ({
     id: step.id,
     label: step.label,
-    locked:
-      isRegistrationLockedStep(step.id, isRegistered) ||
-      isSettlementTourismLocked(
-        step.id,
-        tourismRegistrationRequired,
-        tourismComplete,
-        isRegistered
-      ),
+    locked: isRegistrationLockedStep(step.id, isRegistered),
   }));
 
   const handleLockedChipClick = (id: string) => {
     const step = id as Step;
     if (isRegistrationLockedStep(step, isRegistered)) {
       openCheckInSheet();
-      return;
-    }
-    if (
-      isSettlementTourismLocked(step, tourismRegistrationRequired, tourismComplete, isRegistered)
-    ) {
-      openTourismGateSheet();
     }
   };
 
@@ -372,16 +202,7 @@ export function ArrivalJourneyCoordinator({
       return;
     }
 
-    if (activeStep.id === 'settlement' && !canAccessSettlement) {
-      openTourismGateSheet();
-      return;
-    }
-
-    const nextStep = resolveNextArrivalJourneyStep(
-      activeStep.id,
-      routesAvailable,
-      tourismRegistrationRequired
-    );
+    const nextStep = resolveNextArrivalJourneyStep(activeStep.id, routesAvailable);
 
     if (nextStep === null) {
       activeStep.onComplete();
@@ -394,18 +215,15 @@ export function ArrivalJourneyCoordinator({
   const primaryButtonKey = resolveArrivalJourneyPrimaryButtonKey(
     currentStep,
     isRegistered,
-    routesAvailable,
-    tourismRegistrationRequired
+    routesAvailable
   );
-  const showPrimaryButton =
-    activeStep.id !== 'register' &&
-    !(activeStep.id === 'arrival' && arrivalHideMainPrimary);
+  const showPrimaryButton = !(activeStep.id === 'arrival' && arrivalHideMainPrimary);
 
   const arrivalGuideChipsOverlay = (
     <div className="bg-gradient-to-b from-black/70 via-black/45 to-transparent pb-5 pt-1">
       <SegmentedChipBar
         bleed={false}
-        className="mt-4 px-4"
+        className="mt-2 px-4 py-0.5"
         items={chipItems}
         value={currentStep}
         onValueChange={handleStepChange}
@@ -419,14 +237,16 @@ export function ArrivalJourneyCoordinator({
     <div
       className={cn(
         'flex w-full flex-col bg-background',
-        isArrival ? 'min-h-0 flex-1 overflow-x-hidden overflow-y-hidden' : 'min-h-screen'
+        isArrival
+          ? 'min-h-0 flex-1 overflow-x-hidden overflow-y-hidden'
+          : 'min-h-screen overflow-x-hidden'
       )}
     >
       {!isArrival ? (
         <ArrivalGuideStepsShell stepsLayout="scrollLinked">
           <SegmentedChipBar
-            bleed
-            className="mt-4"
+            bleed={false}
+            className="mt-2 px-4 py-0.5"
             items={chipItems}
             value={currentStep}
             onValueChange={handleStepChange}
@@ -485,11 +305,6 @@ export function ArrivalJourneyCoordinator({
       </main>
 
       <CheckInRequiredSheet open={checkInSheetOpen} onOpenChange={setCheckInSheetOpen} />
-      <TourismRegistrationRequiredSheet
-        open={tourismGateSheetOpen}
-        onOpenChange={setTourismGateSheetOpen}
-        onGoToRegistration={goToTourismRegistration}
-      />
     </div>
   );
 }

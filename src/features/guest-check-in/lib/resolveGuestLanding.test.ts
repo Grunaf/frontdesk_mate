@@ -45,7 +45,7 @@ describe('resolvePostCheckInPath', () => {
       '/en/welcome?step=info'
     );
     expect(resolvePostCheckInPath({ locale: 'en', storedIntent: 'at_desk' })).toBe(
-      '/en/welcome?step=settlement'
+      '/en/welcome?step=info'
     );
   });
 });

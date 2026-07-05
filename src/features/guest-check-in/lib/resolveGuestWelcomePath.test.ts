@@ -32,8 +32,8 @@ describe('resolveWelcomeStep', () => {
     expect(resolveWelcomeStep({ modeOnsite: true })).toBe('arrival');
   });
 
-  it('maps desk to settlement', () => {
-    expect(resolveWelcomeStep({ entry: 'desk' })).toBe('settlement');
+  it('maps desk to preparation', () => {
+    expect(resolveWelcomeStep({ entry: 'desk' })).toBe('info');
   });
 });
 
@@ -41,7 +41,7 @@ describe('resolveGuestWelcomePath', () => {
   it('builds welcome path with step', () => {
     expect(resolveGuestWelcomePath({ locale: 'en' })).toBe('/en/welcome?step=route');
     expect(resolveGuestWelcomePath({ locale: 'en', entry: 'desk' })).toBe(
-      '/en/welcome?step=settlement'
+      '/en/welcome?step=info'
     );
     expect(resolveGuestWelcomePath({ locale: 'ru', entry: 'door' })).toBe(
       '/ru/welcome?step=arrival'

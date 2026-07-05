@@ -2,56 +2,61 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import {
+  resolveGuestStaySetupPath,
+  resolveStaySetupDeepLinkStep,
+} from '@/features/guest-check-in/lib/resolveGuestStaySetupPath';
+import { getStaySetupStatusAction } from '@/features/guest-stay-contact';
 import { resolveGuestStayPlan, resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { useIsGuestRegistered } from '@/features/guest-check-in';
-import { listTourismGuestsForSessionAction } from '@/features/guest-tourism-registration';
 import { useTranslations, useLocale } from '@/shared/i18n';
-import { SITE_CONFIG } from '@/shared/config';
 import { Button, Icon } from '@/shared/ui';
 import { ArrowRight } from 'lucide-react';
 import { FindYourBedSummary } from './FindYourBedSummary';
 
-export type WelcomeBedMapStep = 'register' | 'settlement';
-
-/** Deep link step for bed map / settlement when tourism gate may apply (Chat F). */
-export function useWelcomeBedMapStep(): WelcomeBedMapStep {
+/** Deep link step for bed map / settlement when stay-setup gates may apply. */
+export function useStaySetupBedMapStep(): 'register' | 'contact' | 'settlement' {
   const { settings, slug } = useTenant();
   const isRegistered = useIsGuestRegistered();
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
-  const [tourismComplete, setTourismComplete] = useState<boolean | null>(null);
+  const [status, setStatus] = useState<{
+    tourismComplete: boolean;
+    contactComplete: boolean;
+  } | null>(null);
 
   useEffect(() => {
-    if (!tourismRegistrationRequired || !isRegistered || !slug) {
-      setTourismComplete(null);
+    if (!isRegistered || !slug) {
+      setStatus(null);
       return;
     }
 
     let cancelled = false;
-    void listTourismGuestsForSessionAction(slug).then((result) => {
-      if (cancelled) {
+    void getStaySetupStatusAction(slug).then((result) => {
+      if (cancelled || !result.ok) {
         return;
       }
-      setTourismComplete(result.ok ? result.complete : false);
+      setStatus({
+        tourismComplete: result.status.tourismComplete,
+        contactComplete: result.status.contactComplete,
+      });
     });
 
     return () => {
       cancelled = true;
     };
-  }, [tourismRegistrationRequired, isRegistered, slug]);
+  }, [isRegistered, slug]);
 
-  if (!tourismRegistrationRequired) {
-    return 'settlement';
-  }
+  return resolveStaySetupDeepLinkStep({
+    tourismRequired: tourismRegistrationRequired,
+    tourismComplete: status?.tourismComplete ?? false,
+    contactComplete: status?.contactComplete ?? false,
+    preferSettlement: true,
+  });
+}
 
-  if (!isRegistered) {
-    return 'settlement';
-  }
-
-  if (tourismComplete === true) {
-    return 'settlement';
-  }
-
-  return 'register';
+/** @deprecated Use useStaySetupBedMapStep */
+export function useWelcomeBedMapStep(): 'register' | 'contact' | 'settlement' {
+  return useStaySetupBedMapStep();
 }
 
 export function FindYourBedCard() {
@@ -59,7 +64,8 @@ export function FindYourBedCard() {
   const locale = useLocale();
   const { settings, guestBedId } = useTenant();
   const router = useRouter();
-  const welcomeStep = useWelcomeBedMapStep();
+  const staySetupStep = useStaySetupBedMapStep();
+  const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const plan = resolveGuestStayPlan(settings, guestBedId);
 
   if (!plan.bedId) {
@@ -73,7 +79,16 @@ export function FindYourBedCard() {
       className="mb-4 h-auto w-full justify-between gap-3 p-3 text-left"
       onClick={() =>
         router.push(
-          `/${locale}${SITE_CONFIG.routes.app.welcome.path}?step=${welcomeStep}`
+          resolveGuestStaySetupPath({
+            locale,
+            step: staySetupStep,
+            tourismRequired: tourismRegistrationRequired,
+            completion: {
+              tourismRequired: tourismRegistrationRequired,
+              tourismComplete: false,
+              contactComplete: false,
+            },
+          })
         )
       }
     >

@@ -9,7 +9,7 @@ type TourismGuestListProps = {
 };
 
 export function TourismGuestList({ guests }: TourismGuestListProps) {
-  const t = useTranslations('pages.arrivalJourney.register.guestList');
+  const t = useTranslations('pages.staySetup.register.guestList');
 
   if (guests.length === 0) {
     return <p className="text-sm text-muted-foreground">{t('empty')}</p>;

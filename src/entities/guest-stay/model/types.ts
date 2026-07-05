@@ -10,6 +10,7 @@ export interface GuestStayRecord {
   revoked_at: string | null;
   created_at: string;
   tourism_contact_whatsapp?: string | null;
+  stay_contact_whatsapp?: string | null;
   tourism_registration_completed_at?: string | null;
   tourism_exported_at?: string | null;
 }

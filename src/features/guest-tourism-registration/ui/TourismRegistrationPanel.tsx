@@ -10,26 +10,22 @@ import {
   Alert,
   AlertDescription,
   Button,
-  Input,
   Label,
 } from '@/shared/ui';
-import {
-  completeTourismRegistrationAction,
-} from '../actions/completeTourismRegistrationAction';
+import { completeTourismRegistrationAction } from '../actions/completeTourismRegistrationAction';
 import {
   listTourismGuestsForSessionAction,
   type TourismGuestListItem,
 } from '../actions/listTourismGuestsForSessionAction';
-import { validateTourismWhatsapp } from '../lib/validateTourismWhatsapp';
 import { AddTourismGuestForm } from './AddTourismGuestForm';
 import { TourismGuestList } from './TourismGuestList';
 
-type TourismRegistrationPanelProps = {
+type TourismGuestsRegistrationPanelProps = {
   onComplete: () => void;
 };
 
-export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPanelProps) {
-  const t = useTranslations('pages.arrivalJourney.register');
+export function TourismGuestsRegistrationPanel({ onComplete }: TourismGuestsRegistrationPanelProps) {
+  const t = useTranslations('pages.staySetup.register');
   const { slug: tenantSlug, settings } = useTenant();
   const { session } = useGuestSession();
   const profile = resolveTourismRegistrationProfile(settings);
@@ -37,10 +33,7 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
 
   const [guests, setGuests] = useState<TourismGuestListItem[]>([]);
   const [registrationComplete, setRegistrationComplete] = useState(false);
-  const [contactWhatsapp, setContactWhatsapp] = useState('');
-  const [savedWhatsapp, setSavedWhatsapp] = useState<string | null>(null);
   const [everyoneListed, setEveryoneListed] = useState(false);
-  const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [isLoadingList, setIsLoadingList] = useState(true);
@@ -60,7 +53,6 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
 
     setGuests(result.guests);
     setRegistrationComplete(result.complete);
-    setSavedWhatsapp(result.contactWhatsapp);
     setLoadError(null);
     return true;
   }, [tenantSlug, t]);
@@ -83,10 +75,6 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
 
       setGuests(result.guests);
       setRegistrationComplete(result.complete);
-      setSavedWhatsapp(result.contactWhatsapp);
-      if (result.contactWhatsapp) {
-        setContactWhatsapp(result.contactWhatsapp);
-      }
       setIsLoadingList(false);
     })();
 
@@ -104,23 +92,16 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
     }
   }, [refreshGuests]);
 
-  const whatsappValidation = validateTourismWhatsapp(contactWhatsapp);
-  const whatsappValid = whatsappValidation.ok;
-
   const completeDisabled =
     registrationComplete ||
     guests.length < 1 ||
     !everyoneListed ||
-    !whatsappValid ||
     isGuestUploadPending ||
     isCompleting ||
     isLoadingList;
 
   const resolveCompleteError = (code: string): string => {
     switch (code) {
-      case 'invalid_whatsapp':
-      case 'whatsapp_required':
-        return t('errors.invalidWhatsapp');
       case 'no_guests':
         return t('errors.noGuests');
       case 'unauthorized':
@@ -136,26 +117,15 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
 
   const handleComplete = () => {
     setCompleteError(null);
-    setWhatsappError(null);
-
-    const validation = validateTourismWhatsapp(contactWhatsapp);
-    if (!validation.ok) {
-      setWhatsappError(t('errors.invalidWhatsapp'));
-      return;
-    }
 
     startCompleteTransition(async () => {
-      const result = await completeTourismRegistrationAction(tenantSlug, contactWhatsapp);
+      const result = await completeTourismRegistrationAction(tenantSlug);
       if (!result.ok) {
         setCompleteError(resolveCompleteError(result.error));
-        if (result.error === 'invalid_whatsapp' || result.error === 'whatsapp_required') {
-          setWhatsappError(t('errors.invalidWhatsapp'));
-        }
         return;
       }
 
       setRegistrationComplete(true);
-      setSavedWhatsapp(validation.e164);
       onComplete();
     });
   };
@@ -184,7 +154,9 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
       <div className="space-y-6 pt-5">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">{t('complete.summaryTitle')}</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">{t('intro.description', countryVars)}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t('intro.description', countryVars)}
+          </p>
         </div>
 
         {reservationName ? (
@@ -198,13 +170,6 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
           <h3 className="text-sm font-semibold text-foreground">{t('guestList.heading')}</h3>
           <TourismGuestList guests={guests} />
         </div>
-
-        {savedWhatsapp ? (
-          <div className="space-y-1">
-            <Label>{t('contact.whatsapp')}</Label>
-            <p className="text-sm font-medium text-foreground">{savedWhatsapp}</p>
-          </div>
-        ) : null}
 
         <Button size="lg" className="w-full" onClick={onComplete}>
           {t('complete.continue')}
@@ -243,40 +208,6 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
         onUploadPendingChange={setIsGuestUploadPending}
         onGuestAdded={handleGuestAdded}
       />
-
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-foreground">{t('contact.heading')}</h3>
-          <p className="text-xs text-muted-foreground">{t('contact.hint')}</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="tourism-whatsapp">{t('contact.whatsapp')}</Label>
-          <Input
-            id="tourism-whatsapp"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            value={contactWhatsapp}
-            onChange={(e) => {
-              setContactWhatsapp(e.target.value);
-              setWhatsappError(null);
-            }}
-            onBlur={() => {
-              if (!contactWhatsapp.trim()) return;
-              const result = validateTourismWhatsapp(contactWhatsapp);
-              if (!result.ok) {
-                setWhatsappError(t('errors.invalidWhatsapp'));
-              }
-            }}
-            disabled={isCompleting}
-            aria-invalid={Boolean(whatsappError)}
-          />
-          {whatsappError ? (
-            <p className="text-xs text-destructive">{whatsappError}</p>
-          ) : null}
-        </div>
-      </div>
 
       <div className="space-y-4">
         <label
@@ -319,4 +250,9 @@ export function TourismRegistrationPanel({ onComplete }: TourismRegistrationPane
       </div>
     </div>
   );
+}
+
+/** @deprecated Use TourismGuestsRegistrationPanel in stay-setup flow. */
+export function TourismRegistrationPanel({ onComplete }: TourismGuestsRegistrationPanelProps) {
+  return <TourismGuestsRegistrationPanel onComplete={onComplete} />;
 }

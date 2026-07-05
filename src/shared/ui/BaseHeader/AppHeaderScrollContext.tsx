@@ -11,19 +11,23 @@ import {
 } from 'react';
 import { usePathname } from 'next/navigation';
 import { getCleanPath } from '@/shared/config';
-import { resolveAppHeaderMode, shouldAutoHideAppHeader } from './resolveAppHeaderMode';
+import {
+  resolveAppHeaderMode,
+  shouldAutoHideAppHeader,
+  shouldAutoHideArrivalGuideSteps,
+} from './resolveAppHeaderMode';
 import { useAppHeaderScrollVisibility } from './useAppHeaderScrollVisibility';
 
 export const APP_HEADER_HEIGHT_CSS_VAR = '--app-header-height';
 
 interface AppHeaderScrollContextValue {
-  visible: boolean;
+  headerVisible: boolean;
+  guideStepsVisible: boolean;
   headerHeight: number;
   setHeaderHeight: (height: number) => void;
   prefersReducedMotion: boolean;
-  autoHideEnabled: boolean;
-  /** When true, header stays visible (auto-hide ignored). */
-  setSuppressAutoHide: (suppress: boolean) => void;
+  guideStepsAutoHideEnabled: boolean;
+  registerScrollRoot: (element: HTMLElement | null) => void;
 }
 
 const AppHeaderScrollContext = createContext<AppHeaderScrollContextValue | null>(null);
@@ -32,20 +36,23 @@ export function AppHeaderScrollProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const cleanPath = getCleanPath(pathname);
   const headerMode = resolveAppHeaderMode(cleanPath);
-  const autoHideEnabled = shouldAutoHideAppHeader(headerMode);
+  const headerAutoHideEnabled = shouldAutoHideAppHeader(headerMode);
+  const guideStepsAutoHideEnabled = shouldAutoHideArrivalGuideSteps(headerMode);
+  const scrollTrackingEnabled = headerAutoHideEnabled || guideStepsAutoHideEnabled;
+  const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
+  const registerScrollRoot = useCallback((element: HTMLElement | null) => {
+    setScrollRoot(element);
+  }, []);
   const { visible: scrollVisible } = useAppHeaderScrollVisibility({
-    enabled: autoHideEnabled,
+    enabled: scrollTrackingEnabled,
     resetKey: cleanPath,
+    scrollRoot,
   });
   const [headerHeight, setHeaderHeight] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [suppressAutoHide, setSuppressAutoHideState] = useState(false);
 
-  const setSuppressAutoHide = useCallback((suppress: boolean) => {
-    setSuppressAutoHideState(suppress);
-  }, []);
-
-  const visible = suppressAutoHide ? true : autoHideEnabled ? scrollVisible : true;
+  const headerVisible = headerAutoHideEnabled ? scrollVisible : true;
+  const guideStepsVisible = guideStepsAutoHideEnabled ? scrollVisible : true;
 
   useLayoutEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -68,14 +75,22 @@ export function AppHeaderScrollProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      visible,
+      headerVisible,
+      guideStepsVisible,
       headerHeight,
       setHeaderHeight,
       prefersReducedMotion,
-      autoHideEnabled,
-      setSuppressAutoHide,
+      guideStepsAutoHideEnabled,
+      registerScrollRoot,
     }),
-    [visible, headerHeight, prefersReducedMotion, autoHideEnabled, setSuppressAutoHide]
+    [
+      headerVisible,
+      guideStepsVisible,
+      headerHeight,
+      prefersReducedMotion,
+      guideStepsAutoHideEnabled,
+      registerScrollRoot,
+    ]
   );
 
   return (

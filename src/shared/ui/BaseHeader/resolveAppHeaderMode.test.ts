@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveAppHeaderMode, shouldAutoHideAppHeader } from './resolveAppHeaderMode';
+import { resolveAppHeaderMode, shouldAutoHideAppHeader, shouldAutoHideArrivalGuideSteps } from './resolveAppHeaderMode';
 
 describe('resolveAppHeaderMode', () => {
   it('returns concierge for home path', () => {
@@ -8,6 +8,10 @@ describe('resolveAppHeaderMode', () => {
 
   it('returns arrivalGuide for welcome', () => {
     expect(resolveAppHeaderMode('/welcome')).toBe('arrivalGuide');
+  });
+
+  it('returns arrivalGuide for stay-setup', () => {
+    expect(resolveAppHeaderMode('/stay-setup')).toBe('arrivalGuide');
   });
 
   it('returns preSession for check-in routes', () => {
@@ -28,9 +32,21 @@ describe('shouldAutoHideAppHeader', () => {
     expect(shouldAutoHideAppHeader('preSession')).toBe(false);
   });
 
-  it('enables auto-hide for concierge, arrival guide, and nested routes', () => {
+  it('enables auto-hide for concierge and nested routes', () => {
     expect(shouldAutoHideAppHeader('concierge')).toBe(true);
-    expect(shouldAutoHideAppHeader('arrivalGuide')).toBe(true);
     expect(shouldAutoHideAppHeader('nested')).toBe(true);
+  });
+
+  it('disables header auto-hide for arrival guide', () => {
+    expect(shouldAutoHideAppHeader('arrivalGuide')).toBe(false);
+  });
+});
+
+describe('shouldAutoHideArrivalGuideSteps', () => {
+  it('enables step chips auto-hide only on arrival guide', () => {
+    expect(shouldAutoHideArrivalGuideSteps('arrivalGuide')).toBe(true);
+    expect(shouldAutoHideArrivalGuideSteps('concierge')).toBe(false);
+    expect(shouldAutoHideArrivalGuideSteps('nested')).toBe(false);
+    expect(shouldAutoHideArrivalGuideSteps('preSession')).toBe(false);
   });
 });

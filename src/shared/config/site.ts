@@ -60,6 +60,7 @@ export const SITE_CONFIG = {
     app: {
       concierge: { path: '/', titleKey: 'concierge' },
       welcome: { path: '/welcome', titleKey: 'arrivalGuide' },
+      staySetup: { path: '/stay-setup', titleKey: 'staySetup' },
       guide: { path: '/guide', titleKey: 'guide' },
       services: { path: '/services', titleKey: 'services' },
       faq: { path: '/faq', titleKey: 'faq' },

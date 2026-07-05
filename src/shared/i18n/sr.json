@@ -759,7 +759,8 @@
       "faq": "FAQ",
       "back": "Back",
       "backToConcierge": "Back to Concierge",
-      "goToConcierge": "Go to Concierge"
+      "goToConcierge": "Go to Concierge",
+      "staySetup": "Registration & contact"
     },
     "memories": {
       "title": "Share your memories",
@@ -1189,6 +1190,121 @@
         "backToSetup": "Nazad na launch setup",
         "backToSettings": "Nazad na podešavanja"
       }
+    },
+    "staySetup": {
+      "guestCheckIn": {
+        "hint": "Trip tips and directions are open to everyone. Door codes and your bed map unlock after check-in — tap",
+        "link": "Check in",
+        "checkInToContinue": "Check in to continue"
+      },
+      "tourismGate": {
+        "title": "Complete guest registration",
+        "description": "Your accommodation needs to register all guests before issuing settlement details. This is a legal requirement.",
+        "step1": "Tap \"Register\" below",
+        "step2": "Add each guest's name and document photos",
+        "step3": "Return here to view your settlement",
+        "cta": "Register now"
+      },
+      "tabs": {
+        "register": "Tourist registration",
+        "contact": "Contact",
+        "settlement": "Settlement"
+      },
+      "register": {
+        "actionButton": "Continue to settlement",
+        "loading": "Loading registration…",
+        "intro": {
+          "title": "Tourist registration ({country})",
+          "description": "{country} requires each person staying at the accommodation to be registered separately. Upload the required identity documents for each guest."
+        },
+        "privacy": {
+          "title": "Why we collect this data",
+          "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
+        },
+        "reservationName": {
+          "label": "Name on reservation"
+        },
+        "guestList": {
+          "heading": "Added guests",
+          "photosUploaded": "Photos uploaded",
+          "empty": "No guests added yet. Add everyone who will stay in your room or bed."
+        },
+        "addGuest": {
+          "heading": "Add a guest",
+          "firstName": "First name",
+          "lastName": "Last name",
+          "passport": "Passport (photo page)",
+          "entryStamp": "Entry stamp photo",
+          "submit": "Add guest",
+          "adding": "Uploading photos…",
+          "success": "Guest added."
+        },
+        "contact": {
+          "heading": "Contact for this stay",
+          "whatsapp": "WhatsApp number",
+          "hint": "One number for the whole stay — we may contact this person about registration."
+        },
+        "finish": {
+          "confirmLabel": "Everyone staying at this accommodation is listed above",
+          "submit": "Complete registration",
+          "submitting": "Completing…"
+        },
+        "complete": {
+          "summaryTitle": "Registration complete",
+          "continue": "Continue to contact"
+        },
+        "fieldErrors": {
+          "firstName": "Enter a first name (max 120 characters).",
+          "lastName": "Enter a last name (max 120 characters).",
+          "passport": "Choose a passport photo.",
+          "entryStamp": "Choose an entry stamp photo.",
+          "fileTooLarge": "Image is too large. Use a photo under 10 MB.",
+          "notAnImage": "File must be an image.",
+          "processingFailed": "Could not process this image. Try another photo."
+        },
+        "errors": {
+          "generic": "Something went wrong. Try again.",
+          "unauthorized": "Sign in with your check-in link or PIN first.",
+          "featureDisabled": "Tourist registration is not enabled for this hostel.",
+          "registrationClosed": "Registration is already complete — you cannot add more guests.",
+          "invalidInput": "Check names and photos, then try again.",
+          "invalidFile": "One of the photos was rejected. Use a clear JPG or PNG.",
+          "uploadFailed": "Upload failed. Check your connection and try again.",
+          "dbUnavailable": "Service is temporarily unavailable. Try again in a moment.",
+          "invalidWhatsapp": "Enter a valid WhatsApp number with country code.",
+          "noGuests": "Add at least one guest before completing."
+        }
+      },
+      "settlement": {
+        "copy": {
+          "planning": {
+            "title": "When you're inside",
+            "description": "After you enter, connect to Wi-Fi below and read the house rules. Visit reception during opening hours to pay and register your passport."
+          },
+          "atDoor": {
+            "title": "You're in!",
+            "description": "Use the door codes from the Access tab. Visit reception in the morning to pay and register your passport."
+          },
+          "atDesk": {
+            "title": "Welcome at reception",
+            "description": "Complete your payment and show your passport for mandatory tourist registration. Wi-Fi and house rules are below."
+          }
+        },
+        "actionButton": "Explore Your Stay"
+      },
+      "contact": {
+        "title": "Contact for this stay",
+        "description": "Reception may need to reach you about registration, your room, or stay.",
+        "whatsappLabel": "WhatsApp or mobile number",
+        "hint": "Include country code. One number for the whole booking.",
+        "continue": "Continue to settlement",
+        "saving": "Saving…",
+        "actionButton": "Continue to settlement",
+        "errors": {
+          "invalidWhatsapp": "Enter a valid WhatsApp number with country code.",
+          "generic": "Something went wrong. Try again."
+        }
+      }
     }
   },
   "features": {
@@ -1289,7 +1405,8 @@
         "wifi": "Wi‑Fi",
         "checkout": "Check-out",
         "nightAccess": "Night access",
-        "reception": "About reception"
+        "reception": "About reception",
+        "staySetup": "Registration & contact"
       },
       "bridgeAriaLabelUnread": "{title} — not viewed",
       "bridgeAriaLabelRead": "{title} — viewed",

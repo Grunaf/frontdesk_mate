@@ -7,27 +7,16 @@ const STEP_BUTTON_KEYS: Record<Step, string> = {
   info: 'preTrip.actionButton',
   route: 'directions.actionButton',
   arrival: 'arrival.actionButton',
-  register: 'register.actionButton',
-  settlement: 'settlement.actionButton',
 };
 
 export function resolveArrivalJourneyPrimaryButtonKey(
   activeStepId: Step,
   isRegistered: boolean,
-  routesAvailable: boolean,
-  tourismRegistrationRequired: boolean
+  routesAvailable: boolean
 ): string {
-  const nextStep = resolveNextArrivalJourneyStep(
-    activeStepId,
-    routesAvailable,
-    tourismRegistrationRequired
-  );
+  const nextStep = resolveNextArrivalJourneyStep(activeStepId, routesAvailable);
 
-  if (
-    !isRegistered &&
-    nextStep !== null &&
-    (nextStep === 'arrival' || nextStep === 'register' || nextStep === 'settlement')
-  ) {
+  if (!isRegistered && nextStep === 'arrival') {
     return CHECK_IN_CTA_KEY;
   }
 

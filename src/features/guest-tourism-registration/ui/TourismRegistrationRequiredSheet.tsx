@@ -23,7 +23,7 @@ export function TourismRegistrationRequiredSheet({
   onOpenChange,
   onGoToRegistration,
 }: TourismRegistrationRequiredSheetProps) {
-  const t = useTranslations('pages.arrivalJourney.tourismGate');
+  const t = useTranslations('pages.staySetup.tourismGate');
 
   const handleGoToRegistration = () => {
     onOpenChange(false);

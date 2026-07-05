@@ -11,6 +11,10 @@ export function resolveAppHeaderMode(cleanPath: string): AppHeaderMode {
     return 'arrivalGuide';
   }
 
+  if (cleanPath === SITE_CONFIG.routes.app.staySetup.path) {
+    return 'arrivalGuide';
+  }
+
   if (cleanPath.startsWith('/check-in')) {
     return 'preSession';
   }
@@ -19,5 +23,9 @@ export function resolveAppHeaderMode(cleanPath: string): AppHeaderMode {
 }
 
 export function shouldAutoHideAppHeader(mode: AppHeaderMode): boolean {
-  return mode !== 'preSession';
+  return mode !== 'preSession' && mode !== 'arrivalGuide';
+}
+
+export function shouldAutoHideArrivalGuideSteps(mode: AppHeaderMode): boolean {
+  return mode === 'arrivalGuide';
 }

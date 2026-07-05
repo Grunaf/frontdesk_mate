@@ -5,13 +5,13 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { GuestStayPlan } from '@/entities/tenant';
 import { resolveReceptionContact } from '@/entities/tenant/lib/resolveReceptionContact';
-import { useTenant } from '@/entities/tenant';
+import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { formatBedLocationLine } from '@/features/find-your-bed/lib/formatBedLocation';
 import { FindYourBedSummary } from '@/features/find-your-bed/ui/FindYourBedSummary';
-import { useWelcomeBedMapStep } from '@/features/find-your-bed/ui/FindYourBedCard';
+import { useStaySetupBedMapStep } from '@/features/find-your-bed/ui/FindYourBedCard';
+import { resolveGuestStaySetupPath } from '@/features/guest-check-in/lib/resolveGuestStaySetupPath';
 import { ReceptionContactActions, useReceptionContactLabels } from '@/features/reception-contact';
 import { useTranslations, useLocale } from '@/shared/i18n';
-import { SITE_CONFIG } from '@/shared/config';
 import { cn } from '@/shared/lib/utils';
 import {
   BottomSheet,
@@ -53,7 +53,7 @@ export function GuestStaySheet({
   checkInAt,
   checkOutAt,
 }: GuestStaySheetProps) {
-  const { name, hostel, slug } = useTenant();
+  const { name, hostel, slug, settings } = useTenant();
   const locale = useLocale();
   const params = useParams<{ locale: string }>();
   const routeLocale = params.locale ?? locale;
@@ -67,8 +67,18 @@ export function GuestStaySheet({
   const dateRange = formatGuestStayDateRange(checkInAt, checkOutAt, locale);
   const stayRef = formatStayReference(stayId);
   const trimmedGuestName = guestName?.trim() || null;
-  const welcomeBedMapStep = useWelcomeBedMapStep();
-  const settlementPath = `/${routeLocale}${SITE_CONFIG.routes.app.welcome.path}?step=${welcomeBedMapStep}`;
+  const staySetupBedMapStep = useStaySetupBedMapStep();
+  const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
+  const settlementPath = resolveGuestStaySetupPath({
+    locale: routeLocale,
+    step: staySetupBedMapStep,
+    tourismRequired: tourismRegistrationRequired,
+    completion: {
+      tourismRequired: tourismRegistrationRequired,
+      tourismComplete: false,
+      contactComplete: false,
+    },
+  });
 
   const bedLine = useMemo(
     () =>

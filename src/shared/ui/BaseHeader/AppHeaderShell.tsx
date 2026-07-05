@@ -9,7 +9,8 @@ interface AppHeaderShellProps {
 }
 
 export function AppHeaderShell({ children }: AppHeaderShellProps) {
-  const { visible, headerHeight, setHeaderHeight, prefersReducedMotion } = useAppHeaderScroll();
+  const { headerVisible, headerHeight, setHeaderHeight, prefersReducedMotion } =
+    useAppHeaderScroll();
 
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -41,7 +42,7 @@ export function AppHeaderShell({ children }: AppHeaderShellProps) {
         className={cn(
           'fixed top-0 left-1/2 z-20 w-full max-w-md -translate-x-1/2 border-b border-border bg-card',
           !prefersReducedMotion && 'transition-transform duration-200 ease-out',
-          visible ? 'translate-y-0' : '-translate-y-full'
+          headerVisible ? 'translate-y-0' : '-translate-y-full'
         )}
       >
         {children}

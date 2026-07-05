@@ -9,7 +9,6 @@ import { isTourismRegistrationComplete } from '@/entities/guest-tourism-registra
 import { resolveTourismRegistrationRequired } from '@/entities/tenant';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
-import { validateTourismWhatsapp } from '../lib/validateTourismWhatsapp';
 
 export type CompleteTourismRegistrationActionResult =
   | { ok: true; alreadyComplete?: boolean }
@@ -18,15 +17,12 @@ export type CompleteTourismRegistrationActionResult =
       error:
         | 'feature_disabled'
         | 'unauthorized'
-        | 'invalid_whatsapp'
-        | 'whatsapp_required'
         | 'no_guests'
         | 'db_unavailable';
     };
 
 export async function completeTourismRegistrationAction(
-  tenantSlug: string,
-  contactWhatsapp: string
+  tenantSlug: string
 ): Promise<CompleteTourismRegistrationActionResult> {
   const slug = tenantSlug.trim();
   if (!slug) {
@@ -53,11 +49,6 @@ export async function completeTourismRegistrationAction(
     return { ok: false, error: 'no_guests' };
   }
 
-  const whatsappResult = validateTourismWhatsapp(contactWhatsapp);
-  if (!whatsappResult.ok) {
-    return { ok: false, error: whatsappResult.error };
-  }
-
   const admin = getSupabaseAdmin();
   if (!admin) {
     return { ok: false, error: 'db_unavailable' };
@@ -67,7 +58,6 @@ export async function completeTourismRegistrationAction(
   const { data, error } = await admin
     .from('guest_stays')
     .update({
-      tourism_contact_whatsapp: whatsappResult.e164,
       tourism_registration_completed_at: completedAt,
       updated_at: completedAt,
     })

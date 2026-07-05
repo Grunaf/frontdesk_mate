@@ -1,6 +1,6 @@
 export type GuestEntryParam = 'remote' | 'door' | 'desk';
 
-export type WelcomeStep = 'info' | 'route' | 'arrival' | 'settlement';
+export type WelcomeStep = 'info' | 'route' | 'arrival';
 
 export function parseGuestEntryParam(value: string | null | undefined): GuestEntryParam | null {
   if (value === 'remote' || value === 'door' || value === 'desk') {
@@ -17,7 +17,7 @@ export function resolveWelcomeStep(input: {
   const { entry, modeOnsite } = input;
 
   if (entry === 'desk') {
-    return 'settlement';
+    return 'info';
   }
 
   if (entry === 'door' || modeOnsite) {

@@ -46,8 +46,8 @@ export function AddTourismGuestForm({
   onGuestAdded,
   onUploadPendingChange,
 }: AddTourismGuestFormProps) {
-  const t = useTranslations('pages.arrivalJourney.register');
-  const tField = useTranslations('pages.arrivalJourney.register.fieldErrors');
+  const t = useTranslations('pages.staySetup.register');
+  const tField = useTranslations('pages.staySetup.register.fieldErrors');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});

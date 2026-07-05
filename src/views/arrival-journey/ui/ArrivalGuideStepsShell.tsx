@@ -14,7 +14,8 @@ export function ArrivalGuideStepsShell({
   children,
   stepsLayout = 'scrollLinked',
 }: ArrivalGuideStepsShellProps) {
-  const { visible, prefersReducedMotion, autoHideEnabled } = useAppHeaderScroll();
+  const { guideStepsVisible, prefersReducedMotion, guideStepsAutoHideEnabled } =
+    useAppHeaderScroll();
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState(0);
 
@@ -38,7 +39,7 @@ export function ArrivalGuideStepsShell({
     };
   }, [children]);
 
-  if (stepsLayout === 'inline' || !autoHideEnabled) {
+  if (stepsLayout === 'inline' || !guideStepsAutoHideEnabled) {
     return <div className="shrink-0">{children}</div>;
   }
 
@@ -50,9 +51,7 @@ export function ArrivalGuideStepsShell({
         className={cn(
           'fixed top-[var(--app-header-height,0px)] left-1/2 z-10 w-full max-w-md -translate-x-1/2 bg-background',
           !prefersReducedMotion && 'transition-transform duration-200 ease-out',
-          visible
-            ? 'translate-y-0'
-            : '-translate-y-[calc(100%+var(--app-header-height,0px))]'
+          guideStepsVisible ? 'translate-y-0' : '-translate-y-full'
         )}
       >
         {children}

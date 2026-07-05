@@ -5,7 +5,7 @@ import { GuestAppRuntime } from '@/entities/tenant/ui/GuestAppRuntime';
 import { TenantOfflineContent } from '@/views/platform/ui/TenantOfflineContent';
 import { TenantNotFoundView } from '@/views/platform/ui/TenantNotFoundView';
 import { AnalyticsProvider } from '@/shared/lib/analytics';
-import { AppHeaderScrollProvider, AppHeaderShell, BaseHeader } from '@/shared/ui';
+import { AppGuestScrollMain, AppHeaderScrollProvider, AppHeaderShell, BaseHeader } from '@/shared/ui';
 import { getRouteTranslations } from '@/shared/lib/getRouteTranslations';
 
 interface AppLayoutProps {
@@ -52,7 +52,7 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
               <AppHeaderShell>
                 <BaseHeader translatedTitles={translatedTitles} />
               </AppHeaderShell>
-              <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</main>
+              <AppGuestScrollMain>{children}</AppGuestScrollMain>
             </AppHeaderScrollProvider>
           </div>
         </GuestAppRuntime>

@@ -2,8 +2,7 @@ import type { Step } from '../model/useCheckInState';
 
 export function resolveNextArrivalJourneyStep(
   currentStep: Step,
-  routesAvailable: boolean,
-  tourismRegistrationRequired: boolean
+  routesAvailable: boolean
 ): Step | null {
   switch (currentStep) {
     case 'info':
@@ -11,10 +10,6 @@ export function resolveNextArrivalJourneyStep(
     case 'route':
       return 'arrival';
     case 'arrival':
-      return tourismRegistrationRequired ? 'register' : 'settlement';
-    case 'register':
-      return 'settlement';
-    case 'settlement':
       return null;
     default:
       return null;

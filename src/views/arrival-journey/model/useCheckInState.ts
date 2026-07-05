@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTenant } from '@/entities/tenant';
 
-export type Step = 'info' | 'route' | 'arrival' | 'register' | 'settlement';
+export type Step = 'info' | 'route' | 'arrival';
 
 export function useCheckInState(isOnsite: boolean) {
   const { slug } = useTenant();

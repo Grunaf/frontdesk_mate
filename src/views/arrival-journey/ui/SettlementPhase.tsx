@@ -18,7 +18,7 @@ export function SettlementPhase() {
   const hostel = useHostelConfig();
   const { settings } = useTenant();
   const { currentTenantSlug } = useGuestSession();
-  const settlement = useTranslations('pages.arrivalJourney.settlement');
+  const settlement = useTranslations('pages.staySetup.settlement');
   const intent = currentTenantSlug ? readGuestIntent(currentTenantSlug) : null;
   const copyVariant = resolveSettlementCopyVariant(intent);
 

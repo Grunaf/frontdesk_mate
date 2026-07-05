@@ -6,11 +6,15 @@ import {
 
 describe('resolveNextArrivalJourneyStep', () => {
   it('skips route when routes are hidden', () => {
-    expect(resolveNextArrivalJourneyStep('info', false, false)).toBe('arrival');
+    expect(resolveNextArrivalJourneyStep('info', false)).toBe('arrival');
   });
 
   it('goes to route from preparation when routes are available', () => {
-    expect(resolveNextArrivalJourneyStep('info', true, false)).toBe('route');
+    expect(resolveNextArrivalJourneyStep('info', true)).toBe('route');
+  });
+
+  it('ends after arrival', () => {
+    expect(resolveNextArrivalJourneyStep('arrival', true)).toBeNull();
   });
 });
 
