@@ -154,6 +154,9 @@ export function ContactsFields({
     );
   }
 
+  const deskPinTenantSlug = (tenantSlug ?? readinessInput.slug)?.trim();
+  const showReceptionDeskPinFields = surface === 'platform' || Boolean(deskPinTenantSlug);
+
   const taxiRaw = settings?.contacts?.taxiPhoneRaw ?? '';
   const taxiMask = settings?.contacts?.taxiPhoneMask ?? '';
   const taxiPreset = normalizePhoneDisplayPreset(
@@ -185,13 +188,15 @@ export function ContactsFields({
           placeholder="Replies on WhatsApp during reception hours."
           width="lg"
         />
-        <ReceptionDeskPinFields
-          surface={surface}
-          tenantSlug={tenantSlug ?? readinessInput.slug}
-          locale={locale}
-          deskPinHash={settings?.reception?.deskPinHash}
-          disabled={readOnly}
-        />
+        {showReceptionDeskPinFields ? (
+          <ReceptionDeskPinFields
+            surface={surface}
+            tenantSlug={deskPinTenantSlug ?? ''}
+            locale={locale}
+            deskPinHash={settings?.reception?.deskPinHash}
+            disabled={readOnly}
+          />
+        ) : null}
         {showReceptionToggles ? (
           <>
             <AdminCheckbox
