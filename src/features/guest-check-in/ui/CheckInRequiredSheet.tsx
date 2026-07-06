@@ -118,7 +118,7 @@ export function CheckInRequiredSheet({
         </BottomSheetBody>
 
         <BottomSheetFooter>
-          <Button asChild size="lg" className="w-full">
+          <Button asChild size="default" className="w-full">
             <Link href={checkInPath}>{t('signIn')}</Link>
           </Button>
           {receptionContact ? (
@@ -127,6 +127,9 @@ export function CheckInRequiredSheet({
               labels={{ message: receptionLabels.message, call: receptionLabels.call }}
               analyticsContext="check_in"
               tenantSlug={slug}
+              callButtonSize="default"
+              callButtonVariant="ghost"
+              whatsappButtonClassName="h-11 min-h-11 px-4 text-sm font-medium [&_svg]:size-4"
             />
           ) : (
             <p className="text-center text-sm text-muted-foreground">{t('noContact')}</p>

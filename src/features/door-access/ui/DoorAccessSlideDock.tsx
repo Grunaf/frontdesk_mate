@@ -34,6 +34,7 @@ export type DoorAccessSlideDockFooterAction =
       label: string;
       onClick: () => void;
       disabled?: boolean;
+      back?: DoorAccessSlideDockIconAction;
     }
   | {
       variant: 'slideNav';
@@ -143,23 +144,29 @@ export function DoorAccessSlideDock({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {progress ? (
-        <DoorAccessSlideProgress
-          count={progress.count}
-          activeIndex={progress.activeIndex}
-        />
-      ) : null}
-
       <div
         key={contentTransitionKey}
         className={doorAccessSlideEnterClass(slideDirection, prefersReducedMotion)}
       >
+        {progress ? (
+          <DoorAccessSlideProgress
+            count={progress.count}
+            activeIndex={progress.activeIndex}
+            placement="top"
+          />
+        ) : null}
+
         <BottomSheetHeader className={cn('px-6 pb-2', progress ? 'pt-0' : 'pt-3')}>
           <h3 className="text-base font-semibold leading-snug text-foreground">{title}</h3>
         </BottomSheetHeader>
 
         {hasBodySection ? (
-          <div className="space-y-3 px-6 pb-5 pt-0">
+          <div
+            className={cn(
+              'space-y-3 px-6 pt-0',
+              hasFooter ? 'pb-4' : 'pb-0'
+            )}
+          >
             {body ? (
               <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
             ) : null}
@@ -185,10 +192,18 @@ export function DoorAccessSlideDock({
       </div>
 
       {footerAction?.variant === 'primary' ? (
-        <div className="px-6 pb-5 pt-0">
+        <div
+          className={cn(
+            'flex items-center gap-3 px-6 pb-5',
+            hasBodySection ? 'pt-0' : 'pt-4'
+          )}
+        >
+          {footerAction.back ? (
+            <SlideNavIconButton direction="back" action={footerAction.back} />
+          ) : null}
           <Button
             size="lg"
-            className="w-full"
+            className={cn('min-w-0', footerAction.back ? 'flex-1' : 'w-full')}
             onClick={footerAction.onClick}
             disabled={footerAction.disabled}
           >
@@ -198,7 +213,12 @@ export function DoorAccessSlideDock({
       ) : null}
 
       {footerAction?.variant === 'slideNav' ? (
-        <div className="flex items-center justify-between px-6 pb-5 pt-0">
+        <div
+          className={cn(
+            'flex items-center justify-between px-6 pb-5',
+            hasBodySection ? 'pt-0' : 'pt-4'
+          )}
+        >
           {footerAction.back ? (
             <SlideNavIconButton direction="back" action={footerAction.back} />
           ) : (

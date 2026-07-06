@@ -2,7 +2,7 @@
 
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { useTenant } from '@/entities/tenant';
-import { Button, CardTitle, Icon } from '@/shared/ui';
+import { CardTitle, Icon } from '@/shared/ui';
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import { hasOfficialRouteSchedule, isWalkOnlyRoute, type RouteConfig } from '@/entities/hostel';
 import type { AppLocale } from '@/entities/city-pack/model/types';
@@ -16,12 +16,12 @@ import {
 export function PublicRouteSummaryCard({
   route,
   alternativeRoute,
-  onStepByStepClick,
+  onPrimaryRouteClick,
   onAlternativeRouteClick,
 }: {
   route: RouteConfig;
   alternativeRoute?: RouteConfig;
-  onStepByStepClick: () => void;
+  onPrimaryRouteClick: () => void;
   onAlternativeRouteClick?: () => void;
 }) {
   const { settings, hostel } = useTenant();
@@ -43,75 +43,63 @@ export function PublicRouteSummaryCard({
   });
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
-      <div className="space-y-3 p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {directions('recommendedTitle')}
-        </p>
-
-        <div className="flex items-start gap-4">
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={onPrimaryRouteClick}
+          className="flex w-full items-start gap-4 rounded-lg text-left transition-colors hover:bg-muted/30"
+        >
           <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
             <Icon icon={RouteIcon} className="h-5 w-5" />
           </div>
-          <div className="min-w-0 space-y-2">
+          <div className="min-w-0 flex-1 space-y-2">
             <CardTitle className="text-foreground">
               {resolveRouteCopyField(route, 'publicTitle', routes)}
             </CardTitle>
             <p className="text-sm leading-relaxed text-foreground/90">
               {resolveRouteCopyField(route, 'publicSummary', routes)}
             </p>
+            <TransitLegMeta route={route} routes={routes} directions={directions} />
+            {walkOnly && (
+              <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
+            )}
           </div>
-        </div>
+          <Icon icon={ChevronRight} className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
 
-        <TransitLegMeta route={route} routes={routes} directions={directions} />
-
-        {walkOnly && (
-          <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
+        {showOfficialSchedule && (
+          <a
+            href={route.metadata.publicTransport.officialRouteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {directions('officialRouteLink')}
+            <Icon icon={ExternalLink} className="h-3.5 w-3.5" />
+          </a>
         )}
-
-        <div className="flex gap-2">
-          <Button type="button" variant="default" size="sm" className="flex-1" onClick={onStepByStepClick}>
-            {directions('stepByStep')}
-          </Button>
-          {showOfficialSchedule && (
-            <Button asChild variant="outline" size="sm" className="flex-1">
-              <a
-                href={route.metadata.publicTransport.officialRouteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {directions('officialRouteLink')}
-                <Icon icon={ExternalLink} className="h-3.5 w-3.5" />
-              </a>
-            </Button>
-          )}
-        </div>
       </div>
 
       {alternativeRoute && onAlternativeRouteClick && AlternativeRouteIcon && (
         <button
           type="button"
           onClick={onAlternativeRouteClick}
-          className="flex w-full flex-col gap-2 border-t bg-muted/20 p-4 text-left transition-colors hover:bg-muted/40"
+          className="flex w-full items-start gap-4 rounded-lg pt-2 text-left transition-colors hover:bg-muted/30"
         >
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {directions('otherPublicRoute')}
-          </p>
-          <div className="flex w-full items-start gap-4">
-            <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
-              <Icon icon={AlternativeRouteIcon} className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1 space-y-2">
-              <CardTitle className="text-sm text-foreground">
-                {resolveRouteCopyField(alternativeRoute, 'publicTitle', routes)}
-              </CardTitle>
-              <p className="text-xs leading-relaxed text-foreground/90">
-                {resolveRouteCopyField(alternativeRoute, 'publicSummary', routes)}
-              </p>
-              <TransitLegMeta route={alternativeRoute} routes={routes} directions={directions} />
-            </div>
-            <Icon icon={ChevronRight} className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
+            <Icon icon={AlternativeRouteIcon} className="h-5 w-5" />
           </div>
+          <div className="min-w-0 flex-1 space-y-2">
+            <CardTitle className="text-sm text-foreground">
+              {resolveRouteCopyField(alternativeRoute, 'publicTitle', routes)}
+            </CardTitle>
+            <p className="text-xs leading-relaxed text-foreground/90">
+              {resolveRouteCopyField(alternativeRoute, 'publicSummary', routes)}
+            </p>
+            <TransitLegMeta route={alternativeRoute} routes={routes} directions={directions} />
+          </div>
+          <Icon icon={ChevronRight} className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
       )}
     </div>

@@ -239,7 +239,7 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
         'flex w-full flex-col bg-background',
         isArrival
           ? 'min-h-0 flex-1 overflow-x-hidden overflow-y-hidden'
-          : 'min-h-screen overflow-x-hidden'
+          : 'min-h-0 flex-1 flex-col overflow-x-hidden'
       )}
     >
       {!isArrival ? (
@@ -260,25 +260,12 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
         <CrossHostelStrip showRoutesHint={currentStep === 'route'} className="mx-4 mt-3" />
       ) : null}
 
-      {!isArrival && !isRegistered ? (
-        <p className="mx-4 mt-3 text-xs leading-relaxed text-muted-foreground">
-          {t('guestCheckIn.hint')}{' '}
-          <button
-            type="button"
-            className="font-medium text-primary underline underline-offset-2"
-            onClick={openCheckInSheet}
-          >
-            {t('guestCheckIn.link')}
-          </button>
-        </p>
-      ) : null}
-
       <main
         className={cn(
           'flex flex-col bg-background',
           isArrival
             ? 'min-h-0 flex-1 overflow-hidden px-0 pt-0 pb-0'
-            : 'justify-between gap-y-6 px-4 pt-4 pb-8'
+            : 'min-h-0 flex-1 px-4 pt-4 pb-4'
         )}
       >
         {isArrival ? (
@@ -291,12 +278,14 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
             onHideMainPrimaryChange={setArrivalHideMainPrimary}
           />
         ) : (
-          <ActiveComponent />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <ActiveComponent />
+          </div>
         )}
         {showPrimaryButton ? (
           <Button
             size="lg"
-            className={cn('w-full', isArrival && 'mx-4 mb-4 shrink-0')}
+            className={cn('w-full shrink-0', !isArrival && 'mt-3', isArrival && 'mx-4 mb-2')}
             onClick={handlePrimaryAction}
           >
             {t(primaryButtonKey)}

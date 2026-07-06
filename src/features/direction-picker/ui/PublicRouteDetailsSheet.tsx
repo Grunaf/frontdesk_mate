@@ -67,7 +67,7 @@ export function PublicRouteDetailsSheet({
             </div>
             <div className="min-w-0 space-y-1 pr-8">
               <BottomSheetTitle className="text-base">{title}</BottomSheetTitle>
-              {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
+              {subtitle ? <p className="text-sm leading-relaxed text-muted-foreground">{subtitle}</p> : null}
             </div>
           </div>
         </BottomSheetHeader>
@@ -84,14 +84,15 @@ export function PublicRouteDetailsSheet({
 
         {showOfficialSchedule ? (
           <BottomSheetFooter className="border-t border-border/60 sm:flex-row">
-            <Button asChild variant="outline" size="sm" className="w-full">
+            <Button asChild variant="outline" className="h-11 w-full">
               <a
                 href={route.metadata.publicTransport.officialRouteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5"
               >
-                {directions('officialRouteLink')}
-                <Icon icon={ExternalLink} className="h-3.5 w-3.5" />
+                <span className="text-sm font-semibold">{directions('officialRouteLink')}</span>
+                <Icon icon={ExternalLink} className="h-4 w-4 shrink-0" />
               </a>
             </Button>
           </BottomSheetFooter>

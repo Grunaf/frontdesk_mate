@@ -257,6 +257,14 @@ export function DoorAccessCarousel({
   const dockBody = resolveSheetBody(activeSlide, enter, doors);
   const dockCode = resolveSlideCode(activeSlide);
 
+  const dockBackAction =
+    !isFirstSlide && prevSlide
+      ? {
+          ariaLabel: resolveSheetTitle(prevSlide, enter, doors) || arrival('nextSlide'),
+          onClick: goToPrevSlide,
+        }
+      : undefined;
+
   const footerAction = ((): DoorAccessSlideDockFooterAction | undefined => {
     if (!isLastSlide) {
       const forwardAria =
@@ -287,6 +295,7 @@ export function DoorAccessCarousel({
         label: primaryAction.label,
         onClick: primaryAction.onClick,
         disabled: primaryAction.disabled,
+        back: dockBackAction,
       };
     }
     if (slides.length === 1 && activeSlide.kind === 'landmark') {
@@ -295,6 +304,7 @@ export function DoorAccessCarousel({
         label: primaryAction.label,
         onClick: primaryAction.onClick,
         disabled: primaryAction.disabled,
+        back: dockBackAction,
       };
     }
     return undefined;

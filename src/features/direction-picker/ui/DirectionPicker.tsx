@@ -5,7 +5,15 @@ import { useTranslations } from '@/shared/i18n';
 import { useTenant } from '@/entities/tenant';
 import { getRouteFeedbackLink } from '../lib/getRouteFeedbackLink';
 import { resolveRouteCopyField, resolveRouteHint } from '../lib/resolveRouteCopy';
-import { Button, ExternalServiceTouchLink, Icon, Tabs, TabsList, TabsTrigger } from '@/shared/ui';
+import {
+  Button,
+  ExternalServiceTouchLink,
+  Icon,
+  Separator,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/ui';
 import type { RouteId } from '@/entities/hostel';
 import { getActiveRoutes } from '@/entities/hostel';
 import { PublicRouteDetailsSheet } from './PublicRouteDetailsSheet';
@@ -129,11 +137,13 @@ export function DirectionPicker() {
         <PublicRouteSummaryCard
           route={currentRoute}
           alternativeRoute={alternativeRoute}
-          onStepByStepClick={() => setPrimaryDetailsOpen(true)}
+          onPrimaryRouteClick={() => setPrimaryDetailsOpen(true)}
           onAlternativeRouteClick={
             alternativeRoute ? () => setAlternativeDetailsOpen(true) : undefined
           }
         />
+
+        <Separator />
 
         <TaxiBackupCard route={currentRoute} onTaxiClick={() => setTaxiSheetOpen(true)} />
 

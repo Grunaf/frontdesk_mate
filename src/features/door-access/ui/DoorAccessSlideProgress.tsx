@@ -13,6 +13,7 @@ const ACTIVE_BAR_HEIGHT_PX = 4;
 export type DoorAccessSlideProgressProps = {
   count: number;
   activeIndex: number;
+  placement?: 'top' | 'bottom';
 };
 
 function resolveActiveBarWidthPx(count: number): number {
@@ -46,6 +47,7 @@ export function usePrefersReducedMotion(): boolean {
 export function DoorAccessSlideProgress({
   count,
   activeIndex,
+  placement = 'top',
 }: DoorAccessSlideProgressProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -57,7 +59,10 @@ export function DoorAccessSlideProgress({
 
   return (
     <div
-      className="flex justify-center px-6 pb-3 pt-3"
+      className={cn(
+        'flex px-6',
+        placement === 'top' ? 'justify-start pb-2 pt-3' : 'justify-center pb-3 pt-1'
+      )}
       role="group"
       aria-label={`Slide ${activeIndex + 1} of ${count}`}
     >
