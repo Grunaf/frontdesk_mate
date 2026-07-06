@@ -1,7 +1,12 @@
 import 'server-only';
 
 import type { HouseRule } from '@/entities/house-rules';
-import { HOUSE_RULE_DETAIL_MAX, HOUSE_RULE_SUMMARY_MAX, validateHouseRule } from '@/entities/house-rules';
+import {
+  HOUSE_RULE_DETAIL_MAX,
+  HOUSE_RULE_SUMMARY_MAX,
+  retainSupportedHouseRules,
+  validateHouseRule,
+} from '@/entities/house-rules';
 import {
   GUEST_EXTRA_PRESET_IDS,
   type GuestExtraConfig,
@@ -220,9 +225,10 @@ function parseHouseRules(formData: FormData): HouseRule[] | undefined {
       return [];
     }
 
-    return parsed
-      .filter((rule) => rule?.id && rule?.templateId && String(rule.templateId) !== 'laundry')
-      .map((rule) => {
+    return retainSupportedHouseRules(
+      parsed
+        .filter((rule) => rule?.id && rule?.templateId)
+        .map((rule) => {
         if (rule.templateId === 'custom') {
           return {
             id: rule.id,
@@ -247,7 +253,8 @@ function parseHouseRules(formData: FormData): HouseRule[] | undefined {
           if (rule.detail.length > HOUSE_RULE_DETAIL_MAX) return false;
         }
         return validateHouseRule(rule).valid || !rule.enabled;
-      });
+      })
+    );
   } catch {
     return [];
   }

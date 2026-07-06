@@ -29,6 +29,7 @@ export {
 } from './actions/submitTourismGuestAction';
 export { TourismGuestsRegistrationPanel, TourismRegistrationPanel } from './ui/TourismRegistrationPanel';
 export { TourismRegistrationRequiredSheet } from './ui/TourismRegistrationRequiredSheet';
+export { GuestTourismRegistrationComplianceField } from './ui/GuestTourismRegistrationComplianceField';
 
 export {
   getTourismRegistrationProfile,

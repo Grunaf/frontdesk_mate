@@ -19,6 +19,8 @@ import {
 } from '../actions/listTourismGuestsForSessionAction';
 import { AddTourismGuestForm } from './AddTourismGuestForm';
 import { TourismGuestList } from './TourismGuestList';
+import { TourismRegistrationPanelSkeleton } from './TourismRegistrationPanelSkeleton';
+import { TourismRegistrationPrivacySheet } from './TourismRegistrationPrivacySheet';
 
 type TourismGuestsRegistrationPanelProps = {
   onComplete: () => void;
@@ -39,6 +41,8 @@ export function TourismGuestsRegistrationPanel({
   const [guests, setGuests] = useState<TourismGuestListItem[]>([]);
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [everyoneListed, setEveryoneListed] = useState(false);
+  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
+  const [privacySheetOpen, setPrivacySheetOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [isLoadingList, setIsLoadingList] = useState(true);
@@ -108,6 +112,7 @@ export function TourismGuestsRegistrationPanel({
     registrationComplete ||
     guests.length < 1 ||
     !everyoneListed ||
+    !privacyAcknowledged ||
     isGuestUploadPending ||
     isCompleting ||
     isLoadingList;
@@ -147,12 +152,7 @@ export function TourismGuestsRegistrationPanel({
   };
 
   if (interactionEnabled && isLoadingList) {
-    return (
-      <div className="flex items-center gap-2 pt-5 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" aria-hidden />
-        {t('loading')}
-      </div>
-    );
+    return <TourismRegistrationPanelSkeleton loadingLabel={t('loading')} />;
   }
 
   if (interactionEnabled && loadError) {
@@ -199,11 +199,17 @@ export function TourismGuestsRegistrationPanel({
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-foreground">{t('intro.title', countryVars)}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{t('intro.description', countryVars)}</p>
-        <div className="space-y-1 pt-1">
-          <p className="text-sm font-medium text-foreground">{t('privacy.title')}</p>
-          <p className="text-xs leading-relaxed text-muted-foreground">{t('privacy.body')}</p>
-        </div>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 text-sm font-normal"
+          onClick={() => setPrivacySheetOpen(true)}
+        >
+          {t('privacy.linkLabel')}
+        </Button>
       </div>
+
+      <TourismRegistrationPrivacySheet open={privacySheetOpen} onOpenChange={setPrivacySheetOpen} />
 
       {reservationName ? (
         <div className="space-y-1 rounded-xl border bg-muted/20 p-4">
@@ -240,6 +246,22 @@ export function TourismGuestsRegistrationPanel({
             disabled={isCompleting || !interactionEnabled}
           />
           <span>{t('finish.confirmLabel')}</span>
+        </label>
+
+        <label
+          className={cn(
+            'flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-foreground',
+            (isCompleting || !interactionEnabled) && 'pointer-events-none opacity-60'
+          )}
+        >
+          <input
+            type="checkbox"
+            className="mt-1 size-4 shrink-0 rounded border border-input accent-primary"
+            checked={privacyAcknowledged}
+            onChange={(e) => setPrivacyAcknowledged(e.target.checked)}
+            disabled={isCompleting || !interactionEnabled}
+          />
+          <span>{t('finish.privacyConfirmLabel')}</span>
         </label>
 
         {completeError ? (
