@@ -18,6 +18,26 @@ describe('migrateActiveRulesKeys', () => {
     });
     expect(rules[1]).toMatchObject({ templateId: 'alcohol' });
   });
+
+  it('ignores removed legacy keys such as registration', () => {
+    const rules = migrateActiveRulesKeys(['registration', 'smoking']);
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toMatchObject({ templateId: 'smoking' });
+  });
+});
+
+describe('getHouseRules', () => {
+  it('drops stored rules whose template is not in the catalog', () => {
+    const rules = getHouseRules({
+      houseRules: [
+        { id: 'registration', templateId: 'registration' as 'alcohol', enabled: true },
+        { id: 'laundry', templateId: 'laundry' as 'alcohol', enabled: true },
+        { id: 'alcohol', templateId: 'alcohol', enabled: true },
+      ],
+    });
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toMatchObject({ templateId: 'alcohol' });
+  });
 });
 
 describe('validateHouseRule', () => {

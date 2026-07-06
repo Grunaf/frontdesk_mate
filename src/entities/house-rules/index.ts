@@ -25,6 +25,7 @@ export {
   getHouseRules,
   isHouseRulesModuleTracked,
   migrateActiveRulesKeys,
+  retainSupportedHouseRules,
 } from './lib/normalizeHouseRules';
 export {
   resolveHouseRuleDisplay,

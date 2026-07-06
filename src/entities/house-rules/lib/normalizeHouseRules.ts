@@ -1,14 +1,12 @@
 import type { TenantSettings } from '@/entities/tenant/model/settings';
+import { getRuleTemplate } from './catalog';
 import type { HouseRule, RuleTemplateId } from '../model/types';
 
 const LEGACY_KEY_TO_TEMPLATE: Record<string, Exclude<RuleTemplateId, 'custom'>> = {
   quietHours: 'quietHours',
   smoking: 'smoking',
   alcohol: 'alcohol',
-  registration: 'registration',
 };
-
-const DEPRECATED_RULE_TEMPLATE_IDS = new Set(['laundry']);
 
 const DEFAULT_QUIET_HOURS = { from: '22:00', to: '08:00' };
 
@@ -38,10 +36,14 @@ export function migrateActiveRulesKeys(keys: string[]): HouseRule[] {
     .filter((rule): rule is HouseRule => rule !== null);
 }
 
-function stripDeprecatedHouseRules(rules: HouseRule[]): HouseRule[] {
-  return rules.filter(
-    (rule) => !DEPRECATED_RULE_TEMPLATE_IDS.has(rule.templateId as string)
-  );
+/** Drops custom-invalid and template rules that are not in the current catalog (e.g. removed templates). */
+export function retainSupportedHouseRules(rules: HouseRule[]): HouseRule[] {
+  return rules.filter((rule) => {
+    if (rule.templateId === 'custom') {
+      return true;
+    }
+    return getRuleTemplate(rule.templateId) !== undefined;
+  });
 }
 
 export function getHouseRules(settings: TenantSettings | undefined): HouseRule[] {
@@ -50,11 +52,11 @@ export function getHouseRules(settings: TenantSettings | undefined): HouseRule[]
   }
 
   if (settings.houseRules !== undefined) {
-    return stripDeprecatedHouseRules(settings.houseRules);
+    return retainSupportedHouseRules(settings.houseRules);
   }
 
   if (settings.activeRulesKeys?.length) {
-    return stripDeprecatedHouseRules(migrateActiveRulesKeys(settings.activeRulesKeys));
+    return retainSupportedHouseRules(migrateActiveRulesKeys(settings.activeRulesKeys));
   }
 
   return [];

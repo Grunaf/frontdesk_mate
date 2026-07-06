@@ -84,17 +84,6 @@ export const HOUSE_RULE_TEMPLATES: RuleTemplateDefinition[] = [
       detail: 'Alcohol consumption is allowed, but bringing your own drinks from outside is prohibited. You can purchase drinks at our hostel bar.',
     }),
   },
-  {
-    id: 'registration',
-    kind: 'simple',
-    label: 'Police registration',
-    description: 'Reception handles guest registration.',
-    icon: 'shield',
-    render: () => ({
-      summary: 'Auto-registration',
-      detail: 'We handle all police paperwork automatically upon check-in. You do not need to do anything.',
-    }),
-  },
 ];
 
 export function getRuleTemplate(

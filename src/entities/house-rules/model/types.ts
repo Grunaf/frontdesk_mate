@@ -2,7 +2,6 @@ export type RuleTemplateId =
   | 'quietHours'
   | 'smoking'
   | 'alcohol'
-  | 'registration'
   | 'custom';
 
 export type RuleTemplateKind = 'simple' | 'configured' | 'custom';
