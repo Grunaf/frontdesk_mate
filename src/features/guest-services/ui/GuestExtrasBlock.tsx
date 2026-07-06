@@ -53,6 +53,10 @@ export function GuestExtrasBlock({
   const hasExtras = layout.featured.length > 0 || layout.standard.length > 0;
   const featuredExtras =
     variant === 'compact' ? layout.featured.slice(0, 2) : layout.featured;
+  const standardExtras =
+    variant === 'compact'
+      ? layout.standard.slice(0, layout.featured.length > 0 ? 2 : 4)
+      : layout.standard;
 
   if (!hasExtras) {
     return null;
@@ -86,9 +90,9 @@ export function GuestExtrasBlock({
         </div>
       ) : null}
 
-      {variant === 'full' && layout.standard.length > 0 ? (
+      {standardExtras.length > 0 ? (
         <div className="grid grid-cols-2 gap-2">
-          {layout.standard.map((extra) => (
+          {standardExtras.map((extra) => (
             <GuestExtraStandardTile key={extra.presetId} extra={extra} onSelect={() => openExtra(extra)} />
           ))}
         </div>

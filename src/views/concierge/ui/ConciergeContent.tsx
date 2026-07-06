@@ -33,8 +33,9 @@ export function ConciergeContent() {
     [settings, isRegistered]
   );
   const servicesCount = extrasLayout.standard.length + extrasLayout.featured.length;
+  const compactStandardLimit = extrasLayout.featured.length > 0 ? 2 : 4;
   const servicesSeeAll =
-    extrasLayout.standard.length > 0 || extrasLayout.featured.length > 2;
+    extrasLayout.featured.length > 2 || extrasLayout.standard.length > compactStandardLimit;
   const ruleDisplays = useMemo(
     () => resolveHouseRulesForDisplay(getHouseRules(settings)),
     [settings]
