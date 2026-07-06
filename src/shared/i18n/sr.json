@@ -676,6 +676,8 @@
         },
         "privacy": {
           "title": "Why we collect this data",
+          "linkLabel": "Why we collect this data",
+          "dismiss": "Close",
           "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
         },
         "reservationName": {
@@ -703,6 +705,7 @@
         },
         "finish": {
           "confirmLabel": "Everyone staying at this accommodation is listed above",
+          "privacyConfirmLabel": "I have read and understand how my guest data is used",
           "submit": "Complete registration",
           "submitting": "Completing…"
         },
@@ -1122,6 +1125,13 @@
         "save": "Sačuvaj izmene",
         "unsavedChanges": "Imate nesačuvane izmene",
         "allChangesSaved": "Sve izmene su sačuvane",
+        "unsavedNav": {
+          "title": "Nesačuvane izmene",
+          "description": "Izmene ostaju u formi dok ne sačuvate. Možete preći u drugu sekciju i nastaviti uređivanje ili odbaciti i vratiti poslednju sačuvanu verziju.",
+          "stay": "Ostani",
+          "keepEditingElsewhere": "Nastavi uređivanje drugde",
+          "discardChanges": "Odbaci izmene"
+        },
         "toast": {
           "saved": "Postavke sačuvane",
           "savedReady": "Postavke sačuvane — spremno za goste",
@@ -1219,6 +1229,8 @@
         },
         "privacy": {
           "title": "Why we collect this data",
+          "linkLabel": "Why we collect this data",
+          "dismiss": "Close",
           "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
         },
         "reservationName": {
@@ -1246,6 +1258,7 @@
         },
         "finish": {
           "confirmLabel": "Everyone staying at this accommodation is listed above",
+          "privacyConfirmLabel": "I have read and understand how my guest data is used",
           "submit": "Complete registration",
           "submitting": "Completing…"
         },

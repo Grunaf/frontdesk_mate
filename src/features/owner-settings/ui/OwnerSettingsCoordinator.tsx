@@ -9,9 +9,8 @@ import {
   useState,
 } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ChevronDown } from 'lucide-react';
 import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import type { CityPackId, TenantSettings } from '@/entities/tenant';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
@@ -25,10 +24,8 @@ import {
 } from '@/entities/tenant/lib/resolveTenantReadiness';
 import type { TenantLifecycleStatus } from '@/entities/tenant/lib/resolveTenantLifecycle';
 import {
-  getAdminSectionHint,
+  adminSectionIdForSaveBlock,
   getAdminSectionStatus,
-  getDefaultOpenSections,
-  normalizeAdminSectionId,
   type AdminSectionId,
 } from '@/app/admin/(protected)/tenants/lib/adminSections';
 import {
@@ -44,17 +41,51 @@ import {
 } from '@/app/admin/(protected)/tenants/ui/TenantFormDraftContext';
 import { TenantFormHiddenPayload } from '@/app/admin/(protected)/tenants/ui/TenantFormHiddenPayload';
 import { TenantReadinessChecklist } from '@/app/admin/(protected)/tenants/ui/TenantReadinessChecklist';
+import { TenantSettingsNav } from '@/app/admin/(protected)/tenants/ui/TenantSettingsNav';
+import { TenantUnsavedSectionDialog } from '@/app/admin/(protected)/tenants/ui/TenantUnsavedSectionDialog';
+import {
+  clearReceptionDeskPinInputs,
+  tenantFormHasUnsavedChanges,
+} from '@/app/admin/(protected)/tenants/lib/tenantFormHasUnsavedChanges';
 import { saveOwnerTenantSettingsAction } from '@/features/owner-setup/api/saveOwnerTenantSettingsAction';
 import { validateOwnerTenantFormBeforeSave } from '@/features/owner-setup/lib/validateOwnerTenantFormBeforeSave';
 import { useOwnerShell } from '@/features/owner-shell';
 import { TenantAdminSectionPanel } from '@/features/tenant-admin-sections';
-import { cn } from '@/shared/lib/utils';
-import { getOwnerSettingsSections } from '../lib/ownerSettingsSections';
+import {
+  getOwnerSettingsSections,
+  normalizeOwnerSettingsSectionId,
+  ownerSettingsSectionPath,
+  type OwnerSettingsSectionId,
+} from '../lib/ownerSettingsSections';
+import {
+  appendContactsModuleToUrl,
+  CONTACTS_ADMIN_MODULE_QUERY,
+  getContactsAdminModuleLabel,
+  normalizeContactsAdminModuleId,
+  stripSettingsModuleFromUrl,
+  type ContactsAdminModuleId,
+} from '@/app/admin/(protected)/tenants/lib/contactsAdminSubsections';
+import {
+  getArrivalJourneyAdminModuleLabel,
+  normalizeArrivalJourneyAdminModuleId,
+  type ArrivalJourneyAdminModuleId,
+} from '@/app/admin/(protected)/tenants/lib/arrivalJourneyAdminSubsections';
+import {
+  getGuestAppAdminModuleLabel,
+  normalizeGuestAppAdminModuleId,
+  type GuestAppAdminModuleId,
+} from '@/app/admin/(protected)/tenants/lib/guestAppAdminSubsections';
+import { appendSettingsModuleToUrl } from '@/app/admin/(protected)/tenants/lib/tenantSettingsModuleUrl';
+import { AdminSettingsPanelBreadcrumbs } from '@/app/admin/(protected)/tenants/ui/AdminSettingsPanelBreadcrumbs';
+import {
+  scrollTenantSettingsPanelIntoView,
+  scrollToSectionTarget,
+  TENANT_SETTINGS_PANEL_ID,
+} from '@/app/admin/(protected)/tenants/lib/scrollTenantSettingsPanelIntoView';
 
 interface OwnerSettingsCoordinatorProps {
   locale: string;
   lifecycleStatus: TenantLifecycleStatus;
-  justSaved?: boolean;
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
   cityPackContentsById: Record<string, CityPackContent>;
@@ -68,11 +99,6 @@ interface OwnerSettingsCoordinatorProps {
   };
 }
 
-function scrollToSectionTarget(target: HTMLElement, stickyOffset: number) {
-  const top = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
-  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-}
-
 export function OwnerSettingsCoordinator(props: OwnerSettingsCoordinatorProps) {
   return <OwnerSettingsCoordinatorInner {...props} />;
 }
@@ -80,25 +106,25 @@ export function OwnerSettingsCoordinator(props: OwnerSettingsCoordinatorProps) {
 function OwnerSettingsCoordinatorInner({
   locale,
   lifecycleStatus: shellLifecycleStatus,
-  justSaved = false,
   cityPackOptions,
   cityPackGateSnapshot,
   cityPackContentsById,
   initial,
 }: OwnerSettingsCoordinatorProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const routeParams = useParams();
+  const justSaved = searchParams.get('saved') === '1';
   const { canEditSettings } = useOwnerShell();
   const t = useTranslations('pages.owner.settings');
-  const { draft, markDirty, resetDirty, isDirty } = useTenantFormDraft();
+  const tUnsavedNav = useTranslations('pages.owner.settings.unsavedNav');
+  const { draft, clearDraft, resetDirty } = useTenantFormDraft();
 
   const formRef = useRef<HTMLFormElement>(null);
   const stickyFooterRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<Partial<Record<AdminSectionId, HTMLDivElement | null>>>({});
-  const pendingScrollRef = useRef<AdminSectionId | null>(null);
   const stickyOffsetRef = useRef(96);
   const saveToastHandledRef = useRef(false);
-  const hashHandledRef = useRef(false);
 
   const [toast, setToast] = useState<{
     variant: 'success' | 'warning';
@@ -111,6 +137,32 @@ function OwnerSettingsCoordinatorInner({
     name: initial.name,
     cityPackId: initial.cityPackId,
   });
+
+  const [receptionDeskPinInput, setReceptionDeskPinInput] = useState('');
+
+  const [pendingSectionNav, setPendingSectionNav] = useState<{
+    sectionId: AdminSectionId;
+    href: string;
+  } | null>(null);
+
+  const formBaseline = useMemo(
+    () => ({
+      slug: initial.slug,
+      name: initial.name,
+      cityPackId: initial.cityPackId,
+      subscriptionStartsAt: initial.subscriptionStartsAt,
+      subscriptionEndsAt: initial.subscriptionEndsAt,
+      settings: initial.settings,
+    }),
+    [
+      initial.slug,
+      initial.name,
+      initial.cityPackId,
+      initial.subscriptionStartsAt,
+      initial.subscriptionEndsAt,
+      initial.settings,
+    ]
+  );
 
   const subscription = useMemo(
     () => ({
@@ -130,10 +182,156 @@ function OwnerSettingsCoordinatorInner({
     [shellLifecycleStatus, subscription.subscriptionEndsAt, subscription.subscriptionStartsAt]
   );
 
+  const ownerSections = useMemo(() => getOwnerSettingsSections(), []);
+
+  const activeSectionId = useMemo((): OwnerSettingsSectionId => {
+    const fromRoute = normalizeOwnerSettingsSectionId(String(routeParams.sectionId ?? ''));
+    return fromRoute ?? 'identity';
+  }, [routeParams.sectionId]);
+
+  const activeSection = useMemo(
+    () => ownerSections.find((entry) => entry.id === activeSectionId) ?? ownerSections[0],
+    [activeSectionId, ownerSections]
+  );
+
+  const contactsModuleId = useMemo(() => {
+    if (activeSectionId !== 'contacts') {
+      return null;
+    }
+    return normalizeContactsAdminModuleId(searchParams.get(CONTACTS_ADMIN_MODULE_QUERY));
+  }, [activeSectionId, searchParams]);
+
+  const arrivalJourneyModuleId = useMemo(() => {
+    if (activeSectionId !== 'arrival-journey') {
+      return null;
+    }
+    return normalizeArrivalJourneyAdminModuleId(searchParams.get(CONTACTS_ADMIN_MODULE_QUERY));
+  }, [activeSectionId, searchParams]);
+
+  const guestAppModuleId = useMemo(() => {
+    if (activeSectionId !== 'guest-app') {
+      return null;
+    }
+    return normalizeGuestAppAdminModuleId(searchParams.get(CONTACTS_ADMIN_MODULE_QUERY));
+  }, [activeSectionId, searchParams]);
+
+  const setContactsModule = useCallback(
+    (moduleId: ContactsAdminModuleId | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('saved');
+      if (moduleId) {
+        params.set(CONTACTS_ADMIN_MODULE_QUERY, moduleId);
+      } else {
+        params.delete(CONTACTS_ADMIN_MODULE_QUERY);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams]
+  );
+
+  const setArrivalJourneyModule = useCallback(
+    (moduleId: ArrivalJourneyAdminModuleId | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('saved');
+      if (moduleId) {
+        params.set(CONTACTS_ADMIN_MODULE_QUERY, moduleId);
+      } else {
+        params.delete(CONTACTS_ADMIN_MODULE_QUERY);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams]
+  );
+
+  const setGuestAppModule = useCallback(
+    (moduleId: GuestAppAdminModuleId | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('saved');
+      if (moduleId) {
+        params.set(CONTACTS_ADMIN_MODULE_QUERY, moduleId);
+      } else {
+        params.delete(CONTACTS_ADMIN_MODULE_QUERY);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams]
+  );
+
+  const settingsDrillDownModuleScrollSkipRef = useRef(true);
+
+  const activeSettingsDrillDownModuleId =
+    activeSectionId === 'contacts'
+      ? contactsModuleId
+      : activeSectionId === 'arrival-journey'
+        ? arrivalJourneyModuleId
+        : activeSectionId === 'guest-app'
+          ? guestAppModuleId
+          : null;
+
+  useEffect(() => {
+    if (
+      activeSectionId !== 'contacts' &&
+      activeSectionId !== 'arrival-journey' &&
+      activeSectionId !== 'guest-app'
+    ) {
+      settingsDrillDownModuleScrollSkipRef.current = true;
+      return;
+    }
+    if (settingsDrillDownModuleScrollSkipRef.current) {
+      settingsDrillDownModuleScrollSkipRef.current = false;
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      scrollTenantSettingsPanelIntoView(stickyOffsetRef.current);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeSectionId, activeSettingsDrillDownModuleId]);
+
+  useEffect(() => {
+    if (
+      activeSectionId === 'contacts' ||
+      activeSectionId === 'arrival-journey' ||
+      activeSectionId === 'guest-app'
+    ) {
+      return;
+    }
+    if (!searchParams.get(CONTACTS_ADMIN_MODULE_QUERY)) {
+      return;
+    }
+    router.replace(stripSettingsModuleFromUrl(pathname, searchParams.toString()));
+  }, [activeSectionId, pathname, router, searchParams]);
+
   const mergedSettings = useMemo(
     () => mergeDraftSettings(initial.settings ?? {}, draft),
     [initial.settings, draft]
   );
+
+  const hasUnsavedChanges = useMemo(
+    () =>
+      tenantFormHasUnsavedChanges({
+        baseline: formBaseline,
+        identity,
+        subscription,
+        draft,
+        receptionDeskPinInput,
+      }),
+    [formBaseline, identity, subscription, draft, receptionDeskPinInput]
+  );
+
+  const resetFormToBaseline = useCallback(() => {
+    clearDraft();
+    setIdentity({
+      slug: formBaseline.slug,
+      name: formBaseline.name,
+      cityPackId: formBaseline.cityPackId,
+    });
+    setReceptionDeskPinInput('');
+    clearReceptionDeskPinInputs(formRef.current);
+    resetDirty();
+  }, [clearDraft, formBaseline, resetDirty]);
 
   const readinessInput = useMemo<TenantReadinessInput>(
     () => ({
@@ -168,41 +366,87 @@ function OwnerSettingsCoordinatorInner({
   );
 
   const navInputLive = readinessInput;
-  const ownerSections = useMemo(() => getOwnerSettingsSections(), []);
 
-  const defaultOpen = useMemo(
-    () =>
-      getDefaultOpenSections(navInputLive).filter((id) => id !== 'subscription') as AdminSectionId[],
-    [navInputLive]
-  );
-
-  const [openSections, setOpenSections] = useState<AdminSectionId[]>(
-    defaultOpen.length > 0 ? defaultOpen : ['identity']
-  );
-  const [activeNav, setActiveNav] = useState<AdminSectionId>(defaultOpen[0] ?? 'identity');
-
-  const jumpToSection = useCallback(
-    (sectionId: AdminSectionId) => {
+  const navigateToSection = useCallback(
+    (
+      sectionId: AdminSectionId,
+      href?: string,
+      settingsModule?: ContactsAdminModuleId | ArrivalJourneyAdminModuleId | GuestAppAdminModuleId
+    ) => {
       if (sectionId === 'subscription') {
         return;
       }
-      setActiveNav(sectionId);
-      pendingScrollRef.current = sectionId;
-
-      const isAlreadyOpen = openSections.length === 1 && openSections[0] === sectionId;
-      if (isAlreadyOpen) {
-        const target = sectionRefs.current[sectionId];
-        if (target) {
-          scrollToSectionTarget(target, stickyOffsetRef.current);
+      let target =
+        href ?? ownerSettingsSectionPath(locale, sectionId as OwnerSettingsSectionId);
+      if (sectionId === 'contacts' && settingsModule) {
+        const moduleId = normalizeContactsAdminModuleId(settingsModule);
+        if (moduleId) {
+          target = appendContactsModuleToUrl(target, moduleId);
         }
-        pendingScrollRef.current = null;
+      } else if (sectionId === 'arrival-journey' && settingsModule) {
+        const moduleId = normalizeArrivalJourneyAdminModuleId(settingsModule);
+        if (moduleId) {
+          target = appendSettingsModuleToUrl(target, moduleId);
+        }
+      } else if (sectionId === 'guest-app' && settingsModule) {
+        const moduleId = normalizeGuestAppAdminModuleId(settingsModule);
+        if (moduleId) {
+          target = appendSettingsModuleToUrl(target, moduleId);
+        }
+      }
+      if (hasUnsavedChanges) {
+        setPendingSectionNav({ sectionId, href: target });
         return;
       }
-
-      setOpenSections([sectionId]);
+      router.push(target);
     },
-    [openSections]
+    [hasUnsavedChanges, locale, router]
   );
+
+  const handleStayOnSection = useCallback(() => {
+    setPendingSectionNav(null);
+  }, []);
+
+  const handleKeepEditingElsewhere = useCallback(() => {
+    if (!pendingSectionNav) {
+      return;
+    }
+    router.push(pendingSectionNav.href);
+    setPendingSectionNav(null);
+  }, [pendingSectionNav, router]);
+
+  const handleDiscardAndNavigate = useCallback(() => {
+    if (!pendingSectionNav) {
+      return;
+    }
+    const target = pendingSectionNav.href;
+    resetFormToBaseline();
+    setPendingSectionNav(null);
+    router.push(target);
+  }, [pendingSectionNav, resetFormToBaseline, router]);
+
+  const unsavedNavLabels = useMemo(
+    () => ({
+      title: tUnsavedNav('title'),
+      description: tUnsavedNav('description'),
+      stay: tUnsavedNav('stay'),
+      keepEditingElsewhere: tUnsavedNav('keepEditingElsewhere'),
+      discardChanges: tUnsavedNav('discardChanges'),
+    }),
+    [tUnsavedNav]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const raw = window.location.hash.replace(/^#/, '');
+    const fromHash = normalizeOwnerSettingsSectionId(raw);
+    if (!fromHash) {
+      return;
+    }
+    router.replace(ownerSettingsSectionPath(locale, fromHash));
+  }, [locale, router]);
 
   useLayoutEffect(() => {
     const syncStickyOffset = () => {
@@ -226,80 +470,16 @@ function OwnerSettingsCoordinatorInner({
   }, [canEditSettings]);
 
   useEffect(() => {
-    const sectionId = pendingScrollRef.current;
-    if (!sectionId) {
-      return;
-    }
-
-    if (!openSections.includes(sectionId)) {
-      pendingScrollRef.current = null;
-      return;
-    }
-
-    const target = sectionRefs.current[sectionId];
-    if (!target) {
-      pendingScrollRef.current = null;
-      return;
-    }
-
-    const offset = stickyOffsetRef.current;
-    let done = false;
-    let raf2 = 0;
-
-    const runScroll = () => {
-      if (done) return;
-      done = true;
-      scrollToSectionTarget(target, offset);
-      pendingScrollRef.current = null;
-    };
-
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(runScroll);
-    });
-    const fallback = window.setTimeout(runScroll, 260);
-
-    return () => {
-      done = true;
-      cancelAnimationFrame(raf1);
-      if (raf2) cancelAnimationFrame(raf2);
-      window.clearTimeout(fallback);
-      pendingScrollRef.current = null;
-    };
-  }, [openSections]);
-
-  useEffect(() => {
-    if (hashHandledRef.current) {
-      return;
-    }
-    const raw = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
-    const sectionId = normalizeAdminSectionId(raw);
-    if (!sectionId || sectionId === 'subscription') {
-      hashHandledRef.current = true;
-      return;
-    }
-    hashHandledRef.current = true;
-    jumpToSection(sectionId);
-  }, [jumpToSection]);
-
-  useEffect(() => {
-    const onHashChange = () => {
-      const sectionId = normalizeAdminSectionId(window.location.hash.replace(/^#/, ''));
-      if (sectionId && sectionId !== 'subscription') {
-        jumpToSection(sectionId);
-      }
-    };
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, [jumpToSection]);
-
-  useEffect(() => {
     if (!justSaved || saveToastHandledRef.current) {
       return;
     }
 
     saveToastHandledRef.current = true;
+    clearDraft();
+    setReceptionDeskPinInput('');
+    clearReceptionDeskPinInputs(formRef.current);
     resetDirty();
-    router.replace(`/${locale}/settings`);
+    router.replace(pathname);
 
     const gate = resolveGuestPathGate(guestPathInput);
     if (gate.ready) {
@@ -323,9 +503,9 @@ function OwnerSettingsCoordinatorInner({
 
     const firstGap = configGaps[0];
     if (firstGap?.sectionId && firstGap.sectionId !== 'subscription') {
-      jumpToSection(firstGap.sectionId as AdminSectionId);
+      navigateToSection(firstGap.sectionId as AdminSectionId);
     }
-  }, [guestPathInput, justSaved, jumpToSection, locale, readinessInput, resetDirty, router, t]);
+  }, [clearDraft, guestPathInput, justSaved, navigateToSection, pathname, readinessInput, resetDirty, router, t]);
 
   useEffect(() => {
     const error = searchParams.get('error');
@@ -361,27 +541,74 @@ function OwnerSettingsCoordinatorInner({
       setToast({ variant: 'warning', message: block.message });
 
       if (block.code === 'reception_desk_pin') {
-        jumpToSection('contacts');
+        navigateToSection(adminSectionIdForSaveBlock(block.code), undefined, 'reception-desk');
         return;
       }
-
       if (block.code === 'guest_extra_price') {
-        jumpToSection('guest-app');
+        navigateToSection(adminSectionIdForSaveBlock(block.code));
       }
     },
-    [canEditSettings, jumpToSection, mergedSettings]
+    [canEditSettings, navigateToSection, mergedSettings]
   );
 
   const fieldsDisabled = !canEditSettings;
+  const sectionStatus = getAdminSectionStatus(activeSectionId, navInputLive);
+  const sectionProgress = getAdminSectionGuestProgress(activeSectionId, readinessInput);
+  const sectionProgressLabel = sectionProgress
+    ? formatAdminSectionGuestProgress(sectionProgress)
+    : null;
+
+  const settingsPanelInDetail =
+    (activeSectionId === 'contacts' && contactsModuleId !== null) ||
+    (activeSectionId === 'arrival-journey' && arrivalJourneyModuleId !== null) ||
+    (activeSectionId === 'guest-app' && guestAppModuleId !== null);
+
+  const settingsDrillDownModuleLabel =
+    activeSectionId === 'contacts' && contactsModuleId
+      ? getContactsAdminModuleLabel(contactsModuleId)
+      : activeSectionId === 'arrival-journey' && arrivalJourneyModuleId
+        ? getArrivalJourneyAdminModuleLabel(arrivalJourneyModuleId)
+        : activeSectionId === 'guest-app' && guestAppModuleId
+          ? getGuestAppAdminModuleLabel(guestAppModuleId)
+          : '';
+
+  const handleSettingsDrillDownBack = useCallback(() => {
+    if (activeSectionId === 'contacts') {
+      setContactsModule(null);
+      return;
+    }
+    if (activeSectionId === 'arrival-journey') {
+      setArrivalJourneyModule(null);
+      return;
+    }
+    if (activeSectionId === 'guest-app') {
+      setGuestAppModule(null);
+    }
+  }, [activeSectionId, setArrivalJourneyModule, setContactsModule, setGuestAppModule]);
+
+  const handleReceptionDeskPinInput = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && target.name === 'receptionDeskPin') {
+      setReceptionDeskPinInput(target.value);
+    }
+  }, []);
 
   return (
-    <form
+    <>
+      <TenantUnsavedSectionDialog
+        open={pendingSectionNav !== null}
+        labels={unsavedNavLabels}
+        onStay={handleStayOnSection}
+        onKeepEditingElsewhere={handleKeepEditingElsewhere}
+        onDiscardChanges={handleDiscardAndNavigate}
+      />
+      <form
       ref={formRef}
       action={saveOwnerTenantSettingsAction}
       className="relative space-y-6 pb-24"
       noValidate
       onSubmit={handleFormSubmit}
-      onInput={canEditSettings ? markDirty : undefined}
+      onInput={canEditSettings ? handleReceptionDeskPinInput : undefined}
     >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="returnTo" value="settings" />
@@ -389,6 +616,7 @@ function OwnerSettingsCoordinatorInner({
       <input type="hidden" name="slug" value={identity.slug} />
       <input type="hidden" name="name" value={identity.name} />
       <input type="hidden" name="cityPackId" value={identity.cityPackId} />
+      <input type="hidden" name="settingsSection" value={activeSectionId} />
 
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
@@ -425,122 +653,84 @@ function OwnerSettingsCoordinatorInner({
       <TenantReadinessChecklist
         readinessInput={readinessInput}
         guestPathInput={guestPathInput}
-        onJumpToSection={jumpToSection}
+        onJumpToSection={navigateToSection}
       />
 
-      <div
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
-        role="tablist"
-        aria-label={t('sectionChipsLabel')}
-      >
-        {ownerSections.map((section) => {
-          const status = getAdminSectionStatus(section.id, navInputLive);
-          return (
-            <button
-              key={section.id}
-              type="button"
-              role="tab"
-              aria-selected={activeNav === section.id}
-              onClick={() => jumpToSection(section.id)}
-              className={cn(
-                'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                activeNav === section.id
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted/60'
-              )}
-            >
-              {section.label}
-              <AdminSectionStatusBadge status={status} />
-            </button>
-          );
-        })}
-      </div>
+      <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="lg:sticky lg:top-[var(--admin-sticky-offset,6rem)] lg:self-start">
+          <TenantSettingsNav
+            tenantSlug={identity.slug}
+            navInputLive={navInputLive}
+            readinessInput={readinessInput}
+            isDirty={hasUnsavedChanges}
+            onNavigate={navigateToSection}
+            sectionFilter={(id) => id !== 'subscription'}
+            buildSectionHref={(sectionId) =>
+              ownerSettingsSectionPath(locale, sectionId as OwnerSettingsSectionId)
+            }
+          />
+        </aside>
 
-      <div className="min-w-0 rounded-xl border bg-background">
-        {ownerSections.map((section) => {
-          const isOpen = openSections.includes(section.id);
-          const status = getAdminSectionStatus(section.id, navInputLive);
-          const hint = getAdminSectionHint(section.id, navInputLive);
-          const progress = getAdminSectionGuestProgress(section.id, readinessInput);
-          const progressLabel = progress ? formatAdminSectionGuestProgress(progress) : null;
+        <div className="flex min-w-0 flex-col gap-2">
+          {settingsPanelInDetail ? (
+            <AdminSettingsPanelBreadcrumbs
+              sectionLabel={activeSection.label}
+              moduleLabel={settingsDrillDownModuleLabel}
+              onBackToHub={handleSettingsDrillDownBack}
+              backAriaLabel={`Back to ${activeSection.label}`}
+            />
+          ) : null}
 
-          return (
-            <div
-              key={section.id}
-              ref={(node) => {
-                sectionRefs.current[section.id] = node;
-              }}
-              className="scroll-mt-[var(--admin-sticky-offset,6rem)] border-b last:border-b-0"
-            >
-              <button
-                type="button"
-                aria-expanded={isOpen}
-                onClick={() => {
-                  pendingScrollRef.current = null;
-                  setActiveNav(section.id);
-                  setOpenSections((current) =>
-                    current.includes(section.id)
-                      ? current.filter((id) => id !== section.id)
-                      : [...current, section.id]
-                  );
-                }}
-                className="flex w-full items-start justify-between gap-3 px-4 py-4 text-left hover:bg-muted/30"
-              >
-                <span className="flex flex-1 flex-col items-start gap-0.5 pr-2">
-                  <span className="flex w-full items-center justify-between gap-3 text-sm font-semibold">
-                    <span>{section.label}</span>
-                    <span className="flex items-center gap-2">
-                      {progressLabel ? (
-                        <span className="text-[10px] font-medium text-muted-foreground">
-                          {progressLabel}
-                        </span>
-                      ) : null}
-                      <AdminSectionStatusBadge status={status} />
-                    </span>
-                  </span>
-                  <span className="text-xs font-normal text-muted-foreground">{section.description}</span>
-                  {hint && !isOpen ? (
-                    <span className="text-[11px] text-muted-foreground">{hint}</span>
-                  ) : null}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    'mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform',
-                    isOpen && 'rotate-180'
-                  )}
-                />
-              </button>
-
-              {isOpen ? (
-                <div
-                  className={cn('px-4 pb-5 pt-1', fieldsDisabled && 'pointer-events-none opacity-60')}
-                >
-                  <TenantAdminSectionPanel
-                    surface="owner"
-                    sectionId={section.id}
-                    initialSettings={initial.settings}
-                    identity={identity}
-                    originalSlug={initial.slug}
-                    subscription={subscription}
-                    onSubscriptionChange={() => {}}
-                    readinessInput={readinessInput}
-                    onIdentityChange={(next) => {
-                      markDirty();
-                      setIdentity(next);
-                    }}
-                    onJumpToSection={jumpToSection}
-                    cityPackOptions={cityPackOptions}
-                    cityPackGateSnapshot={cityPackGateSnapshot}
-                    cityPackContentsById={cityPackContentsById}
-                    mergedSettings={mergedSettings}
-                    readOnly={fieldsDisabled}
-                    locale={locale}
-                  />
+          <div
+            id={TENANT_SETTINGS_PANEL_ID}
+            className={`min-w-0 rounded-xl border bg-background px-4 pb-5 pt-4 ${fieldsDisabled ? 'pointer-events-none opacity-60' : ''}`}
+            style={{ scrollMarginTop: 'var(--admin-sticky-offset, 6rem)' }}
+          >
+            {!settingsPanelInDetail ? (
+              <header className="mb-4 border-b pb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <h2 className="text-sm font-semibold">{activeSection.label}</h2>
+                    <p className="text-xs text-muted-foreground">{activeSection.description}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {sectionProgressLabel ? (
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        {sectionProgressLabel}
+                      </span>
+                    ) : null}
+                    <AdminSectionStatusBadge status={sectionStatus} />
+                  </div>
                 </div>
-              ) : null}
-            </div>
-          );
-        })}
+              </header>
+            ) : null}
+            <TenantAdminSectionPanel
+              key={activeSectionId}
+            surface="owner"
+            sectionId={activeSectionId}
+            initialSettings={initial.settings}
+            identity={identity}
+            originalSlug={initial.slug}
+            subscription={subscription}
+            onSubscriptionChange={() => {}}
+            readinessInput={readinessInput}
+            onIdentityChange={setIdentity}
+            onJumpToSection={navigateToSection}
+            cityPackOptions={cityPackOptions}
+            cityPackGateSnapshot={cityPackGateSnapshot}
+            cityPackContentsById={cityPackContentsById}
+            mergedSettings={mergedSettings}
+            readOnly={fieldsDisabled}
+            locale={locale}
+            contactsModuleId={contactsModuleId}
+              onContactsModuleChange={setContactsModule}
+            arrivalJourneyModuleId={arrivalJourneyModuleId}
+            onArrivalJourneyModuleChange={setArrivalJourneyModule}
+            guestAppModuleId={guestAppModuleId}
+            onGuestAppModuleChange={setGuestAppModule}
+            />
+          </div>
+        </div>
       </div>
 
       <TenantFormHiddenPayload
@@ -557,7 +747,7 @@ function OwnerSettingsCoordinatorInner({
         >
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              {isDirty ? t('unsavedChanges') : t('allChangesSaved')}
+              {hasUnsavedChanges ? t('unsavedChanges') : t('allChangesSaved')}
             </p>
             <button
               type="submit"
@@ -569,5 +759,6 @@ function OwnerSettingsCoordinatorInner({
         </div>
       ) : null}
     </form>
+    </>
   );
 }

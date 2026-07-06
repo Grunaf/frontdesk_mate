@@ -676,6 +676,8 @@
         },
         "privacy": {
           "title": "Why we collect this data",
+          "linkLabel": "Why we collect this data",
+          "dismiss": "Close",
           "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
         },
         "reservationName": {
@@ -703,6 +705,7 @@
         },
         "finish": {
           "confirmLabel": "Everyone staying at this accommodation is listed above",
+          "privacyConfirmLabel": "I have read and understand how my guest data is used",
           "submit": "Complete registration",
           "submitting": "Completing…"
         },
@@ -778,6 +781,8 @@
         },
         "privacy": {
           "title": "Why we collect this data",
+          "linkLabel": "Why we collect this data",
+          "dismiss": "Close",
           "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
         },
         "reservationName": {
@@ -800,6 +805,7 @@
         },
         "finish": {
           "confirmLabel": "Everyone staying at this accommodation is listed above",
+          "privacyConfirmLabel": "I have read and understand how my guest data is used",
           "submit": "Complete registration",
           "submitting": "Completing…"
         },
@@ -1231,6 +1237,13 @@
         "save": "Save changes",
         "unsavedChanges": "You have unsaved changes",
         "allChangesSaved": "All changes saved",
+        "unsavedNav": {
+          "title": "Unsaved changes",
+          "description": "Your edits stay in this form until you save. Switch sections and keep editing, or discard and revert to the last saved version.",
+          "stay": "Stay",
+          "keepEditingElsewhere": "Keep editing elsewhere",
+          "discardChanges": "Discard changes"
+        },
         "toast": {
           "saved": "Settings saved",
           "savedReady": "Settings saved — ready for guests",

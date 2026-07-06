@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { AccessPoint, ArrivalLayoutKind, TenantSettings } from '@/entities/tenant';
+import type { ArrivalAccessConfig } from '@/entities/tenant/model/accessPoints';
 import { isArrivalAccessMissing } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { normalizeAccessPoints } from '@/entities/tenant/lib/normalizeAccessPoints';
-import { AdminField } from './ui/AdminField';
 import { AdminImageField } from './ui/AdminImageField';
+import { AdminLabelHelp } from './ui/AdminLabelHelp';
 import { useTenantFormDraft } from './ui/TenantFormDraftContext';
 
 interface ArrivalAccessFieldsProps {
@@ -25,6 +26,31 @@ const LAYOUT_OPTIONS: { value: ArrivalLayoutKind; label: string; hint: string }[
     hint: 'No shared hostel entrance — guests go straight to their floor. e.g. Kotor house.',
   },
 ];
+
+const LAYOUT_GUEST_EFFECT_HINT =
+  'Affects guest door-access steps: order of doors, outside vs zone steps, and night banner copy. Changing this does not reorder existing access points — only new “Add point” defaults.';
+
+const DAY_MODE_GUEST_EFFECT_HINT =
+  'Affects daytime banner and instructions in the guest arrival guide (who opens / self check-in). Does not change the list of doors below.';
+
+const AUTO_DAY_MODE_BY_LAYOUT: Record<ArrivalLayoutKind, string> = {
+  building_then_zones: 'Auto → Doorbell / WhatsApp (daytime) for this layout.',
+  direct_to_floor: 'Auto → Walk in / self check-in (daytime) for this layout.',
+};
+
+function getLayoutHelpParagraphs(layoutKind: ArrivalLayoutKind): string[] {
+  const variantHint = LAYOUT_OPTIONS.find((option) => option.value === layoutKind)?.hint;
+  return [LAYOUT_GUEST_EFFECT_HINT, variantHint ?? ''].filter(Boolean);
+}
+
+function getDayModeHelpParagraphs(
+  layoutKind: ArrivalLayoutKind,
+  dayMode: '' | NonNullable<TenantSettings['arrivalAccess']>['dayMode']
+): string[] {
+  const autoHint =
+    dayMode === '' ? AUTO_DAY_MODE_BY_LAYOUT[layoutKind] : 'Overrides Auto.';
+  return [DAY_MODE_GUEST_EFFECT_HINT, autoHint];
+}
 
 function emptyPoint(index: number, layoutKind: ArrivalLayoutKind): AccessPoint {
   if (index === 0 && layoutKind === 'building_then_zones') {
@@ -167,53 +193,69 @@ function AccessPointRow({
   );
 }
 
+interface ArrivalAccessFormState {
+  layoutKind: ArrivalLayoutKind;
+  dayMode: '' | NonNullable<TenantSettings['arrivalAccess']>['dayMode'];
+  landmark: string;
+  points: AccessPoint[];
+}
+
+function toArrivalAccessDraft(state: ArrivalAccessFormState): ArrivalAccessConfig {
+  return {
+    layoutKind: state.layoutKind,
+    dayMode: state.dayMode || undefined,
+    landmark: state.landmark || undefined,
+    accessPoints: state.points,
+  };
+}
+
 export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessFieldsProps) {
   const { updateDraft } = useTenantFormDraft();
   const initialPoints = useMemo(() => normalizeAccessPoints(settings ?? {}), [settings]);
   const showAccessGap = isArrivalAccessMissing(settings ?? {});
-  const [landmark, setLandmark] = useState(settings?.arrivalAccess?.landmark ?? '');
-  const [layoutKind, setLayoutKind] = useState<ArrivalLayoutKind>(
+  const initialLayoutKind =
     settings?.arrivalAccess?.layoutKind ??
-      (initialPoints.some((point) => point.kind === 'outside' || point.id === 'building_entrance')
-        ? 'building_then_zones'
-        : 'direct_to_floor')
-  );
+    (initialPoints.some((point) => point.kind === 'outside' || point.id === 'building_entrance')
+      ? 'building_then_zones'
+      : 'direct_to_floor');
+
+  const [landmark, setLandmark] = useState(settings?.arrivalAccess?.landmark ?? '');
+  const [layoutKind, setLayoutKind] = useState<ArrivalLayoutKind>(initialLayoutKind);
   const [dayMode, setDayMode] = useState<
     '' | NonNullable<TenantSettings['arrivalAccess']>['dayMode']
   >(settings?.arrivalAccess?.dayMode ?? '');
-  const [bedFloorMapJson, setBedFloorMapJson] = useState(
-    settings?.arrivalAccess?.bedFloorMap
-      ? JSON.stringify(settings.arrivalAccess.bedFloorMap, null, 2)
-      : ''
-  );
   const [points, setPoints] = useState<AccessPoint[]>(
-    initialPoints.length > 0 ? initialPoints : [emptyPoint(0, layoutKind)]
+    initialPoints.length > 0 ? initialPoints : [emptyPoint(0, initialLayoutKind)]
+  );
+  const [layoutChangeNote, setLayoutChangeNote] = useState(false);
+
+  const readFormState = useCallback(
+    (): ArrivalAccessFormState => ({
+      layoutKind,
+      dayMode,
+      landmark,
+      points,
+    }),
+    [dayMode, landmark, layoutKind, points]
   );
 
-  useEffect(() => {
-    let bedFloorMap: Record<string, string> | undefined;
-    const trimmed = bedFloorMapJson.trim();
-    if (trimmed) {
-      try {
-        const parsed = JSON.parse(trimmed) as Record<string, string>;
-        if (parsed && typeof parsed === 'object') {
-          bedFloorMap = parsed;
-        }
-      } catch {
-        bedFloorMap = settings?.arrivalAccess?.bedFloorMap;
-      }
-    }
+  const commitArrivalAccess = useCallback(
+    (next: ArrivalAccessFormState) => {
+      setLayoutKind(next.layoutKind);
+      setDayMode(next.dayMode);
+      setLandmark(next.landmark);
+      setPoints(next.points);
+      updateDraft({ arrivalAccess: toArrivalAccessDraft(next) });
+    },
+    [updateDraft]
+  );
 
-    updateDraft({
-      arrivalAccess: {
-        layoutKind,
-        dayMode: dayMode || undefined,
-        landmark: landmark || undefined,
-        accessPoints: points,
-        bedFloorMap,
-      },
-    });
-  }, [bedFloorMapJson, dayMode, landmark, layoutKind, points, settings?.arrivalAccess?.bedFloorMap, updateDraft]);
+  const applyArrivalAccess = useCallback(
+    (updater: (current: ArrivalAccessFormState) => ArrivalAccessFormState) => {
+      commitArrivalAccess(updater(readFormState()));
+    },
+    [commitArrivalAccess, readFormState]
+  );
 
   return (
     <div className="space-y-4">
@@ -225,10 +267,23 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
       ) : null}
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Arrival layout</span>
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          Arrival layout
+          <AdminLabelHelp fieldLabel="Arrival layout">
+            {getLayoutHelpParagraphs(layoutKind).map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </AdminLabelHelp>
+        </span>
         <select
           value={layoutKind}
-          onChange={(event) => setLayoutKind(event.target.value as ArrivalLayoutKind)}
+          onChange={(event) => {
+            const next = event.target.value as ArrivalLayoutKind;
+            if (next !== layoutKind) {
+              setLayoutChangeNote(true);
+            }
+            applyArrivalAccess((current) => ({ ...current, layoutKind: next }));
+          }}
           className="w-full rounded-md border bg-background px-3 py-2 text-sm"
         >
           {LAYOUT_OPTIONS.map((option) => (
@@ -237,17 +292,29 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
             </option>
           ))}
         </select>
-        <span className="block text-xs text-muted-foreground">
-          {LAYOUT_OPTIONS.find((option) => option.value === layoutKind)?.hint}
-        </span>
+        {layoutChangeNote ? (
+          <span className="block text-xs text-muted-foreground">
+            Existing access points unchanged; review IDs/kinds if needed.
+          </span>
+        ) : null}
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Day check-in mode</span>
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          Day check-in mode
+          <AdminLabelHelp fieldLabel="Day check-in mode">
+            {getDayModeHelpParagraphs(layoutKind, dayMode).map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </AdminLabelHelp>
+        </span>
         <select
           value={dayMode}
           onChange={(event) =>
-            setDayMode(event.target.value as '' | NonNullable<TenantSettings['arrivalAccess']>['dayMode'])
+            applyArrivalAccess((current) => ({
+              ...current,
+              dayMode: event.target.value as '' | NonNullable<TenantSettings['arrivalAccess']>['dayMode'],
+            }))
           }
           className="w-full rounded-md border bg-background px-3 py-2 text-sm"
         >
@@ -263,7 +330,7 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
         tenantSlug={tenantSlug}
         kind="misc"
         value={landmark}
-        onChange={setLandmark}
+        onChange={(next) => applyArrivalAccess((current) => ({ ...current, landmark: next }))}
         placeholder="/images/facade.jpg"
         hint="Exterior / how to find the building. No codes here."
         previewAlt="Hostel landmark"
@@ -279,7 +346,12 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
           </div>
           <button
             type="button"
-            onClick={() => setPoints((current) => [...current, emptyPoint(current.length, layoutKind)])}
+            onClick={() =>
+              applyArrivalAccess((current) => ({
+                ...current,
+                points: [...current.points, emptyPoint(current.points.length, current.layoutKind)],
+              }))
+            }
             className="shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
           >
             Add point
@@ -293,22 +365,23 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
             index={index}
             tenantSlug={tenantSlug}
             onChange={(next) =>
-              setPoints((current) => current.map((item, itemIndex) => (itemIndex === index ? next : item)))
+              applyArrivalAccess((current) => ({
+                ...current,
+                points: current.points.map((item, itemIndex) => (itemIndex === index ? next : item)),
+              }))
             }
             onRemove={() =>
-              setPoints((current) => (current.length <= 1 ? current : current.filter((_, i) => i !== index)))
+              applyArrivalAccess((current) => ({
+                ...current,
+                points:
+                  current.points.length <= 1
+                    ? current.points
+                    : current.points.filter((_, i) => i !== index),
+              }))
             }
           />
         ))}
       </div>
-
-      <AdminField
-        label="Bed → floor map (JSON)"
-        value={bedFloorMapJson}
-        onChange={setBedFloorMapJson}
-        placeholder='{"4B": "2"}'
-        hint="Filters access points by the guest session bed floor when checked in."
-      />
     </div>
   );
 }

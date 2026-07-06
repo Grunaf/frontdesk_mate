@@ -1,22 +1,28 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { CityPackContent, CityPackGateSnapshot } from '@/entities/city-pack';
 import type { CityPackId } from '@/entities/hostel';
 import type { TenantSettings } from '@/entities/tenant';
 import type { TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
 import type { AdminSectionId } from '../lib/adminSections';
-import { AdminModuleStatusPanel } from '../ui/AdminModuleStatusPanel';
+import {
+  GUEST_APP_ADMIN_MODULES,
+  getGuestAppAdminModuleHint,
+  getGuestAppAdminModuleIdentityAction,
+  getGuestAppAdminModuleStatus,
+  type GuestAppAdminModuleId,
+  type GuestAppAdminSubsectionContext,
+} from '../lib/guestAppAdminSubsections';
+import { AdminSettingsDrillDown } from '../ui/AdminSettingsDrillDown';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
-import { cn } from '@/shared/lib/utils';
 import { CityPackNeedNowFields } from './CityPackNeedNowFields';
 import { GuestStayFields } from './GuestStayFields';
 import { GuestExtrasFields } from './GuestExtrasFields';
 import { HostelPlacesFields } from './HostelPlacesFields';
 import { HouseRulesFields } from './HouseRulesFields';
 import type { CityPackInheritanceSurface } from '../ui/CityPackInheritanceCard';
-
-type GuestAppTab = 'room-map' | 'rules' | 'extras' | 'near-hostel';
+import { GuestTourismRegistrationComplianceField } from '@/features/guest-tourism-registration';
 
 interface GuestAppFieldsProps {
   tenantSlug: string;
@@ -29,14 +35,54 @@ interface GuestAppFieldsProps {
   scope?: 'full' | 'rules-only';
   surface?: CityPackInheritanceSurface;
   locale?: string;
+  readOnly?: boolean;
+  activeModuleId?: GuestAppAdminModuleId | null;
+  onModuleChange?: (moduleId: GuestAppAdminModuleId | null) => void;
 }
 
-const TAB_LABELS: Record<GuestAppTab, string> = {
-  'room-map': 'Room map',
-  rules: 'House rules',
-  extras: 'Extras',
-  'near-hostel': 'Near hostel',
-};
+function NearHostelModule({
+  mergedSettings,
+  cityPackId,
+  cityPackContent,
+  surface,
+  locale,
+  subsectionContext,
+  onJumpToSection,
+}: {
+  mergedSettings: TenantSettings;
+  cityPackId: CityPackId;
+  cityPackContent?: CityPackContent;
+  surface: CityPackInheritanceSurface;
+  locale: string;
+  subsectionContext: GuestAppAdminSubsectionContext;
+  onJumpToSection?: (sectionId: AdminSectionId) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      {getGuestAppAdminModuleIdentityAction('near-hostel', subsectionContext) &&
+      onJumpToSection ? (
+        <p className="text-sm text-muted-foreground">
+          Local guide needs a ready city pack.{' '}
+          <button
+            type="button"
+            onClick={() => onJumpToSection('identity')}
+            className="font-semibold text-primary hover:underline"
+          >
+            {surface === 'owner' ? 'Open Identity section' : 'Go to Identity'}
+          </button>
+        </p>
+      ) : null}
+      <CityPackNeedNowFields
+        settings={mergedSettings}
+        cityPackId={cityPackId}
+        cityPackContent={cityPackContent}
+        surface={surface}
+        locale={locale}
+      />
+      <HostelPlacesFields settings={mergedSettings} />
+    </div>
+  );
+}
 
 export function GuestAppFields({
   tenantSlug,
@@ -49,80 +95,114 @@ export function GuestAppFields({
   scope = 'full',
   surface = 'platform',
   locale = 'en',
+  readOnly = false,
+  activeModuleId = null,
+  onModuleChange,
 }: GuestAppFieldsProps) {
   const { draft } = useTenantFormDraft();
-  const [tab, setTab] = useState<GuestAppTab>(scope === 'rules-only' ? 'rules' : 'room-map');
 
   const mergedSettings = useMemo(
     () => mergeDraftSettings(settings ?? {}, draft),
     [settings, draft]
   );
 
-  const nearHostelFields = (
-    <>
-      <CityPackNeedNowFields
-        settings={mergedSettings}
-        cityPackId={cityPackId}
-        cityPackContent={cityPackContent}
-        surface={surface}
-        locale={locale}
-      />
-      <HostelPlacesFields settings={mergedSettings} />
-    </>
+  const subsectionContext = useMemo(
+    () => ({
+      readinessInput: { ...readinessInput, settings: mergedSettings },
+      cityPackGateSnapshot,
+    }),
+    [cityPackGateSnapshot, mergedSettings, readinessInput]
   );
+
+  const modules = useMemo(() => {
+    if (scope !== 'full') {
+      return [];
+    }
+    return GUEST_APP_ADMIN_MODULES.map((definition) => ({
+      id: definition.id,
+      label: definition.label,
+      description: definition.description,
+      hint: getGuestAppAdminModuleHint(definition.id, subsectionContext),
+      status: getGuestAppAdminModuleStatus(definition.id, subsectionContext),
+      render: () => {
+        switch (definition.id) {
+          case 'room-map':
+            return (
+              <GuestStayFields
+                tenantSlug={tenantSlug}
+                settings={mergedSettings}
+                readinessInput={readinessInput}
+              />
+            );
+          case 'house-rules':
+            return <HouseRulesFields settings={settings} readinessInput={readinessInput} />;
+          case 'extras':
+            return <GuestExtrasFields settings={mergedSettings} tenantSlug={tenantSlug} />;
+          case 'near-hostel':
+            return (
+              <NearHostelModule
+                mergedSettings={mergedSettings}
+                cityPackId={cityPackId}
+                cityPackContent={cityPackContent}
+                surface={surface}
+                locale={locale}
+                subsectionContext={subsectionContext}
+                onJumpToSection={onJumpToSection}
+              />
+            );
+          default:
+            return null;
+        }
+      },
+    }));
+  }, [
+    cityPackContent,
+    cityPackId,
+    locale,
+    mergedSettings,
+    onJumpToSection,
+    readinessInput,
+    scope,
+    settings,
+    subsectionContext,
+    surface,
+    tenantSlug,
+  ]);
 
   if (scope === 'rules-only') {
     return (
       <div className="space-y-6">
-        {nearHostelFields}
+        <NearHostelModule
+          mergedSettings={mergedSettings}
+          cityPackId={cityPackId}
+          cityPackContent={cityPackContent}
+          surface={surface}
+          locale={locale}
+          subsectionContext={subsectionContext}
+          onJumpToSection={onJumpToSection}
+        />
         <HouseRulesFields settings={settings} readinessInput={readinessInput} />
       </div>
     );
   }
 
+  const handleModuleChange = (moduleId: string | null) => {
+    onModuleChange?.(moduleId as GuestAppAdminModuleId | null);
+  };
+
+  const showHubCompliance = activeModuleId === null;
+
   return (
     <div className="space-y-6">
-      <AdminModuleStatusPanel
-        cityPackId={cityPackId}
-        cityPackGateSnapshot={cityPackGateSnapshot}
-        settings={mergedSettings}
-        onJumpToSection={onJumpToSection}
-        surface={surface}
+      {showHubCompliance ? (
+        <GuestTourismRegistrationComplianceField mergedSettings={mergedSettings} disabled={readOnly} />
+      ) : null}
+      <AdminSettingsDrillDown
+        activeModuleId={activeModuleId}
+        onModuleChange={handleModuleChange}
+        modules={modules}
+        detailChrome="external"
       />
-
-      <div className="flex flex-wrap gap-1 rounded-lg border bg-muted/20 p-1">
-        {(Object.keys(TAB_LABELS) as GuestAppTab[]).map((tabId) => (
-          <button
-            key={tabId}
-            type="button"
-            onClick={() => setTab(tabId)}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-              tab === tabId
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {TAB_LABELS[tabId]}
-          </button>
-        ))}
-      </div>
-
-      <div className={cn(tab !== 'room-map' && 'hidden')} aria-hidden={tab !== 'room-map'}>
-        <GuestStayFields tenantSlug={tenantSlug} settings={mergedSettings} readinessInput={readinessInput} />
-      </div>
-      <div className={cn(tab !== 'rules' && 'hidden')} aria-hidden={tab !== 'rules'}>
-        <HouseRulesFields settings={settings} readinessInput={readinessInput} />
-      </div>
-      <div className={cn(tab !== 'extras' && 'hidden')} aria-hidden={tab !== 'extras'}>
-        <GuestExtrasFields settings={mergedSettings} tenantSlug={tenantSlug} />
-      </div>
-      <div
-        className={cn('space-y-6', tab !== 'near-hostel' && 'hidden')}
-        aria-hidden={tab !== 'near-hostel'}
-      >
-        {nearHostelFields}
-      </div>
     </div>
   );
 }

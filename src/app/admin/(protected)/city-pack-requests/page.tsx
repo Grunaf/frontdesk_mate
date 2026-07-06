@@ -126,7 +126,7 @@ export default async function AdminCityPackRequestsPage({ searchParams }: AdminC
               <div className="shrink-0 text-right text-xs text-muted-foreground space-y-1">
                 {row.contactEmail ? <p>{row.contactEmail}</p> : <p>—</p>}
                 {row.tenantSlug ? (
-                  <Link href={`/admin/tenants/${row.tenantSlug}`} className="text-primary hover:underline">
+                  <Link href={`/admin/tenants/${row.tenantSlug}/settings/identity`} className="text-primary hover:underline">
                     {row.tenantSlug}
                   </Link>
                 ) : (

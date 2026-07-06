@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <>
       <AdminShellBackground />
       <header className="border-b bg-background px-6 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Internal</p>
             <h1 className="text-lg font-semibold">Frontdesk Mate Admin</h1>
@@ -49,7 +49,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 pt-8 pb-4">{children}</main>
+      <main className="mx-auto w-full max-w-6xl overflow-x-hidden px-6 pt-8 pb-4">{children}</main>
     </>
   );
 }

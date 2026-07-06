@@ -1,8 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { saveTenantAction, setTenantArchiveAction } from '../../actions';
 import type { CityPackContent, CityPackGateSnapshot, CityPackSelectOption } from '@/entities/city-pack';
 import type { CityPackId, TenantSettings } from '@/entities/tenant';
@@ -28,19 +27,42 @@ import {
 import { LAUNCH_STEP_ORDER } from '@/features/tenant-launch-setup';
 import { LaunchSetupWizard } from '@/features/tenant-launch-setup';
 import { TenantAdminSectionPanel } from '@/features/tenant-admin-sections';
-import { cn } from '@/shared/lib/utils';
 import {
   ADMIN_SECTIONS,
-  getAdminSectionHint,
+  adminSectionIdForSaveBlock,
+  adminTenantSettingsSectionPath,
   getAdminSectionStatus,
-  getDefaultOpenSections,
+  normalizeAdminSectionId,
   type AdminSectionId,
 } from './lib/adminSections';
+import {
+  appendContactsModuleToUrl,
+  CONTACTS_ADMIN_MODULE_QUERY,
+  getContactsAdminModuleLabel,
+  normalizeContactsAdminModuleId,
+  stripSettingsModuleFromUrl,
+  type ContactsAdminModuleId,
+} from './lib/contactsAdminSubsections';
+import {
+  getArrivalJourneyAdminModuleLabel,
+  normalizeArrivalJourneyAdminModuleId,
+  type ArrivalJourneyAdminModuleId,
+} from './lib/arrivalJourneyAdminSubsections';
+import {
+  getGuestAppAdminModuleLabel,
+  normalizeGuestAppAdminModuleId,
+  type GuestAppAdminModuleId,
+} from './lib/guestAppAdminSubsections';
+import { appendSettingsModuleToUrl } from './lib/tenantSettingsModuleUrl';
 import {
   formatAdminSectionGuestProgress,
   getAdminSectionGuestProgress,
 } from './lib/resolveAdminSectionProgress';
 import { validateTenantFormBeforeSave } from './lib/validateTenantFormBeforeSave';
+import {
+  clearReceptionDeskPinInputs,
+  tenantFormHasUnsavedChanges,
+} from './lib/tenantFormHasUnsavedChanges';
 import { resolveSubscriptionLifecycleStatus } from './sections/SubscriptionFields';
 import { AdminSectionStatusBadge } from './ui/AdminField';
 import { AdminToast } from './ui/AdminToast';
@@ -52,9 +74,17 @@ import {
 import { TenantReadinessChecklist } from './ui/TenantReadinessChecklist';
 import { TenantCommandBar } from './ui/TenantCommandBar';
 import { TenantFormHiddenPayload } from './ui/TenantFormHiddenPayload';
+import { TenantSettingsNav } from './ui/TenantSettingsNav';
+import { AdminSettingsPanelBreadcrumbs } from './ui/AdminSettingsPanelBreadcrumbs';
+import { TenantUnsavedSectionDialog } from './ui/TenantUnsavedSectionDialog';
+import {
+  scrollTenantSettingsPanelIntoView,
+  scrollToSectionTarget,
+  TENANT_SETTINGS_PANEL_ID,
+} from './lib/scrollTenantSettingsPanelIntoView';
+
 interface TenantFormAccordionProps {
   originalSlug: string;
-  justSaved?: boolean;
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
   cityPackContentsById: Record<string, CityPackContent>;
@@ -80,11 +110,6 @@ interface SubscriptionState {
   subscriptionEndsAt: string;
 }
 
-function scrollToSectionTarget(target: HTMLElement, stickyOffset: number) {
-  const top = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
-  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-}
-
 function scrollToChecklist(stickyOffset: number) {
   const target = document.getElementById('tenant-readiness');
   if (target) {
@@ -102,7 +127,6 @@ export function TenantFormAccordion(props: TenantFormAccordionProps) {
 
 function TenantFormAccordionInner({
   originalSlug,
-  justSaved = false,
   cityPackOptions,
   cityPackGateSnapshot,
   cityPackContentsById,
@@ -111,14 +135,14 @@ function TenantFormAccordionInner({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { draft, updateDraft, isDirty, markDirty, resetDirty } = useTenantFormDraft();
+  const routeParams = useParams();
+  const justSaved = searchParams.get('saved') === '1';
+  const { draft, updateDraft, clearDraft, resetDirty } = useTenantFormDraft();
 
   const formRef = useRef<HTMLFormElement>(null);
   const archiveFormRef = useRef<HTMLFormElement>(null);
   const archiveValueRef = useRef<HTMLInputElement>(null);
   const stickyBarRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<Partial<Record<AdminSectionId, HTMLDivElement | null>>>({});
-  const pendingScrollRef = useRef<AdminSectionId | null>(null);
   const stickyOffsetRef = useRef(88);
   const saveToastHandledRef = useRef(false);
 
@@ -149,10 +173,189 @@ function TenantFormAccordionInner({
     cityPackId: initial.cityPackId,
   });
 
+  const [receptionDeskPinInput, setReceptionDeskPinInput] = useState('');
+
+  const [pendingSectionNav, setPendingSectionNav] = useState<{
+    sectionId: AdminSectionId;
+    href: string;
+  } | null>(null);
+
+  const formBaseline = useMemo(
+    () => ({
+      slug: initial.slug,
+      name: initial.name,
+      cityPackId: initial.cityPackId,
+      subscriptionStartsAt: initial.subscriptionStartsAt,
+      subscriptionEndsAt: initial.subscriptionEndsAt,
+      settings: initial.settings,
+    }),
+    [
+      initial.slug,
+      initial.name,
+      initial.cityPackId,
+      initial.subscriptionStartsAt,
+      initial.subscriptionEndsAt,
+      initial.settings,
+    ]
+  );
+
+  const navTenantSlug = identity.slug.trim() || originalSlug || 'new';
+
+  const activeSectionId = useMemo(() => {
+    const fromRoute = normalizeAdminSectionId(String(routeParams.sectionId ?? ''));
+    if (fromRoute) {
+      return fromRoute;
+    }
+    return 'identity' as AdminSectionId;
+  }, [routeParams.sectionId]);
+
+  const activeSection = useMemo(
+    () => ADMIN_SECTIONS.find((entry) => entry.id === activeSectionId) ?? ADMIN_SECTIONS[0],
+    [activeSectionId]
+  );
+
+  const contactsModuleId = useMemo(() => {
+    if (activeSectionId !== 'contacts') {
+      return null;
+    }
+    return normalizeContactsAdminModuleId(searchParams.get(CONTACTS_ADMIN_MODULE_QUERY));
+  }, [activeSectionId, searchParams]);
+
+  const arrivalJourneyModuleId = useMemo(() => {
+    if (activeSectionId !== 'arrival-journey') {
+      return null;
+    }
+    return normalizeArrivalJourneyAdminModuleId(searchParams.get(CONTACTS_ADMIN_MODULE_QUERY));
+  }, [activeSectionId, searchParams]);
+
+  const guestAppModuleId = useMemo(() => {
+    if (activeSectionId !== 'guest-app') {
+      return null;
+    }
+    return normalizeGuestAppAdminModuleId(searchParams.get(CONTACTS_ADMIN_MODULE_QUERY));
+  }, [activeSectionId, searchParams]);
+
+  const setContactsModule = useCallback(
+    (moduleId: ContactsAdminModuleId | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('saved');
+      if (moduleId) {
+        params.set(CONTACTS_ADMIN_MODULE_QUERY, moduleId);
+      } else {
+        params.delete(CONTACTS_ADMIN_MODULE_QUERY);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams]
+  );
+
+  const setArrivalJourneyModule = useCallback(
+    (moduleId: ArrivalJourneyAdminModuleId | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('saved');
+      if (moduleId) {
+        params.set(CONTACTS_ADMIN_MODULE_QUERY, moduleId);
+      } else {
+        params.delete(CONTACTS_ADMIN_MODULE_QUERY);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams]
+  );
+
+  const setGuestAppModule = useCallback(
+    (moduleId: GuestAppAdminModuleId | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('saved');
+      if (moduleId) {
+        params.set(CONTACTS_ADMIN_MODULE_QUERY, moduleId);
+      } else {
+        params.delete(CONTACTS_ADMIN_MODULE_QUERY);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams]
+  );
+
+  const settingsDrillDownModuleScrollSkipRef = useRef(true);
+
+  const activeSettingsDrillDownModuleId =
+    activeSectionId === 'contacts'
+      ? contactsModuleId
+      : activeSectionId === 'arrival-journey'
+        ? arrivalJourneyModuleId
+        : activeSectionId === 'guest-app'
+          ? guestAppModuleId
+          : null;
+
+  useEffect(() => {
+    if (
+      activeSectionId !== 'contacts' &&
+      activeSectionId !== 'arrival-journey' &&
+      activeSectionId !== 'guest-app'
+    ) {
+      settingsDrillDownModuleScrollSkipRef.current = true;
+      return;
+    }
+    if (settingsDrillDownModuleScrollSkipRef.current) {
+      settingsDrillDownModuleScrollSkipRef.current = false;
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      scrollTenantSettingsPanelIntoView(stickyOffsetRef.current);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeSectionId, activeSettingsDrillDownModuleId]);
+
+  useEffect(() => {
+    if (
+      activeSectionId === 'contacts' ||
+      activeSectionId === 'arrival-journey' ||
+      activeSectionId === 'guest-app'
+    ) {
+      return;
+    }
+    if (!searchParams.get(CONTACTS_ADMIN_MODULE_QUERY)) {
+      return;
+    }
+    router.replace(stripSettingsModuleFromUrl(pathname, searchParams.toString()));
+  }, [activeSectionId, pathname, router, searchParams]);
+
   const mergedSettings = useMemo(
     () => mergeDraftSettings(initial.settings ?? {}, draft),
     [initial.settings, draft]
   );
+
+  const hasUnsavedChanges = useMemo(
+    () =>
+      tenantFormHasUnsavedChanges({
+        baseline: formBaseline,
+        identity,
+        subscription,
+        draft,
+        receptionDeskPinInput,
+      }),
+    [formBaseline, identity, subscription, draft, receptionDeskPinInput]
+  );
+
+  const resetFormToBaseline = useCallback(() => {
+    clearDraft();
+    setIdentity({
+      slug: formBaseline.slug,
+      name: formBaseline.name,
+      cityPackId: formBaseline.cityPackId,
+    });
+    setSubscription({
+      subscriptionStartsAt: formBaseline.subscriptionStartsAt,
+      subscriptionEndsAt: formBaseline.subscriptionEndsAt,
+    });
+    setReceptionDeskPinInput('');
+    clearReceptionDeskPinInputs(formRef.current);
+    resetDirty();
+  }, [clearDraft, formBaseline, resetDirty]);
 
   const readinessInput = useMemo<TenantReadinessInput>(
     () => ({
@@ -191,11 +394,6 @@ function TenantFormAccordionInner({
     [readinessInput, bookingPath, cityPackGateSnapshot]
   );
 
-  const guestPathGate = useMemo(
-    () => resolveGuestPathGate(guestPathInput),
-    [guestPathInput]
-  );
-
   const storageSlug = identity.slug.trim() || originalSlug || 'new';
   const queryMode = useMemo(
     () => readAdminModeFromSearchParams(searchParams),
@@ -205,7 +403,7 @@ function TenantFormAccordionInner({
   const [adminMode, setAdminMode] = useState<AdminTenantMode>(() =>
     resolveDefaultAdminTenantMode({
       isNewTenant: !originalSlug,
-      guestPathReady: guestPathGate.ready,
+      guestPathReady: resolveGuestPathGate(guestPathInput).ready,
       storedMode: queryMode,
     })
   );
@@ -251,33 +449,67 @@ function TenantFormAccordionInner({
 
   const navInputLive = readinessInput;
 
-  const defaultOpen = useMemo(() => getDefaultOpenSections(navInputLive), [navInputLive]);
-  const [openSections, setOpenSections] = useState<string[]>(defaultOpen);
-  const [activeNav, setActiveNav] = useState<AdminSectionId>(defaultOpen[0] ?? 'identity');
-
-  const jumpToSection = useCallback((sectionId: AdminSectionId) => {
-    setActiveNav(sectionId);
-    pendingScrollRef.current = sectionId;
-
-    const isAlreadyOpen = openSections.length === 1 && openSections[0] === sectionId;
-    if (isAlreadyOpen) {
-      const target = sectionRefs.current[sectionId];
-      if (target) {
-        scrollToSectionTarget(target, stickyOffsetRef.current);
+  const navigateToSection = useCallback(
+    (
+      sectionId: AdminSectionId,
+      href?: string,
+      settingsModule?: ContactsAdminModuleId | ArrivalJourneyAdminModuleId | GuestAppAdminModuleId
+    ) => {
+      let target =
+        href ?? adminTenantSettingsSectionPath(navTenantSlug, sectionId);
+      if (sectionId === 'contacts' && settingsModule) {
+        const moduleId = normalizeContactsAdminModuleId(settingsModule);
+        if (moduleId) {
+          target = appendContactsModuleToUrl(target, moduleId);
+        }
+      } else if (sectionId === 'arrival-journey' && settingsModule) {
+        const moduleId = normalizeArrivalJourneyAdminModuleId(settingsModule);
+        if (moduleId) {
+          target = appendSettingsModuleToUrl(target, moduleId);
+        }
+      } else if (sectionId === 'guest-app' && settingsModule) {
+        const moduleId = normalizeGuestAppAdminModuleId(settingsModule);
+        if (moduleId) {
+          target = appendSettingsModuleToUrl(target, moduleId);
+        }
       }
-      pendingScrollRef.current = null;
+      if (hasUnsavedChanges) {
+        setPendingSectionNav({ sectionId, href: target });
+        return;
+      }
+      router.push(target);
+    },
+    [hasUnsavedChanges, navTenantSlug, router]
+  );
+
+  const handleStayOnSection = useCallback(() => {
+    setPendingSectionNav(null);
+  }, []);
+
+  const handleKeepEditingElsewhere = useCallback(() => {
+    if (!pendingSectionNav) {
       return;
     }
+    router.push(pendingSectionNav.href);
+    setPendingSectionNav(null);
+  }, [pendingSectionNav, router]);
 
-    setOpenSections([sectionId]);
-  }, [openSections]);
+  const handleDiscardAndNavigate = useCallback(() => {
+    if (!pendingSectionNav) {
+      return;
+    }
+    const target = pendingSectionNav.href;
+    resetFormToBaseline();
+    setPendingSectionNav(null);
+    router.push(target);
+  }, [pendingSectionNav, resetFormToBaseline, router]);
 
   const handleJumpToAdvancedSection = useCallback(
     (sectionId: AdminSectionId) => {
       applyAdminMode('advanced');
-      jumpToSection(sectionId);
+      navigateToSection(sectionId);
     },
-    [applyAdminMode, jumpToSection]
+    [applyAdminMode, navigateToSection]
   );
 
   useLayoutEffect(() => {
@@ -301,53 +533,14 @@ function TenantFormAccordionInner({
   }, []);
 
   useEffect(() => {
-    const sectionId = pendingScrollRef.current;
-    if (!sectionId) {
-      return;
-    }
-
-    if (!openSections.includes(sectionId)) {
-      pendingScrollRef.current = null;
-      return;
-    }
-
-    const target = sectionRefs.current[sectionId];
-    if (!target) {
-      pendingScrollRef.current = null;
-      return;
-    }
-
-    const offset = stickyOffsetRef.current;
-    let done = false;
-    let raf2 = 0;
-
-    const runScroll = () => {
-      if (done) return;
-      done = true;
-      scrollToSectionTarget(target, offset);
-      pendingScrollRef.current = null;
-    };
-
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(runScroll);
-    });
-    const fallback = window.setTimeout(runScroll, 260);
-
-    return () => {
-      done = true;
-      cancelAnimationFrame(raf1);
-      if (raf2) cancelAnimationFrame(raf2);
-      window.clearTimeout(fallback);
-      pendingScrollRef.current = null;
-    };
-  }, [openSections]);
-
-  useEffect(() => {
     if (!justSaved || saveToastHandledRef.current) {
       return;
     }
 
     saveToastHandledRef.current = true;
+    clearDraft();
+    setReceptionDeskPinInput('');
+    clearReceptionDeskPinInputs(formRef.current);
     resetDirty();
     router.replace(pathname);
 
@@ -387,9 +580,7 @@ function TenantFormAccordionInner({
 
       const firstGap = configGaps[0];
       if (firstGap?.sectionId) {
-        setActiveNav(firstGap.sectionId as AdminSectionId);
-        pendingScrollRef.current = firstGap.sectionId as AdminSectionId;
-        setOpenSections([firstGap.sectionId as AdminSectionId]);
+        navigateToSection(firstGap.sectionId as AdminSectionId);
       }
       return;
     }
@@ -400,10 +591,18 @@ function TenantFormAccordionInner({
       actionLabel: 'View checklist',
     });
 
-    setActiveNav('guest-app');
-    pendingScrollRef.current = 'guest-app';
-    setOpenSections(['guest-app']);
-  }, [justSaved, pathname, readinessInput, guestPathInput, adminMode, router, resetDirty]);
+    navigateToSection('guest-app');
+  }, [
+    justSaved,
+    pathname,
+    readinessInput,
+    guestPathInput,
+    adminMode,
+    router,
+    clearDraft,
+    resetDirty,
+    navigateToSection,
+  ]);
 
   const handleArchiveToggle = useCallback(() => {
     if (initial.archived) {
@@ -454,20 +653,20 @@ function TenantFormAccordionInner({
         if (adminMode === 'launch') {
           setLaunchStep('identity');
         } else {
-          jumpToSection('subscription');
+          navigateToSection(adminSectionIdForSaveBlock(block.code));
         }
         return;
       }
 
       if (block.code === 'reception_desk_pin') {
-        jumpToSection('contacts');
+        navigateToSection(adminSectionIdForSaveBlock(block.code), undefined, 'reception-desk');
         return;
       }
 
       if (adminMode === 'launch') {
         setLaunchStep('rules-wifi');
       } else {
-        jumpToSection('guest-app');
+        navigateToSection(adminSectionIdForSaveBlock(block.code));
       }
     },
     [
@@ -475,12 +674,59 @@ function TenantFormAccordionInner({
       subscription.subscriptionEndsAt,
       mergedSettings,
       adminMode,
-      jumpToSection,
+      navigateToSection,
     ]
   );
 
+  const sectionStatus = getAdminSectionStatus(activeSectionId, navInputLive);
+  const sectionProgress = getAdminSectionGuestProgress(activeSectionId, readinessInput);
+  const sectionProgressLabel = sectionProgress
+    ? formatAdminSectionGuestProgress(sectionProgress)
+    : null;
+
+  const settingsPanelInDetail =
+    (activeSectionId === 'contacts' && contactsModuleId !== null) ||
+    (activeSectionId === 'arrival-journey' && arrivalJourneyModuleId !== null) ||
+    (activeSectionId === 'guest-app' && guestAppModuleId !== null);
+
+  const settingsDrillDownModuleLabel =
+    activeSectionId === 'contacts' && contactsModuleId
+      ? getContactsAdminModuleLabel(contactsModuleId)
+      : activeSectionId === 'arrival-journey' && arrivalJourneyModuleId
+        ? getArrivalJourneyAdminModuleLabel(arrivalJourneyModuleId)
+        : activeSectionId === 'guest-app' && guestAppModuleId
+          ? getGuestAppAdminModuleLabel(guestAppModuleId)
+          : '';
+
+  const handleSettingsDrillDownBack = useCallback(() => {
+    if (activeSectionId === 'contacts') {
+      setContactsModule(null);
+      return;
+    }
+    if (activeSectionId === 'arrival-journey') {
+      setArrivalJourneyModule(null);
+      return;
+    }
+    if (activeSectionId === 'guest-app') {
+      setGuestAppModule(null);
+    }
+  }, [activeSectionId, setArrivalJourneyModule, setContactsModule, setGuestAppModule]);
+
+  const handleReceptionDeskPinInput = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && target.name === 'receptionDeskPin') {
+      setReceptionDeskPinInput(target.value);
+    }
+  }, []);
+
   return (
     <>
+      <TenantUnsavedSectionDialog
+        open={pendingSectionNav !== null}
+        onStay={handleStayOnSection}
+        onKeepEditingElsewhere={handleKeepEditingElsewhere}
+        onDiscardChanges={handleDiscardAndNavigate}
+      />
       <form ref={archiveFormRef} action={setTenantArchiveAction} className="hidden">
         <input type="hidden" name="originalSlug" value={originalSlug} />
         <input type="hidden" name="slug" value={identity.slug} />
@@ -493,237 +739,192 @@ function TenantFormAccordionInner({
         className="relative"
         noValidate
         onSubmit={handleFormSubmit}
-        onInput={markDirty}
+        onInput={handleReceptionDeskPinInput}
       >
-      <input type="hidden" name="originalSlug" value={originalSlug} />
-      <input type="hidden" name="slug" value={identity.slug} />
-      <input type="hidden" name="name" value={identity.name} />
-      <input type="hidden" name="cityPackId" value={identity.cityPackId} />
+        <input type="hidden" name="originalSlug" value={originalSlug} />
+        <input type="hidden" name="slug" value={identity.slug} />
+        <input type="hidden" name="name" value={identity.name} />
+        <input type="hidden" name="cityPackId" value={identity.cityPackId} />
+        <input type="hidden" name="settingsSection" value={activeSectionId} />
 
-      {toast ? (
-        <AdminToast
-          variant={toast.variant}
-          message={toast.message}
-          actionLabel={toast.actionLabel}
-          onAction={
-            toast.actionLabel
-              ? () => {
-                  if (toast.actionLabel === 'Continue setup') {
-                    applyAdminMode('launch');
-                    setLaunchStep(
-                      resolveFirstIncompleteLaunchStep(guestPathInput, LAUNCH_STEP_ORDER)
-                    );
-                    return;
+        {justSaved ? (
+          <p className="sr-only" aria-live="polite">
+            Tenant saved
+          </p>
+        ) : null}
+
+        {toast ? (
+          <AdminToast
+            variant={toast.variant}
+            message={toast.message}
+            actionLabel={toast.actionLabel}
+            onAction={
+              toast.actionLabel
+                ? () => {
+                    if (toast.actionLabel === 'Continue setup') {
+                      applyAdminMode('launch');
+                      setLaunchStep(
+                        resolveFirstIncompleteLaunchStep(guestPathInput, LAUNCH_STEP_ORDER)
+                      );
+                      return;
+                    }
+                    scrollToChecklist(stickyOffsetRef.current);
                   }
-                  scrollToChecklist(stickyOffsetRef.current);
-                }
-              : undefined
-          }
-          onDismiss={() => setToast(null)}
-        />
-      ) : null}
+                : undefined
+            }
+            onDismiss={() => setToast(null)}
+          />
+        ) : null}
 
-      <TenantCommandBar
-        barRef={stickyBarRef}
-        displayName={identity.name}
-        slug={identity.slug}
-        lifecycleStatus={lifecycleStatus}
-        subscriptionStartsAt={subscription.subscriptionStartsAt}
-        subscriptionEndsAt={subscription.subscriptionEndsAt}
-        archived={initial.archived}
-        isNewTenant={!originalSlug}
-        readinessInput={readinessInput}
-        configComplete={setupSummaries.config.completeCount}
-        configTotal={setupSummaries.config.totalCount}
-        modulesLive={setupSummaries.modules.liveCount}
-        modulesTracked={setupSummaries.modules.trackedCount}
-        moduleGaps={setupSummaries.modules.gapCount}
-        guestPathInput={guestPathInput}
-        adminMode={adminMode}
-        onAdminModeChange={handleAdminModeChange}
-        onEditSubscription={() => {
-          if (adminMode === 'launch') {
-            setLaunchStep('identity');
-          } else {
-            jumpToSection('subscription');
-          }
-        }}
-        onScrollToChecklist={() => scrollToChecklist(stickyOffsetRef.current)}
-        onJumpToGuestModules={() => {
-          if (adminMode === 'launch') {
-            setLaunchStep('room-map');
-          } else {
-            jumpToSection('guest-app');
-          }
-        }}
-        onArchiveToggle={handleArchiveToggle}
-        isDirty={isDirty}
-      />
-
-      {adminMode === 'advanced' ? (
-        <TenantReadinessChecklist
-          readinessInput={readinessInput}
-          guestPathInput={guestPathInput}
-          onJumpToSection={jumpToSection}
-        />
-      ) : null}
-
-      {adminMode === 'launch' ? (
-        <LaunchSetupWizard
-          stepId={launchStep}
-          onStepChange={setLaunchStep}
-          bookingPath={bookingPath}
-          onBookingPathChange={handleBookingPathChange}
-          guestPathInput={guestPathInput}
-          readinessInput={readinessInput}
-          identity={identity}
-          originalSlug={originalSlug}
-          subscription={subscription}
-          onSubscriptionChange={(patch) => {
-            markDirty();
-            setSubscription((current) => ({ ...current, ...patch }));
-          }}
-          onIdentityChange={(next) => {
-            markDirty();
-            setIdentity(next);
-          }}
-          onJumpToAdvancedSection={handleJumpToAdvancedSection}
-          settings={mergedSettings}
+        <TenantCommandBar
+          barRef={stickyBarRef}
+          displayName={identity.name}
+          slug={identity.slug}
           lifecycleStatus={lifecycleStatus}
-          cityPackOptions={cityPackOptions}
-          cityPackGateSnapshot={cityPackGateSnapshot}
-          cityPackContentsById={cityPackContentsById}
+          subscriptionStartsAt={subscription.subscriptionStartsAt}
+          subscriptionEndsAt={subscription.subscriptionEndsAt}
+          archived={initial.archived}
+          isNewTenant={!originalSlug}
+          readinessInput={readinessInput}
+          configComplete={setupSummaries.config.completeCount}
+          configTotal={setupSummaries.config.totalCount}
+          modulesLive={setupSummaries.modules.liveCount}
+          modulesTracked={setupSummaries.modules.trackedCount}
+          moduleGaps={setupSummaries.modules.gapCount}
+          guestPathInput={guestPathInput}
+          adminMode={adminMode}
+          onAdminModeChange={handleAdminModeChange}
+          onEditSubscription={() => {
+            if (adminMode === 'launch') {
+              setLaunchStep('identity');
+            } else {
+              navigateToSection('subscription');
+            }
+          }}
+          onScrollToChecklist={() => scrollToChecklist(stickyOffsetRef.current)}
+          onJumpToGuestModules={() => {
+            if (adminMode === 'launch') {
+              setLaunchStep('room-map');
+            } else {
+              navigateToSection('guest-app');
+            }
+          }}
+          onArchiveToggle={handleArchiveToggle}
+          isDirty={hasUnsavedChanges}
         />
-      ) : (
-      <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-[var(--admin-sticky-offset,5.5rem)] lg:self-start">
-          <nav className="space-y-1 rounded-xl border bg-background p-2" aria-label="Settings sections">
-            <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Sections
-            </p>
-            {ADMIN_SECTIONS.map((section) => {
-              const status = getAdminSectionStatus(section.id, navInputLive);
-              const hint = getAdminSectionHint(section.id, navInputLive);
-              const progress = getAdminSectionGuestProgress(section.id, readinessInput);
-              const progressLabel = progress ? formatAdminSectionGuestProgress(progress) : null;
 
-              return (
-                <button
-                  key={section.id}
-                  type="button"
-                  onClick={() => jumpToSection(section.id)}
-                  className={cn(
-                    'w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted/60',
-                    activeNav === section.id && 'bg-muted'
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{section.label}</span>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {progressLabel ? (
-                        <span className="text-[10px] font-medium text-muted-foreground">{progressLabel}</span>
-                      ) : null}
-                      <AdminSectionStatusBadge status={status} />
-                    </div>
-                  </div>
-                  {hint ? (
-                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">{hint}</p>
-                  ) : null}
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
+        {adminMode === 'advanced' ? (
+          <TenantReadinessChecklist
+            readinessInput={readinessInput}
+            guestPathInput={guestPathInput}
+            onJumpToSection={navigateToSection}
+          />
+        ) : null}
 
-        <div className="min-w-0 rounded-xl border bg-background">
-          {ADMIN_SECTIONS.map((section) => {
-            const isOpen = openSections.includes(section.id);
-            const status = getAdminSectionStatus(section.id, navInputLive);
-            const progress = getAdminSectionGuestProgress(section.id, readinessInput);
-            const progressLabel = progress ? formatAdminSectionGuestProgress(progress) : null;
+        {adminMode === 'launch' ? (
+          <LaunchSetupWizard
+            stepId={launchStep}
+            onStepChange={setLaunchStep}
+            bookingPath={bookingPath}
+            onBookingPathChange={handleBookingPathChange}
+            guestPathInput={guestPathInput}
+            readinessInput={readinessInput}
+            identity={identity}
+            originalSlug={originalSlug}
+            subscription={subscription}
+            onSubscriptionChange={(patch) => {
+              setSubscription((current) => ({ ...current, ...patch }));
+            }}
+            onIdentityChange={setIdentity}
+            onJumpToAdvancedSection={handleJumpToAdvancedSection}
+            settings={mergedSettings}
+            lifecycleStatus={lifecycleStatus}
+            cityPackOptions={cityPackOptions}
+            cityPackGateSnapshot={cityPackGateSnapshot}
+            cityPackContentsById={cityPackContentsById}
+          />
+        ) : (
+          <div className="grid w-full gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
+            <aside className="min-w-0 shrink-0 lg:sticky lg:top-[var(--admin-sticky-offset,5.5rem)] lg:w-[240px] lg:self-start">
+              <TenantSettingsNav
+                tenantSlug={navTenantSlug}
+                navInputLive={navInputLive}
+                readinessInput={readinessInput}
+                isDirty={hasUnsavedChanges}
+                onNavigate={navigateToSection}
+              />
+            </aside>
 
-            return (
+            <div className="flex min-w-0 flex-col gap-2">
+              {settingsPanelInDetail ? (
+                <AdminSettingsPanelBreadcrumbs
+                  sectionLabel={activeSection.label}
+                  moduleLabel={settingsDrillDownModuleLabel}
+                  onBackToHub={handleSettingsDrillDownBack}
+                  backAriaLabel={`Back to ${activeSection.label}`}
+                />
+              ) : null}
+
               <div
-                key={section.id}
-                ref={(node) => {
-                  sectionRefs.current[section.id] = node;
-                }}
-                className="scroll-mt-[var(--admin-sticky-offset,5.5rem)] border-b last:border-b-0"
+                id={TENANT_SETTINGS_PANEL_ID}
+                className="min-w-0 w-full overflow-x-hidden rounded-xl border bg-background px-4 pb-5 pt-4"
+                style={{ scrollMarginTop: 'var(--admin-sticky-offset, 5.5rem)' }}
               >
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  onClick={() => {
-                    pendingScrollRef.current = null;
-                    setActiveNav(section.id);
-                    setOpenSections((current) =>
-                      current.includes(section.id)
-                        ? current.filter((id) => id !== section.id)
-                        : [...current, section.id]
-                    );
-                  }}
-                  className="flex w-full items-start justify-between gap-3 px-4 py-4 text-left hover:bg-muted/30"
-                >
-                  <span className="flex flex-1 flex-col items-start gap-0.5 pr-2">
-                    <span className="flex w-full items-center justify-between gap-3 text-sm font-semibold">
-                      <span>{section.label}</span>
-                      <span className="flex items-center gap-2">
-                        {progressLabel ? (
-                          <span className="text-[10px] font-medium text-muted-foreground">{progressLabel}</span>
+                {!settingsPanelInDetail ? (
+                  <header className="mb-4 border-b pb-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <h3 className="text-sm font-semibold">{activeSection.label}</h3>
+                        <p className="text-xs text-muted-foreground">{activeSection.description}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {sectionProgressLabel ? (
+                          <span className="text-[10px] font-medium text-muted-foreground">
+                            {sectionProgressLabel}
+                          </span>
                         ) : null}
-                        <AdminSectionStatusBadge status={status} />
-                      </span>
-                    </span>
-                    <span className="text-xs font-normal text-muted-foreground">{section.description}</span>
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      'mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform',
-                      isOpen && 'rotate-180'
-                    )}
-                  />
-                </button>
-
-                {isOpen ? (
-                  <div className="px-4 pb-5 pt-1">
-                    <TenantAdminSectionPanel
-                      surface="platform"
-                      sectionId={section.id}
-                      initialSettings={initial.settings}
-                      identity={identity}
-                      originalSlug={originalSlug}
-                      subscription={subscription}
-                      onSubscriptionChange={(patch) => {
-                        markDirty();
-                        setSubscription((current) => ({ ...current, ...patch }));
-                      }}
-                      readinessInput={readinessInput}
-                      onIdentityChange={(next) => {
-                        markDirty();
-                        setIdentity(next);
-                      }}
-                      onJumpToSection={jumpToSection}
-                      cityPackOptions={cityPackOptions}
-                      cityPackGateSnapshot={cityPackGateSnapshot}
-                      cityPackContentsById={cityPackContentsById}
-                      mergedSettings={mergedSettings}
-                    />
-                  </div>
+                        <AdminSectionStatusBadge status={sectionStatus} />
+                      </div>
+                    </div>
+                  </header>
                 ) : null}
+                <TenantAdminSectionPanel
+                  key={activeSectionId}
+                surface="platform"
+                sectionId={activeSectionId}
+                initialSettings={initial.settings}
+                identity={identity}
+                originalSlug={originalSlug}
+                subscription={subscription}
+                onSubscriptionChange={(patch) => {
+                  setSubscription((current) => ({ ...current, ...patch }));
+                }}
+                readinessInput={readinessInput}
+                onIdentityChange={setIdentity}
+                onJumpToSection={navigateToSection}
+                cityPackOptions={cityPackOptions}
+                cityPackGateSnapshot={cityPackGateSnapshot}
+                cityPackContentsById={cityPackContentsById}
+                mergedSettings={mergedSettings}
+                contactsModuleId={contactsModuleId}
+                  onContactsModuleChange={setContactsModule}
+                arrivalJourneyModuleId={arrivalJourneyModuleId}
+                onArrivalJourneyModuleChange={setArrivalJourneyModule}
+                guestAppModuleId={guestAppModuleId}
+                onGuestAppModuleChange={setGuestAppModule}
+                />
               </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
+            </div>
+          </div>
+        )}
 
-      <TenantFormHiddenPayload
-        subscriptionStartsAt={subscription.subscriptionStartsAt}
-        subscriptionEndsAt={subscription.subscriptionEndsAt}
-        mergedSettings={mergedSettings}
-        roomMapEnabled={draft.roomMapEnabled ?? isRoomMapModuleEnabled(mergedSettings)}
-      />
-    </form>
+        <TenantFormHiddenPayload
+          subscriptionStartsAt={subscription.subscriptionStartsAt}
+          subscriptionEndsAt={subscription.subscriptionEndsAt}
+          mergedSettings={mergedSettings}
+          roomMapEnabled={draft.roomMapEnabled ?? isRoomMapModuleEnabled(mergedSettings)}
+        />
+      </form>
     </>
   );
 }

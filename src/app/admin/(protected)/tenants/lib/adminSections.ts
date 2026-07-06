@@ -45,6 +45,31 @@ export function normalizeAdminSectionId(sectionId: string | null | undefined): A
   return ADMIN_SECTION_IDS.includes(aliased as AdminSectionId) ? (aliased as AdminSectionId) : null;
 }
 
+export function adminTenantSettingsSectionPath(slug: string, sectionId: AdminSectionId): string {
+  const tenantSlug = slug.trim() || 'new';
+  return `/admin/tenants/${tenantSlug}/settings/${sectionId}`;
+}
+
+export function adminTenantSettingsDefaultPath(slug: string): string {
+  return adminTenantSettingsSectionPath(slug, 'identity');
+}
+
+export type AdminSettingsSaveBlockCode =
+  | 'subscription_dates'
+  | 'guest_extra_price'
+  | 'reception_desk_pin';
+
+export function adminSectionIdForSaveBlock(code: AdminSettingsSaveBlockCode): AdminSectionId {
+  switch (code) {
+    case 'subscription_dates':
+      return 'subscription';
+    case 'reception_desk_pin':
+      return 'contacts';
+    case 'guest_extra_price':
+      return 'guest-app';
+  }
+}
+
 export interface AdminSectionDefinition {
   id: AdminSectionId;
   label: string;

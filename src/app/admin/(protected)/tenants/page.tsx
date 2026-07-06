@@ -57,7 +57,7 @@ export default async function AdminTenantsPage() {
           </p>
         </div>
         <Link
-          href="/admin/tenants/new"
+          href="/admin/tenants/new/settings/identity"
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
         >
           New tenant
@@ -95,7 +95,7 @@ export default async function AdminTenantsPage() {
           return (
             <li key={tenant.id}>
               <Link
-                href={`/admin/tenants/${tenant.slug}`}
+                href={`/admin/tenants/${tenant.slug}/settings/identity`}
                 className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40"
               >
                 <div className="min-w-0">

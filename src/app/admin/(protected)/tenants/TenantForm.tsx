@@ -5,7 +5,6 @@ import { TenantFormAccordion } from './TenantFormAccordion';
 
 interface TenantFormProps {
   originalSlug: string;
-  justSaved?: boolean;
   cityPackOptions: CityPackSelectOption[];
   cityPackGateSnapshot: CityPackGateSnapshot;
   cityPackContentsById: Record<string, CityPackContent>;
@@ -22,7 +21,6 @@ interface TenantFormProps {
 
 export function TenantForm({
   originalSlug,
-  justSaved,
   cityPackOptions,
   cityPackGateSnapshot,
   cityPackContentsById,
@@ -32,7 +30,6 @@ export function TenantForm({
     <Suspense fallback={<p className="text-sm text-muted-foreground">Loading tenant form…</p>}>
       <TenantFormAccordion
         originalSlug={originalSlug}
-        justSaved={justSaved}
         cityPackOptions={cityPackOptions}
         cityPackGateSnapshot={cityPackGateSnapshot}
         cityPackContentsById={cityPackContentsById}

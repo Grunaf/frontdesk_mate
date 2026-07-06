@@ -216,6 +216,6 @@ export async function collectDevPanelSnapshot(): Promise<DevPanelSnapshot> {
     envRows,
     checks,
     modules,
-    adminEditUrl: `/admin/tenants/${devTenantSlug}`,
+    adminEditUrl: `/admin/tenants/${devTenantSlug}/settings/identity`,
   };
 }

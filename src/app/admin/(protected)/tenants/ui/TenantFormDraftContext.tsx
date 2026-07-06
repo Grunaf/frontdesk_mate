@@ -54,6 +54,7 @@ interface TenantFormDraftContextValue {
   draft: TenantFormDraft;
   updateDraft: (patch: Partial<TenantFormDraft>, options?: UpdateDraftOptions) => void;
   syncDraft: (patch: Partial<TenantFormDraft>) => void;
+  clearDraft: () => void;
   isDirty: boolean;
   markDirty: () => void;
   resetDirty: () => void;
@@ -244,6 +245,7 @@ export function TenantFormDraftProvider({ children }: { children: ReactNode }) {
 
   const markDirty = useCallback(() => setIsDirty(true), []);
   const resetDirty = useCallback(() => setIsDirty(false), []);
+  const clearDraft = useCallback(() => setDraft({}), []);
 
   const updateDraft = useCallback((patch: Partial<TenantFormDraft>, options?: UpdateDraftOptions) => {
     setDraft((current) => applyDraftPatch(current, patch));
@@ -257,8 +259,8 @@ export function TenantFormDraftProvider({ children }: { children: ReactNode }) {
   }, [updateDraft]);
 
   const value = useMemo(
-    () => ({ draft, updateDraft, syncDraft, isDirty, markDirty, resetDirty }),
-    [draft, updateDraft, syncDraft, isDirty, markDirty, resetDirty]
+    () => ({ draft, updateDraft, syncDraft, clearDraft, isDirty, markDirty, resetDirty }),
+    [draft, updateDraft, syncDraft, clearDraft, isDirty, markDirty, resetDirty]
   );
 
   return <TenantFormDraftContext.Provider value={value}>{children}</TenantFormDraftContext.Provider>;

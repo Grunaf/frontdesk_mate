@@ -10,6 +10,7 @@ import {
   clearAdminSession,
   setAdminSession,
 } from './lib/adminSession';
+import { normalizeAdminSectionId } from './(protected)/tenants/lib/adminSections';
 
 export async function loginAdminAction(formData: FormData) {
   const password = formData.get('password')?.toString() ?? '';
@@ -73,7 +74,8 @@ export async function saveTenantAction(formData: FormData) {
     revalidatePath(`/admin/tenants/${originalSlug}`);
   }
   revalidatePath(`/admin/tenants/${savedSlug}`);
-  redirect(`/admin/tenants/${savedSlug}?saved=1`);
+  const returnSection = normalizeAdminSectionId(String(formData.get('settingsSection') || '')) ?? 'identity';
+  redirect(`/admin/tenants/${savedSlug}/settings/${returnSection}?saved=1`);
 }
 
 export async function setTenantArchiveAction(formData: FormData) {

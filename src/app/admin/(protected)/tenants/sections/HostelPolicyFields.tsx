@@ -13,12 +13,15 @@ interface HostelPolicyFieldsProps {
   settings?: TenantSettings;
   readinessInput: TenantReadinessInput;
   scope?: HostelPolicyFieldsScope;
+  /** When true, omit outer section title and top border (e.g. inside drill-down). */
+  embedded?: boolean;
 }
 
 export function HostelPolicyFields({
   settings,
   readinessInput,
   scope = 'full',
+  embedded = false,
 }: HostelPolicyFieldsProps) {
   const { updateDraft } = useTenantFormDraft();
 
@@ -50,10 +53,12 @@ export function HostelPolicyFields({
   }
 
   return (
-    <div className="space-y-4 border-t pt-6">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Stay policy & money
-      </p>
+    <div className={embedded ? 'space-y-4' : 'space-y-4 border-t pt-6'}>
+      {embedded ? null : (
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Stay policy & money
+        </p>
+      )}
       {timeFields}
       <AdminTimeField
         label="Self check-in after"

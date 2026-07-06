@@ -9,6 +9,7 @@ import { getTenantRecord } from '@/entities/tenant/server';
 import { persistTenantSettings } from '@/entities/tenant/server/persistTenantSettings';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { normalizeOwnerSettingsSectionId } from '@/features/owner-settings/lib/ownerSettingsSections';
 
 export async function saveOwnerTenantSettingsAction(formData: FormData) {
   await assertOwnerAuthenticated();
@@ -22,7 +23,7 @@ export async function saveOwnerTenantSettingsAction(formData: FormData) {
   const access = resolveOwnerEditAccess(context.lifecycleStatus);
   if (!access.canEditSettings) {
     const returnTo = String(formData.get('returnTo') || 'setup').trim();
-    const path = returnTo === 'settings' ? 'settings' : 'setup';
+    const path = returnTo === 'settings' ? 'settings/identity' : 'setup';
     redirect(`/${locale}/${path}?error=read_only`);
   }
 
@@ -39,7 +40,7 @@ export async function saveOwnerTenantSettingsAction(formData: FormData) {
   const name = String(formData.get('name') || '').trim();
   if (!name) {
     const returnTo = String(formData.get('returnTo') || 'setup').trim();
-    const path = returnTo === 'settings' ? 'settings' : 'setup';
+    const path = returnTo === 'settings' ? 'settings/identity' : 'setup';
     redirect(`/${locale}/${path}?error=name`);
   }
 
@@ -57,16 +58,18 @@ export async function saveOwnerTenantSettingsAction(formData: FormData) {
 
   if (!result.ok) {
     const returnTo = String(formData.get('returnTo') || 'setup').trim();
-    const path = returnTo === 'settings' ? 'settings' : 'setup';
+    const path = returnTo === 'settings' ? 'settings/identity' : 'setup';
     redirect(`/${locale}/${path}?error=save`);
   }
 
   revalidatePath(`/${locale}/setup`, 'page');
-  revalidatePath(`/${locale}/settings`, 'page');
+  revalidatePath(`/${locale}/settings`, 'layout');
 
   const returnTo = String(formData.get('returnTo') || 'setup').trim();
   if (returnTo === 'settings') {
-    redirect(`/${locale}/settings?saved=1`);
+    const returnSection =
+      normalizeOwnerSettingsSectionId(String(formData.get('settingsSection') || '')) ?? 'identity';
+    redirect(`/${locale}/settings/${returnSection}?saved=1`);
   }
   redirect(`/${locale}/setup?saved=1`);
 }

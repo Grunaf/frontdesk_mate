@@ -2,14 +2,148 @@
 
 import { useMemo, useState } from 'react';
 import {
+  composePhoneRaw,
+  extractNationalDigitsFromRaw,
+  formatNationalPhoneInput,
+  getPhoneCountryPreset,
   inferPhoneDisplayPreset,
-  PHONE_DISPLAY_PRESET_OPTIONS,
+  nationalDigitLength,
+  nationalInputPlaceholder,
+  parseNationalPhoneInput,
+  PHONE_COUNTRY_PRESETS,
+  resolveAdminCountryPresetId,
+  resolvePhoneFormatPresetForDraft,
+  type PhoneCountryPresetId,
   type PhoneDisplayPresetId,
 } from '@/shared/lib/phone-display-presets';
-import { resolvePhoneDisplay, resolveStoredPhoneMask } from '@/shared/lib/phoneDisplay';
+import { resolveStoredPhoneMask } from '@/shared/lib/phoneDisplay';
 import { cn } from '@/shared/lib/utils';
 import { shouldShowPhoneDisplayOptions } from '../lib/tenantAdminFieldSpecs';
-import { adminFieldWidthClass } from './AdminField';
+
+interface AdminPhoneFieldRowProps {
+  label: string;
+  hint?: string;
+  missing?: boolean;
+  raw: string;
+  mask: string;
+  preset: PhoneDisplayPresetId;
+  onRawChange: (value: string) => void;
+  onMaskChange: (value: string) => void;
+  onPresetChange: (value: PhoneDisplayPresetId) => void;
+  labelClassName?: string;
+  inputClassName?: string;
+  compact?: boolean;
+}
+
+function AdminPhoneFieldRow({
+  label,
+  hint,
+  missing,
+  raw,
+  mask,
+  preset,
+  onRawChange,
+  onMaskChange,
+  onPresetChange,
+  labelClassName,
+  inputClassName,
+  compact = false,
+}: AdminPhoneFieldRowProps) {
+  const countryPresetId = useMemo(
+    () => resolveAdminCountryPresetId(raw, preset),
+    [preset, raw]
+  );
+  const countryPreset = getPhoneCountryPreset(countryPresetId);
+  const maxNational = nationalDigitLength(countryPreset);
+  const nationalDigits = extractNationalDigitsFromRaw(raw, countryPresetId);
+  const maskedNational = formatNationalPhoneInput(
+    nationalDigits,
+    countryPreset.groupsAfterCountry
+  );
+  const placeholder = nationalInputPlaceholder(countryPreset.groupsAfterCountry);
+
+  function commitChange(nextRaw: string, nextCountryId: PhoneCountryPresetId) {
+    const nextPreset = resolvePhoneFormatPresetForDraft(nextRaw, nextCountryId);
+    onRawChange(nextRaw);
+    onPresetChange(nextPreset);
+    onMaskChange(resolveStoredPhoneMask(nextRaw, mask, nextPreset) ?? '');
+  }
+
+  function handleCountryChange(nextCountryId: PhoneCountryPresetId) {
+    const nextCountry = getPhoneCountryPreset(nextCountryId);
+    const national = extractNationalDigitsFromRaw(raw, countryPresetId);
+    const trimmed = parseNationalPhoneInput(national, nationalDigitLength(nextCountry));
+    const nextRaw = composePhoneRaw(nextCountry.countryCode, trimmed);
+    commitChange(nextRaw, nextCountryId);
+  }
+
+  function handleNationalChange(value: string) {
+    const national = parseNationalPhoneInput(value, maxNational);
+    const nextRaw = composePhoneRaw(countryPreset.countryCode, national);
+    commitChange(nextRaw, countryPresetId);
+  }
+
+  const selectClass = cn(
+    'shrink-0 rounded-md border bg-background py-1.5 text-sm',
+    compact ? 'px-2' : 'px-2.5',
+    inputClassName
+  );
+  const nationalInputClass = cn(
+    'min-w-0 flex-1 rounded-md border bg-background py-1.5 text-sm',
+    compact ? 'px-2' : 'px-2.5',
+    missing && 'border-amber-400 ring-1 ring-amber-200',
+    inputClassName
+  );
+
+  return (
+    <label className={cn('block space-y-1', labelClassName)}>
+      <span
+        className={cn(
+          'flex flex-wrap items-center gap-2 font-medium',
+          compact ? 'text-xs text-muted-foreground' : 'text-sm'
+        )}
+      >
+        {label}
+        {missing ? (
+          <span className="ml-2 text-xs font-normal text-amber-700">Required for guests</span>
+        ) : null}
+      </span>
+      {hint ? (
+        <span
+          className={cn(
+            'block text-muted-foreground',
+            compact ? 'text-[11px]' : 'text-xs'
+          )}
+        >
+          {hint}
+        </span>
+      ) : null}
+      <div className="flex max-w-md gap-2">
+        <select
+          value={countryPresetId}
+          onChange={(event) => handleCountryChange(event.target.value as PhoneCountryPresetId)}
+          className={selectClass}
+          aria-label={`${label} country code`}
+        >
+          {PHONE_COUNTRY_PRESETS.map((option) => (
+            <option key={option.id} value={option.id}>
+              +{option.countryCode}
+            </option>
+          ))}
+        </select>
+        <input
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          value={maskedNational}
+          onChange={(event) => handleNationalChange(event.target.value)}
+          placeholder={placeholder}
+          className={nationalInputClass}
+        />
+      </div>
+    </label>
+  );
+}
 
 interface AdminPhoneFieldProps {
   label: string;
@@ -40,90 +174,32 @@ export function AdminPhoneField({
   const [preset, setPreset] = useState<PhoneDisplayPresetId>(() =>
     inferPhoneDisplayPreset(defaultRaw, defaultMask, defaultPreset)
   );
-  const [customMask, setCustomMask] = useState(defaultMask ?? '');
-
-  const resolvedMask = useMemo(
-    () => resolveStoredPhoneMask(raw, customMask, preset) ?? '',
-    [customMask, preset, raw]
-  );
-
-  const preview = useMemo(
-    () => resolvePhoneDisplay(raw, preset === 'custom' ? customMask : undefined, preset),
-    [customMask, preset, raw]
-  );
+  const [mask, setMask] = useState(defaultMask ?? '');
 
   const showDisplayOptions =
     !collapseWhenEmpty || shouldShowPhoneDisplayOptions(raw, defaultRaw);
+
+  const resolvedMask = useMemo(
+    () => resolveStoredPhoneMask(raw, mask, preset) ?? '',
+    [mask, preset, raw]
+  );
 
   return (
     <div>
       <input type="hidden" name={rawName} value={raw} />
       <input type="hidden" name={maskName} value={showDisplayOptions ? resolvedMask : ''} />
       <input type="hidden" name={presetName} value={showDisplayOptions ? preset : 'auto'} />
-      <div className="space-y-3">
-        <label className="block space-y-1.5">
-          <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-            {label}
-            {missing ? (
-              <span className="text-xs font-normal text-amber-700">Required for guests</span>
-            ) : null}
-          </span>
-          {hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
-          <input
-            type="text"
-            value={raw}
-            onChange={(event) => setRaw(event.target.value)}
-            placeholder="38761538331"
-            className={cn(
-              'rounded-md border bg-background px-3 py-2 text-sm',
-              adminFieldWidthClass('md'),
-              missing && 'border-amber-400 ring-1 ring-amber-200'
-            )}
-          />
-        </label>
-
-        {showDisplayOptions ? (
-          <>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium">Display format</span>
-              <select
-                value={preset}
-                onChange={(event) => setPreset(event.target.value as PhoneDisplayPresetId)}
-                className={cn(
-                  'rounded-md border bg-background px-3 py-2 text-sm',
-                  adminFieldWidthClass('sm')
-                )}
-              >
-                {PHONE_DISPLAY_PRESET_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {preset === 'custom' ? (
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">Display label</span>
-                <input
-                  type="text"
-                  value={customMask}
-                  onChange={(event) => setCustomMask(event.target.value)}
-                  placeholder="+387 61 538 331"
-                  className={cn(
-                    'rounded-md border bg-background px-3 py-2 text-sm',
-                    adminFieldWidthClass('md')
-                  )}
-                />
-              </label>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Guests see: <span className="font-medium text-foreground">{preview || '—'}</span>
-              </p>
-            )}
-          </>
-        ) : null}
-      </div>
+      <AdminPhoneFieldRow
+        label={label}
+        hint={hint}
+        missing={missing}
+        raw={raw}
+        mask={mask}
+        preset={preset}
+        onRawChange={setRaw}
+        onMaskChange={setMask}
+        onPresetChange={setPreset}
+      />
     </div>
   );
 }
@@ -149,75 +225,21 @@ export function AdminPhoneFieldInline({
   onRawChange,
   onMaskChange,
   onPresetChange,
-  collapseWhenEmpty = true,
+  collapseWhenEmpty: _collapseWhenEmpty = true,
 }: AdminPhoneFieldInlineProps) {
-  const preview = useMemo(
-    () => resolvePhoneDisplay(raw, preset === 'custom' ? mask : undefined, preset),
-    [mask, preset, raw]
-  );
-
-  const showDisplayOptions = !collapseWhenEmpty || shouldShowPhoneDisplayOptions(raw);
-
-  function updateRaw(nextRaw: string) {
-    onRawChange(nextRaw);
-    onMaskChange(resolveStoredPhoneMask(nextRaw, mask, preset) ?? '');
-  }
-
-  function updatePreset(nextPreset: PhoneDisplayPresetId) {
-    onPresetChange(nextPreset);
-    onMaskChange(resolveStoredPhoneMask(raw, mask, nextPreset) ?? '');
-  }
-
-  function updateCustomMask(nextMask: string) {
-    onMaskChange(nextMask);
-  }
-
   return (
-    <div className="space-y-3 sm:col-span-2">
-      <label className="block space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        {hint ? <span className="block text-[11px] text-muted-foreground">{hint}</span> : null}
-        <input
-          value={raw}
-          onChange={(event) => updateRaw(event.target.value)}
-          placeholder="38761538331"
-          className="w-full max-w-md rounded-md border bg-background px-2.5 py-1.5 text-sm"
-        />
-      </label>
-
-      {showDisplayOptions ? (
-        <>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">Display format</span>
-            <select
-              value={preset}
-              onChange={(event) => updatePreset(event.target.value as PhoneDisplayPresetId)}
-              className="w-full max-w-[12rem] rounded-md border bg-background px-2.5 py-1.5 text-sm"
-            >
-              {PHONE_DISPLAY_PRESET_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {preset === 'custom' ? (
-            <label className="block space-y-1">
-              <span className="text-xs font-medium text-muted-foreground">Display label</span>
-              <input
-                value={mask}
-                onChange={(event) => updateCustomMask(event.target.value)}
-                className="w-full max-w-md rounded-md border bg-background px-2.5 py-1.5 text-sm"
-              />
-            </label>
-          ) : (
-            <p className="text-[11px] text-muted-foreground">
-              Guests see: <span className="font-medium text-foreground">{preview || '—'}</span>
-            </p>
-          )}
-        </>
-      ) : null}
+    <div className="sm:col-span-2">
+      <AdminPhoneFieldRow
+        label={label}
+        hint={hint}
+        raw={raw}
+        mask={mask}
+        preset={preset}
+        onRawChange={onRawChange}
+        onMaskChange={onMaskChange}
+        onPresetChange={onPresetChange}
+        compact
+      />
     </div>
   );
 }
