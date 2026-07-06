@@ -44,12 +44,14 @@ function BottomSheet({
   open,
   onOpenChange,
   dismissible,
+  modal: modalProp,
   preserveAppHeaderAccess: preserveAppHeaderAccessProp,
   ...props
 }: BottomSheetProps) {
   useRegisterBottomSheetOpen(open);
 
   const preserveAppHeaderAccess = preserveAppHeaderAccessProp ?? dismissible === false;
+  const modal = preserveAppHeaderAccess ? false : modalProp;
 
   const handleOpenChange = React.useCallback(
     (next: boolean) => {
@@ -68,6 +70,7 @@ function BottomSheet({
         onOpenChange={handleOpenChange}
         dismissible={dismissible}
         {...props}
+        modal={modal}
       />
     </BottomSheetChromeContext.Provider>
   );
@@ -85,19 +88,36 @@ function BottomSheetClose({ ...props }: React.ComponentProps<typeof DrawerPrimit
   return <DrawerPrimitive.Close data-slot="bottom-sheet-close" {...props} />;
 }
 
+function bottomSheetOverlayClassName(preserveAppHeaderAccess: boolean, className?: string) {
+  return cn(
+    'fixed inset-x-0 bottom-0 z-50 bg-black/80 supports-backdrop-filter:backdrop-blur-xs',
+    preserveAppHeaderAccess ? 'top-[var(--app-header-height,0px)]' : 'top-0',
+    className
+  );
+}
+
 function BottomSheetOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Overlay>) {
   const preserveAppHeaderAccess = React.useContext(BottomSheetChromeContext);
 
+  if (preserveAppHeaderAccess) {
+    return (
+      <div
+        data-slot="bottom-sheet-overlay"
+        aria-hidden
+        className={cn(bottomSheetOverlayClassName(true, className), 'animate-in fade-in-0')}
+      />
+    );
+  }
+
   return (
     <DrawerPrimitive.Overlay
       data-slot="bottom-sheet-overlay"
       className={cn(
-        'fixed inset-x-0 bottom-0 z-50 bg-black/80 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',
-        preserveAppHeaderAccess ? 'top-[var(--app-header-height,0px)]' : 'top-0',
-        className
+        bottomSheetOverlayClassName(false, className),
+        'data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0'
       )}
       {...props}
     />

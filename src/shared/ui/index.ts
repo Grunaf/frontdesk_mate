@@ -18,6 +18,7 @@ export { Label } from './label';
 export { Icon } from './icon';
 export { ThemeProvider } from './theme-provider';
 export { Separator } from './separator';
+export { Skeleton } from './skeleton';
 export {
   Select,
   SelectContent,

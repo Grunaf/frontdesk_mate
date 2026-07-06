@@ -130,9 +130,13 @@
   body.admin-shell-bg {
     @apply bg-muted/30;
   }
+  html.admin-stable-layout {
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
+  }
   html {
     @apply font-sans;
-    scrollbar-gutter: stable both-edges;
+    scrollbar-gutter: stable;
   }
   /* Radix scroll-lock adds padding-right; gutter already reserves space */
   body[data-scroll-locked] {
