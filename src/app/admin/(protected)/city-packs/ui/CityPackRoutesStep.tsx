@@ -1,50 +1,44 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import type { RouteId } from '@/entities/hostel';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { RouteCategory, RouteId } from '@/entities/hostel';
 import {
+  addCityPackArrivalHub,
+  countOfferedCityPackBusHubs,
   formatRouteGateStatus,
-  ROUTE_PRESETS,
-  type CityPackContent,
+  listAdminCityPackHubRouteIds,
+  resolveCityPackHubAdminLabel,
   type CityPackContentWarnings,
   type CityPackRouteContent,
 } from '@/entities/city-pack';
-import { isLocalizedFilled } from '@/entities/city-pack/lib/resolveLocalizedLocaleStatus';
 import { cn } from '@/shared/lib/utils';
 import type { PhoneDisplayPresetId } from '@/shared/lib/phoneDisplay';
-import { AdminPhoneFieldInline } from '../../tenants/ui/AdminPhoneField';
-import { ChevronDown, X } from 'lucide-react';
-import { Icon } from '@/shared/ui';
-import { AdminLocalizedInput } from './AdminLocalizedInput';
 import {
   AdminEditingLocaleProvider,
   AdminEditingLocaleSwitcher,
   useAdminEditingLocale,
 } from './AdminLocaleEditContext';
 import { CityPackRouteEditor } from './CityPackRouteEditor';
-import { CityPackRoutePreview } from './CityPackRoutePreview';
-
-function hasCityWideContent(
-  warnings: CityPackContentWarnings,
-  taxiName: string,
-  taxiPhone: string,
-  preTripSundayClosure: boolean
-): boolean {
-  return (
-    Boolean(taxiName.trim()) ||
-    Boolean(taxiPhone.trim()) ||
-    preTripSundayClosure ||
-    isLocalizedFilled(warnings.taxiStand, 'en') ||
-    isLocalizedFilled(warnings.taxiStand, 'ru') ||
-    isLocalizedFilled(warnings.taxiMeter, 'en') ||
-    isLocalizedFilled(warnings.taxiMeter, 'ru') ||
-    isLocalizedFilled(warnings.busClarification, 'en') ||
-    isLocalizedFilled(warnings.busClarification, 'ru')
-  );
-}
+import { CityPackBulkImportPanel } from '@/features/city-pack-bulk-import';
+import { CityPackTaxiServiceModule } from './CityPackTaxiServiceModule';
+import { CityPackHubWarningsModule } from './CityPackHubWarningsModule';
+import { CityPackAddHubPanel } from './CityPackAddHubPanel';
+import { AdminSettingsDrillDown } from '../../tenants/ui/AdminSettingsDrillDown';
+import {
+  CITY_PACK_ROUTES_ADMIN_MODULES,
+  CITY_PACK_ROUTE_MODULE_DESCRIPTION,
+  decodeCityPackRouteModuleId,
+  encodeCityPackRouteModuleId,
+  getCityPackRouteModuleHint,
+  getCityPackRouteModuleStatus,
+  getCityPackRoutesModuleHint,
+  getCityPackRoutesModuleStatus,
+} from '../lib/cityPackRoutesAdminSubsections';
+import type { AdminSettingsDrillDownGroup } from '../../tenants/ui/AdminSettingsDrillDown';
 
 function CityPackRoutesStepBody({
   packId,
+  packLabel,
   enabledRoutes,
   routes,
   warnings,
@@ -53,16 +47,17 @@ function CityPackRoutesStepBody({
   taxiPhone,
   taxiMask,
   taxiPreset,
+  transportCurrencyMode,
   onEnabledRoutesChange,
   onRoutesChange,
   onWarningsChange,
-  onPreTripSundayClosureChange,
   onTaxiNameChange,
   onTaxiPhoneChange,
   onTaxiMaskChange,
   onTaxiPresetChange,
 }: {
   packId: string;
+  packLabel: string;
   enabledRoutes: RouteId[];
   routes: Partial<Record<RouteId, CityPackRouteContent>>;
   warnings: CityPackContentWarnings;
@@ -71,74 +66,222 @@ function CityPackRoutesStepBody({
   taxiPhone: string;
   taxiMask: string;
   taxiPreset: PhoneDisplayPresetId;
+  transportCurrencyMode: import('@/entities/city-pack').CityPackTransportCurrencyMode;
   onEnabledRoutesChange: (routes: RouteId[]) => void;
   onRoutesChange: (routes: Partial<Record<RouteId, CityPackRouteContent>>) => void;
   onWarningsChange: (warnings: CityPackContentWarnings) => void;
-  onPreTripSundayClosureChange: (enabled: boolean) => void;
   onTaxiNameChange: (value: string) => void;
   onTaxiPhoneChange: (value: string) => void;
   onTaxiMaskChange: (value: string) => void;
   onTaxiPresetChange: (value: PhoneDisplayPresetId) => void;
 }) {
   const { locale } = useAdminEditingLocale();
+  const packHubRouteIds = useMemo(() => listAdminCityPackHubRouteIds(routes), [routes]);
   const editableRoutes = useMemo(
     () => enabledRoutes.filter((routeId) => routes[routeId]),
     [enabledRoutes, routes]
   );
-  const [activeRouteId, setActiveRouteId] = useState<RouteId | null>(editableRoutes[0] ?? null);
-  const [cityWideOpen, setCityWideOpen] = useState(() =>
-    hasCityWideContent(warnings, taxiName, taxiPhone, preTripSundayClosure)
+  const offeredBusHubCount = useMemo(
+    () => countOfferedCityPackBusHubs(enabledRoutes, routes),
+    [enabledRoutes, routes]
   );
+  const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeRouteId && editableRoutes.includes(activeRouteId)) {
+    const routeId = activeModuleId ? decodeCityPackRouteModuleId(activeModuleId) : null;
+    if (!routeId) {
       return;
     }
+    if (!editableRoutes.includes(routeId)) {
+      setActiveModuleId(null);
+    }
+  }, [activeModuleId, editableRoutes]);
 
-    setActiveRouteId(editableRoutes[0] ?? null);
-  }, [activeRouteId, editableRoutes]);
-
-  const previewContent = useMemo<CityPackContent>(
-    () => ({
-      enabledRoutes,
-      routes,
-      warnings,
-      preTripTips: preTripSundayClosure ? ['sundayClosure'] : undefined,
-      recommendedTaxi: taxiName.trim()
-        ? {
-            name: taxiName.trim(),
-            phoneRaw: taxiPhone.trim() || undefined,
-            phoneMask: taxiMask.trim() || undefined,
-            phoneFormatPreset: taxiPreset,
-          }
-        : undefined,
-    }),
-    [enabledRoutes, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, taxiPreset, warnings]
+  const moduleInput = useMemo(
+    () => ({ taxiName, taxiPhone, warnings }),
+    [taxiName, taxiPhone, warnings]
   );
 
-  const selectHub = (routeId: RouteId) => {
-    if (!enabledRoutes.includes(routeId)) {
-      onEnabledRoutesChange([...enabledRoutes, routeId]);
-    }
-    setActiveRouteId(routeId);
-  };
+  const transportContent = useMemo(
+    () => ({ transportCurrency: { mode: transportCurrencyMode } }),
+    [transportCurrencyMode]
+  );
 
-  const disableHub = (routeId: RouteId) => {
-    onEnabledRoutesChange(enabledRoutes.filter((id) => id !== routeId));
-  };
+  const setHubOffered = useCallback(
+    (routeId: RouteId, offered: boolean) => {
+      if (offered) {
+        if (!enabledRoutes.includes(routeId)) {
+          onEnabledRoutesChange([...enabledRoutes, routeId]);
+        }
+        return;
+      }
+      if (activeModuleId === encodeCityPackRouteModuleId(routeId)) {
+        setActiveModuleId(null);
+      }
+      onEnabledRoutesChange(enabledRoutes.filter((id) => id !== routeId));
+    },
+    [activeModuleId, enabledRoutes, onEnabledRoutesChange]
+  );
+
+  const handleAddHub = useCallback(
+    (category: RouteCategory, displayNameEn: string) => {
+      const result = addCityPackArrivalHub({
+        packId,
+        category,
+        displayNameEn,
+        enabledRoutes,
+        routes,
+        content: transportContent,
+      });
+      if (!result.ok) {
+        return;
+      }
+      onRoutesChange(result.routes);
+      onEnabledRoutesChange(result.enabledRoutes);
+      setActiveModuleId(encodeCityPackRouteModuleId(result.routeId));
+    },
+    [enabledRoutes, onEnabledRoutesChange, onRoutesChange, packId, routes, transportContent]
+  );
 
   const updateRoute = (routeId: RouteId, next: CityPackRouteContent) => {
     onRoutesChange({ ...routes, [routeId]: next });
   };
 
-  const activeRoute = activeRouteId ? routes[activeRouteId] : undefined;
-  const activeGate = formatRouteGateStatus(activeRoute);
+  const packWideModules = useMemo(
+    () =>
+      CITY_PACK_ROUTES_ADMIN_MODULES.filter(
+        (definition) => definition.id !== 'hub-warnings' || offeredBusHubCount >= 2
+      ).map((definition) => ({
+        id: definition.id,
+        label: definition.label,
+        description: definition.description,
+        hint: getCityPackRoutesModuleHint(definition.id, moduleInput),
+        status: getCityPackRoutesModuleStatus(definition.id, moduleInput),
+        render: () => {
+          switch (definition.id) {
+            case 'taxi-service':
+              return (
+                <CityPackTaxiServiceModule
+                  taxiName={taxiName}
+                  taxiPhone={taxiPhone}
+                  taxiMask={taxiMask}
+                  taxiPreset={taxiPreset}
+                  warnings={warnings}
+                  onTaxiNameChange={onTaxiNameChange}
+                  onTaxiPhoneChange={onTaxiPhoneChange}
+                  onTaxiMaskChange={onTaxiMaskChange}
+                  onTaxiPresetChange={onTaxiPresetChange}
+                  onWarningsChange={onWarningsChange}
+                />
+              );
+            case 'hub-warnings':
+              return (
+                <CityPackHubWarningsModule warnings={warnings} onWarningsChange={onWarningsChange} />
+              );
+            default:
+              return null;
+          }
+        },
+      })),
+    [
+      moduleInput,
+      offeredBusHubCount,
+      onTaxiMaskChange,
+      onTaxiNameChange,
+      onTaxiPhoneChange,
+      onTaxiPresetChange,
+      onWarningsChange,
+      taxiMask,
+      taxiName,
+      taxiPhone,
+      taxiPreset,
+      warnings,
+    ]
+  );
+
+  const hubRouteModules = useMemo(
+    () =>
+      packHubRouteIds.map((routeId) => {
+        const route = routes[routeId];
+        const offered = enabledRoutes.includes(routeId);
+        const label = resolveCityPackHubAdminLabel(routeId, route);
+        return {
+          id: encodeCityPackRouteModuleId(routeId),
+          label,
+          description: CITY_PACK_ROUTE_MODULE_DESCRIPTION,
+          hint: getCityPackRouteModuleHint(route, { offered }),
+          status: getCityPackRouteModuleStatus(route, { offered }),
+          hubOffered: offered,
+          hubOfferedAriaLabel: `Offer ${label} to guests on arrival`,
+          onHubOfferedChange: (nextOffered: boolean) => setHubOffered(routeId, nextOffered),
+          render: () => {
+            const currentRoute = routes[routeId];
+            if (!currentRoute) {
+              return (
+                <p className="text-sm text-amber-900">
+                  Route content is missing. Turn this hub on, or save draft to repair.
+                </p>
+              );
+            }
+            const gate = formatRouteGateStatus(currentRoute);
+            return (
+              <>
+                <p
+                  className={cn(
+                    'text-[11px]',
+                    gate.ready ? 'text-green-800' : 'text-amber-800'
+                  )}
+                >
+                  {gate.statusLabel}
+                </p>
+                <CityPackRouteEditor
+                  key={routeId}
+                  packId={packId}
+                  routeId={routeId}
+                  route={currentRoute}
+                  onChange={(next) => updateRoute(routeId, next)}
+                  embedded
+                  showHubHint={offeredBusHubCount >= 2}
+                  transportCurrencyMode={transportCurrencyMode}
+                />
+              </>
+            );
+          },
+        };
+      }),
+    [
+      enabledRoutes,
+      offeredBusHubCount,
+      packHubRouteIds,
+      packId,
+      routes,
+      setHubOffered,
+      transportCurrencyMode,
+    ]
+  );
+
+  const routesDrillDownGroups = useMemo((): AdminSettingsDrillDownGroup[] => {
+    const groups: AdminSettingsDrillDownGroup[] = [];
+    if (hubRouteModules.length > 0) {
+      groups.push({ title: 'Arrival hubs', modules: hubRouteModules });
+    }
+    if (packWideModules.length > 0) {
+      groups.push({ title: 'Pack-wide (optional)', modules: packWideModules });
+    }
+    return groups;
+  }, [hubRouteModules, packWideModules]);
+
+  const routesDrillDownModules = useMemo(
+    () => routesDrillDownGroups.flatMap((group) => group.modules),
+    [routesDrillDownGroups]
+  );
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Arrival hubs for <code className="text-xs">{packId}</code>. Click a hub to enable and edit.
-        Fill required EN fields, then optional details. Save draft anytime.
+        Arrival hubs for <code className="text-xs">{packId}</code>. Use the toggle to offer a hub to
+        guests; open the row to edit copy. Fill required EN fields, then optional details. Save draft
+        anytime.
       </p>
 
       <AdminEditingLocaleSwitcher
@@ -147,205 +290,49 @@ function CityPackRoutesStepBody({
         }
       />
 
-      <div className="space-y-2">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Arrival hubs
-          </p>
-          <p className="text-[11px] text-muted-foreground">
-            Click to edit · × to turn off. Guests pick one on arrival.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {ROUTE_PRESETS.map((preset) => {
-            const enabled = enabledRoutes.includes(preset.id);
-            const gate = formatRouteGateStatus(routes[preset.id]);
-            const active = activeRouteId === preset.id;
+      <CityPackBulkImportPanel
+        packId={packId}
+        cityLabel={packLabel}
+        enabledRoutes={enabledRoutes}
+        routes={routes}
+        transportCurrencyMode={transportCurrencyMode}
+        onEnabledRoutesChange={onEnabledRoutesChange}
+        onRoutesChange={onRoutesChange}
+      />
 
-            return (
-              <div
-                key={preset.id}
-                className={cn(
-                  'inline-flex items-stretch overflow-hidden rounded-full border text-sm',
-                  !enabled && 'border-dashed border-border bg-background text-muted-foreground',
-                  enabled &&
-                    active &&
-                    'border-foreground bg-foreground text-background',
-                  enabled &&
-                    !active &&
-                    gate.ready &&
-                    'border-border bg-background text-foreground',
-                  enabled &&
-                    !active &&
-                    !gate.ready &&
-                    'border-amber-300 bg-amber-50 text-amber-950'
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => selectHub(preset.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-left"
-                >
-                  <span className="font-medium">{preset.label}</span>
-                  <span
-                    className={cn(
-                      'text-[10px] font-medium uppercase tracking-wide',
-                      !enabled && 'text-muted-foreground',
-                      enabled && active && 'text-background/80',
-                      enabled && !active && gate.ready && 'text-green-700',
-                      enabled && !active && !gate.ready && 'text-amber-800'
-                    )}
-                  >
-                    {enabled ? gate.shortLabel : 'Off'}
-                  </span>
-                </button>
-                {enabled ? (
-                  <button
-                    type="button"
-                    aria-label={`Turn off ${preset.label}`}
-                    onClick={() => disableHub(preset.id)}
-                    className={cn(
-                      'border-l px-2 text-muted-foreground hover:bg-black/5',
-                      active && 'border-background/20 text-background/80 hover:bg-background/10'
-                    )}
-                  >
-                    <Icon icon={X} className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <CityPackAddHubPanel routes={routes} onAdd={handleAddHub} />
 
-      {enabledRoutes.length === 0 ? (
-        <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-          Turn on at least one hub to edit arrival copy.
+      {enabledRoutes.length > 0 && editableRoutes.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Some offered hubs are missing route bodies. Turn a hub on, or save draft to repair.
         </p>
-      ) : editableRoutes.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-900">
-          Route bodies are missing. Turn a hub off and on, or save draft to repair.
-        </p>
-      ) : activeRouteId && activeRoute ? (
-        <div className="space-y-3 rounded-lg border p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-medium">
-                {ROUTE_PRESETS.find((entry) => entry.id === activeRouteId)?.label ?? activeRouteId}
-              </p>
-              <p
-                className={cn(
-                  'text-[11px]',
-                  activeGate.ready ? 'text-green-800' : 'text-amber-800'
-                )}
-              >
-                {activeGate.statusLabel}
-              </p>
-            </div>
-          </div>
-          <CityPackRouteEditor
-            key={activeRouteId}
-            packId={packId}
-            routeId={activeRouteId}
-            route={activeRoute}
-            onChange={(next) => updateRoute(activeRouteId, next)}
-            embedded
-            showHubHint={
-              enabledRoutes.includes('bus_central') && enabledRoutes.includes('bus_istochno')
-            }
+      ) : null}
+
+      {routesDrillDownModules.length > 0 ? (
+        <div className="rounded-lg border p-3">
+          <p className="mb-2 px-2.5 text-[11px] text-muted-foreground">
+            Toggle = guest can pick this hub · row = edit arrival copy (only when offered)
+          </p>
+          <AdminSettingsDrillDown
+            activeModuleId={activeModuleId}
+            onModuleChange={setActiveModuleId}
+            modules={routesDrillDownModules}
+            groups={routesDrillDownGroups}
+            backLabel="Back to routes"
           />
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Select a hub to edit.</p>
+        <p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+          No arrival hubs yet. Add at least one hub guests can arrive from.
+        </p>
       )}
-
-      {enabledRoutes.length > 0 ? (
-        <CityPackRoutePreview
-          packId={packId}
-          content={previewContent}
-          activeRouteId={activeRouteId}
-        />
-      ) : null}
-
-      <div className="rounded-lg border">
-        <button
-          type="button"
-          onClick={() => setCityWideOpen((current) => !current)}
-          className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
-        >
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              City-wide (optional)
-            </p>
-            <p className="text-[11px] text-muted-foreground">Taxi, warnings, and pre-trip tips</p>
-          </div>
-          <Icon
-            icon={ChevronDown}
-            className={cn(
-              'h-4 w-4 text-muted-foreground transition-transform',
-              cityWideOpen && 'rotate-180'
-            )}
-          />
-        </button>
-        {cityWideOpen ? (
-          <div className="space-y-3 border-t px-3 py-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1">
-                <span className="text-xs font-medium text-muted-foreground">Taxi name</span>
-                <input
-                  value={taxiName}
-                  onChange={(event) => onTaxiNameChange(event.target.value)}
-                  className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
-                />
-              </label>
-              <AdminPhoneFieldInline
-                label="Taxi phone"
-                raw={taxiPhone}
-                mask={taxiMask}
-                preset={taxiPreset}
-                onRawChange={onTaxiPhoneChange}
-                onMaskChange={onTaxiMaskChange}
-                onPresetChange={onTaxiPresetChange}
-              />
-            </div>
-            <AdminLocalizedInput
-              label="Taxi stand warning"
-              value={warnings.taxiStand}
-              onChange={(taxiStand) => onWarningsChange({ ...warnings, taxiStand })}
-              multiline
-              rows={2}
-            />
-            <AdminLocalizedInput
-              label="Taxi meter warning"
-              value={warnings.taxiMeter}
-              onChange={(taxiMeter) => onWarningsChange({ ...warnings, taxiMeter })}
-              multiline
-              rows={2}
-            />
-            <AdminLocalizedInput
-              label="Bus hub clarification"
-              value={warnings.busClarification}
-              onChange={(busClarification) => onWarningsChange({ ...warnings, busClarification })}
-              multiline
-              rows={2}
-            />
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={preTripSundayClosure}
-                onChange={(event) => onPreTripSundayClosureChange(event.target.checked)}
-              />
-              Sunday closure pre-trip tip
-            </label>
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 }
 
 export function CityPackRoutesStep(props: {
   packId: string;
+  packLabel: string;
   enabledRoutes: RouteId[];
   routes: Partial<Record<RouteId, CityPackRouteContent>>;
   warnings: CityPackContentWarnings;
@@ -354,10 +341,10 @@ export function CityPackRoutesStep(props: {
   taxiPhone: string;
   taxiMask: string;
   taxiPreset: PhoneDisplayPresetId;
+  transportCurrencyMode: import('@/entities/city-pack').CityPackTransportCurrencyMode;
   onEnabledRoutesChange: (routes: RouteId[]) => void;
   onRoutesChange: (routes: Partial<Record<RouteId, CityPackRouteContent>>) => void;
   onWarningsChange: (warnings: CityPackContentWarnings) => void;
-  onPreTripSundayClosureChange: (enabled: boolean) => void;
   onTaxiNameChange: (value: string) => void;
   onTaxiPhoneChange: (value: string) => void;
   onTaxiMaskChange: (value: string) => void;

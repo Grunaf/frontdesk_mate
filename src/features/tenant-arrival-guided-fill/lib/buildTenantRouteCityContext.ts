@@ -11,7 +11,6 @@ export function buildTenantRouteCityContext(
 
   const parts: string[] = [];
   const getOff = resolveLocalizedText(cityRoute.copy.publicGetOffAt, 'en').trim();
-  const cityWalk = resolveLocalizedText(cityRoute.copy.publicWalkToHostel, 'en').trim();
   const summary = resolveLocalizedText(cityRoute.copy.publicSummary, 'en').trim();
 
   if (getOff) {
@@ -19,9 +18,6 @@ export function buildTenantRouteCityContext(
   }
   if (summary) {
     parts.push(`City route summary: ${summary}`);
-  }
-  if (cityWalk) {
-    parts.push(`City pack walk template: ${cityWalk}`);
   }
 
   return parts.length > 0 ? parts.join('\n') : undefined;

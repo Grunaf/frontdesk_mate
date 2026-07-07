@@ -66,4 +66,19 @@ describe('formatBedLocationLine', () => {
       'Bed 1 · upper',
     ]);
   });
+
+  it('omits floor segment when omitFloor is true', () => {
+    const plan = resolveGuestStayPlan(
+      {
+        guestStay: {
+          floors: [{ id: '1', label: '1' }],
+          rooms: [{ id: 'r1', label: 'Dorm A', floorId: '1' }],
+          beds: [{ id: '4B', roomId: 'r1', x: 1, y: 2 }],
+        },
+      },
+      '4B'
+    );
+
+    expect(formatBedLocationLine(t, plan, { omitFloor: true })).toBe('Room Dorm A · Bed 1');
+  });
 });

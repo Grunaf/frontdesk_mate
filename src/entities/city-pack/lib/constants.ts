@@ -8,6 +8,7 @@ export const MAX_ROUTE_TIPS = 5;
 export const CITY_PACK_WIZARD_STEPS = [
   { id: 'identity', label: 'Identity' },
   { id: 'places', label: 'Places' },
+  { id: 'city-settings', label: 'City settings' },
   { id: 'routes', label: 'Arrival' },
   { id: 'preview', label: 'Publish' },
 ] as const;

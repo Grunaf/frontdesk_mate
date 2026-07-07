@@ -1,17 +1,11 @@
 'use client';
 
-import { useTranslations, useLocale } from '@/shared/i18n';
-import { useTenant } from '@/entities/tenant';
+import { useTranslations } from '@/shared/i18n';
 import { CardTitle, Icon } from '@/shared/ui';
 import { ChevronRight, ExternalLink } from 'lucide-react';
-import { hasOfficialRouteSchedule, isWalkOnlyRoute, type RouteConfig } from '@/entities/hostel';
-import type { AppLocale } from '@/entities/city-pack/model/types';
+import { hasOfficialRouteSchedule, type RouteConfig } from '@/entities/hostel';
 import { resolveRouteCopyField } from '../lib/resolveRouteCopy';
-import {
-  getRouteDisplayIcon,
-  resolveWalkToHostelText,
-  TransitLegMeta,
-} from './PublicRouteItinerary';
+import { getRouteDisplayIcon, TransitLegMeta } from './PublicRouteItinerary';
 
 export function PublicRouteSummaryCard({
   route,
@@ -24,23 +18,11 @@ export function PublicRouteSummaryCard({
   onPrimaryRouteClick: () => void;
   onAlternativeRouteClick?: () => void;
 }) {
-  const { settings, hostel } = useTenant();
   const routes = useTranslations();
-  const locale = useLocale() as AppLocale;
   const directions = useTranslations('pages.arrivalJourney.directions');
   const RouteIcon = getRouteDisplayIcon(route);
   const AlternativeRouteIcon = alternativeRoute ? getRouteDisplayIcon(alternativeRoute) : null;
   const showOfficialSchedule = hasOfficialRouteSchedule(route);
-  const walkOnly = isWalkOnlyRoute(route);
-  const address = hostel.contacts.address.display ?? '';
-
-  const walkToHostel = resolveWalkToHostelText({
-    route,
-    routes,
-    settings,
-    address,
-    locale,
-  });
 
   return (
     <div className="space-y-4">
@@ -61,9 +43,6 @@ export function PublicRouteSummaryCard({
               {resolveRouteCopyField(route, 'publicSummary', routes)}
             </p>
             <TransitLegMeta route={route} routes={routes} directions={directions} />
-            {walkOnly && (
-              <p className="text-xs leading-relaxed text-foreground/90">{walkToHostel}</p>
-            )}
           </div>
           <Icon icon={ChevronRight} className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
         </button>

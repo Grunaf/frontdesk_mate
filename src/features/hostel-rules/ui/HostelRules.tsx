@@ -33,8 +33,6 @@ export function HostelRules({ settings, variant = 'full' }: HostelRulesProps) {
     return null;
   }
 
-  const expandableRules = displays.filter(hasRuleDetail);
-
   const openRule = (rule: ResolvedHouseRuleDisplay) => {
     setSelectedRule(rule);
     setSheetOpen(true);
@@ -55,23 +53,7 @@ export function HostelRules({ settings, variant = 'full' }: HostelRulesProps) {
         <h3 className="text-sm font-semibold text-foreground">{rulesComponent('title')}</h3>
       ) : null}
 
-      {expandableRules.length > 0 ? (
-        <p
-          className={cn(
-            'text-xs text-muted-foreground',
-            variant === 'full' ? 'mt-1' : 'mt-1.5'
-          )}
-        >
-          {rulesComponent('tapHint')}
-        </p>
-      ) : null}
-
-      <div
-        className={cn(
-          'flex flex-wrap gap-2',
-          variant === 'full' ? 'mt-2' : expandableRules.length > 0 ? 'mt-3' : null
-        )}
-      >
+      <div className={cn('flex flex-wrap gap-2', variant === 'full' ? 'mt-2' : null)}>
         {displays.map((rule) => {
           if (!hasRuleDetail(rule)) {
             return (

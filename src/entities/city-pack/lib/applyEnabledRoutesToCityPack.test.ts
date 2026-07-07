@@ -34,4 +34,30 @@ describe('applyEnabledRoutesToCityPack', () => {
     expect(Object.keys(filtered.routes)).toEqual(['airport']);
     expect(filtered.categories.map((category) => category.id)).toEqual(['airport']);
   });
+
+  it('derives hub categories for dynamic packs from enabled routes', () => {
+    const base = getCityPack('tivat');
+    const kotorRoutes = getCityPack('kotor').routes;
+    const pack = {
+      ...base,
+      routes: {
+        airport: kotorRoutes.airport!,
+        bus_central: kotorRoutes.bus_central!,
+      },
+    };
+
+    const filtered = applyEnabledRoutesToCityPack(pack, ['airport', 'bus_central']);
+
+    expect(filtered.categories.map((category) => category.id)).toEqual(['airport', 'bus']);
+    expect(filtered.categories[0]?.labelKey).toBe('pages.arrivalJourney.directions.hubs.airport');
+  });
+
+  it('sets defaultRouteId to first enabled route in the hub category', () => {
+    const base = getCityPack('sarajevo');
+    const filtered = applyEnabledRoutesToCityPack(base, ['bus_istochno']);
+
+    expect(filtered.categories).toHaveLength(1);
+    expect(filtered.categories[0]?.id).toBe('bus');
+    expect(filtered.categories[0]?.defaultRouteId).toBe('bus_istochno');
+  });
 });

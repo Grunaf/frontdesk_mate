@@ -34,7 +34,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@ai-sdk/google": "^4.0.8",
+    "@ai-sdk/openai": "^4.0.8",
     "@hugeicons/core-free-icons": "^4.1.4",
     "@hugeicons/react": "^1.1.6",
     "@supabase/ssr": "^0.6.1",

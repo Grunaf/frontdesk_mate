@@ -23,6 +23,8 @@ export function buildRouteGuestCopy(
   locale: AppLocale
 ): RouteGuestCopy {
   const { copy, transit, taxi } = content;
+  const pickupFromCopy = resolveLocalizedText(copy.taxiPickupPoint, locale);
+  const pickupFallback = resolveLocalizedText(content.locationLabel, locale);
 
   return {
     publicTitle: resolveLocalizedText(copy.publicTitle, locale),
@@ -30,9 +32,9 @@ export function buildRouteGuestCopy(
     publicPreview: resolveLocalizedText(copy.publicPreview, locale),
     publicText: resolveLocalizedText(copy.publicText, locale),
     publicGetOffAt: resolveLocalizedText(copy.publicGetOffAt, locale),
-    publicWalkToHostel: resolveLocalizedText(copy.publicWalkToHostel, locale),
+    publicWalkToHostel: '',
     taxiCost: resolveTaxiCost(copy, taxi, locale),
-    taxiPickupPoint: resolveLocalizedText(copy.taxiPickupPoint, locale),
+    taxiPickupPoint: pickupFromCopy || pickupFallback,
     fareLabel: transit.fareLabel ? resolveLocalizedText(transit.fareLabel, locale) : undefined,
     hint: content.hint ? resolveLocalizedText(content.hint, locale) : undefined,
     tips: resolveRouteTipsForGuest(content.tips, locale),

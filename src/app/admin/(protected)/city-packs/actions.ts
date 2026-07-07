@@ -54,10 +54,15 @@ function readContent(formData: FormData, packId: string): CityPackContent {
     taxiPhoneMaskInput,
     taxiPhoneFormatPreset ?? 'auto'
   );
+  const transportCurrencyRaw = String(formData.get('transportCurrencyMode') || '').trim();
+  const transportCurrencyMode =
+    transportCurrencyRaw === 'local_and_eur' ? ('local_and_eur' as const) : ('eur_only' as const);
+
   const routes = ensureEnabledCityPackRoutes(
     packId,
     enabledRoutes,
-    parseCityPackRoutesJson(String(formData.get('routesJson') || '{}'))
+    parseCityPackRoutesJson(String(formData.get('routesJson') || '{}')),
+    { transportCurrency: { mode: transportCurrencyMode } }
   );
   const warnings = parseCityPackWarningsJson(String(formData.get('warningsJson') || '{}'));
   let preTripTips: CityPackContent['preTripTips'];
@@ -74,6 +79,7 @@ function readContent(formData: FormData, packId: string): CityPackContent {
     routes: Object.keys(routes).length > 0 ? routes : undefined,
     warnings,
     preTripTips,
+    transportCurrency: { mode: transportCurrencyMode },
     recommendedTaxi: taxiName
       ? {
           name: taxiName,
@@ -84,7 +90,7 @@ function readContent(formData: FormData, packId: string): CityPackContent {
       : undefined,
   };
 
-  return mergeCityPackContentForSave(base, enabledRoutes);
+  return mergeCityPackContentForSave(base, enabledRoutes, packId);
 }
 
 export async function saveCityPackAction(formData: FormData) {

@@ -18,6 +18,10 @@ import type {
 } from '../model/types';
 
 import { createGuidedFillLanguageModel, isGuidedFillLlmConfigured } from './createGuidedFillLanguageModel';
+import {
+  logGuidedFillProviderError,
+  resolveGuidedFillProviderError,
+} from './resolveGuidedFillProviderError';
 
 export async function runGuidedRouteFill(
   input: GuidedRouteFillRequest
@@ -43,6 +47,7 @@ export async function runGuidedRouteFill(
       system: guidedRouteFillSystemPrompt(),
       prompt: buildGuidedRouteFillUserPrompt(input),
       temperature: 0.2,
+      maxRetries: 1,
     });
 
     let preview = enforceGuidedSingleScenario(modelOutputToPreview(object), rawInput);
@@ -54,8 +59,8 @@ export async function runGuidedRouteFill(
 
     return { ok: true, preview: normalizeOpenQuestions(preview) };
   } catch (error) {
-    console.error('runGuidedRouteFill:', error instanceof Error ? error.message : 'unknown');
-    return { ok: false, error: 'provider_error' };
+    logGuidedFillProviderError('runGuidedRouteFill', error);
+    return { ok: false, error: resolveGuidedFillProviderError(error) };
   }
 }
 

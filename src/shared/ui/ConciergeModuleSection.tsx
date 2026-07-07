@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react';
 import { SITE_CONFIG } from '@/shared/config';
 import { setInAppReturnTo } from '@/shared/lib';
 import { useTranslations } from '@/shared/i18n';
+import { cn } from '@/shared/lib/utils';
 import { Button } from './button';
 import { Icon } from './icon';
 
@@ -41,13 +42,21 @@ export function ConciergeModuleSection({
         {seeAllHref ? (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="ghost"
             onClick={handleSeeAll}
-            className="relative min-h-11 shrink-0 self-end max-w-[45%] px-2.5 py-2 text-sm leading-none -my-1.5"
+            className="h-auto min-h-0 max-w-[calc(45%+1rem)] shrink-0 self-end -m-2 p-2 hover:bg-transparent active:translate-y-0"
           >
-            <span className="truncate">{resolvedSeeAllLabel}</span>
-            <Icon icon={ArrowRight} className="size-3.5 shrink-0" />
+            <span
+              className={cn(
+                'inline-flex max-w-full min-w-0 items-center gap-1 truncate rounded-md border border-border',
+                'bg-background px-2.5 py-1 text-sm font-medium leading-none text-foreground',
+                'group-hover/button:bg-input/50 group-active/button:translate-y-px',
+                'dark:bg-input/30'
+              )}
+            >
+              <span className="truncate">{resolvedSeeAllLabel}</span>
+              <Icon icon={ArrowRight} className="size-3.5 shrink-0" />
+            </span>
           </Button>
         ) : null}
       </div>

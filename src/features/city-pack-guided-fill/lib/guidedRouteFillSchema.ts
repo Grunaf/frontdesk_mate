@@ -9,7 +9,6 @@ const openQuestionSchema = z.object({
     'publicText',
     'publicGetOffAt',
     'publicPreview',
-    'publicWalkToHostel',
     'tips',
     'routeMode',
   ]),
@@ -24,8 +23,21 @@ export const guidedRouteFillModelSchema = z.object({
   publicText: z.string().optional(),
   publicGetOffAt: z.string().optional(),
   publicPreview: z.string().optional(),
-  publicWalkToHostel: z.string().optional(),
   tips: z.array(z.string()).max(5).optional(),
+  metadata: z
+    .object({
+      transitDurationMin: z.number().optional(),
+      transitStops: z.number().optional(),
+      ticketKioskKm: z.number().optional(),
+      ticketDriverKm: z.number().optional(),
+      taxiEurMin: z.number().optional(),
+      taxiEurMax: z.number().optional(),
+      taxiKmMin: z.number().optional(),
+      taxiKmMax: z.number().optional(),
+      taxiDurationMin: z.number().optional(),
+      taxiDurationMax: z.number().optional(),
+    })
+    .optional(),
   openQuestions: z.array(openQuestionSchema).optional(),
 });
 
@@ -44,7 +56,6 @@ export function modelOutputToPreview(output: GuidedRouteFillModelOutput): Guided
     'publicText',
     'publicGetOffAt',
     'publicPreview',
-    'publicWalkToHostel',
   ] as const;
 
   for (const key of fields) {
@@ -61,6 +72,7 @@ export function modelOutputToPreview(output: GuidedRouteFillModelOutput): Guided
     locationLabelEn: trimOrUndefined(output.locationLabelEn),
     copy,
     tips: tips?.length ? tips : undefined,
+    metadata: output.metadata,
     openQuestions: (output.openQuestions ?? []) as GuidedRouteOpenQuestion[],
   };
 }

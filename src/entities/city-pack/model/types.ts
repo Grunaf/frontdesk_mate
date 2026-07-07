@@ -19,7 +19,12 @@ export {
 
 export type CityPackStatus = 'draft' | 'ready';
 
-export type CityPackWizardStepId = 'identity' | 'places' | 'routes' | 'preview';
+export type CityPackWizardStepId =
+  | 'identity'
+  | 'places'
+  | 'city-settings'
+  | 'routes'
+  | 'preview';
 
 export interface CityPackAdminPlace {
   id: string;
@@ -79,6 +84,15 @@ export interface CityPackContentWarnings {
   busClarification?: LocalizedText;
 }
 
+export type CityPackTransportCurrencyMode = 'eur_only' | 'local_and_eur';
+
+export interface CityPackTransportCurrency {
+  mode: CityPackTransportCurrencyMode;
+  /** Present when mode is local_and_eur (Bosnia). */
+  localCurrencyCode?: 'BAM';
+  localCurrencySymbol?: 'KM';
+}
+
 export interface CityPackContent {
   places?: CityPackAdminPlace[];
   enabledRoutes?: RouteId[];
@@ -88,6 +102,7 @@ export interface CityPackContent {
   recommendedTaxi?: RecommendedTaxi;
   warnings?: CityPackContentWarnings;
   preTripTips?: ('sundayClosure')[];
+  transportCurrency?: CityPackTransportCurrency;
 }
 
 export interface CityPackRecord {

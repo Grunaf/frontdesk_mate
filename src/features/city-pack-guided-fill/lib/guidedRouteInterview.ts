@@ -5,7 +5,6 @@ export type GuidedInterviewQuestionId =
   | 'walk-to-stop'
   | 'board-and-ride'
   | 'get-off'
-  | 'walk-to-hostel'
   | 'payment-tips'
   | 'taxi-backup'
   | 'extra-notes'
@@ -49,14 +48,6 @@ export function getGuidedInterviewQuestions(
         hint: 'Streets, signs, approximate time — only what you know.',
       },
       {
-        id: 'walk-to-hostel',
-        field: 'publicWalkToHostel',
-        required: false,
-        multiline: true,
-        label: 'Last stretch to the hostel door (optional)',
-        hint: 'Tenants can insert {address}. Landmarks are fine.',
-      },
-      {
         id: 'extra-notes',
         field: 'general',
         required: false,
@@ -90,14 +81,6 @@ export function getGuidedInterviewQuestions(
       multiline: false,
       label: 'Where should they get off?',
       hint: 'Stop name, station, or landmark.',
-    },
-    {
-      id: 'walk-to-hostel',
-      field: 'publicWalkToHostel',
-      required: false,
-      multiline: true,
-      label: 'Walk from the drop-off to the hostel',
-      hint: 'Optional; {address} can be set per tenant.',
     },
     {
       id: 'payment-tips',

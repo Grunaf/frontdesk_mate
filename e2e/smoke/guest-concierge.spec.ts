@@ -66,8 +66,10 @@ test.describe('guest concierge stay chip', () => {
     await roomMapLink.scrollIntoViewIfNeeded();
     await roomMapLink.click();
 
-    await expect(page).toHaveURL(/\/welcome\?.*step=settlement/, { timeout: config.navTimeoutMs });
-    await expect(page.getByRole('tab', { name: /Settlement|Заселение/i })).toBeVisible();
+    await expect(page).toHaveURL(/\/stay-setup\?.*step=(room|settlement)/, {
+      timeout: config.navTimeoutMs,
+    });
+    await expect(page.getByRole('heading', { name: /Find your bed|Your room|Settlement/i })).toBeVisible();
   });
 
   test('hides stay chip on arrival guide', async ({ page }) => {

@@ -19,10 +19,18 @@ function formatGuestBedValue(t: BedLocationTranslate, plan: GuestStayPlan): stri
   return String(slot);
 }
 
-export function formatBedLocationSegments(t: BedLocationTranslate, plan: GuestStayPlan): string[] {
+export type FormatBedLocationOptions = {
+  omitFloor?: boolean;
+};
+
+export function formatBedLocationSegments(
+  t: BedLocationTranslate,
+  plan: GuestStayPlan,
+  options?: FormatBedLocationOptions
+): string[] {
   const segments: string[] = [];
 
-  if (plan.floor?.label) {
+  if (!options?.omitFloor && plan.floor?.label) {
     segments.push(t('floorLabel', { floor: plan.floor.label }));
   }
 
@@ -37,6 +45,10 @@ export function formatBedLocationSegments(t: BedLocationTranslate, plan: GuestSt
   return segments;
 }
 
-export function formatBedLocationLine(t: BedLocationTranslate, plan: GuestStayPlan): string {
-  return formatBedLocationSegments(t, plan).join(' · ');
+export function formatBedLocationLine(
+  t: BedLocationTranslate,
+  plan: GuestStayPlan,
+  options?: FormatBedLocationOptions
+): string {
+  return formatBedLocationSegments(t, plan, options).join(' · ');
 }

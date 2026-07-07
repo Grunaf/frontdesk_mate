@@ -12,6 +12,7 @@ describe('resolveRouteGateMissingFields', () => {
     expect(resolveRouteGateMissingFields(undefined)).toEqual([
       'Card title',
       'Card summary',
+      'Walk to stop',
       'Step-by-step',
       'Get off at',
     ]);
@@ -23,9 +24,20 @@ describe('resolveRouteGateMissingFields', () => {
 
     expect(resolveRouteGateMissingFields(route)).toEqual([
       'Card summary',
+      'Walk to stop',
       'Step-by-step',
       'Get off at',
     ]);
+  });
+
+  it('requires Walk to stop for transit hubs', () => {
+    const route = createBlankCityPackRouteContent('airport');
+    route.copy.publicTitle = { en: 'Title' };
+    route.copy.publicSummary = { en: 'Summary' };
+    route.copy.publicText = { en: 'Steps' };
+    route.copy.publicGetOffAt = { en: 'Stop' };
+
+    expect(resolveRouteGateMissingFields(route)).toEqual(['Walk to stop']);
   });
 
   it('skips Get off at for walk-only hubs', () => {
@@ -46,7 +58,7 @@ describe('resolveRouteGateMissingFields', () => {
     });
     const blank = formatRouteGateStatus(createBlankCityPackRouteContent('airport'));
     expect(blank.statusLabel).toMatch(/^Missing:/);
-    expect(blank.shortLabel).toBe('Missing (4)');
+    expect(blank.shortLabel).toBe('Missing (5)');
   });
 });
 

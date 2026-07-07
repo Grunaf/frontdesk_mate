@@ -6,6 +6,7 @@ import { resolveGuestStayPlan, useHostelConfig, useTenant } from '@/entities/ten
 import { shouldShowPreTripLuggage } from '@/entities/tenant/lib/resolveGuestFieldPresentation';
 import { useGuestSession } from '@/features/guest-check-in';
 import { GuestExtraSheet } from '@/features/guest-services/ui/GuestExtraSheet';
+import { formatGuestExtraPriceLine } from '@/features/guest-services/lib/formatGuestExtraPriceLine';
 import {
   formatGuestStayCheckoutShort,
   formatStayReference,
@@ -58,6 +59,7 @@ export function StayEssentialsCheckoutSheet({
 }: StayEssentialsCheckoutSheetProps) {
   const t = useTranslations('components.stayEssentials');
   const checkoutT = useTranslations('components.stayEssentials.checkout');
+  const guestExtrasT = useTranslations('components.guestExtras');
   const commonT = useTranslations('domains.hostel.common');
   const tBed = useTranslations('components.findYourBed');
   const { settings } = useTenant();
@@ -86,8 +88,13 @@ export function StayEssentialsCheckoutSheet({
       return checkoutT('lateCheckoutLink');
     }
 
-    return checkoutT('lateCheckoutLinkWithPrice', { price });
-  }, [checkoutT, lateCheckoutExtra]);
+    const priceLine = formatGuestExtraPriceLine(
+      (key, values) => guestExtrasT(key, values),
+      price
+    );
+
+    return checkoutT('lateCheckoutLinkWithPrice', { price: priceLine });
+  }, [checkoutT, guestExtrasT, lateCheckoutExtra]);
 
   const personalCheckout = checkOutAt
     ? formatGuestStayCheckoutShort(checkOutAt, locale)

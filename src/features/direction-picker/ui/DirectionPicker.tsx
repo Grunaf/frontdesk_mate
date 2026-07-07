@@ -77,28 +77,39 @@ export function DirectionPicker() {
   };
 
   const tabGridClass = routeCategories.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
+  const hubCount = routeCategories.length;
+  const singleHub = hubCount === 1 ? routeCategories[0] : undefined;
 
   return (
     <div className="space-y-4">
-      <p className="text-sm font-medium text-muted-foreground">{directions('fromSubtitle')}</p>
+      {hubCount >= 2 ? (
+        <>
+          <p className="text-sm font-medium text-muted-foreground">{directions('fromSubtitle')}</p>
 
-      <Tabs value={activeCategory} onValueChange={handleCategoryChange} className="w-full">
-        <TabsList
-          variant="category"
-          className={`grid w-full items-stretch gap-1 p-1 ${tabGridClass}`}
-        >
-          {routeCategories.map(({ id, icon, labelKey }) => (
-            <TabsTrigger
-              key={id}
-              value={id}
-              className="flex-col gap-1 px-2 py-2 text-xs leading-snug sm:flex-row sm:gap-2 sm:py-1.5 sm:whitespace-nowrap"
+          <Tabs value={activeCategory} onValueChange={handleCategoryChange} className="w-full">
+            <TabsList
+              variant="category"
+              className={`grid w-full items-stretch gap-1 p-1 ${tabGridClass}`}
             >
-              <Icon icon={icon} className="h-4 w-4 shrink-0" />
-              <span className="max-w-full text-center leading-snug">{routes(labelKey)}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+              {routeCategories.map(({ id, icon, labelKey }) => (
+                <TabsTrigger
+                  key={id}
+                  value={id}
+                  className="flex-col gap-1 px-2 py-2 text-xs leading-snug sm:flex-row sm:gap-2 sm:py-1.5 sm:whitespace-nowrap"
+                >
+                  <Icon icon={icon} className="h-4 w-4 shrink-0" />
+                  <span className="max-w-full text-center leading-snug">{routes(labelKey)}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </>
+      ) : singleHub ? (
+        <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+          <Icon icon={singleHub.icon} className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span>{routes(singleHub.labelKey)}</span>
+        </div>
+      ) : null}
 
       {subRoutes.length > 0 && busClarificationQuestion && (
         <div className="animate-fadeIn space-y-4 rounded-xl border bg-muted p-4">

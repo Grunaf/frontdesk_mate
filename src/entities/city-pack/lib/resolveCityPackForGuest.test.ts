@@ -111,7 +111,28 @@ describe('resolveCityPackForGuest', () => {
     });
 
     expect(Object.keys(pack.routes).sort()).toEqual(['airport', 'bus_central']);
+    expect(pack.categories.map((category) => category.id)).toEqual(['airport', 'bus']);
     expect(pack.categories.length).toBeLessThanOrEqual(base.categories.length);
+  });
+
+  it('derives hub categories for dynamic pack when routes are guest-ready', () => {
+    const routes = buildCityPackRoutesFromCode('kotor');
+    const pack = resolveCityPackForGuest({
+      packId: 'tivat',
+      locale: 'en',
+      packStatus: 'ready',
+      enabledRoutes: ['airport', 'bus_central'],
+      content: {
+        enabledRoutes: ['airport', 'bus_central'],
+        routes: {
+          airport: routes.airport!,
+          bus_central: routes.bus_central!,
+        },
+      },
+    });
+
+    expect(Object.keys(pack.routes).sort()).toEqual(['airport', 'bus_central']);
+    expect(pack.categories.map((category) => category.id)).toEqual(['airport', 'bus']);
   });
 });
 

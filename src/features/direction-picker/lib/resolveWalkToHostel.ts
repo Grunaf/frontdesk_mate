@@ -1,6 +1,5 @@
 import type { RouteConfig } from '@/entities/hostel';
 import type { TenantSettings } from '@/entities/tenant';
-import { resolveCityDefaultWalkToHostel } from '@/entities/city-pack/lib/buildRouteGuestCopy';
 import type { AppLocale } from '@/entities/city-pack/model/types';
 import { resolveLocalizedText } from '@/entities/city-pack/model/localized';
 import { resolveRouteCopyField } from './resolveRouteCopy';
@@ -23,10 +22,6 @@ export function resolveWalkToHostelText(params: {
 
   if (settings?.arrivalWalkToHostel) {
     return resolveLocalizedText(settings.arrivalWalkToHostel, locale);
-  }
-
-  if (route.guestCopy?.publicWalkToHostel) {
-    return resolveCityDefaultWalkToHostel(route, locale, address ?? '');
   }
 
   return resolveRouteCopyField(route, 'publicWalkToHostel', routes, {

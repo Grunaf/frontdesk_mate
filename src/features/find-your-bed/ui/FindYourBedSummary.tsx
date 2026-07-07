@@ -8,13 +8,21 @@ interface FindYourBedSummaryProps {
   plan: GuestStayPlan;
   /** Inline text for compact teasers; breadcrumb for settlement header. */
   variant?: 'inline' | 'breadcrumb';
+  omitFloor?: boolean;
 }
 
-function BedLocationBreadcrumb({ plan }: { plan: GuestStayPlan }) {
+function BedLocationBreadcrumb({
+  plan,
+  omitFloor,
+}: {
+  plan: GuestStayPlan;
+  omitFloor?: boolean;
+}) {
   const t = useTranslations('components.findYourBed');
   const segments = formatBedLocationSegments(
     (key, values) => t(key, values as Record<string, string | number> | undefined),
-    plan
+    plan,
+    { omitFloor }
   );
 
   if (segments.length === 0) {
@@ -38,16 +46,22 @@ function BedLocationBreadcrumb({ plan }: { plan: GuestStayPlan }) {
   );
 }
 
-export function FindYourBedSummary({ plan, variant = 'breadcrumb' }: FindYourBedSummaryProps) {
+export function FindYourBedSummary({
+  plan,
+  variant = 'breadcrumb',
+  omitFloor,
+}: FindYourBedSummaryProps) {
   const t = useTranslations('components.findYourBed');
 
   if (!plan.bedId) {
     return null;
   }
 
+  const locationOptions = { omitFloor };
   const summaryLine = formatBedLocationLine(
     (key, values) => t(key, values as Record<string, string | number> | undefined),
-    plan
+    plan,
+    locationOptions
   );
 
   if (variant === 'inline') {
@@ -56,5 +70,5 @@ export function FindYourBedSummary({ plan, variant = 'breadcrumb' }: FindYourBed
     );
   }
 
-  return <BedLocationBreadcrumb plan={plan} />;
+  return <BedLocationBreadcrumb plan={plan} omitFloor={omitFloor} />;
 }

@@ -1,3 +1,4 @@
+import type { RouteMetadataImport } from '@/entities/city-pack/lib/patchRouteMetadataFromImport';
 import type { RouteMode } from '@/entities/hostel';
 
 export type GuidedRouteCopyFieldKey =
@@ -5,8 +6,7 @@ export type GuidedRouteCopyFieldKey =
   | 'publicSummary'
   | 'publicText'
   | 'publicGetOffAt'
-  | 'publicPreview'
-  | 'publicWalkToHostel';
+  | 'publicPreview';
 
 export type GuidedRouteFillFieldKey = GuidedRouteCopyFieldKey | 'tips';
 
@@ -22,6 +22,7 @@ export type GuidedRouteFillPreview = {
   locationLabelEn?: string;
   copy: Partial<Record<GuidedRouteCopyFieldKey, string>>;
   tips?: string[];
+  metadata?: RouteMetadataImport;
   openQuestions: GuidedRouteOpenQuestion[];
 };
 
@@ -36,6 +37,7 @@ export type GuidedRouteFillRequest = {
   field?: GuidedRouteFillFieldKey;
   existingPreview?: GuidedRouteFillPreview;
   currentRouteMode?: RouteMode;
+  transportCurrencyMode?: 'eur_only' | 'local_and_eur';
 };
 
 export type GuidedRouteFillSuccess = {

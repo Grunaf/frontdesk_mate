@@ -34,7 +34,7 @@ export function resolveStaySetupDeepLinkStep(input: {
     if (!input.contactComplete) {
       return 'contact';
     }
-    return 'settlement';
+    return input.preferSettlement ? 'room' : 'essentials';
   }
 
   return resolveFirstIncompleteStaySetupStep(input.tourismRequired, {

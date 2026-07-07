@@ -18,8 +18,8 @@ import { guidedTenantLastMileFillAction } from '@/features/tenant-arrival-guided
 
 const ERROR_LABEL: Record<string, string> = {
   unauthorized: 'Sign in to admin again.',
-  not_configured: 'Set GEMINI_API_KEY to use Guided fill.',
-  rate_limited: 'Too many requests — wait a few minutes.',
+  not_configured: 'Set OPENROUTER_API_KEY to use Guided fill.',
+  rate_limited: 'OpenRouter rate limit (429) — wait a few minutes or switch OPENROUTER_MODEL_ID.',
   invalid_input: 'Answer required questions or mark Don\'t know.',
   provider_error: 'AI request failed. Try again.',
 };

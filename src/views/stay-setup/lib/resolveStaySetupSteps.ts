@@ -1,10 +1,32 @@
-export type StaySetupStep = 'register' | 'contact' | 'settlement';
+export type StaySetupStep = 'register' | 'contact' | 'essentials' | 'room';
 
 export type StaySetupCompletion = {
   tourismRequired: boolean;
   tourismComplete: boolean;
   contactComplete: boolean;
 };
+
+const LEGACY_URL_STEP_ALIASES: Record<string, StaySetupStep> = {
+  settlement: 'room',
+};
+
+export function normalizeStaySetupUrlStep(step: string | null): StaySetupStep | null {
+  if (!step) {
+    return null;
+  }
+
+  const normalized = LEGACY_URL_STEP_ALIASES[step] ?? step;
+  if (
+    normalized === 'register' ||
+    normalized === 'contact' ||
+    normalized === 'essentials' ||
+    normalized === 'room'
+  ) {
+    return normalized;
+  }
+
+  return null;
+}
 
 export function resolveNextStaySetupStep(
   currentStep: StaySetupStep,
@@ -17,12 +39,34 @@ export function resolveNextStaySetupStep(
     return null;
   }
 
-  return steps[index + 1] ?? null;
+  for (let i = index + 1; i < steps.length; i += 1) {
+    const step = steps[i];
+    if (step === 'contact' && completion.contactComplete) {
+      continue;
+    }
+    return step;
+  }
+
+  return null;
+}
+
+export function resolvePreviousStaySetupStep(
+  currentStep: StaySetupStep,
+  tourismRequired: boolean,
+  completion: StaySetupCompletion
+): StaySetupStep | null {
+  const steps = resolveStaySetupStepOrder(tourismRequired, completion);
+  const index = steps.indexOf(currentStep);
+  if (index <= 0) {
+    return null;
+  }
+
+  return steps[index - 1] ?? null;
 }
 
 export function resolveStaySetupStepOrder(
   tourismRequired: boolean,
-  completion: StaySetupCompletion
+  _completion: StaySetupCompletion
 ): StaySetupStep[] {
   const steps: StaySetupStep[] = [];
 
@@ -30,11 +74,9 @@ export function resolveStaySetupStepOrder(
     steps.push('register');
   }
 
-  if (!completion.contactComplete) {
-    steps.push('contact');
-  }
-
-  steps.push('settlement');
+  steps.push('contact');
+  steps.push('essentials');
+  steps.push('room');
 
   return steps;
 }
@@ -51,7 +93,7 @@ export function resolveFirstIncompleteStaySetupStep(
     return 'contact';
   }
 
-  return 'settlement';
+  return 'essentials';
 }
 
 export function isStaySetupStepLocked(
@@ -72,7 +114,7 @@ export function isStaySetupStepLocked(
     return tourismRequired && !completion.tourismComplete;
   }
 
-  if (step === 'settlement') {
+  if (step === 'essentials' || step === 'room') {
     if (tourismRequired && !completion.tourismComplete) {
       return true;
     }
@@ -85,23 +127,16 @@ export function isStaySetupStepLocked(
 export function isValidStaySetupUrlStep(
   step: string | null,
   tourismRequired: boolean,
-  contactComplete: boolean
+  _contactComplete: boolean
 ): step is StaySetupStep {
-  if (!step) {
+  const normalized = normalizeStaySetupUrlStep(step);
+  if (!normalized) {
     return false;
   }
 
-  if (step === 'register') {
+  if (normalized === 'register') {
     return tourismRequired;
   }
 
-  if (step === 'contact') {
-    return !contactComplete;
-  }
-
-  if (step === 'settlement') {
-    return true;
-  }
-
-  return false;
+  return true;
 }

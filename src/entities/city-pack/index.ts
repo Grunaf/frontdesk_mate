@@ -7,9 +7,18 @@ export type {
   CityPackRouteContent,
   CityPackSelectOption,
   CityPackStatus,
+  CityPackTransportCurrency,
+  CityPackTransportCurrencyMode,
   CityPackWizardStepId,
 } from './model/types';
 export { MIN_PLACES_FOR_PACK, MAX_ROUTE_TIPS, CITY_PACK_WIZARD_STEPS, ROUTE_PRESETS } from './lib/constants';
+export {
+  addCityPackArrivalHub,
+  CITY_PACK_HUB_TYPE_OPTIONS,
+  countOfferedCityPackBusHubs,
+  listAdminCityPackHubRouteIds,
+  resolveCityPackHubAdminLabel,
+} from './lib/cityPackHubAdmin';
 export {
   contentHasLegacyCityPackPlaces,
   findLegacyCityPackPlaceKeys,
@@ -49,3 +58,8 @@ export {
   buildCityPackRouteSeedContent,
   buildCityPackRoutesFromCode,
 } from './lib/buildCityPackRouteContentFromCode';
+export {
+  applyHubApproxTravelMinutes,
+  resolveHubApproxTravelMinutes,
+  syncHubApproxTravelTime,
+} from './lib/syncHubApproxTravelTime';

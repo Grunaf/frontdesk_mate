@@ -10,7 +10,8 @@ describe('normalizeCityPackRoutes', () => {
         enabledRoutes: ['airport', 'bus_central'],
         routes,
       },
-      ['airport']
+      ['airport'],
+      'sarajevo'
     );
 
     expect(Object.keys(merged.routes ?? {})).toEqual(['airport']);
@@ -125,7 +126,7 @@ describe('normalizeCityPackRoutes', () => {
       },
     })!;
 
-    const merged = mergeCityPackContentForSave({ routes }, ['airport']);
+    const merged = mergeCityPackContentForSave({ routes }, ['airport'], 'tivat');
     expect(merged.routes?.airport?.tips).toEqual([{ en: 'Buy ticket at kiosk' }]);
   });
 });

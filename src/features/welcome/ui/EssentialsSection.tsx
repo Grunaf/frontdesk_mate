@@ -80,16 +80,24 @@ export function EssentialsSection({
   const visibleUtilities = limit != null ? utilities.slice(0, limit) : utilities;
 
   return (
-    <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="flex w-max snap-x snap-mandatory gap-2 pr-4">
-        {visibleUtilities.map((utility) => (
-          <EssentialsChip
-            key={utility.id}
-            recommendation={utility}
-            label={resolveUtilityShortLabel(utility, t)}
-            openInMapsLabel={openInMapsLabel}
-          />
-        ))}
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          {t('essentials.title')}
+        </h3>
+        <p className="text-muted-foreground text-xs">{t('essentials.subtitle')}</p>
+      </div>
+      <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max snap-x snap-mandatory gap-2 pr-4">
+          {visibleUtilities.map((utility) => (
+            <EssentialsChip
+              key={utility.id}
+              recommendation={utility}
+              label={resolveUtilityShortLabel(utility, t)}
+              openInMapsLabel={openInMapsLabel}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

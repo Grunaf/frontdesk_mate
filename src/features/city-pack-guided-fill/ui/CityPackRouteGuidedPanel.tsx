@@ -1,24 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RouteId, RouteMode } from '@/entities/hostel';
 import type { CityPackRouteContent } from '@/entities/city-pack/model/types';
 import { cn } from '@/shared/lib/utils';
+import { getGuidedInterviewQuestions, type GuidedInterviewQuestion } from '../lib/guidedRouteInterview';
+import { buildExternalGuidedRouteFillClipboard } from '../lib/buildExternalGuidedRouteFillClipboard';
 import {
-  canGenerateFromInterview,
-  compileInterviewToSourceText,
-  getGuidedInterviewQuestions,
-  getInterviewProgress,
-  isInterviewQuestionResolved,
-  type GuidedInterviewAnswerMap,
-  type GuidedInterviewQuestion,
-} from '../lib/guidedRouteInterview';
+  compileGuidedRouteNotesToSourceText,
+  guidedRouteNotesMeetMinimum,
+} from '../lib/compileGuidedRouteNotes';
+import { buildGuidedRoutePreviewFromPastedJson } from '../lib/buildGuidedRoutePreviewFromPastedJson';
 import { guidedRouteFillFieldLabel } from '../lib/buildGuidedRouteFillPrompt';
 import {
   isGuidedPreviewGateReady,
   resolveRouteAfterGuidedPreview,
 } from '../lib/guidedPreviewGate';
 import { guidedRouteFillAction } from '../api/guidedRouteFillAction';
+import { getGuidedFillLlmConfiguredAction } from '../api/getGuidedFillLlmConfiguredAction';
 import type {
   GuidedRouteFillFieldKey,
   GuidedRouteFillPreview,
@@ -27,10 +26,11 @@ import type {
 
 const ERROR_LABEL: Record<string, string> = {
   unauthorized: 'Sign in to admin again.',
-  not_configured: 'Set GEMINI_API_KEY or AI_GATEWAY_API_KEY + AI_GATEWAY_BASE_URL.',
-  rate_limited: 'Too many requests — wait a few minutes.',
-  invalid_input: 'Answer required questions or mark Don\'t know, then try again.',
-  provider_error: 'AI request failed. Try again.',
+  not_configured: 'API key not set — use Copy prompt + Paste JSON instead.',
+  rate_limited: 'OpenRouter rate limit (429) — wait or use Paste JSON.',
+  invalid_input: 'Add enough notes (at least a few sentences), then try again.',
+  invalid_json: 'Could not parse JSON — check the model returned one object only, no markdown fences.',
+  provider_error: 'AI request failed. Try Paste JSON from your chat.',
 };
 
 function PreviewField({
@@ -38,93 +38,64 @@ function PreviewField({
   value,
   onRegenerate,
   busy,
+  showRegenerate,
 }: {
   label: string;
   value?: string;
   onRegenerate: () => void;
   busy: boolean;
+  showRegenerate: boolean;
 }) {
   return (
     <div className="rounded-md border bg-background px-2.5 py-2">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onRegenerate}
-          className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
-        >
-          Regenerate
-        </button>
+        {showRegenerate ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onRegenerate}
+            className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
+          >
+            Regenerate (API)
+          </button>
+        ) : null}
       </div>
       <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{value?.trim() || '—'}</p>
     </div>
   );
 }
 
-function InterviewQuestionRow({
+function QuestionNavItem({
   question,
-  answer,
-  onChange,
-  onDontKnow,
+  active,
+  onSelect,
 }: {
   question: GuidedInterviewQuestion;
-  answer: GuidedInterviewAnswerMap[typeof question.id];
-  onChange: (value: string) => void;
-  onDontKnow: () => void;
+  active: boolean;
+  onSelect: () => void;
 }) {
-  const isUnknown = answer?.status === 'unknown';
-  const value = isUnknown ? '' : (answer?.value ?? '');
-
   return (
-    <div
+    <button
+      type="button"
+      onClick={onSelect}
       className={cn(
-        'space-y-1.5 rounded-md border px-2.5 py-2',
-        question.required && !isInterviewQuestionResolved(question, answer) && 'border-amber-200 bg-amber-50/40',
-        isUnknown && 'border-dashed bg-muted/20'
+        'w-full rounded-md border px-2 py-1.5 text-left transition-colors',
+        active
+          ? 'border-violet-400 bg-violet-100/80'
+          : 'border-transparent bg-background/60 hover:border-violet-200 hover:bg-background'
       )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 space-y-0.5">
-          <p className="text-xs font-medium text-foreground">
-            {question.label}
-            {question.required ? (
-              <span className="ml-1 text-[10px] font-normal text-amber-800">Required</span>
-            ) : null}
-          </p>
-          {question.hint ? (
-            <p className="text-[11px] text-muted-foreground">{question.hint}</p>
-          ) : null}
-        </div>
+      <p className="text-[11px] font-medium leading-snug text-foreground">
+        {question.label}
         {question.required ? (
-          <button
-            type="button"
-            onClick={onDontKnow}
-            className={cn(
-              'shrink-0 rounded border px-2 py-0.5 text-[10px] font-medium',
-              isUnknown
-                ? 'border-amber-400 bg-amber-100 text-amber-950'
-                : 'text-muted-foreground hover:bg-muted/50'
-            )}
-          >
-            Don&apos;t know
-          </button>
+          <span className="ml-1 text-[9px] font-normal text-amber-800">· cover</span>
         ) : null}
-      </div>
-      {isUnknown ? (
-        <p className="text-[11px] text-muted-foreground">
-          Marked unknown — field stays empty until you know.
-        </p>
-      ) : (
-        <textarea
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          rows={question.multiline ? 3 : 1}
-          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
-          placeholder={question.required ? 'Type what you remember…' : 'Optional'}
-        />
-      )}
-    </div>
+      </p>
+      {question.hint ? (
+        <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{question.hint}</p>
+      ) : null}
+    </button>
   );
 }
 
@@ -134,22 +105,28 @@ export function CityPackRouteGuidedPanel({
   hubLabel,
   route,
   onApply,
+  transportCurrencyMode = 'eur_only',
 }: {
   packId: string;
   routeId: RouteId;
   hubLabel: string;
   route: CityPackRouteContent;
   onApply: (next: CityPackRouteContent) => void;
+  transportCurrencyMode?: 'eur_only' | 'local_and_eur';
 }) {
   const [routeMode, setRouteMode] = useState<RouteMode>(route.routeMode ?? 'transit');
-  const [answers, setAnswers] = useState<GuidedInterviewAnswerMap>({});
-  const [extraPaste, setExtraPaste] = useState('');
-  const [showExtraPaste, setShowExtraPaste] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
+  const [pastedJson, setPastedJson] = useState('');
   const [followUp, setFollowUp] = useState<Record<string, string>>({});
   const [skippedFollowUpIds, setSkippedFollowUpIds] = useState<string[]>([]);
   const [preview, setPreview] = useState<GuidedRouteFillPreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copyHint, setCopyHint] = useState<string | null>(null);
+  const [llmConfigured, setLlmConfigured] = useState(false);
+
+  const notesRef = useRef<HTMLTextAreaElement>(null);
 
   const questions = useMemo(
     () => getGuidedInterviewQuestions(routeMode, hubLabel),
@@ -157,25 +134,23 @@ export function CityPackRouteGuidedPanel({
   );
 
   useEffect(() => {
-    setAnswers({});
+    void getGuidedFillLlmConfiguredAction().then(setLlmConfigured);
+  }, []);
+
+  useEffect(() => {
+    setNotes('');
     setPreview(null);
     setFollowUp({});
     setSkippedFollowUpIds([]);
-  }, [routeMode, routeId]);
+    setPastedJson('');
+    setActiveQuestionId(questions[0]?.id ?? null);
+  }, [routeMode, routeId, questions]);
 
-  const progress = useMemo(() => getInterviewProgress(questions, answers), [questions, answers]);
-  const canGenerate = canGenerateFromInterview(questions, answers);
+  const canProceed = guidedRouteNotesMeetMinimum(notes, hubLabel, routeMode);
 
   const compiledSource = useMemo(
-    () =>
-      compileInterviewToSourceText({
-        hubLabel,
-        routeMode,
-        questions,
-        answers,
-        extraNotes: extraPaste,
-      }),
-    [hubLabel, routeMode, questions, answers, extraPaste]
+    () => compileGuidedRouteNotesToSourceText({ hubLabel, routeMode, notes }),
+    [hubLabel, routeMode, notes]
   );
 
   const visibleFollowUps = useMemo(() => {
@@ -183,25 +158,53 @@ export function CityPackRouteGuidedPanel({
     return list.filter((q) => !skippedFollowUpIds.includes(q.id));
   }, [preview, skippedFollowUpIds]);
 
-  const patchAnswer = (id: GuidedInterviewQuestion['id'], value: string) => {
-    setAnswers((current) => ({
-      ...current,
-      [id]: {
-        status: 'answered',
-        value,
-      },
-    }));
+  const focusNotes = () => {
+    notesRef.current?.focus();
   };
 
-  const markDontKnow = (id: GuidedInterviewQuestion['id']) => {
-    setAnswers((current) => ({
-      ...current,
-      [id]: { status: 'unknown', value: '' },
-    }));
+  const selectQuestion = (question: GuidedInterviewQuestion) => {
+    setActiveQuestionId(question.id);
+    focusNotes();
+  };
+
+  const copyExternalPrompt = async () => {
+    if (!canProceed) {
+      setError(ERROR_LABEL.invalid_input);
+      return;
+    }
+    setError(null);
+    const text = buildExternalGuidedRouteFillClipboard({
+      packId,
+      routeId,
+      hubLabel,
+      routeMode,
+      notes,
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyHint('Prompt copied — paste into Gemini (or any chat), then paste JSON below.');
+      window.setTimeout(() => setCopyHint(null), 5000);
+    } catch {
+      setError('Could not copy to clipboard.');
+    }
+  };
+
+  const applyPastedJson = () => {
+    if (!canProceed) {
+      setError(ERROR_LABEL.invalid_input);
+      return;
+    }
+    setError(null);
+    const next = buildGuidedRoutePreviewFromPastedJson(pastedJson, compiledSource);
+    if (!next) {
+      setError(ERROR_LABEL.invalid_json);
+      return;
+    }
+    setPreview(next);
   };
 
   const runGenerate = async (mode: 'full' | 'single_field', field?: GuidedRouteFillFieldKey) => {
-    if (mode === 'full' && !canGenerate) {
+    if (mode === 'full' && !canProceed) {
       setError(ERROR_LABEL.invalid_input);
       return;
     }
@@ -219,6 +222,7 @@ export function CityPackRouteGuidedPanel({
       field,
       existingPreview: preview ?? undefined,
       currentRouteMode: routeMode,
+      transportCurrencyMode,
     });
 
     setBusy(false);
@@ -231,21 +235,26 @@ export function CityPackRouteGuidedPanel({
     setPreview(result.preview);
   };
 
+  const guidedContent = useMemo(
+    () => ({ transportCurrency: { mode: transportCurrencyMode } }),
+    [transportCurrencyMode]
+  );
+
   const gateStatus = preview
-    ? isGuidedPreviewGateReady(packId, routeId, route, preview)
+    ? isGuidedPreviewGateReady(packId, routeId, route, preview, guidedContent)
     : null;
 
   const applyPreview = (force = false) => {
     if (!preview) {
       return;
     }
-    const status = isGuidedPreviewGateReady(packId, routeId, route, preview);
+    const status = isGuidedPreviewGateReady(packId, routeId, route, preview, guidedContent);
     if (!status.ready && !force) {
       setError(`Publish gate not ready: ${status.statusLabel}. Use Apply anyway or fix in Manual.`);
       return;
     }
     setError(null);
-    onApply(resolveRouteAfterGuidedPreview(packId, routeId, route, preview));
+    onApply(resolveRouteAfterGuidedPreview(packId, routeId, route, preview, guidedContent));
   };
 
   const copyFields: GuidedRouteFillFieldKey[] = [
@@ -254,7 +263,6 @@ export function CityPackRouteGuidedPanel({
     'publicText',
     'publicGetOffAt',
     'publicPreview',
-    'publicWalkToHostel',
   ];
 
   const openFollowUpCount = visibleFollowUps.length;
@@ -264,7 +272,8 @@ export function CityPackRouteGuidedPanel({
       <div className="space-y-0.5">
         <p className="text-xs font-medium text-foreground">Guided fill</p>
         <p className="text-[11px] text-muted-foreground">
-          Answer from memory — we format guest copy. We won&apos;t invent lines, stops, or prices.
+          Write notes in one box (use topics as a checklist), copy the prompt into your own AI, paste
+          JSON back — or use API if configured.
         </p>
       </div>
 
@@ -294,52 +303,54 @@ export function CityPackRouteGuidedPanel({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
-        <span>
-          Required: {progress.resolvedRequired}/{progress.requiredTotal} answered
-        </span>
-        {progress.optionalTotal > 0 ? (
-          <span>
-            Optional tips: {progress.optionalAnswered}/{progress.optionalTotal}
-          </span>
-        ) : null}
-      </div>
+      <div className="grid gap-3 md:grid-cols-[minmax(0,12rem)_1fr]">
+        <div className="space-y-1">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Topics
+          </p>
+          <div className="flex max-h-64 flex-col gap-1 overflow-y-auto md:max-h-none">
+            {questions.map((question) => (
+              <QuestionNavItem
+                key={question.id}
+                question={question}
+                active={activeQuestionId === question.id}
+                onSelect={() => selectQuestion(question)}
+              />
+            ))}
+          </div>
+        </div>
 
-      <div className="space-y-2">
-        {questions.map((question) => (
-          <InterviewQuestionRow
-            key={question.id}
-            question={question}
-            answer={answers[question.id]}
-            onChange={(value) => patchAnswer(question.id, value)}
-            onDontKnow={() => markDontKnow(question.id)}
-          />
-        ))}
-      </div>
-
-      <div className="space-y-1">
-        <button
-          type="button"
-          onClick={() => setShowExtraPaste((open) => !open)}
-          className="text-[11px] font-medium text-violet-900 underline-offset-2 hover:underline"
-        >
-          {showExtraPaste ? 'Hide' : 'Add'} extra notes (optional paste)
-        </button>
-        {showExtraPaste ? (
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-muted-foreground">Your notes (one place)</p>
           <textarea
-            value={extraPaste}
-            onChange={(event) => setExtraPaste(event.target.value)}
-            rows={3}
+            ref={notesRef}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            rows={10}
             className="w-full rounded-md border bg-background px-2.5 py-2 text-sm"
-            placeholder="Only if something did not fit above — same no-invent rules."
+            placeholder="Cover the topics on the left — only facts you know. No invented line numbers, stops, or prices."
           />
-        ) : null}
+          {!canProceed ? (
+            <p className="text-[11px] text-amber-800">Add a bit more detail before copy or paste.</p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="space-y-1.5 rounded-md border border-dashed border-violet-300/80 bg-background/80 p-2.5">
+        <p className="text-[11px] font-medium text-foreground">Paste AI JSON</p>
+        <textarea
+          value={pastedJson}
+          onChange={(event) => setPastedJson(event.target.value)}
+          rows={5}
+          className="w-full rounded-md border bg-background px-2.5 py-2 font-mono text-[11px]"
+          placeholder='{ "publicTitle": "...", "publicText": "...", ... }'
+        />
       </div>
 
       {openFollowUpCount > 0 ? (
         <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/50 p-2.5">
           <p className="text-[11px] font-medium text-amber-950">
-            Still unclear ({openFollowUpCount}) — answer if you can
+            Still unclear ({openFollowUpCount}) — add to notes and re-copy, or answer here for API
           </p>
           {visibleFollowUps.map((question: GuidedRouteOpenQuestion) => (
             <div key={question.id} className="space-y-1">
@@ -351,40 +362,60 @@ export function CityPackRouteGuidedPanel({
                     setFollowUp((current) => ({ ...current, [question.id]: event.target.value }))
                   }
                   className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1 text-sm"
-                  placeholder="Answer or Don't know"
+                  placeholder="Answer or skip"
                 />
                 <button
                   type="button"
                   onClick={() => setSkippedFollowUpIds((ids) => [...ids, question.id])}
                   className="shrink-0 rounded-md border px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/50"
                 >
-                  Skip for now
+                  Skip
                 </button>
               </div>
             </div>
           ))}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => runGenerate('full')}
-            className="rounded-md border bg-background px-2 py-1 text-[11px] font-medium hover:bg-muted/50 disabled:opacity-50"
-          >
-            Update preview
-          </button>
+          {llmConfigured ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => runGenerate('full')}
+              className="rounded-md border bg-background px-2 py-1 text-[11px] font-medium hover:bg-muted/50 disabled:opacity-50"
+            >
+              Update preview (API)
+            </button>
+          ) : null}
         </div>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          disabled={busy || !canGenerate}
-          onClick={() => runGenerate('full')}
+          disabled={busy || !canProceed}
+          onClick={() => void copyExternalPrompt()}
           className={cn(
             'rounded-md bg-violet-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-800 disabled:opacity-50'
           )}
         >
-          {busy ? 'Working…' : 'Generate preview'}
+          Copy prompt for external AI
         </button>
+        <button
+          type="button"
+          disabled={busy || !pastedJson.trim()}
+          onClick={applyPastedJson}
+          className="rounded-md border border-violet-400 bg-background px-3 py-1.5 text-xs font-medium text-violet-900 hover:bg-violet-50 disabled:opacity-50"
+        >
+          Apply pasted JSON
+        </button>
+        {llmConfigured ? (
+          <button
+            type="button"
+            disabled={busy || !canProceed}
+            onClick={() => runGenerate('full')}
+            className="rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
+          >
+            {busy ? 'Working…' : 'Generate preview (API)'}
+          </button>
+        ) : null}
         {preview ? (
           <>
             <button
@@ -409,12 +440,7 @@ export function CityPackRouteGuidedPanel({
         ) : null}
       </div>
 
-      {!canGenerate ? (
-        <p className="text-[11px] text-amber-800">
-          Fill each required question or use Don&apos;t know — then Generate preview.
-        </p>
-      ) : null}
-
+      {copyHint ? <p className="text-[11px] text-violet-900">{copyHint}</p> : null}
       {error ? <p className="text-[11px] text-red-700">{error}</p> : null}
 
       {preview ? (
@@ -436,6 +462,7 @@ export function CityPackRouteGuidedPanel({
               label={guidedRouteFillFieldLabel(field)}
               value={preview.copy[field as keyof typeof preview.copy]}
               busy={busy}
+              showRegenerate={llmConfigured}
               onRegenerate={() => runGenerate('single_field', field)}
             />
           ))}
@@ -443,6 +470,7 @@ export function CityPackRouteGuidedPanel({
             label={guidedRouteFillFieldLabel('tips')}
             value={preview.tips?.join('\n')}
             busy={busy}
+            showRegenerate={llmConfigured}
             onRegenerate={() => runGenerate('single_field', 'tips')}
           />
         </div>

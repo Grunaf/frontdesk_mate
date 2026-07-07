@@ -115,7 +115,7 @@ function ArrivalTransportFieldsBody({
   };
 
   const applyCityTemplate = (routeId: RouteId) => {
-    const template = readCityRouteWalkTemplate(cityRoutes, routeId);
+    const template = readCityRouteWalkTemplate(cityPackId, routeId);
     if (template) {
       updateWalkByRoute(routeId, template);
     }
@@ -124,8 +124,8 @@ function ArrivalTransportFieldsBody({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Last mile is <strong>hostel-specific</strong> and required before go-live. City pack walk
-        text is an editorial template — pre-fill from it, then adjust for this building.
+        Last mile is <strong>hostel-specific</strong> and required before go-live. Optional starters
+        come from built-in city i18n — adjust for this building.
       </p>
 
       <AdminEditingLocaleSwitcher label="Editing language" />
@@ -144,8 +144,8 @@ function ArrivalTransportFieldsBody({
           onClick={seedFromCityTemplates}
           className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
         >
-          Pre-fill {emptyRouteCount} empty route{emptyRouteCount === 1 ? '' : 's'} from city
-          templates
+          Pre-fill {emptyRouteCount} empty route{emptyRouteCount === 1 ? '' : 's'} from city i18n
+          starters
         </button>
       ) : null}
 
@@ -166,8 +166,8 @@ function ArrivalTransportFieldsBody({
           <div className="space-y-2">
             {enabledRoutes.map((routeId) => {
               const preset = ROUTE_PRESETS.find((route) => route.id === routeId);
-              const cityDefault = resolveCityDefaultWalkLabel(cityRoutes, routeId, locale);
-              const hasTemplate = Boolean(readCityRouteWalkTemplate(cityRoutes, routeId));
+              const cityDefault = resolveCityDefaultWalkLabel(cityPackId, routeId, locale);
+              const hasTemplate = Boolean(readCityRouteWalkTemplate(cityPackId, routeId));
               const editMode = editModeByRoute[routeId] ?? 'manual';
               const cityContext = buildTenantRouteCityContextForRouteId(cityRoutes, routeId);
 
@@ -207,7 +207,7 @@ function ArrivalTransportFieldsBody({
                     </div>
                     {cityDefault ? (
                       <AdminLocalizedPreview
-                        label="City template"
+                        label="City i18n starter"
                         value={cityDefault}
                         locale={locale}
                       />
@@ -219,7 +219,7 @@ function ArrivalTransportFieldsBody({
                       onClick={() => applyCityTemplate(routeId)}
                       className="mb-2 text-xs font-medium text-primary hover:underline"
                     >
-                      Use city template
+                      Use i18n starter
                     </button>
                   ) : null}
                   {editMode === 'guided' ? (

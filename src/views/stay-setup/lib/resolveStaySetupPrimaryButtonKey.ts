@@ -4,7 +4,8 @@ import { resolveNextStaySetupStep, type StaySetupCompletion } from './resolveSta
 const STEP_BUTTON_KEYS: Record<StaySetupStep, string> = {
   register: 'register.actionButton',
   contact: 'contact.actionButton',
-  settlement: 'settlement.actionButton',
+  essentials: 'essentials.actionButton',
+  room: 'settlement.actionButton',
 };
 
 const CHECK_IN_CTA_KEY = 'guestCheckIn.checkInToContinue';

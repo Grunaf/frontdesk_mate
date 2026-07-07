@@ -6,6 +6,10 @@ import {
   isGuidedFillLlmConfigured,
 } from '@/features/city-pack-guided-fill/lib/createGuidedFillLanguageModel';
 import {
+  logGuidedFillProviderError,
+  resolveGuidedFillProviderError,
+} from '@/features/city-pack-guided-fill/lib/resolveGuidedFillProviderError';
+import {
   buildTenantLastMileUserPrompt,
   tenantLastMileSystemPrompt,
 } from './buildTenantLastMilePrompt';
@@ -40,13 +44,14 @@ export async function runGuidedTenantLastMileFill(
       system: tenantLastMileSystemPrompt(),
       prompt: buildTenantLastMileUserPrompt(input),
       temperature: 0.2,
+      maxRetries: 1,
     });
 
     const preview = modelOutputToTenantLastMilePreview(object);
     return { ok: true, preview: normalizeOpenQuestions(preview) };
   } catch (error) {
-    console.error('runGuidedTenantLastMileFill:', error instanceof Error ? error.message : 'unknown');
-    return { ok: false, error: 'provider_error' };
+    logGuidedFillProviderError('runGuidedTenantLastMileFill', error);
+    return { ok: false, error: resolveGuidedFillProviderError(error) };
   }
 }
 

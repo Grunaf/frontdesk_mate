@@ -15,7 +15,7 @@ import { ArrowRight } from 'lucide-react';
 import { FindYourBedSummary } from './FindYourBedSummary';
 
 /** Deep link step for bed map / settlement when stay-setup gates may apply. */
-export function useStaySetupBedMapStep(): 'register' | 'contact' | 'settlement' {
+export function useStaySetupBedMapStep(): 'register' | 'contact' | 'essentials' | 'room' {
   const { settings, slug } = useTenant();
   const isRegistered = useIsGuestRegistered();
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
@@ -55,7 +55,7 @@ export function useStaySetupBedMapStep(): 'register' | 'contact' | 'settlement' 
 }
 
 /** @deprecated Use useStaySetupBedMapStep */
-export function useWelcomeBedMapStep(): 'register' | 'contact' | 'settlement' {
+export function useWelcomeBedMapStep(): 'register' | 'contact' | 'essentials' | 'room' {
   return useStaySetupBedMapStep();
 }
 

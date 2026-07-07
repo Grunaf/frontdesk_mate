@@ -220,3 +220,20 @@ export function buildCityPackRouteSeedContent(packId: CodeCityPackId): Pick<
 export function isCodeCityPackRouteSeedAvailable(packId: string): packId is CodeCityPackId {
   return isCodeCityPackId(packId);
 }
+
+/** Static i18n walk starter for tenant pre-fill — not editable in city pack admin. */
+export function readCodeI18nRouteWalkTemplate(
+  packId: string,
+  routeId: RouteId
+): LocalizedText | undefined {
+  if (!isCodeCityPackRouteSeedAvailable(packId)) {
+    return undefined;
+  }
+
+  const walk = buildCityPackRoutesFromCode(packId)[routeId]?.copy.publicWalkToHostel;
+  if (!walk?.en?.trim() && !walk?.ru?.trim()) {
+    return undefined;
+  }
+
+  return walk;
+}

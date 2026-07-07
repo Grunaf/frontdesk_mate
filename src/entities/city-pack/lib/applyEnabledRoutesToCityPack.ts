@@ -1,4 +1,5 @@
-import type { CategoryConfig, CityPack, RouteConfig, RouteId } from '@/entities/hostel';
+import type { CityPack, RouteConfig, RouteId } from '@/entities/hostel';
+import { resolveGuestRouteCategories } from './resolveGuestRouteCategories';
 
 export function applyEnabledRoutesToCityPack(
   pack: CityPack,
@@ -8,7 +9,6 @@ export function applyEnabledRoutesToCityPack(
     return { ...pack, routes: {}, categories: [] };
   }
 
-  const enabledSet = new Set<RouteId>(enabledRoutes);
   const routes: Partial<Record<RouteId, RouteConfig>> = {};
 
   for (const routeId of enabledRoutes) {
@@ -18,16 +18,11 @@ export function applyEnabledRoutesToCityPack(
     }
   }
 
-  const activeRouteList = Object.values(routes).filter(
-    (route): route is RouteConfig => route != null
-  );
-  const activeCategories = pack.categories.filter((category) =>
-    activeRouteList.some((route) => route.category === category.id)
-  );
+  const categories = resolveGuestRouteCategories(pack.categories, enabledRoutes, routes);
 
   return {
     ...pack,
     routes,
-    categories: activeCategories,
+    categories,
   };
 }

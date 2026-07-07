@@ -2,18 +2,18 @@
 
 import { useState } from 'react';
 import type { RouteId } from '@/entities/hostel';
-import type { CityPackRouteContent } from '@/entities/city-pack/model/types';
+import type { CityPackRouteContent, CityPackTransportCurrencyMode, LocalizedText } from '@/entities/city-pack/model/types';
 import {
   copyRouteEnToRu,
   isLocalizedFilled,
 } from '@/entities/city-pack/lib/resolveLocalizedLocaleStatus';
 import { formatRouteGateStatus, MAX_ROUTE_TIPS, ROUTE_PRESETS } from '@/entities/city-pack';
-import type { LocalizedText } from '@/entities/city-pack/model/types';
 import { cn } from '@/shared/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { Icon } from '@/shared/ui';
 import { AdminLocalizedInput } from './AdminLocalizedInput';
 import { CityPackRouteGuidedPanel } from '@/features/city-pack-guided-fill';
+import { CityPackRouteMetadataFields } from './CityPackRouteMetadataFields';
 
 function CollapsibleBlock({
   title,
@@ -55,20 +55,28 @@ function hasRouteTips(route: CityPackRouteContent): boolean {
   return Boolean(route.tips?.some((tip) => isLocalizedFilled(tip, 'en') || isLocalizedFilled(tip, 'ru')));
 }
 
-function hasOptionalGuestCopy(route: CityPackRouteContent): boolean {
+function hasOptionalTipsContent(route: CityPackRouteContent): boolean {
   return (
     hasRouteTips(route) ||
-    isLocalizedFilled(route.copy.publicPreview, 'en') ||
-    isLocalizedFilled(route.copy.publicPreview, 'ru') ||
-    isLocalizedFilled(route.copy.publicWalkToHostel, 'en') ||
-    isLocalizedFilled(route.copy.publicWalkToHostel, 'ru') ||
-    isLocalizedFilled(route.copy.taxiCost, 'en') ||
-    isLocalizedFilled(route.copy.taxiCost, 'ru') ||
-    isLocalizedFilled(route.copy.taxiPickupPoint, 'en') ||
-    isLocalizedFilled(route.copy.taxiPickupPoint, 'ru') ||
     isLocalizedFilled(route.hint, 'en') ||
     isLocalizedFilled(route.hint, 'ru')
   );
+}
+
+function tipsSectionSummary(route: CityPackRouteContent): string {
+  const tipCount = route.tips?.filter(
+    (tip) => isLocalizedFilled(tip, 'en') || isLocalizedFilled(tip, 'ru')
+  ).length;
+  if (tipCount) {
+    return tipCount === 1 ? '1 tip' : `${tipCount} tips`;
+  }
+  if (
+    isLocalizedFilled(route.hint, 'en') ||
+    isLocalizedFilled(route.hint, 'ru')
+  ) {
+    return 'Hub hint set';
+  }
+  return 'Optional';
 }
 
 type EditorMode = 'manual' | 'guided';
@@ -80,19 +88,22 @@ export function CityPackRouteEditor({
   onChange,
   embedded = false,
   showHubHint = false,
+  transportCurrencyMode = 'eur_only',
 }: {
   packId: string;
   routeId: RouteId;
   route: CityPackRouteContent;
   onChange: (next: CityPackRouteContent) => void;
   embedded?: boolean;
-  /** Both bus hubs enabled — show per-hub hint field on bus routes. */
   showHubHint?: boolean;
+  transportCurrencyMode?: CityPackTransportCurrencyMode;
 }) {
   const [editorMode, setEditorMode] = useState<EditorMode>('manual');
   const preset = ROUTE_PRESETS.find((entry) => entry.id === routeId);
   const gateReady = formatRouteGateStatus(route).ready;
-  const getOffAtRequired = route.routeMode !== 'walk_only';
+  const isWalkOnly = route.routeMode === 'walk_only';
+  const getOffAtRequired = !isWalkOnly;
+  const walkToStopRequired = !isWalkOnly;
   const hubHintEditable =
     showHubHint && (routeId === 'bus_central' || routeId === 'bus_istochno');
 
@@ -184,12 +195,26 @@ export function CityPackRouteEditor({
           routeId={routeId}
           hubLabel={preset?.label ?? routeId}
           route={route}
+          transportCurrencyMode={transportCurrencyMode}
           onApply={onChange}
         />
       ) : null}
 
       {editorMode === 'manual' ? (
         <>
+      <AdminLocalizedInput
+        label="Hub display name"
+        hint="Admin list, drill-down title, and guest taxi pickup. Not the arrival card title."
+        value={route.locationLabel}
+        onChange={(locationLabel) => patch({ locationLabel })}
+      />
+
+      <CityPackRouteMetadataFields
+        route={route}
+        currencyMode={transportCurrencyMode}
+        onChange={onChange}
+      />
+
       <div className="space-y-2.5 rounded-md border border-amber-200/80 bg-amber-50/30 p-3">
         <div className="space-y-0.5">
           <p className="text-[11px] font-medium uppercase tracking-wide text-amber-900">
@@ -197,7 +222,7 @@ export function CityPackRouteEditor({
           </p>
           <p className="text-[11px] text-muted-foreground">
             Fill these in English. RU is optional and can wait.
-            {route.routeMode === 'walk_only' ? ' Walk-only hubs skip Get off at.' : null}
+            {isWalkOnly ? ' Walk-only hubs skip Walk to stop and Get off at.' : null}
           </p>
         </div>
         <AdminLocalizedInput
@@ -214,6 +239,16 @@ export function CityPackRouteEditor({
           rows={2}
           gateRequired
         />
+        {!isWalkOnly ? (
+          <AdminLocalizedInput
+            label="Walk to stop"
+            value={route.copy.publicPreview}
+            onChange={(publicPreview) => patchCopy({ publicPreview })}
+            multiline
+            rows={2}
+            gateRequired={walkToStopRequired}
+          />
+        ) : null}
         <AdminLocalizedInput
           label="Step-by-step"
           value={route.copy.publicText}
@@ -222,41 +257,32 @@ export function CityPackRouteEditor({
           rows={3}
           gateRequired
         />
+        {!isWalkOnly ? (
         <AdminLocalizedInput
           label="Get off at"
           value={route.copy.publicGetOffAt}
           onChange={(publicGetOffAt) => patchCopy({ publicGetOffAt })}
           gateRequired={getOffAtRequired}
         />
+        ) : null}
       </div>
 
       {!gateReady ? (
         <p className="text-[11px] text-muted-foreground">
-          Optional guest copy unlocks when required EN is Ready.
+          Tips unlock when required EN is Ready.
         </p>
       ) : null}
 
       {gateReady ? (
         <CollapsibleBlock
-          title="More guest copy (optional)"
-          summary="Walk hints, taxi text, hub hint"
-          defaultOpen={hasOptionalGuestCopy(route)}
+          title="Good to know (optional)"
+          summary={tipsSectionSummary(route)}
+          defaultOpen={hasOptionalTipsContent(route)}
         >
-          <AdminLocalizedInput
-            label="Walk to stop"
-            value={route.copy.publicPreview}
-            onChange={(publicPreview) => patchCopy({ publicPreview })}
-            multiline
-            rows={2}
-          />
-          <AdminLocalizedInput
-            label="Walk to hostel (default)"
-            hint="{address} is replaced with tenant address."
-            value={route.copy.publicWalkToHostel}
-            onChange={(publicWalkToHostel) => patchCopy({ publicWalkToHostel })}
-            multiline
-            rows={2}
-          />
+          <p className="text-[11px] text-muted-foreground">
+            Short tips shown under the step-by-step modal (max {MAX_ROUTE_TIPS}). Not required for
+            publish.
+          </p>
           {hubHintEditable ? (
             <AdminLocalizedInput
               label="Hub hint"
@@ -264,27 +290,7 @@ export function CityPackRouteEditor({
               onChange={(hint) => patch({ hint })}
             />
           ) : null}
-          <AdminLocalizedInput
-            label="Taxi cost text"
-            hint="{minKM}, {maxKM}, {minEUR}, {maxEUR}"
-            value={route.copy.taxiCost}
-            onChange={(taxiCost) => patchCopy({ taxiCost })}
-            multiline
-            rows={2}
-          />
-          <AdminLocalizedInput
-            label="Pickup point"
-            value={route.copy.taxiPickupPoint}
-            onChange={(taxiPickupPoint) => patchCopy({ taxiPickupPoint })}
-          />
-          <div className="space-y-2 border-t border-dashed pt-3">
-            <div className="space-y-0.5">
-              <p className="text-xs font-medium text-foreground">Good to know (optional)</p>
-              <p className="text-[11px] text-muted-foreground">
-                Short tips shown under the step-by-step modal (max {MAX_ROUTE_TIPS}). Not required for
-                publish.
-              </p>
-            </div>
+          <div className="space-y-2">
             {tips.map((tip, index) => (
               <div key={index} className="flex gap-2">
                 <div className="min-w-0 flex-1">

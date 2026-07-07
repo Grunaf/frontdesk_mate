@@ -612,6 +612,11 @@
       },
       "directions": {
         "fromSubtitle": "From which location are you arriving?",
+        "hubs": {
+          "airport": "Аэропорт",
+          "bus": "Автовокзал",
+          "train": "Ж/д вокзал"
+        },
         "recommendedTitle": "Рекомендуемый маршрут",
         "stepByStep": "Пошагово",
         "otherPublicRoute": "Другой общественный маршрут",
@@ -628,6 +633,7 @@
           "freeTransit": "Бесплатный общественный транспорт",
           "flatFare": "Стоимость: {amount}",
           "taxiPrice": "{minKM}–{maxKM} KM ({minEUR}–{maxEUR} €)",
+          "taxiPriceEurOnly": "{minEUR}–{maxEUR} €",
           "taxiDuration": "~{min}–{max} мин"
         },
         "steps": {
@@ -753,17 +759,138 @@
         "actionButton": "Explore Your Stay"
       }
     },
+    "staySetup": {
+      "guestCheckIn": {
+        "hint": "Советы и маршруты доступны всем. Коды дверей и карта кровати — после check-in. Нажмите",
+        "link": "Войти",
+        "checkInToContinue": "Войти, чтобы продолжить"
+      },
+      "tourismGate": {
+        "title": "Завершите регистрацию гостей",
+        "description": "Размещение обязано зарегистрировать всех гостей до выдачи данных для расчёта. Это требование закона.",
+        "step1": "Нажмите «Зарегистрировать»",
+        "step2": "Добавьте имя и фото документов каждого гостя",
+        "step3": "Вернитесь сюда для просмотра расчёта",
+        "cta": "Зарегистрировать"
+      },
+      "tabs": {
+        "register": "Туристическая регистрация",
+        "contact": "Контакт",
+        "essentials": "Wi‑Fi & rules",
+        "room": "Your room",
+        "settlement": "Заселение"
+      },
+      "register": {
+        "actionButton": "К заселению",
+        "loading": "Загрузка регистрации…",
+        "intro": {
+          "title": "Туристическая регистрация ({country})",
+          "description": "Законодательство страны ({country}) требует регистрации каждого проживающего отдельно. Загрузите необходимые документы для каждого гостя."
+        },
+        "privacy": {
+          "title": "Зачем мы собираем эти данные",
+          "linkLabel": "Зачем мы собираем эти данные",
+          "dismiss": "Закрыть",
+          "body": "Размещение обязано по закону зарегистрировать иностранных гостей в местном туристическом органе. Мы собираем ваше имя, фото паспорта и штампа въезда исключительно для этой цели. Данные доступны только сотрудникам ресепшн и государственному туристическому органу. Изображения документов автоматически удаляются в течение 90 дней после выезда. По вопросам доступа или удаления данных обращайтесь на ресепшн."
+        },
+        "reservationName": {
+          "label": "Имя в бронировании"
+        },
+        "guestList": {
+          "heading": "Добавленные гости",
+          "photosUploaded": "Фото загружены",
+          "empty": "Гостей пока нет. Добавьте всех, кто будет жить в вашей комнате или на кровати."
+        },
+        "addGuest": {
+          "heading": "Добавить гостя",
+          "firstName": "Имя",
+          "lastName": "Фамилия",
+          "passport": "Паспорт (страница с фото)",
+          "entryStamp": "Фото штампа въезда",
+          "submit": "Добавить гостя",
+          "adding": "Загрузка фото…",
+          "success": "Гость добавлен."
+        },
+        "finish": {
+          "confirmLabel": "Все, кто проживает в этом размещении, указаны выше",
+          "privacyConfirmLabel": "Я прочитал(а) и понимаю, как используются данные гостей",
+          "submit": "Завершить регистрацию",
+          "submitting": "Завершение…"
+        },
+        "complete": {
+          "summaryTitle": "Регистрация завершена",
+          "continue": "Далее: контакт"
+        },
+        "fieldErrors": {
+          "firstName": "Укажите имя (до 120 символов).",
+          "lastName": "Укажите фамилию (до 120 символов).",
+          "passport": "Выберите фото паспорта.",
+          "entryStamp": "Выберите фото штампа въезда.",
+          "fileTooLarge": "Файл слишком большой. Используйте фото до 10 МБ.",
+          "notAnImage": "Нужен файл изображения.",
+          "processingFailed": "Не удалось обработать фото. Попробуйте другое."
+        },
+        "errors": {
+          "generic": "Что-то пошло не так. Попробуйте снова.",
+          "unauthorized": "Сначала войдите по ссылке или PIN check-in.",
+          "featureDisabled": "Туристическая регистрация не включена для этого хостела.",
+          "registrationClosed": "Регистрация уже завершена — добавить гостей нельзя.",
+          "invalidInput": "Проверьте имена и фото и попробуйте снова.",
+          "invalidFile": "Одно из фото отклонено. Используйте чёткий JPG или PNG.",
+          "uploadFailed": "Не удалось загрузить. Проверьте связь и попробуйте снова.",
+          "dbUnavailable": "Сервис временно недоступен. Попробуйте чуть позже.",
+          "noGuests": "Добавьте хотя бы одного гостя перед завершением."
+        }
+      },
+      "contact": {
+        "title": "Контакт на время проживания",
+        "description": "Ресепшен может связаться с вами по регистрации, комнате или проживанию. Укажите номер, который вы проверяете в WhatsApp или по телефону.",
+        "whatsappLabel": "WhatsApp или мобильный",
+        "hint": "С кодом страны. Один номер на всё бронирование.",
+        "continue": "К settlement",
+        "saving": "Сохранение…",
+        "actionButton": "К settlement",
+        "errors": {
+          "invalidWhatsapp": "Введите корректный номер WhatsApp с кодом страны.",
+          "generic": "Что-то пошло не так. Попробуйте снова."
+        }
+      },
+      "essentials": {
+        "actionButton": "Continue to your room"
+      },
+      "room": {
+        "title": "Find your bed",
+        "description": "See your room on the map and how to get there from reception."
+      },
+      "settlement": {
+        "copy": {
+          "planning": {
+            "title": "Когда вы внутри",
+            "description": "После входа подключитесь к Wi-Fi ниже и прочитайте правила. Зайдите на ресепшен в часы работы, чтобы оплатить и зарегистрировать паспорт."
+          },
+          "atDoor": {
+            "title": "Вы внутри!",
+            "description": "Используйте коды дверей во вкладке «Двери и коды». Утром зайдите на ресепшен для оплаты и регистрации паспорта."
+          },
+          "atDesk": {
+            "title": "Добро пожаловать на ресепшен",
+            "description": "Завершите оплату и предъявите паспорт для обязательной туристической регистрации. Wi-Fi и правила ниже."
+          }
+        },
+        "actionButton": "Explore Your Stay"
+      }
+    },
     "navigation": {
       "home": "Главная",
       "concierge": "Concierge",
       "arrivalGuide": "Инструкция по заселению",
+      "staySetup": "Данные гостей",
       "guide": "Городской гид",
       "services": "Услуги",
       "faq": "FAQ",
       "back": "Назад",
       "backToConcierge": "Назад к консьержу",
-      "goToConcierge": "К консьержу",
-      "staySetup": "Данные гостей"
+      "goToConcierge": "К консьержу"
     },
     "memories": {
       "title": "Share your memories",
@@ -1003,124 +1130,202 @@
         "starts": "Начало",
         "ends": "Окончание",
         "readOnlyHint": "Даты управляет Frontdesk Mate. Для изменения тарифа свяжитесь с поддержкой."
-      }
-    },
-    "staySetup": {
-      "guestCheckIn": {
-        "hint": "Советы и маршруты доступны всем. Коды дверей и карта кровати — после check-in. Нажмите",
-        "link": "Войти",
-        "checkInToContinue": "Войти, чтобы продолжить"
       },
-      "tourismGate": {
-        "title": "Завершите регистрацию гостей",
-        "description": "Размещение обязано зарегистрировать всех гостей до выдачи данных для расчёта. Это требование закона.",
-        "step1": "Нажмите «Зарегистрировать»",
-        "step2": "Добавьте имя и фото документов каждого гостя",
-        "step3": "Вернитесь сюда для просмотра расчёта",
-        "cta": "Зарегистрировать"
+      "editAccess": {
+        "readOnlyNotice": "Editing is disabled until your subscription is renewed or your hostel is restored. You can still view your setup."
       },
-      "tabs": {
-        "register": "Туристическая регистрация",
-        "contact": "Контакт",
-        "settlement": "Заселение"
-      },
-      "register": {
-        "actionButton": "К заселению",
-        "loading": "Загрузка регистрации…",
-        "intro": {
-          "title": "Туристическая регистрация ({country})",
-          "description": "Законодательство страны ({country}) требует регистрации каждого проживающего отдельно. Загрузите необходимые документы для каждого гостя."
+      "auth": {
+        "login": {
+          "title": "Sign in",
+          "subtitle": "Owner portal for your hostel.",
+          "email": "Email",
+          "password": "Password",
+          "emailPlaceholder": "you@hostel.com",
+          "submit": "Sign in",
+          "submitPending": "Signing in…",
+          "noAccount": "No account?",
+          "signUpLink": "Sign up",
+          "connectionError": "Sign in failed. Check your connection and try again."
         },
-        "privacy": {
-          "title": "Зачем мы собираем эти данные",
-          "linkLabel": "Зачем мы собираем эти данные",
-          "dismiss": "Закрыть",
-          "body": "Размещение обязано по закону зарегистрировать иностранных гостей в местном туристическом органе. Мы собираем ваше имя, фото паспорта и штампа въезда исключительно для этой цели. Данные доступны только сотрудникам ресепшн и государственному туристическому органу. Изображения документов автоматически удаляются в течение 90 дней после выезда. По вопросам доступа или удаления данных обращайтесь на ресепшн."
-        },
-        "reservationName": {
-          "label": "Имя в бронировании"
-        },
-        "guestList": {
-          "heading": "Добавленные гости",
-          "photosUploaded": "Фото загружены",
-          "empty": "Гостей пока нет. Добавьте всех, кто будет жить в вашей комнате или на кровати."
-        },
-        "addGuest": {
-          "heading": "Добавить гостя",
-          "firstName": "Имя",
-          "lastName": "Фамилия",
-          "passport": "Паспорт (страница с фото)",
-          "entryStamp": "Фото штампа въезда",
-          "submit": "Добавить гостя",
-          "adding": "Загрузка фото…",
-          "success": "Гость добавлен."
-        },
-        "contact": {
-          "heading": "Контакт на время проживания",
-          "whatsapp": "Номер WhatsApp",
-          "hint": "Один номер на всё проживание — по нему могут связаться по регистрации."
-        },
-        "finish": {
-          "confirmLabel": "Все, кто проживает в этом размещении, указаны выше",
-          "privacyConfirmLabel": "Я прочитал(а) и понимаю, как используются данные гостей",
-          "submit": "Завершить регистрацию",
-          "submitting": "Завершение…"
-        },
-        "complete": {
-          "summaryTitle": "Регистрация завершена",
-          "continue": "Далее: контакт"
-        },
-        "fieldErrors": {
-          "firstName": "Укажите имя (до 120 символов).",
-          "lastName": "Укажите фамилию (до 120 символов).",
-          "passport": "Выберите фото паспорта.",
-          "entryStamp": "Выберите фото штампа въезда.",
-          "fileTooLarge": "Файл слишком большой. Используйте фото до 10 МБ.",
-          "notAnImage": "Нужен файл изображения.",
-          "processingFailed": "Не удалось обработать фото. Попробуйте другое."
-        },
-        "errors": {
-          "generic": "Что-то пошло не так. Попробуйте снова.",
-          "unauthorized": "Сначала войдите по ссылке или PIN check-in.",
-          "featureDisabled": "Туристическая регистрация не включена для этого хостела.",
-          "registrationClosed": "Регистрация уже завершена — добавить гостей нельзя.",
-          "invalidInput": "Проверьте имена и фото и попробуйте снова.",
-          "invalidFile": "Одно из фото отклонено. Используйте чёткий JPG или PNG.",
-          "uploadFailed": "Не удалось загрузить. Проверьте связь и попробуйте снова.",
-          "dbUnavailable": "Сервис временно недоступен. Попробуйте чуть позже.",
-          "invalidWhatsapp": "Введите корректный номер WhatsApp с кодом страны.",
-          "noGuests": "Добавьте хотя бы одного гостя перед завершением."
+        "signup": {
+          "title": "Create account",
+          "subtitle": "Register as a hostel owner.",
+          "loading": "Loading…",
+          "email": "Email",
+          "password": "Password",
+          "emailPlaceholder": "you@hostel.com",
+          "submit": "Sign up",
+          "submitPending": "Creating account…",
+          "confirmEmail": "Check your email to confirm your account, then sign in.",
+          "hasAccount": "Already have an account?",
+          "signInLink": "Sign in",
+          "connectionError": "Sign up failed. Check your connection and try again."
         }
       },
-      "settlement": {
-        "copy": {
-          "planning": {
-            "title": "Когда вы внутри",
-            "description": "После входа подключитесь к Wi-Fi ниже и прочитайте правила. Зайдите на ресепшен в часы работы, чтобы оплатить и зарегистрировать паспорт."
+      "onboarding": {
+        "title": "Create your hostel",
+        "subtitle": "Choose a public slug and city pack. Subscription dates are set automatically when your hostel is created.",
+        "cityPacksError": "Could not load city packs: {message}",
+        "displayName": "Display name",
+        "displayNamePlaceholder": "Balkan Han Hostel",
+        "slug": "Slug",
+        "slugHint": "Your guest URLs: {landingHost} and {appHost}",
+        "slugPlaceholder": "balkan-han",
+        "cityPack": "City pack",
+        "cityPackHint": "Routes, local guide, and default taxi for your city. You cannot change this later.",
+        "cityPackPlaceholder": "Select a city…",
+        "submit": "Create hostel",
+        "submitPending": "Creating…",
+        "noCityPacks": "No city packs are available right now. Try again later or request your city below.",
+        "missingCity": "Don't see your city?",
+        "requestCityLink": "Tell us"
+      },
+      "setup": {
+        "title": "Setup",
+        "slugLabel": "slug",
+        "previewTitle": "Guest preview URLs",
+        "landingLabel": "Landing",
+        "appLabel": "App",
+        "wizardTeaser": "Setup continues in the launch wizard (Module 5). You will configure branding, rooms, arrival access, and more in guided steps.",
+        "goToSettings": "Go to settings",
+        "savedLive": "Hostel settings saved"
+      },
+      "wizard": {
+        "back": "Back",
+        "next": "Next",
+        "save": "Save changes",
+        "openFullSection": "Open full {section} section →",
+        "subscriptionSeeAbove": "Subscription dates are shown above — contact support to change your plan.",
+        "cityPackReady": "ready for guests (places + routes).",
+        "cityPackNotReady": "not ready yet.",
+        "cityPackRequestLink": "Request city support →",
+        "toast": {
+          "savedReady": "Saved — ready for guests",
+          "savedIncomplete": "Saved — {count} guest-path must item(s) left",
+          "continueSetup": "Continue setup",
+          "readOnly": "Editing is disabled for your account status.",
+          "saveFailed": "Could not save. Try again or contact support."
+        },
+        "steps": {
+          "identity": {
+            "title": "Identity & subscription",
+            "description": "Your hostel name and logo guests see on landing and app.",
+            "short": "Identity"
           },
-          "atDoor": {
-            "title": "Вы внутри!",
-            "description": "Используйте коды дверей во вкладке «Двери и коды». Утром зайдите на ресепшен для оплаты и регистрации паспорта."
+          "contacts-landing": {
+            "title": "Reception & landing",
+            "description": "Reception phone, stay policy, hero image, and public landing.",
+            "short": "Reception"
           },
-          "atDesk": {
-            "title": "Добро пожаловать на ресепшен",
-            "description": "Завершите оплату и предъявите паспорт для обязательной туристической регистрации. Wi-Fi и правила ниже."
+          "booking": {
+            "title": "Booking path",
+            "description": "Online engine or WhatsApp-only booking from the landing hero and room cards.",
+            "short": "Booking"
+          },
+          "arrival": {
+            "title": "Arrival journey",
+            "description": "Address, walk to the door, and access for guests.",
+            "short": "Arrival"
+          },
+          "room-map": {
+            "title": "Room map minimum",
+            "description": "Preview bed, layout, and wayfinding for settlement.",
+            "short": "Room map"
+          },
+          "rules-wifi": {
+            "title": "Rules, guide & WiFi",
+            "description": "In-app essentials unlocked after guest check-in.",
+            "short": "Rules"
+          },
+          "preview": {
+            "title": "Preview & go live",
+            "description": "Check guest-path readiness and share links with guests.",
+            "short": "Preview"
           }
-        },
-        "actionButton": "Explore Your Stay"
-      },
-      "contact": {
-        "title": "Контакт на время проживания",
-        "description": "Ресепшен может связаться с вами по регистрации, комнате или проживанию. Укажите номер, который вы проверяете в WhatsApp или по телефону.",
-        "whatsappLabel": "WhatsApp или мобильный",
-        "hint": "С кодом страны. Один номер на всё бронирование.",
-        "continue": "К settlement",
-        "saving": "Сохранение…",
-        "actionButton": "К settlement",
-        "errors": {
-          "invalidWhatsapp": "Введите корректный номер WhatsApp с кодом страны.",
-          "generic": "Что-то пошло не так. Попробуйте снова."
         }
+      },
+      "settings": {
+        "title": "Settings",
+        "subtitle": "Full hostel configuration. For guided setup, go back to",
+        "backToSetup": "Back to setup",
+        "sectionChipsLabel": "Settings sections",
+        "save": "Save changes",
+        "unsavedChanges": "You have unsaved changes",
+        "allChangesSaved": "All changes saved",
+        "unsavedNav": {
+          "title": "Unsaved changes",
+          "description": "Your edits stay in this form until you save. Switch sections and keep editing, or discard and revert to the last saved version.",
+          "stay": "Stay",
+          "keepEditingElsewhere": "Keep editing elsewhere",
+          "discardChanges": "Discard changes"
+        },
+        "toast": {
+          "saved": "Settings saved",
+          "savedReady": "Settings saved — ready for guests",
+          "savedIncomplete": "Saved — {count} config item(s) still incomplete",
+          "viewChecklist": "View checklist",
+          "readOnly": "Your subscription does not allow editing settings.",
+          "saveFailed": "Could not save settings. Try again."
+        }
+      },
+      "receptionDesk": {
+        "title": "Reception desk PIN",
+        "description": "Staff use this PIN to sign in at your reception desk site — not for guests.",
+        "loginUrlLabel": "Reception login",
+        "statusSet": "PIN set",
+        "statusNotSet": "PIN not set",
+        "pinLabel": "PIN",
+        "pinHint": "At least 6 characters. Leave empty to keep the current PIN.",
+        "pinPlaceholderUnchanged": "•••••• (unchanged)",
+        "pinPlaceholderNew": "Set a PIN for staff",
+        "setupHint": "Reception desk login uses a separate staff PIN.",
+        "setupLink": "Set PIN in Settings →"
+      },
+      "cityPack": {
+        "inheritedTitle": "City transport (inherited)",
+        "inheritedDescription": "Hub routes and transit copy are shared for your city. You only customize address and last-mile walk for your hostel.",
+        "managedHint": "City pack content is managed by Frontdesk Mate.",
+        "noPlaces": "No places in your city pack yet.",
+        "requestCityLink": "Request city support →",
+        "statusReady": "Ready",
+        "statusNotReady": "Not ready",
+        "enabledRoutes": "Enabled routes",
+        "cityTaxi": "City taxi",
+        "packLabel": "Pack",
+        "none": "None"
+      },
+      "cityRequest": {
+        "title": "Request city support",
+        "description": "Tell us which city you need or which pack is not ready yet. We review requests manually and will contact you at the email on your account.",
+        "form": {
+          "requestKind": "Request type",
+          "cityName": "City",
+          "cityNamePlaceholder": "Kotor, Novi Sad…",
+          "countryOrRegion": "Country or region (optional)",
+          "countryOrRegionPlaceholder": "Montenegro",
+          "message": "Message (optional)",
+          "messagePlaceholder": "Anything that helps us prioritize your request",
+          "contactEmail": "Contact email",
+          "submit": "Send request",
+          "submitPending": "Sending…"
+        },
+        "kind": {
+          "new_city": "New city — not in the list yet",
+          "pack_not_ready": "City pack exists but is not ready for guests",
+          "other": "Other"
+        },
+        "success": {
+          "title": "Request received",
+          "body": "Thanks — we have your request. Our team will reach out when we have an update."
+        },
+        "error": {
+          "duplicate": "You already have a pending request for this city from the last 7 days.",
+          "validation": "Please check the form and try again.",
+          "save": "Could not save your request. Please try again."
+        },
+        "backToOnboarding": "Back to hostel setup",
+        "backToSetup": "Back to launch setup",
+        "backToSettings": "Back to settings"
       }
     }
   },
@@ -1219,11 +1424,11 @@
     "stayEssentials": {
       "bridges": {
         "arrivalGuide": "Гид по заезду",
+        "staySetup": "Данные гостей",
         "wifi": "Wi‑Fi",
         "checkout": "Выезд",
         "nightAccess": "Ночной доступ",
-        "reception": "О ресепшене",
-        "staySetup": "Данные гостей"
+        "reception": "О ресепшене"
       },
       "bridgeAriaLabelUnread": "{title} — не просмотрено",
       "bridgeAriaLabelRead": "{title} — просмотрено",
@@ -1294,6 +1499,17 @@
       "copyLineRef": "Ref: #{stayRef}",
       "copyLineName": "Имя: {guestName}",
       "showRoomMapLink": "Карта комнаты и маршрут",
+      "bedLockedUntilTourism": "Complete tourist registration to see your bed assignment.",
+      "tourismSummaryHeading": "Tourist registration",
+      "tourismStatusNotStarted": "Not started",
+      "tourismStatusInProgress": "In progress",
+      "tourismStatusComplete": "Complete",
+      "tourismSummaryNotStarted": "Add each guest and upload the required documents.",
+      "tourismSummaryInProgress": "{count} guest added — finish documents for everyone in your group.",
+      "tourismSummaryInProgress_other": "{count} guests added — finish documents for everyone in your group.",
+      "tourismSummaryComplete": "{count} guest registered for your stay.",
+      "tourismSummaryComplete_other": "{count} guests registered for your stay.",
+      "tourismSummaryContinueLink": "Continue registration",
       "extendStayHeading": "Нужны ещё ночи?",
       "extendStayNotice": "Продление — на стойке. Доступ в приложении привязан к ночам: после продления попросите ресепшен обновить access, если коды перестанут работать.",
       "extendStayWhatsapp": "Написать о продлении",
@@ -1314,7 +1530,7 @@
       "whatsappMessage": "Здравствуйте, вопрос по проживанию в {hostelName}"
     },
     "guestIssue": {
-      "cardTitle": "Что-то не работает?",
+      "cardTitle": "Заметили поломку в хостеле?",
       "cardDescription": "Душ, дверь, кровать, Wi‑Fi… Ресепшен увидит на экране.",
       "cardButton": "Сообщить о поломке",
       "sheetTitle": "Сообщить о поломке",
@@ -1334,7 +1550,7 @@
       "successWhatsappButton": "Написать ресепшену",
       "successWhatsappMessage": "Здравствуйте, сообщил о поломке в комнате в {hostelName}. Можете помочь?",
       "successClose": "Готово",
-      "myStayPrompt": "Что-то сломалось в комнате?",
+      "myStayPrompt": "Заметили поломку в комнате?",
       "myStayLink": "Сообщить о поломке",
       "categories": {
         "shower": "Душ",

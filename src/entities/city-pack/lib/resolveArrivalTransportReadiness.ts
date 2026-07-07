@@ -1,14 +1,14 @@
 import type { CityPackId, RouteId } from '@/entities/hostel';
 import { ROUTE_PRESETS } from '@/entities/city-pack/lib/constants';
-import type { CityPackContent, CityPackRouteContent } from '@/entities/city-pack/model/types';
-import { resolveLocalizedText, type LocalizedText } from '@/entities/city-pack/model/localized';
+import type { CityPackContent } from '@/entities/city-pack/model/types';
+import { resolveLocalizedText } from '@/entities/city-pack/model/localized';
 import type { LocalizedField } from '@/entities/city-pack/model/types';
 import type { TenantSettings } from '@/entities/tenant';
 import {
   resolveAdminCityPackEnabledRoutes,
-  resolveAdminCityPackRoutes,
   resolveCityDefaultWalkLabel,
 } from '@/entities/city-pack/lib/resolveAdminCityPackTransport';
+import { readCodeI18nRouteWalkTemplate } from './buildCityPackRouteContentFromCode';
 
 function hasLocalizedValue(value: LocalizedField | undefined): boolean {
   if (!value) {
@@ -22,21 +22,12 @@ function hasLocalizedValue(value: LocalizedField | undefined): boolean {
   return Boolean(value.en?.trim() || value.ru?.trim());
 }
 
-/** City-pack walk copy — editorial seed only; guests use tenant fields after go-live. */
+/** Static city i18n starter for tenant pre-fill — not from city pack DB routes. */
 export function readCityRouteWalkTemplate(
-  cityRoutes: Partial<Record<RouteId, CityPackRouteContent>>,
+  packId: string,
   routeId: RouteId
-): LocalizedText | undefined {
-  const walk = cityRoutes[routeId]?.copy.publicWalkToHostel;
-  if (!walk) {
-    return undefined;
-  }
-
-  if (!walk.en?.trim() && !walk.ru?.trim()) {
-    return undefined;
-  }
-
-  return walk;
+): ReturnType<typeof readCodeI18nRouteWalkTemplate> {
+  return readCodeI18nRouteWalkTemplate(packId, routeId);
 }
 
 export function buildTenantWalkSeedFromCityTemplates(input: {
@@ -45,7 +36,6 @@ export function buildTenantWalkSeedFromCityTemplates(input: {
   settings: TenantSettings;
 }): Pick<TenantSettings, 'arrivalWalkToHostel' | 'arrivalWalkToHostelByRoute'> {
   const enabledRoutes = resolveAdminCityPackEnabledRoutes(input.cityPackId, input.cityPackContent);
-  const cityRoutes = resolveAdminCityPackRoutes(input.cityPackId, input.cityPackContent);
   const existingByRoute = input.settings.arrivalWalkToHostelByRoute ?? {};
   const nextByRoute: Partial<Record<RouteId, LocalizedField>> = { ...existingByRoute };
 
@@ -54,7 +44,7 @@ export function buildTenantWalkSeedFromCityTemplates(input: {
       continue;
     }
 
-    const template = readCityRouteWalkTemplate(cityRoutes, routeId);
+    const template = readCodeI18nRouteWalkTemplate(input.cityPackId, routeId);
     if (template) {
       nextByRoute[routeId] = template;
     }
@@ -96,7 +86,7 @@ export function resolveArrivalWalkReadiness(input: {
 
   return {
     complete: false,
-    detail: `Add hostel walk directions for: ${missingLabels.join(', ')} (city templates are seeds only)`,
+    detail: `Add hostel walk directions for: ${missingLabels.join(', ')}`,
   };
 }
 
@@ -118,8 +108,7 @@ export function resolveArrivalWalkPreviewText(input: {
     return resolveLocalizedText(input.settings!.arrivalWalkToHostel!, locale);
   }
 
-  const cityRoutes = resolveAdminCityPackRoutes(input.cityPackId, input.cityPackContent);
-  const template = resolveCityDefaultWalkLabel(cityRoutes, input.routeId, locale) ?? '';
+  const template = resolveCityDefaultWalkLabel(input.cityPackId, input.routeId, locale) ?? '';
   const address = input.address ?? '123 Example Street';
 
   return template.replace(/\{address\}/g, address);

@@ -1,33 +1,29 @@
 import 'server-only';
 
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 
-const DEFAULT_MODEL_ID = 'gemini-2.0-flash';
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+
+const DEFAULT_MODEL_ID = 'qwen/qwen3-next-80b-a3b-instruct:free';
 
 /**
- * Direct Gemini or optional AI Gateway (set AI_GATEWAY_API_KEY + AI_GATEWAY_BASE_URL).
+ * OpenRouter (OpenAI-compatible API). Set OPENROUTER_API_KEY.
  */
 export function createGuidedFillLanguageModel(): LanguageModel | null {
-  const gatewayKey = process.env.AI_GATEWAY_API_KEY?.trim();
-  const gatewayBase = process.env.AI_GATEWAY_BASE_URL?.trim();
-  const geminiKey =
-    process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
-
-  if (gatewayKey && gatewayBase) {
-    const google = createGoogleGenerativeAI({
-      apiKey: gatewayKey,
-      baseURL: gatewayBase,
-    });
-    return google(DEFAULT_MODEL_ID);
-  }
-
-  if (!geminiKey) {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) {
     return null;
   }
 
-  const google = createGoogleGenerativeAI({ apiKey: geminiKey });
-  return google(DEFAULT_MODEL_ID);
+  const modelId = process.env.OPENROUTER_MODEL_ID?.trim() || DEFAULT_MODEL_ID;
+
+  const openrouter = createOpenAI({
+    apiKey,
+    baseURL: OPENROUTER_BASE_URL,
+  });
+
+  return openrouter.chat(modelId);
 }
 
 export function isGuidedFillLlmConfigured(): boolean {

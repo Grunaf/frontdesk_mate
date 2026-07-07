@@ -2,10 +2,14 @@ import { normalizeEnabledRoutes } from './resolveCityPackGate';
 import {
   buildCityPackRoutesFromCode,
   isCodeCityPackRouteSeedAvailable,
+  readCodeI18nRouteWalkTemplate,
 } from './buildCityPackRouteContentFromCode';
 import type { CityPackId, RouteCategory, RouteId } from '@/entities/hostel';
 import type { CityPackContent, CityPackRouteContent } from '../model/types';
 import { resolveLocalizedText, toLocalizedText, type LocalizedText } from '../model/localized';
+import { autofillTaxiCostFromMetadata } from './autofillTaxiCostFromMetadata';
+import { inferCityPackTransportCurrencyMode } from './inferCityPackTransportCurrency';
+import { mergeRouteMetadataDefaults } from './resolveRouteMetadataDefaults';
 import { ROUTE_PRESETS } from './constants';
 import { isLocalizedFilled } from './resolveLocalizedLocaleStatus';
 
@@ -97,22 +101,28 @@ export function autofillCityPackRouteLocationLabel(
 export function ensureCityPackRouteContent(
   packId: string,
   routeId: RouteId,
-  current?: CityPackRouteContent
+  current?: CityPackRouteContent,
+  content?: CityPackContent
 ): CityPackRouteContent {
+  const currencyMode = inferCityPackTransportCurrencyMode(packId, content);
   const body =
     current ?? resolveCodeCityPackRouteSeed(packId, routeId) ?? createBlankCityPackRouteContent(routeId);
 
-  return autofillCityPackRouteLocationLabel(packId, routeId, body);
+  let next = autofillCityPackRouteLocationLabel(packId, routeId, body);
+  next = mergeRouteMetadataDefaults(packId, routeId, next, currencyMode);
+  next = autofillTaxiCostFromMetadata(next, currencyMode);
+  return next;
 }
 
 export function ensureEnabledCityPackRoutes(
   packId: string,
   enabledRoutes: RouteId[],
-  routes: Partial<Record<RouteId, CityPackRouteContent>>
+  routes: Partial<Record<RouteId, CityPackRouteContent>>,
+  content?: CityPackContent
 ): Partial<Record<RouteId, CityPackRouteContent>> {
   const next = { ...routes };
   for (const routeId of enabledRoutes) {
-    next[routeId] = ensureCityPackRouteContent(packId, routeId, next[routeId]);
+    next[routeId] = ensureCityPackRouteContent(packId, routeId, next[routeId], content);
   }
   return next;
 }
@@ -147,11 +157,11 @@ export function resolveAdminCityPackEnabledRoutes(
 }
 
 export function resolveCityDefaultWalkLabel(
-  routes: Partial<Record<RouteId, CityPackRouteContent>>,
+  packId: string,
   routeId: RouteId,
   locale: 'en' | 'ru' = 'en'
 ): string | undefined {
-  const walk = routes[routeId]?.copy.publicWalkToHostel;
+  const walk = readCodeI18nRouteWalkTemplate(packId, routeId);
   if (!walk) {
     return undefined;
   }

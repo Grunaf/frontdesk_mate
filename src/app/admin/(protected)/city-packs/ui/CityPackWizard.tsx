@@ -12,6 +12,7 @@ import {
   MIN_PLACES_FOR_PACK,
   resolveFirstIncompletePackStep,
   ROUTE_PRESETS,
+  CITY_PACK_WIZARD_STEPS,
   type CityPackAdminPlace,
   type CityPackContent,
   type CityPackContentWarnings,
@@ -40,8 +41,10 @@ import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/ui';
 import { PlaceIconPicker } from './PlaceIconPicker';
 import { CityPackRoutesStep } from './CityPackRoutesStep';
+import { CityPackCitySettingsStep } from './CityPackCitySettingsStep';
 import type { RouteId } from '@/entities/hostel';
-import { CITY_PACK_WIZARD_STEPS } from '@/entities/city-pack';
+import { inferCityPackTransportCurrencyMode } from '@/entities/city-pack/lib/inferCityPackTransportCurrency';
+import type { CityPackTransportCurrencyMode } from '@/entities/city-pack';
 
 interface CityPackWizardProps {
   pack: CityPackRecord;
@@ -86,10 +89,18 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   const [enabledRoutes, setEnabledRoutes] = useState<RouteId[]>(() =>
     resolveAdminCityPackEnabledRoutes(pack.id, pack.content)
   );
+  const [transportCurrencyMode, setTransportCurrencyMode] = useState<CityPackTransportCurrencyMode>(
+    () => inferCityPackTransportCurrencyMode(pack.id, pack.content)
+  );
   const [routes, setRoutes] = useState<Partial<Record<RouteId, CityPackRouteContent>>>(() => {
     const enabled = resolveAdminCityPackEnabledRoutes(pack.id, pack.content);
     const base = resolveAdminCityPackRoutes(pack.id, pack.content);
-    return ensureEnabledCityPackRoutes(pack.id, enabled, base);
+    const currencyContent = {
+      transportCurrency: {
+        mode: inferCityPackTransportCurrencyMode(pack.id, pack.content),
+      },
+    };
+    return ensureEnabledCityPackRoutes(pack.id, enabled, base, currencyContent);
   });
   const [warnings, setWarnings] = useState<CityPackContentWarnings>(() => initialWarnings(pack));
   const [preTripSundayClosure, setPreTripSundayClosure] = useState(
@@ -116,6 +127,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
       routes,
       warnings,
       preTripTips: preTripSundayClosure ? ['sundayClosure'] : undefined,
+      transportCurrency: { mode: transportCurrencyMode },
       recommendedTaxi: taxiName.trim()
         ? {
             name: taxiName.trim(),
@@ -125,7 +137,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
           }
         : undefined,
     }),
-    [enabledRoutes, places, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, taxiPreset, warnings]
+    [enabledRoutes, places, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, taxiPreset, transportCurrencyMode, warnings]
   );
 
   const placesCount = countGatePlaces(content);
@@ -182,8 +194,21 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
   };
 
   const handleEnabledRoutesChange = (next: RouteId[]) => {
-    setRoutes((current) => ensureEnabledCityPackRoutes(pack.id, next, current));
+    setRoutes((current) =>
+      ensureEnabledCityPackRoutes(pack.id, next, current, {
+        transportCurrency: { mode: transportCurrencyMode },
+      })
+    );
     setEnabledRoutes(next);
+  };
+
+  const handleTransportCurrencyModeChange = (mode: CityPackTransportCurrencyMode) => {
+    setTransportCurrencyMode(mode);
+    setRoutes((current) =>
+      ensureEnabledCityPackRoutes(pack.id, enabledRoutes, current, {
+        transportCurrency: { mode },
+      })
+    );
   };
 
   return (
@@ -250,6 +275,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
         <input type="hidden" name="recommendedTaxiPhoneRaw" value={taxiPhone} />
         <input type="hidden" name="recommendedTaxiPhoneMask" value={taxiMask} />
         <input type="hidden" name="recommendedTaxiPhoneFormatPreset" value={taxiPreset} />
+        <input type="hidden" name="transportCurrencyMode" value={transportCurrencyMode} />
 
         {stepId === 'identity' ? (
           <div className="space-y-4">
@@ -351,9 +377,19 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
           </div>
         ) : null}
 
+        {stepId === 'city-settings' ? (
+          <CityPackCitySettingsStep
+            transportCurrencyMode={transportCurrencyMode}
+            onTransportCurrencyModeChange={handleTransportCurrencyModeChange}
+            preTripSundayClosure={preTripSundayClosure}
+            onPreTripSundayClosureChange={setPreTripSundayClosure}
+          />
+        ) : null}
+
         {stepId === 'routes' ? (
           <CityPackRoutesStep
             packId={pack.id}
+            packLabel={label}
             enabledRoutes={enabledRoutes}
             routes={routes}
             warnings={warnings}
@@ -365,11 +401,11 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
             onEnabledRoutesChange={handleEnabledRoutesChange}
             onRoutesChange={setRoutes}
             onWarningsChange={setWarnings}
-            onPreTripSundayClosureChange={setPreTripSundayClosure}
             onTaxiNameChange={setTaxiName}
             onTaxiPhoneChange={setTaxiPhone}
             onTaxiMaskChange={setTaxiMask}
             onTaxiPresetChange={setTaxiPreset}
+            transportCurrencyMode={transportCurrencyMode}
           />
         ) : null}
 

@@ -10,6 +10,7 @@ import {
   Alert,
   AlertDescription,
   Button,
+  IconBackActionsRow,
   Label,
 } from '@/shared/ui';
 import { completeTourismRegistrationAction } from '../actions/completeTourismRegistrationAction';
@@ -167,16 +168,59 @@ export function TourismGuestsRegistrationPanel({
 
   if (registrationComplete) {
     return (
-      <div className="space-y-6 pt-5">
+      <div className="flex min-h-full flex-col pt-5">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-foreground">{t('complete.summaryTitle')}</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t('intro.description', countryVars)}
+            </p>
+          </div>
+
+          {reservationName ? (
+            <div className="space-y-1">
+              <Label>{t('reservationName.label')}</Label>
+              <p className="text-sm font-medium text-foreground">{reservationName}</p>
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-foreground">{t('guestList.heading')}</h3>
+            <TourismGuestList guests={guests} />
+          </div>
+        </div>
+
+        <IconBackActionsRow className="mt-auto pt-6">
+          <Button size="lg" onClick={onComplete}>
+            {t('complete.continue')}
+          </Button>
+        </IconBackActionsRow>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-full flex-col pt-5">
+      <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">{t('complete.summaryTitle')}</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t('intro.title', countryVars)}</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {t('intro.description', countryVars)}
           </p>
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 text-sm font-normal"
+            onClick={() => setPrivacySheetOpen(true)}
+          >
+            {t('privacy.linkLabel')}
+          </Button>
         </div>
 
+        <TourismRegistrationPrivacySheet open={privacySheetOpen} onOpenChange={setPrivacySheetOpen} />
+
         {reservationName ? (
-          <div className="space-y-1">
+          <div className="space-y-1 rounded-xl border bg-muted/20 p-4">
             <Label>{t('reservationName.label')}</Label>
             <p className="text-sm font-medium text-foreground">{reservationName}</p>
           </div>
@@ -187,51 +231,15 @@ export function TourismGuestsRegistrationPanel({
           <TourismGuestList guests={guests} />
         </div>
 
-        <Button size="lg" className="w-full" onClick={onComplete}>
-          {t('complete.continue')}
-        </Button>
-      </div>
-    );
-  }
+        <AddTourismGuestForm
+          tenantSlug={tenantSlug}
+          requiredDocumentKinds={profile?.requiredDocumentKinds ?? ['passport', 'entry_stamp']}
+          disabled={!interactionEnabled || isGuestUploadPending}
+          onUploadPendingChange={setIsGuestUploadPending}
+          onGuestAdded={handleGuestAdded}
+        />
 
-  return (
-    <div className="space-y-6 pt-5">
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-foreground">{t('intro.title', countryVars)}</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">{t('intro.description', countryVars)}</p>
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto p-0 text-sm font-normal"
-          onClick={() => setPrivacySheetOpen(true)}
-        >
-          {t('privacy.linkLabel')}
-        </Button>
-      </div>
-
-      <TourismRegistrationPrivacySheet open={privacySheetOpen} onOpenChange={setPrivacySheetOpen} />
-
-      {reservationName ? (
-        <div className="space-y-1 rounded-xl border bg-muted/20 p-4">
-          <Label>{t('reservationName.label')}</Label>
-          <p className="text-sm font-medium text-foreground">{reservationName}</p>
-        </div>
-      ) : null}
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-foreground">{t('guestList.heading')}</h3>
-        <TourismGuestList guests={guests} />
-      </div>
-
-      <AddTourismGuestForm
-        tenantSlug={tenantSlug}
-        requiredDocumentKinds={profile?.requiredDocumentKinds ?? ['passport', 'entry_stamp']}
-        disabled={!interactionEnabled || isGuestUploadPending}
-        onUploadPendingChange={setIsGuestUploadPending}
-        onGuestAdded={handleGuestAdded}
-      />
-
-      <div className="space-y-4">
+        <div className="space-y-4">
         <label
           className={cn(
             'flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-foreground',
@@ -269,13 +277,11 @@ export function TourismGuestsRegistrationPanel({
             <AlertDescription>{completeError}</AlertDescription>
           </Alert>
         ) : null}
+      </div>
+      </div>
 
-        <Button
-          size="lg"
-          className="w-full"
-          disabled={completeDisabled}
-          onClick={handleComplete}
-        >
+      <IconBackActionsRow className="mt-auto pt-6">
+        <Button size="lg" disabled={completeDisabled} onClick={handleComplete}>
           {isCompleting ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -285,7 +291,7 @@ export function TourismGuestsRegistrationPanel({
             t('finish.submit')
           )}
         </Button>
-      </div>
+      </IconBackActionsRow>
     </div>
   );
 }

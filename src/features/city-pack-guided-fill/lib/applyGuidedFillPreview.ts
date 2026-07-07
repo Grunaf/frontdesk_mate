@@ -1,6 +1,10 @@
 import type { RouteId } from '@/entities/hostel';
-import type { CityPackRouteContent } from '@/entities/city-pack/model/types';
-import { autofillCityPackRouteLocationLabel } from '@/entities/city-pack/lib/resolveAdminCityPackTransport';
+import type { CityPackContent, CityPackRouteContent } from '@/entities/city-pack/model/types';
+import {
+  autofillCityPackRouteLocationLabel,
+} from '@/entities/city-pack/lib/resolveAdminCityPackTransport';
+import { inferCityPackTransportCurrencyMode } from '@/entities/city-pack/lib/inferCityPackTransportCurrency';
+import { patchRouteMetadataFromImport } from '@/entities/city-pack/lib/patchRouteMetadataFromImport';
 import type { GuidedRouteFillPreview } from '../model/types';
 
 function toLocalizedEn(value: string | undefined, previous: { en: string; ru?: string }): {
@@ -17,8 +21,10 @@ export function applyGuidedFillPreview(
   packId: string,
   routeId: RouteId,
   route: CityPackRouteContent,
-  preview: GuidedRouteFillPreview
+  preview: GuidedRouteFillPreview,
+  content?: CityPackContent
 ): CityPackRouteContent {
+  const currencyMode = inferCityPackTransportCurrencyMode(packId, content);
   const routeMode = preview.routeMode ?? route.routeMode ?? 'transit';
 
   let next: CityPackRouteContent = {
@@ -39,7 +45,7 @@ export function applyGuidedFillPreview(
   }
 
   for (const [key, value] of Object.entries(preview.copy) as [keyof typeof preview.copy, string][]) {
-    if (!value?.trim()) {
+    if (key === 'publicWalkToHostel' || !value?.trim()) {
       continue;
     }
     next.copy[key] = toLocalizedEn(value, next.copy[key]);
@@ -52,5 +58,7 @@ export function applyGuidedFillPreview(
     });
   }
 
-  return autofillCityPackRouteLocationLabel(packId, routeId, next);
+  next = autofillCityPackRouteLocationLabel(packId, routeId, next);
+  next = patchRouteMetadataFromImport(next, preview.metadata, currencyMode);
+  return next;
 }

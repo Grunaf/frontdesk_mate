@@ -39,6 +39,10 @@ function normalizeContent(raw: CityPackContent | null | undefined): CityPackCont
     recommendedTaxi: raw.recommendedTaxi,
     warnings: raw.warnings && typeof raw.warnings === 'object' ? raw.warnings : undefined,
     preTripTips: Array.isArray(raw.preTripTips) ? raw.preTripTips : undefined,
+    transportCurrency:
+      raw.transportCurrency && typeof raw.transportCurrency === 'object'
+        ? raw.transportCurrency
+        : undefined,
   };
 }
 

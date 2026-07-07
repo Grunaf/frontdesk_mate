@@ -612,6 +612,11 @@
       },
       "directions": {
         "fromSubtitle": "From which location are you arriving?",
+        "hubs": {
+          "airport": "Airport",
+          "bus": "Bus station",
+          "train": "Train station"
+        },
         "recommendedTitle": "Recommended route",
         "stepByStep": "Step-by-step",
         "otherPublicRoute": "Other public route",
@@ -628,6 +633,7 @@
           "freeTransit": "Free public transport",
           "flatFare": "Fare: {amount}",
           "taxiPrice": "{minKM}–{maxKM} KM ({minEUR}–{maxEUR} €)",
+          "taxiPriceEurOnly": "{minEUR}–{maxEUR} €",
           "taxiDuration": "~{min}–{max} min"
         },
         "steps": {
@@ -770,6 +776,8 @@
       "tabs": {
         "register": "Guest registration",
         "contact": "Contact",
+        "essentials": "Wi‑Fi & rules",
+        "room": "Your room",
         "settlement": "Settlement"
       },
       "register": {
@@ -839,13 +847,20 @@
         "description": "Reception may need to reach you about your registration, room, or stay. Use a number you check on WhatsApp or phone.",
         "whatsappLabel": "WhatsApp or mobile number",
         "hint": "Include country code. One number for the whole booking.",
-        "continue": "Continue to settlement",
+        "continue": "Continue to Wi‑Fi & rules",
         "saving": "Saving…",
-        "actionButton": "Continue to settlement",
+        "actionButton": "Continue to Wi‑Fi & rules",
         "errors": {
           "invalidWhatsapp": "Enter a valid number with country code.",
           "generic": "Something went wrong. Try again."
         }
+      },
+      "essentials": {
+        "actionButton": "Continue to your room"
+      },
+      "room": {
+        "title": "Find your bed",
+        "description": "See your room on the map and how to get there from reception."
       },
       "settlement": {
         "copy": {
@@ -1484,6 +1499,17 @@
       "copyLineRef": "Ref: #{stayRef}",
       "copyLineName": "Name: {guestName}",
       "showRoomMapLink": "Show room map & directions",
+      "bedLockedUntilTourism": "Complete tourist registration to see your bed assignment.",
+      "tourismSummaryHeading": "Tourist registration",
+      "tourismStatusNotStarted": "Not started",
+      "tourismStatusInProgress": "In progress",
+      "tourismStatusComplete": "Complete",
+      "tourismSummaryNotStarted": "Add each guest and upload the required documents.",
+      "tourismSummaryInProgress": "{count} guest added — finish documents for everyone in your group.",
+      "tourismSummaryInProgress_other": "{count} guests added — finish documents for everyone in your group.",
+      "tourismSummaryComplete": "{count} guest registered for your stay.",
+      "tourismSummaryComplete_other": "{count} guests registered for your stay.",
+      "tourismSummaryContinueLink": "Continue registration",
       "extendStayHeading": "Need more nights?",
       "extendStayNotice": "Extensions are handled at reception. Your app access matches your booked nights — after extending, ask reception to refresh your access if door codes stop working.",
       "extendStayWhatsapp": "Request to extend stay",
@@ -1504,7 +1530,7 @@
       "whatsappMessage": "Hi, I have a question about my stay at {hostelName}"
     },
     "guestIssue": {
-      "cardTitle": "Something not working?",
+      "cardTitle": "Notice a fault in the hostel?",
       "cardDescription": "Shower, door, bed, Wi‑Fi… Reception sees it on their screen.",
       "cardButton": "Report issue",
       "sheetTitle": "Report an issue",
@@ -1524,7 +1550,7 @@
       "successWhatsappButton": "Message reception",
       "successWhatsappMessage": "Hi, I reported an issue in my room at {hostelName}. Can you help?",
       "successClose": "Done",
-      "myStayPrompt": "Something broken in your room?",
+      "myStayPrompt": "Notice a fault in your room?",
       "myStayLink": "Report issue",
       "categories": {
         "shower": "Shower",

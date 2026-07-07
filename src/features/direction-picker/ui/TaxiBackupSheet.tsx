@@ -24,6 +24,7 @@ import { resolveReceptionTaxiBackup } from '../lib/resolveReceptionTaxiBackup';
 import { resolveRecommendedTaxi } from '../lib/resolveRecommendedTaxi';
 import { resolveRouteCopyField } from '../lib/resolveRouteCopy';
 import { ReceptionContactActions, ReceptionContactHint, useReceptionContactLabels } from '@/features/reception-contact';
+import { inferCityPackTransportCurrencyMode } from '@/entities/city-pack/lib/inferCityPackTransportCurrency';
 import { TaxiRouteSummary } from './TaxiBackupCard';
 
 export function TaxiBackupSheet({
@@ -35,7 +36,7 @@ export function TaxiBackupSheet({
   onOpenChange: (open: boolean) => void;
   route: RouteConfig;
 }) {
-  const { name, hostel, cityPack, contentKeys, slug } = useTenant();
+  const { name, hostel, cityPack, contentKeys, slug, cityPackId, cityPackContent } = useTenant();
   const routes = useTranslations();
   const taxiActions = useTranslations('components.taxi');
   const directions = useTranslations('pages.arrivalJourney.directions');
@@ -74,6 +75,7 @@ export function TaxiBackupSheet({
 
   const hasTaxi = Boolean(recommendedTaxi);
   const hasReception = Boolean(receptionBackup);
+  const currencyMode = inferCityPackTransportCurrencyMode(cityPackId, cityPackContent);
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
@@ -88,7 +90,7 @@ export function TaxiBackupSheet({
             </div>
             <div className="min-w-0 space-y-1">
               <BottomSheetTitle className="text-base">{directions('taxiTitle')}</BottomSheetTitle>
-              <TaxiRouteSummary route={route} directions={directions} />
+              <TaxiRouteSummary route={route} directions={directions} currencyMode={currencyMode} />
             </div>
           </div>
         </BottomSheetHeader>

@@ -10,7 +10,7 @@ import {
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 import { badgeVariants, Icon } from '@/shared/ui';
-import { ChevronDown } from 'lucide-react';
+import { BedSingle } from 'lucide-react';
 import { GuestStaySheet } from './GuestStaySheet';
 
 export function GuestStayChip() {
@@ -37,13 +37,12 @@ export function GuestStayChip() {
         type="button"
         className={cn(
           badgeVariants({ variant: 'outline' }),
-          'shrink-0 gap-1 px-2.5 py-2 text-left active:bg-muted/60'
+          'size-11 shrink-0 p-0 active:bg-muted/60'
         )}
         onClick={() => setSheetOpen(true)}
         aria-label={t('openDetail', { summary: chipLabel })}
       >
-        <span className="text-xs font-medium whitespace-nowrap">{chipLabel}</span>
-        <Icon icon={ChevronDown} className="h-3 w-3 shrink-0 text-muted-foreground" />
+        <Icon icon={BedSingle} size={22} className="text-foreground" />
       </button>
 
       <GuestStaySheet

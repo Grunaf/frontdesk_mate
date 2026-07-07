@@ -12,8 +12,10 @@ Rules:
 - If the operator says they do not know, leave the field empty and keep the question in openQuestions.
 - publicText: imperative steps for boarding and riding only (not get-off — use publicGetOffAt).
 - publicGetOffAt: where to exit transit; omit for walk-only (set routeMode to walk_only).
+- publicPreview: walk from hub to stop/platform only (not final walk to hostel — tenant settings).
 - tips: up to 5 short optional bullets (payment, night taxi, etc.).
-- locationLabelEn: short hub name if obvious from input (e.g. "Airport", "Main bus station").`;
+- locationLabelEn: short hub name if obvious from input (e.g. "Airport", "Main bus station").
+- metadata: numeric fields ONLY when explicitly stated in operator input (prices, durations, ticket kiosk/driver KM). Never guess. For eur_only packs use taxiEurMin/Max; for local_and_eur also taxiKmMin/Max and ticketKioskKm/ticketDriverKm when given.`;
 
 function formatFollowUps(followUpAnswers?: Record<string, string>): string {
   if (!followUpAnswers || Object.keys(followUpAnswers).length === 0) {
@@ -28,7 +30,11 @@ function formatFollowUps(followUpAnswers?: Record<string, string>): string {
 }
 
 export function buildGuidedRouteFillUserPrompt(input: GuidedRouteFillRequest): string {
-  const base = `Hub: ${input.hubLabel} (${input.routeId})
+  const currencyLine = input.transportCurrencyMode
+    ? `Transport currency profile: ${input.transportCurrencyMode}\n`
+    : '';
+
+  const base = `${currencyLine}Hub: ${input.hubLabel} (${input.routeId})
 Pack: ${input.packId}
 Current route mode: ${input.currentRouteMode ?? 'transit'}
 
@@ -62,7 +68,6 @@ export function guidedRouteFillFieldLabel(field: GuidedRouteFillFieldKey): strin
     publicText: 'Step-by-step (ride)',
     publicGetOffAt: 'Get off at',
     publicPreview: 'Walk to stop',
-    publicWalkToHostel: 'Walk to hostel',
     tips: 'Good to know tips',
   };
   return labels[field];

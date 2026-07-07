@@ -4,9 +4,13 @@ import type {
   CityPackContentWarnings,
   CityPackRouteContent,
   CityPackRouteCopy,
+  CityPackTransportCurrencyMode,
 } from '../model/types';
 import { toLocalizedText, type LocalizedText } from '../model/localized';
 import { MAX_ROUTE_TIPS } from './constants';
+import { inferCityPackTransportCurrency } from './inferCityPackTransportCurrency';
+import { normalizeRouteTaxiForCurrency } from './normalizeRouteTaxiForCurrency';
+import { syncHubApproxTravelTime } from './syncHubApproxTravelTime';
 
 const ROUTE_CATEGORY: Record<RouteId, RouteCategory> = {
   airport: 'airport',
@@ -26,7 +30,7 @@ function softCopy(copy: CityPackRouteCopy | undefined): CityPackRouteCopy {
     publicPreview: softLocalized(copy?.publicPreview),
     publicText: softLocalized(copy?.publicText),
     publicGetOffAt: softLocalized(copy?.publicGetOffAt),
-    publicWalkToHostel: softLocalized(copy?.publicWalkToHostel),
+    publicWalkToHostel: { en: '' },
     taxiCost: softLocalized(copy?.taxiCost),
     taxiPickupPoint: softLocalized(copy?.taxiPickupPoint),
   };
@@ -46,11 +50,12 @@ function softRouteTips(tips: LocalizedText[] | undefined): LocalizedText[] | und
 
 function normalizeRouteContent(
   route: CityPackRouteContent,
-  routeId: RouteId
+  routeId: RouteId,
+  currencyMode: CityPackTransportCurrencyMode
 ): CityPackRouteContent {
   const category = route.category ?? ROUTE_CATEGORY[routeId];
 
-  return {
+  const base: CityPackRouteContent = {
     category,
     routeMode: route.routeMode,
     isActive: route.isActive,
@@ -80,10 +85,13 @@ function normalizeRouteContent(
       },
     },
   };
+
+  return normalizeRouteTaxiForCurrency(syncHubApproxTravelTime(base), currencyMode);
 }
 
 export function normalizeCityPackRoutes(
-  routes: Partial<Record<RouteId, CityPackRouteContent>> | undefined
+  routes: Partial<Record<RouteId, CityPackRouteContent>> | undefined,
+  currencyMode: CityPackTransportCurrencyMode = 'eur_only'
 ): Partial<Record<RouteId, CityPackRouteContent>> | undefined {
   if (!routes || typeof routes !== 'object') {
     return undefined;
@@ -100,7 +108,7 @@ export function normalizeCityPackRoutes(
       continue;
     }
 
-    normalized[routeId] = normalizeRouteContent(route, routeId);
+    normalized[routeId] = normalizeRouteContent(route, routeId, currencyMode);
   }
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;
@@ -146,13 +154,17 @@ export function parseCityPackWarningsJson(raw: string): CityPackContentWarnings 
 
 export function mergeCityPackContentForSave(
   content: CityPackContent,
-  enabledRoutes: RouteId[]
+  enabledRoutes: RouteId[],
+  packId: string
 ): CityPackContent {
-  const routes = normalizeCityPackRoutes(content.routes);
+  const transportCurrency = inferCityPackTransportCurrency(packId, content);
+  const currencyMode = transportCurrency.mode;
+  const routes = normalizeCityPackRoutes(content.routes, currencyMode);
 
   if (!routes) {
     return {
       ...content,
+      transportCurrency,
       routes: undefined,
     };
   }
@@ -166,6 +178,7 @@ export function mergeCityPackContentForSave(
 
   return {
     ...content,
+    transportCurrency,
     routes: Object.keys(filtered).length > 0 ? filtered : undefined,
   };
 }

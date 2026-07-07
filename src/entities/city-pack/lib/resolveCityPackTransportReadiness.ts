@@ -16,12 +16,14 @@ export interface CityPackTransportReadinessResult {
 export type RouteGateFieldId =
   | 'publicTitle'
   | 'publicSummary'
+  | 'publicPreview'
   | 'publicText'
   | 'publicGetOffAt';
 
 export const ROUTE_GATE_FIELDS: { id: RouteGateFieldId; label: string }[] = [
   { id: 'publicTitle', label: 'Card title' },
   { id: 'publicSummary', label: 'Card summary' },
+  { id: 'publicPreview', label: 'Walk to stop' },
   { id: 'publicText', label: 'Step-by-step' },
   { id: 'publicGetOffAt', label: 'Get off at' },
 ];
@@ -35,6 +37,8 @@ function readRouteGateField(
       return route.copy.publicTitle;
     case 'publicSummary':
       return route.copy.publicSummary;
+    case 'publicPreview':
+      return route.copy.publicPreview;
     case 'publicText':
       return route.copy.publicText;
     case 'publicGetOffAt':
@@ -44,7 +48,9 @@ function readRouteGateField(
 
 function gateFieldsForRoute(route: CityPackRouteContent | undefined) {
   if (route?.routeMode === 'walk_only') {
-    return ROUTE_GATE_FIELDS.filter((field) => field.id !== 'publicGetOffAt');
+    return ROUTE_GATE_FIELDS.filter(
+      (field) => field.id !== 'publicGetOffAt' && field.id !== 'publicPreview'
+    );
   }
   return ROUTE_GATE_FIELDS;
 }

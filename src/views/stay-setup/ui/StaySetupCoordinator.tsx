@@ -12,21 +12,26 @@ import {
   TourismRegistrationRequiredSheet,
 } from '@/features/guest-tourism-registration';
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
-import { ArrivalGuideStepsShell, SettlementPhase } from '@/views/arrival-journey';
-import { useTranslations } from '@/shared/i18n';
+import { ArrivalGuideStepsShell } from '@/views/arrival-journey';
 import { SITE_CONFIG } from '@/shared/config';
-import { Button, SegmentedChipBar } from '@/shared/ui';
+import { useTranslations } from '@/shared/i18n';
+import { Button, IconBackActionsRow } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
   isStaySetupStepLocked,
   isValidStaySetupUrlStep,
+  normalizeStaySetupUrlStep,
   resolveFirstIncompleteStaySetupStep,
   resolveNextStaySetupStep,
+  resolvePreviousStaySetupStep,
   resolveStaySetupStepOrder,
   type StaySetupCompletion,
   type StaySetupStep,
 } from '../lib/resolveStaySetupSteps';
 import { resolveStaySetupPrimaryButtonKey } from '../lib/resolveStaySetupPrimaryButtonKey';
+import { StaySetupEssentialsStep } from './StaySetupEssentialsStep';
+import { StaySetupRoomStep } from './StaySetupRoomStep';
+import { StaySetupStepProgressBar } from './StaySetupStepProgressBar';
 
 export interface StaySetupInitialState {
   tourismComplete: boolean;
@@ -38,10 +43,19 @@ interface StaySetupCoordinatorProps {
   initial: StaySetupInitialState;
 }
 
-const REGISTRATION_LOCKED_STEPS: StaySetupStep[] = ['register', 'contact', 'settlement'];
+const REGISTRATION_LOCKED_STEPS: StaySetupStep[] = [
+  'register',
+  'contact',
+  'essentials',
+  'room',
+];
 
 function isRegistrationLockedStep(step: StaySetupStep, isRegistered: boolean): boolean {
   return !isRegistered && REGISTRATION_LOCKED_STEPS.includes(step);
+}
+
+function isRoomOrEssentialsStep(step: StaySetupStep): boolean {
+  return step === 'essentials' || step === 'room';
 }
 
 export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
@@ -89,11 +103,11 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const step = params.get('step');
+    const step = normalizeStaySetupUrlStep(params.get('step'));
 
     if (!isRegistered) {
-      if (step === 'settlement') {
-        setCurrentStep('settlement');
+      if (step === 'room' || step === 'essentials') {
+        setCurrentStep(step);
         return;
       }
       if (step === 'contact') {
@@ -120,18 +134,13 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     if (step === 'register' && !tourismRegistrationRequired) {
       setCurrentStep(
         contactComplete
-          ? 'settlement'
+          ? 'essentials'
           : resolveFirstIncompleteStaySetupStep(false, completion)
       );
       return;
     }
 
-    if (step === 'contact' && contactComplete) {
-      setCurrentStep(resolveFirstIncompleteStaySetupStep(tourismRegistrationRequired, completion));
-      return;
-    }
-
-    if (step === 'settlement') {
+    if (step === 'room' || step === 'essentials') {
       if (tourismRegistrationRequired && !tourismComplete) {
         setCurrentStep('register');
         return;
@@ -140,17 +149,15 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         setCurrentStep('contact');
         return;
       }
-      setCurrentStep('settlement');
+      setCurrentStep(step);
       return;
     }
 
-    if (!isValidStaySetupUrlStep(step, tourismRegistrationRequired, contactComplete)) {
+    if (!isValidStaySetupUrlStep(params.get('step'), tourismRegistrationRequired, contactComplete)) {
       return;
     }
 
-    const target = step as StaySetupStep;
-
-    setCurrentStep(target);
+    setCurrentStep(step);
   }, [
     isRegistered,
     tourismRegistrationRequired,
@@ -168,12 +175,13 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   const handleTourismComplete = useCallback(() => {
     setTourismComplete(true);
-    setCurrentStep(contactComplete ? 'settlement' : 'contact');
+    setCurrentStep(contactComplete ? 'essentials' : 'contact');
   }, [contactComplete]);
 
-  const handleContactComplete = useCallback(() => {
+  const handleContactComplete = useCallback((savedWhatsapp: string) => {
+    setStayContactWhatsapp(savedWhatsapp);
     setContactComplete(true);
-    setCurrentStep('settlement');
+    setCurrentStep('essentials');
   }, []);
 
   const navigateToStep = useCallback(
@@ -184,7 +192,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       }
 
       if (
-        step === 'settlement' &&
+        isRoomOrEssentialsStep(step) &&
         tourismRegistrationRequired &&
         isRegistered &&
         !tourismComplete
@@ -193,7 +201,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         return;
       }
 
-      if (step === 'settlement' && isRegistered && !contactComplete) {
+      if (isRoomOrEssentialsStep(step) && isRegistered && !contactComplete) {
         setCurrentStep('contact');
         return;
       }
@@ -234,28 +242,37 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       });
     }
 
-    if (!contactComplete) {
-      items.push({
-        id: 'contact',
-        label: t('tabs.contact'),
-        showPrimary: false,
-        render: () => (
-          <StayContactStepPanel
-            tenantSlug={tenantSlug}
-            initialContactWhatsapp={stayContactWhatsapp}
-            onComplete={handleContactComplete}
-            interactionEnabled={isRegistered}
-          />
-        ),
-        onComplete: handleContactComplete,
-      });
-    }
+    items.push({
+      id: 'contact',
+      label: t('tabs.contact'),
+      showPrimary: false,
+      render: () => (
+        <StayContactStepPanel
+          tenantSlug={tenantSlug}
+          initialContactWhatsapp={stayContactWhatsapp}
+          onComplete={handleContactComplete}
+          interactionEnabled={isRegistered}
+          onBack={
+            tourismRegistrationRequired ? () => navigateToStep('register') : undefined
+          }
+        />
+      ),
+      onComplete: () => handleContactComplete(stayContactWhatsapp ?? ''),
+    });
 
     items.push({
-      id: 'settlement',
-      label: t('tabs.settlement'),
+      id: 'essentials',
+      label: t('tabs.essentials'),
       showPrimary: true,
-      render: () => <SettlementPhase />,
+      render: () => <StaySetupEssentialsStep />,
+      onComplete: () => setCurrentStep('room'),
+    });
+
+    items.push({
+      id: 'room',
+      label: t('tabs.room'),
+      showPrimary: true,
+      render: () => <StaySetupRoomStep />,
       onComplete: () => router.push(SITE_CONFIG.routes.app.concierge.path),
     });
 
@@ -263,7 +280,6 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   }, [
     t,
     tourismRegistrationRequired,
-    contactComplete,
     handleTourismComplete,
     handleContactComplete,
     tenantSlug,
@@ -271,32 +287,16 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     router,
     visibleSteps,
     isRegistered,
+    navigateToStep,
   ]);
 
   const activeStep = stepsConfig.find((step) => step.id === currentStep) ?? stepsConfig[0];
 
-  const chipItems = stepsConfig.map((step) => ({
+  const progressSteps = stepsConfig.map((step) => ({
     id: step.id,
     label: step.label,
     locked: isStaySetupStepLocked(step.id, isRegistered, tourismRegistrationRequired, completion),
   }));
-
-  const handleStepChange = (value: string) => {
-    navigateToStep(value as StaySetupStep);
-  };
-
-  const handleLockedChipClick = (id: string) => {
-    const step = id as StaySetupStep;
-    if (isRegistrationLockedStep(step, isRegistered)) {
-      openCheckInSheet();
-      return;
-    }
-    if (step === 'settlement' || step === 'contact') {
-      if (tourismRegistrationRequired && !tourismComplete) {
-        openTourismGateSheet();
-      }
-    }
-  };
 
   const handlePrimaryAction = () => {
     if (!activeStep) {
@@ -309,7 +309,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     }
 
     if (
-      activeStep.id === 'settlement' &&
+      isRoomOrEssentialsStep(activeStep.id) &&
       tourismRegistrationRequired &&
       !tourismComplete
     ) {
@@ -317,7 +317,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       return;
     }
 
-    if (activeStep.id === 'settlement' && !contactComplete) {
+    if (isRoomOrEssentialsStep(activeStep.id) && !contactComplete) {
       setCurrentStep('contact');
       return;
     }
@@ -347,26 +347,42 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   const showPrimaryButton = activeStep?.showPrimary ?? false;
 
+  const previousStep = activeStep
+    ? resolvePreviousStaySetupStep(
+        activeStep.id,
+        tourismRegistrationRequired,
+        completion
+      )
+    : null;
+  const showBackButton = previousStep !== null;
+
+  const handleBackAction = () => {
+    if (!previousStep) {
+      return;
+    }
+    navigateToStep(previousStep);
+  };
+
   return (
-    <div className={cn('flex min-h-screen w-full flex-col overflow-x-hidden bg-background')}>
+    <div className={cn('flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-background')}>
       <ArrivalGuideStepsShell stepsLayout="scrollLinked">
-        <SegmentedChipBar
-          bleed={false}
-          className="mt-2 px-4 py-0.5"
-          items={chipItems}
+        <StaySetupStepProgressBar
+          className="mt-2 px-4"
+          steps={progressSteps}
           value={currentStep}
-          onValueChange={handleStepChange}
-          onLockedClick={handleLockedChipClick}
+          completion={completion}
           ariaLabel="Stay setup steps"
         />
       </ArrivalGuideStepsShell>
 
-      <main className="flex flex-col justify-between gap-y-6 px-4 pt-4 pb-8">
-        {activeStep?.render()}
+      <main className="flex min-h-0 flex-1 flex-col px-4 pt-1 pb-4">
+        <div className="min-h-0 flex-1 overflow-y-auto">{activeStep?.render()}</div>
         {showPrimaryButton ? (
-          <Button size="lg" className="w-full" onClick={handlePrimaryAction}>
-            {t(primaryButtonKey)}
-          </Button>
+          <IconBackActionsRow className="mt-3" onBack={showBackButton ? handleBackAction : undefined}>
+            <Button size="lg" onClick={handlePrimaryAction}>
+              {t(primaryButtonKey)}
+            </Button>
+          </IconBackActionsRow>
         ) : null}
       </main>
 
