@@ -117,6 +117,19 @@ export function CityPackRouteEditor({
   const patch = (partial: Partial<CityPackRouteContent>) => onChange({ ...route, ...partial });
   const patchCopy = (partial: Partial<CityPackRouteContent['copy']>) =>
     onChange({ ...route, copy: { ...route.copy, ...partial } });
+  const patchAdviceLine = (
+    key: 'transitScheduleAdvice' | 'transitTicketPayment',
+    index: number,
+    value: LocalizedText
+  ) => {
+    const current = route.copy[key] ?? [];
+    const next = [...current];
+    next[index] = value;
+    const compact = next.filter((line) => isLocalizedFilled(line, 'en') || isLocalizedFilled(line, 'ru'));
+    patchCopy({ [key]: compact.length > 0 ? compact : undefined });
+  };
+  const scheduleAdvice = route.copy.transitScheduleAdvice ?? [];
+  const ticketPaymentAdvice = route.copy.transitTicketPayment ?? [];
   const setHubArrivalKind = (next: HubArrivalKind) => patch({ hubArrivalKind: next });
 
   const tips = route.tips ?? [];
@@ -337,6 +350,38 @@ export function CityPackRouteEditor({
           gateRequired={getOffAtRequired}
         />
         ) : null}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <AdminLocalizedInput
+            label="Schedule advice"
+            hint="Short line shown as transit reliability note."
+            value={scheduleAdvice[0] ?? { en: '' }}
+            onChange={(value) => patchAdviceLine('transitScheduleAdvice', 0, value)}
+            multiline
+            rows={2}
+          />
+          <AdminLocalizedInput
+            label="Schedule advice (line 2)"
+            value={scheduleAdvice[1] ?? { en: '' }}
+            onChange={(value) => patchAdviceLine('transitScheduleAdvice', 1, value)}
+            multiline
+            rows={2}
+          />
+          <AdminLocalizedInput
+            label="Ticket payment"
+            hint="Where/how to buy and validate tickets."
+            value={ticketPaymentAdvice[0] ?? { en: '' }}
+            onChange={(value) => patchAdviceLine('transitTicketPayment', 0, value)}
+            multiline
+            rows={2}
+          />
+          <AdminLocalizedInput
+            label="Ticket payment (line 2)"
+            value={ticketPaymentAdvice[1] ?? { en: '' }}
+            onChange={(value) => patchAdviceLine('transitTicketPayment', 1, value)}
+            multiline
+            rows={2}
+          />
+        </div>
       </div>
 
       {!gateReady && !isTenantLocal ? (

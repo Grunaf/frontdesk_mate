@@ -42,6 +42,9 @@ export const PACK_BULK_JSON_SCHEMA = `Reply with a single JSON object only (no m
         "transitDurationMin": number,
         "ticketKioskKm": number,
         "ticketDriverKm": number,
+        "taxiEur": number,
+        "taxiKm": number,
+        "taxiDuration": number,
         "taxiEurMin": number,
         "taxiEurMax": number,
         "taxiKmMin": number,
@@ -68,4 +71,4 @@ Rules for routes object:
 - taxi.tips: max 2 short operational bullets (how taxis work here — stand, meter, payment). Never duplicate transit.tips[] or prices.
 - primaryRouteMode must match the main guest path (transit vs walk_only).
 - hubArrivalKind: city_shared (default) — city owns transit/get-off; tenant_local — city meta only, tenants own full hub→door (soft city copy gate).
-- metadata: numeric prices/durations ONLY when stated in research; eur_only → taxiEurMin/Max; local_and_eur → also taxiKmMin/Max and ticketKioskKm/ticketDriverKm when given. Taxi numbers live in metadata only — not in copy strings.`;
+- metadata: numeric prices/durations ONLY when stated in research; prefer single values (taxiEur/taxiKm/taxiDuration). Min/Max variants are accepted for compatibility. Taxi numbers live in metadata only — not in copy strings.`;

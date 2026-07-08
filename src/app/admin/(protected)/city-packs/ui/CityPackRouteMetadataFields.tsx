@@ -34,30 +34,6 @@ function NumberField({
   );
 }
 
-function RangeFields({
-  title,
-  min,
-  max,
-  onMinChange,
-  onMaxChange,
-}: {
-  title: string;
-  min: number;
-  max: number;
-  onMinChange: (value: number) => void;
-  onMaxChange: (value: number) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-medium text-foreground">{title}</p>
-      <div className="grid grid-cols-2 gap-2">
-        <NumberField label="Min" value={min} onChange={onMinChange} />
-        <NumberField label="Max" value={max} onChange={onMaxChange} />
-      </div>
-    </div>
-  );
-}
-
 export function CityPackRouteMetadataFields({
   route,
   currencyMode,
@@ -120,41 +96,30 @@ export function CityPackRouteMetadataFields({
         </div>
       ) : null}
 
-      <RangeFields
-        title="Price range (€)"
-        min={route.taxi.priceEUR.min}
-        max={route.taxi.priceEUR.max}
-        onMinChange={(min) =>
+      <NumberField
+        label="Taxi fair price (€)"
+        value={Math.round((route.taxi.priceEUR.min + route.taxi.priceEUR.max) / 2)}
+        onChange={(value) =>
           patchTaxi({
-            priceEUR: { min, max: route.taxi.priceEUR.max },
-            ...(currencyMode === 'eur_only'
-              ? { priceKM: { min, max: route.taxi.priceEUR.max } }
-              : {}),
-          })
-        }
-        onMaxChange={(max) =>
-          patchTaxi({
-            priceEUR: { min: route.taxi.priceEUR.min, max },
-            ...(currencyMode === 'eur_only'
-              ? { priceKM: { min: route.taxi.priceEUR.min, max } }
-              : {}),
+            priceEUR: { min: value, max: value },
+            ...(currencyMode === 'eur_only' ? { priceKM: { min: value, max: value } } : {}),
           })
         }
       />
 
       {showLocalKm ? (
-        <RangeFields
-          title="Price range (KM)"
-          min={route.taxi.priceKM.min}
-          max={route.taxi.priceKM.max}
-          onMinChange={(min) =>
-            patchTaxi({ priceKM: { min, max: route.taxi.priceKM.max } })
-          }
-          onMaxChange={(max) =>
-            patchTaxi({ priceKM: { min: route.taxi.priceKM.min, max } })
-          }
+        <NumberField
+          label="Taxi fair price (KM)"
+          value={Math.round((route.taxi.priceKM.min + route.taxi.priceKM.max) / 2)}
+          onChange={(value) => patchTaxi({ priceKM: { min: value, max: value } })}
         />
       ) : null}
+
+      <NumberField
+        label="Taxi duration (min)"
+        value={Math.round((route.taxi.durationMin.min + route.taxi.durationMin.max) / 2)}
+        onChange={(value) => patchTaxi({ durationMin: { min: value, max: value } })}
+      />
     </div>
   );
 }

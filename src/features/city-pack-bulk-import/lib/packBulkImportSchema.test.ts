@@ -154,7 +154,7 @@ describe('applyPackBulkImportPreview', () => {
         routes: {
           airport: {
             taxi: { taxiCost: { en: '€18–22' } },
-            metadata: { taxiEurMin: 18, taxiEurMax: 22, taxiDurationMin: 15, taxiDurationMax: 25 },
+            metadata: { taxiEur: 18, taxiDuration: 15 },
           },
         },
       },
@@ -167,7 +167,9 @@ describe('applyPackBulkImportPreview', () => {
 
     const next = routes.airport!;
     expect(next.taxi.priceEUR.min).toBe(18);
-    expect(next.taxi.priceEUR.max).toBe(22);
+    expect(next.taxi.priceEUR.max).toBe(18);
+    expect(next.taxi.durationMin.min).toBe(15);
+    expect(next.taxi.durationMin.max).toBe(15);
     expect(next.copy.taxiCost.en).toBeTruthy();
   });
 });

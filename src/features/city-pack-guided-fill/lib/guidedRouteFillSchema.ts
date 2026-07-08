@@ -34,10 +34,13 @@ export const guidedRouteFillModelSchema = z.object({
       transitStops: z.number().optional(),
       ticketKioskKm: z.number().optional(),
       ticketDriverKm: z.number().optional(),
+      taxiEur: z.number().optional(),
       taxiEurMin: z.number().optional(),
       taxiEurMax: z.number().optional(),
+      taxiKm: z.number().optional(),
       taxiKmMin: z.number().optional(),
       taxiKmMax: z.number().optional(),
+      taxiDuration: z.number().optional(),
       taxiDurationMin: z.number().optional(),
       taxiDurationMax: z.number().optional(),
     })

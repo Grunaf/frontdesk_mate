@@ -7,10 +7,13 @@ export interface RouteMetadataImport {
   transitStops?: number;
   ticketKioskKm?: number;
   ticketDriverKm?: number;
+  taxiEur?: number;
   taxiEurMin?: number;
   taxiEurMax?: number;
+  taxiKm?: number;
   taxiKmMin?: number;
   taxiKmMax?: number;
+  taxiDuration?: number;
   taxiDurationMin?: number;
   taxiDurationMax?: number;
 }
@@ -52,8 +55,9 @@ export function patchRouteMetadataFromImport(
     };
   }
 
-  const eurMin = positive(metadata.taxiEurMin);
-  const eurMax = positive(metadata.taxiEurMax);
+  const eurSingle = positive(metadata.taxiEur);
+  const eurMin = eurSingle ?? positive(metadata.taxiEurMin);
+  const eurMax = eurSingle ?? positive(metadata.taxiEurMax);
   if (eurMin != null || eurMax != null) {
     next.taxi.priceEUR = {
       min: eurMin ?? next.taxi.priceEUR.min,
@@ -61,8 +65,9 @@ export function patchRouteMetadataFromImport(
     };
   }
 
-  const kmMin = positive(metadata.taxiKmMin);
-  const kmMax = positive(metadata.taxiKmMax);
+  const kmSingle = positive(metadata.taxiKm);
+  const kmMin = kmSingle ?? positive(metadata.taxiKmMin);
+  const kmMax = kmSingle ?? positive(metadata.taxiKmMax);
   if (kmMin != null || kmMax != null) {
     next.taxi.priceKM = {
       min: kmMin ?? next.taxi.priceKM.min,
@@ -70,8 +75,9 @@ export function patchRouteMetadataFromImport(
     };
   }
 
-  const taxiDurMin = positive(metadata.taxiDurationMin);
-  const taxiDurMax = positive(metadata.taxiDurationMax);
+  const taxiDurSingle = positive(metadata.taxiDuration);
+  const taxiDurMin = taxiDurSingle ?? positive(metadata.taxiDurationMin);
+  const taxiDurMax = taxiDurSingle ?? positive(metadata.taxiDurationMax);
   if (taxiDurMin != null || taxiDurMax != null) {
     next.taxi.durationMin = {
       min: taxiDurMin ?? next.taxi.durationMin.min,

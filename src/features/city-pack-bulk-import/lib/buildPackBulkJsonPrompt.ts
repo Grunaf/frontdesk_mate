@@ -54,7 +54,7 @@ Convert the research into one pack JSON object for the hostel admin app.`;
     guidedRouteFillSystemPrompt(),
     '',
     'Pack-level: output multiple hubs in routes{}. Each hub follows the same single-scenario rules independently.',
-    'Fill taxi{} as a separate guest taxi card (cost, pickup, tips) plus metadata taxiEur*/taxiKm*/taxiDuration* when research states numbers.',
+    'Fill taxi{} as a separate guest taxi card (cost, pickup, tips) plus metadata taxiEur/taxiKm/taxiDuration (or Min/Max compatibility keys) when research states numbers.',
     'taxi.tips: max 2 general operational lines (official stand, meter, payment) for the taxi backup sheet — never mix into transit.tips[] (Good to know).',
     'Never place any prices/currencies/ranges in tips (including taxi.tips); keep those only in taxiCost and metadata numeric fields.',
     'Fill transitScheduleAdvice/transitTicketPayment from research; each line max 10 words, non-generic, no duplication with tips.',
