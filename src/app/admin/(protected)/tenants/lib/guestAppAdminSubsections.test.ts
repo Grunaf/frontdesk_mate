@@ -19,6 +19,7 @@ describe('guestAppAdminSubsections', () => {
         name: 'Demo',
         cityPackId: 'sarajevo' as const,
         settings: {},
+        lifecycleStatus: 'active' as const,
       },
     };
     expect(getGuestAppAdminModuleStatus('extras', context)).toBe('n/a');

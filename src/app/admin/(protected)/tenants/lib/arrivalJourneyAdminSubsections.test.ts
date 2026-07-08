@@ -26,6 +26,7 @@ describe('arrivalJourneyAdminSubsections', () => {
       name: 'Demo',
       cityPackId: 'sarajevo' as const,
       settings: {},
+      lifecycleStatus: 'active' as const,
     };
     expect(getArrivalJourneyAdminModuleStatus('find-building', input)).toBe('preview');
     expect(getArrivalJourneyAdminModuleHint('find-building', input)).toMatch(/address/i);

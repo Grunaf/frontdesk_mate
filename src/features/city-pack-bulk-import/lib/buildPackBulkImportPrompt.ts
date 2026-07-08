@@ -6,5 +6,5 @@ export function buildPackBulkImportPrompt(input: {
   cityLabel: string;
   notes: string;
 }): string {
-  return buildPackBulkJsonPrompt({ ...input, research: '' });
+  return buildPackBulkJsonPrompt({ ...input, research: '', researchRouteIds: [] });
 }

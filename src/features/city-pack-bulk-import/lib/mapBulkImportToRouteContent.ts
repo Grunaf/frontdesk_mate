@@ -61,7 +61,7 @@ function copyBlockToPartialCopy(
     }
 
     const value = trimOrUndefined(block[key] as string | undefined);
-    if (value && key !== 'transitScheduleAdvice' && key !== 'transitTicketPayment') {
+    if (value) {
       copy[key] = value;
     }
   }

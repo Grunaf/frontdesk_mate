@@ -65,10 +65,6 @@ export function applyGuidedFillPreview(
     keyof typeof preview.copy,
     string | string[],
   ][]) {
-    if (key === 'publicWalkToHostel') {
-      continue;
-    }
-
     if (key === 'transitScheduleAdvice' || key === 'transitTicketPayment') {
       next.copy[key] = toLocalizedEnLines(value as string[] | undefined, next.copy[key]);
       continue;

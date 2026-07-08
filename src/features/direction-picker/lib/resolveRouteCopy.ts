@@ -2,7 +2,10 @@ import type { RouteConfig, RouteGuestCopy } from '@/entities/hostel';
 
 type RoutesTranslator = (key: string, values?: Record<string, string>) => string;
 
-type RouteCopyTranslatableField = Exclude<keyof RouteGuestCopy, 'tips' | 'fareLabel' | 'hint'>;
+type RouteCopyTranslatableField = Exclude<
+  keyof RouteGuestCopy,
+  'tips' | 'fareLabel' | 'hint' | 'transitScheduleAdvice' | 'transitTicketPayment' | 'taxiTips'
+>;
 
 const TRANSLATION_KEY_BY_FIELD: Record<
   RouteCopyTranslatableField,

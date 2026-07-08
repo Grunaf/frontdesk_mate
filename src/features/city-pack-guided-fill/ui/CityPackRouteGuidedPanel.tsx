@@ -456,16 +456,20 @@ export function CityPackRouteGuidedPanel({
               Gate EN: {gateStatus.statusLabel}. Apply anyway only if you will fix in Manual.
             </p>
           ) : null}
-          {copyFields.map((field) => (
-            <PreviewField
-              key={field}
-              label={guidedRouteFillFieldLabel(field)}
-              value={preview.copy[field as keyof typeof preview.copy]}
-              busy={busy}
-              showRegenerate={llmConfigured}
-              onRegenerate={() => runGenerate('single_field', field)}
-            />
-          ))}
+          {copyFields.map((field) => {
+            const rawValue = preview.copy[field as keyof typeof preview.copy];
+            const fieldValue = typeof rawValue === 'string' ? rawValue : undefined;
+            return (
+              <PreviewField
+                key={field}
+                label={guidedRouteFillFieldLabel(field)}
+                value={fieldValue}
+                busy={busy}
+                showRegenerate={llmConfigured}
+                onRegenerate={() => runGenerate('single_field', field)}
+              />
+            );
+          })}
           <PreviewField
             label={guidedRouteFillFieldLabel('tips')}
             value={preview.tips?.join('\n')}

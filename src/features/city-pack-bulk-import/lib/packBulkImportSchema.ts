@@ -1,12 +1,25 @@
 import { z } from 'zod';
 import type { RouteId } from '@/entities/hostel';
+import type { GuidedRouteOpenQuestion } from '@/features/city-pack-guided-fill';
 import type { PackBulkImportDocument, PackBulkImportParseResult } from '../model/types';
 
 const ROUTE_IDS = ['airport', 'bus_central', 'bus_istochno', 'train_station'] as const satisfies readonly RouteId[];
 
+const OPEN_QUESTION_FIELDS = [
+  'publicTitle',
+  'publicSummary',
+  'publicText',
+  'publicGetOffAt',
+  'publicPreview',
+  'transitScheduleAdvice',
+  'transitTicketPayment',
+  'tips',
+  'routeMode',
+] as const satisfies readonly GuidedRouteOpenQuestion['field'][];
+
 const openQuestionSchema = z.object({
   id: z.string().min(1),
-  field: z.string().min(1),
+  field: z.enum(OPEN_QUESTION_FIELDS),
   question: z.string().min(1),
 });
 

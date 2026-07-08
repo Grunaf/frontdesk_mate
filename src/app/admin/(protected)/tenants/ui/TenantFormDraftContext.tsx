@@ -192,11 +192,11 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
   return merged;
 }
 
-function mergeDraftSlice<T extends Record<string, unknown>>(
+function mergeDraftSlice<T extends object>(
   current: T | undefined,
   patch: T
 ): T {
-  return { ...(current ?? ({} as T)), ...patch };
+  return { ...(current ?? {}), ...patch } as T;
 }
 
 /** Merges nested draft slices so rapid partial updates (e.g. phone raw + mask) do not clobber each other. */
