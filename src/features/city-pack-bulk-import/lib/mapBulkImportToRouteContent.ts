@@ -27,6 +27,8 @@ const COPY_KEYS: GuidedRouteCopyFieldKey[] = [
 const MAX_BULK_AI_TIPS = 2;
 const PRICE_IN_TIP_PATTERN =
   /\b(?:\d+[.,]?\d*\s?(?:€|eur|usd|gbp|km|kм|руб|rsd|din|price|fare)|(?:€|\$|£)\s?\d+[.,]?\d*|price\s*range|fare\s*range)\b/i;
+const CALL_AHEAD_IN_TAXI_TIP_PATTERN =
+  /\b(?:call|phone|whatsapp|book\s+(?:a\s+)?taxi|dial|pre-?book)\b|(?:\+?\d[\d\s-]{6,}\d)/i;
 
 function trimOrUndefined(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -53,7 +55,7 @@ function copyBlockToPartialCopy(
   const copy: GuidedRouteCopyPayload = {};
   for (const key of COPY_KEYS) {
     if (key === 'transitScheduleAdvice' || key === 'transitTicketPayment') {
-      const lines = block[key]?.map((line) => line.trim()).filter(Boolean).slice(0, 2);
+      const lines = block[key]?.map((line) => line.trim()).filter(Boolean).slice(0, 1);
       if (lines?.length) {
         copy[key] = lines;
       }
@@ -143,7 +145,9 @@ function patchTaxiTipsFields(
 ): CityPackRouteContent {
   const tips = taxi?.tips
     ?.map((tip) => tip.trim())
-    .filter((tip) => tip && !PRICE_IN_TIP_PATTERN.test(tip))
+    .filter(
+      (tip) => tip && !PRICE_IN_TIP_PATTERN.test(tip) && !CALL_AHEAD_IN_TAXI_TIP_PATTERN.test(tip)
+    )
     .slice(0, MAX_TAXI_TIPS);
   if (!tips?.length) {
     return route;

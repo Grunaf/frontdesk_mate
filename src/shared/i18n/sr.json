@@ -1431,7 +1431,9 @@
       "whatsappTaxiMessage": "Hello! Please send a taxi to {pickupPoint}. Destination: {address}.",
       "askReceptionHoursHint": "Reception hours: {open}–{close}.",
       "askReceptionOpensHint": "Reception opens at {open}.",
-      "safetyTipsTitle": "Before you call — safety tips",
+      "zoneAtHubTitle": "Getting a taxi here",
+      "zoneDealTitle": "Before you get in",
+      "zoneCallLead": "Prefer to book by phone?",
       "receptionTaxiMessage": "Hi {hostelName}! I'm at {pickupPoint} and need a taxi to {address}. Can you help me book one?",
       "noTaxiNumber": "No taxi number configured — use WhatsApp reception to help book a ride.",
       "noContactFallback": "Contact details are not configured yet."

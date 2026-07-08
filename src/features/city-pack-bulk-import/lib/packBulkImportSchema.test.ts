@@ -144,6 +144,59 @@ describe('applyPackBulkImportPreview', () => {
     expect(next.copy.taxiCost.en).toBe('€15–20');
   });
 
+  it('drops call-ahead wording from imported taxi.tips', () => {
+    const existing = createBlankCityPackRouteContent('airport');
+    const { routes } = applyPackBulkImportPreview({
+      packId: 'demo',
+      notes: 'Desk taxi.',
+      document: {
+        packId: 'demo',
+        routes: {
+          airport: {
+            taxi: {
+              tips: ['Call Red Taxi at the desk', 'Insist on the meter'],
+            },
+          },
+        },
+      },
+      currentRoutes: { airport: existing },
+      routeIdsToApply: ['airport'],
+      currentEnabledRoutes: ['airport'],
+      applySuggestedEnabledRoutes: false,
+    });
+
+    expect(routes.airport!.copy.taxiTips?.map((tip) => tip.en)).toEqual(['Insist on the meter']);
+  });
+
+  it('documents taxi.tips slot semantics for bulk import', () => {
+    const existing = createBlankCityPackRouteContent('airport');
+    const { routes } = applyPackBulkImportPreview({
+      packId: 'demo',
+      notes: 'Airport taxi.',
+      document: {
+        packId: 'demo',
+        routes: {
+          airport: {
+            taxi: {
+              taxiPickupPoint: { en: 'Arrivals taxi desk' },
+              tips: ['Queue at the desk in arrivals', 'Agree fare or confirm meter before leaving'],
+            },
+          },
+        },
+      },
+      currentRoutes: { airport: existing },
+      routeIdsToApply: ['airport'],
+      currentEnabledRoutes: ['airport'],
+      applySuggestedEnabledRoutes: false,
+    });
+
+    expect(routes.airport!.copy.taxiPickupPoint.en).toBe('Arrivals taxi desk');
+    expect(routes.airport!.copy.taxiTips?.map((tip) => tip.en)).toEqual([
+      'Queue at the desk in arrivals',
+      'Agree fare or confirm meter before leaving',
+    ]);
+  });
+
   it('applies taxi metadata to numeric guest card fields', () => {
     const existing = createBlankCityPackRouteContent('airport');
     const { routes } = applyPackBulkImportPreview({

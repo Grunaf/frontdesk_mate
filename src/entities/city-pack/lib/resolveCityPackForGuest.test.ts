@@ -66,6 +66,27 @@ describe('resolveCityPackForGuest', () => {
 
     expect(pack.routes.airport?.guestCopy?.publicTitle).toContain('Trolleybus');
     expect(pack.guestWarnings?.taxiStandWarning).toContain('official stands');
+    expect(pack.guestWarnings?.taxiCityRulesLines?.length).toBeGreaterThan(0);
+  });
+
+  it('uses taxiCityRules from DB for guest zone B', () => {
+    const pack = resolveCityPackForGuest({
+      packId: 'sarajevo',
+      locale: 'en',
+      packStatus: 'ready',
+      enabledRoutes: ['airport'],
+      content: {
+        enabledRoutes: ['airport'],
+        warnings: {
+          taxiCityRules: { en: 'Only use licensed taxis.\n\nAgree the fare before you board.' },
+        },
+      },
+    });
+
+    expect(pack.guestWarnings?.taxiCityRulesLines).toEqual([
+      'Only use licensed taxis.',
+      'Agree the fare before you board.',
+    ]);
   });
 
   it('prefers DB route copy over code/i18n', () => {

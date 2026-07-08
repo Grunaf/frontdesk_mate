@@ -1425,7 +1425,9 @@
       "whatsappTaxiMessage": "Здравствуйте! Нужно такси до {pickupPoint}. Адрес: {address}.",
       "askReceptionHoursHint": "Reception: {open}–{close}.",
       "askReceptionOpensHint": "Reception открывается в {open}.",
-      "safetyTipsTitle": "Перед звонком — советы по безопасности",
+      "zoneAtHubTitle": "Где взять такси",
+      "zoneDealTitle": "Перед посадкой",
+      "zoneCallLead": "Удобнее заказать по телефону?",
       "receptionTaxiMessage": "Здравствуйте, {hostelName}! Я на {pickupPoint}, нужно такси до {address}. Можете помочь заказать?",
       "noTaxiNumber": "Номер такси не настроен — напишите reception в WhatsApp.",
       "noContactFallback": "Контакты пока не настроены."

@@ -61,8 +61,11 @@ export interface RecommendedTaxi {
 export type PreTripTipId = 'sundayClosure';
 
 export interface CityPackGuestWarnings {
-  taxiStandWarning: string;
-  taxiMeterWarning: string;
+  /** Pack-wide copy for guest taxi zone B (before boarding). */
+  taxiCityRulesLines?: string[];
+  /** @deprecated Populated from legacy stand/meter when taxiCityRules is absent. */
+  taxiStandWarning?: string;
+  taxiMeterWarning?: string;
   busClarificationQuestion?: string;
 }
 

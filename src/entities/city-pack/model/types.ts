@@ -94,7 +94,11 @@ export interface CityPackRouteContent {
 }
 
 export interface CityPackContentWarnings {
+  /** Pack-wide taxi deal / safety copy (guest zone B). Prefer over legacy stand/meter. */
+  taxiCityRules?: LocalizedText;
+  /** @deprecated Use taxiCityRules; still read for legacy DB/code packs. */
   taxiStand?: LocalizedText;
+  /** @deprecated Use taxiCityRules; still read for legacy DB/code packs. */
   taxiMeter?: LocalizedText;
   busClarification?: LocalizedText;
 }
