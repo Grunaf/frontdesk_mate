@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBlankCityPackRouteContent } from '@/entities/city-pack/lib/resolveAdminCityPackTransport';
 import { parsePackBulkImportJson } from './packBulkImportSchema';
-import { applyPackBulkImportPreview } from './applyPackBulkImportPreview';
+import { applyPackBulkImportPreview, buildPackBulkImportPreviewState } from './applyPackBulkImportPreview';
 import { hubImportToGuidedPreview } from './mapBulkImportToRouteContent';
 
 describe('parsePackBulkImportJson', () => {
@@ -122,5 +122,54 @@ describe('applyPackBulkImportPreview', () => {
     expect(next.copy.publicText.en).not.toMatch(/official taxi desk/i);
     expect(next.tips?.some((tip) => /official taxi desk/i.test(tip.en))).toBe(true);
     expect(next.copy.taxiCost.en).toBe('€15–20');
+  });
+
+  it('applies taxi metadata to numeric guest card fields', () => {
+    const existing = createBlankCityPackRouteContent('airport');
+    const { routes } = applyPackBulkImportPreview({
+      packId: 'demo',
+      notes: 'Taxi from desk.',
+      document: {
+        packId: 'demo',
+        routes: {
+          airport: {
+            taxi: { taxiCost: { en: '€18–22' } },
+            metadata: { taxiEurMin: 18, taxiEurMax: 22, taxiDurationMin: 15, taxiDurationMax: 25 },
+          },
+        },
+      },
+      currentRoutes: { airport: existing },
+      routeIdsToApply: ['airport'],
+      currentEnabledRoutes: ['airport'],
+      applySuggestedEnabledRoutes: false,
+      transportCurrencyMode: { mode: 'eur_only' },
+    });
+
+    const next = routes.airport!;
+    expect(next.taxi.priceEUR.min).toBe(18);
+    expect(next.taxi.priceEUR.max).toBe(22);
+    expect(next.copy.taxiCost.en).toBeTruthy();
+  });
+});
+
+describe('buildPackBulkImportPreviewState research scope', () => {
+  it('preview only hubs in researchRouteIds; flags ignored keys', () => {
+    const airport = createBlankCityPackRouteContent('airport');
+    const state = buildPackBulkImportPreviewState({
+      packId: 'demo',
+      notes: '',
+      document: {
+        packId: 'demo',
+        routes: {
+          airport: { transit: { publicText: 'Shuttle', publicGetOffAt: 'Stop' } },
+          bus_central: { transit: { publicText: 'Bus 1', publicGetOffAt: 'Center' } },
+        },
+      },
+      currentRoutes: { airport },
+      researchRouteIds: ['airport'],
+    });
+
+    expect(state.hubs.map((hub) => hub.routeId)).toEqual(['airport']);
+    expect(state.ignoredOutOfScopeRouteIds).toEqual(['bus_central']);
   });
 });

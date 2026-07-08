@@ -2,6 +2,23 @@ import type { RouteId } from '@/entities/hostel';
 import { ROUTE_PRESETS } from '@/entities/city-pack';
 import { getGuidedInterviewQuestions } from '@/features/city-pack-guided-fill';
 
+function formatTaxiCardChecklist(hubLabel: string): string {
+  const taxiQuestions = getGuidedInterviewQuestions('transit', hubLabel).filter(
+    (question) => question.id === 'taxi-backup'
+  );
+  const lines = [
+    'Taxi card (guest backup — not the main step-by-step path):',
+    '  - Typical metered price or range to hostel district (source?)',
+    '  - Official taxi stand / desk / pickup point at this hub',
+    '  - When taxi is backup vs public transport (night, no service)',
+  ];
+  for (const question of taxiQuestions) {
+    const hint = question.hint ? ` (${question.hint})` : '';
+    lines.push(`  - ${question.label}${hint}`);
+  }
+  return lines.join('\n');
+}
+
 function formatQuestionBlock(
   hubLabel: string,
   mode: 'transit' | 'walk_only',
@@ -32,6 +49,8 @@ export function formatPackBulkInterviewChecklist(routeIds: RouteId[]): string {
     );
     sections.push('');
     sections.push(formatQuestionBlock(hubLabel, 'walk_only', 'If walk-only from this hub'));
+    sections.push('');
+    sections.push(formatTaxiCardChecklist(hubLabel));
     sections.push('');
   }
 

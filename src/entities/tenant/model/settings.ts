@@ -29,6 +29,27 @@ export {
 import type { HouseRule } from '@/entities/house-rules';
 import type { GuestExtraConfig } from '@/entities/guest-extra';
 
+/** Guest path when city hub is tenant_local (hostel owns hub→door). */
+export type TenantLocalArrivalMode = 'walk' | 'transit_lite';
+
+export interface TenantLocalArrivalPath {
+  mode: TenantLocalArrivalMode;
+  /** Card title shown on guest route summary (optional — falls back to city hub label). */
+  title?: LocalizedField;
+  /** Card summary (optional). */
+  summary?: LocalizedField;
+  /**
+   * Primary guest directions:
+   * - walk: full on-foot path from hub to door
+   * - transit_lite: board/ride (or short hop) before optional get-off + walk
+   */
+  primaryText: LocalizedField;
+  /** Optional get-off for transit_lite. */
+  getOffAt?: LocalizedField;
+  /** Final walk after get-off (transit_lite). For walk mode, prefer primaryText only. */
+  walkToHostel?: LocalizedField;
+}
+
 export interface TenantSettings {
   booking?: TenantBookingSettings;
   checkInTime?: string;
@@ -106,6 +127,28 @@ export interface TenantSettings {
   arrivalWalkToHostel?: LocalizedField;
   /** Per-route overrides for the final walk-to-hostel step. */
   arrivalWalkToHostelByRoute?: Partial<Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', LocalizedField>>;
+  /**
+   * Per-route full Google Maps walking directions URL (A → hostel).
+   * Required for enabled hubs — never autofilled from city pack or AI.
+   */
+  arrivalWalkMapsUrlByRoute?: Partial<
+    Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', string>
+  >;
+  /**
+   * Per-route get-off override. Empty / missing inherits city pack `publicGetOffAt`.
+   * Guest + last-mile AI use tenant value when set.
+   * Only for city_shared hubs (ignored for tenant_local — use arrivalLocalByRoute.getOffAt).
+   */
+  arrivalGetOffAtByRoute?: Partial<
+    Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', LocalizedField>
+  >;
+  /**
+   * Full hub→door path when city hub is `tenant_local`.
+   * Shared hubs ignore this; they use walk + get-off override instead.
+   */
+  arrivalLocalByRoute?: Partial<
+    Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', TenantLocalArrivalPath>
+  >;
   /** Hostel-specific tips merged with city pack tips in guest modal (max 5 total). */
   arrivalRouteTipsByRoute?: Partial<Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', LocalizedText[]>>;
 }

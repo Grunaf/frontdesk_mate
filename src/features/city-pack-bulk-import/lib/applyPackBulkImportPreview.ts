@@ -32,6 +32,7 @@ export function buildPackBulkImportPreviewState(input: {
   document: PackBulkImportDocument;
   currentRoutes: Partial<Record<RouteId, CityPackRouteContent>>;
   transportCurrencyMode?: CityPackContent['transportCurrency'];
+  researchRouteIds: RouteId[];
 }): PackBulkImportPreviewState {
   const enforcementSource = input.notes.trim();
   const packIdMismatch = input.document.packId.trim() !== input.packId.trim();
@@ -39,6 +40,8 @@ export function buildPackBulkImportPreviewState(input: {
     ? { transportCurrency: input.transportCurrencyMode }
     : undefined;
 
+  const researchScope = new Set(input.researchRouteIds);
+  const ignoredOutOfScopeRouteIds: RouteId[] = [];
   const hubs: PackBulkImportHubPreview[] = [];
 
   for (const [routeId, hubImport] of Object.entries(input.document.routes) as [
@@ -46,6 +49,11 @@ export function buildPackBulkImportPreviewState(input: {
     NonNullable<PackBulkImportDocument['routes'][RouteId]>,
   ][]) {
     if (!hubImport) {
+      continue;
+    }
+
+    if (researchScope.size > 0 && !researchScope.has(routeId)) {
+      ignoredOutOfScopeRouteIds.push(routeId);
       continue;
     }
 
@@ -71,6 +79,8 @@ export function buildPackBulkImportPreviewState(input: {
       openQuestions: preview.openQuestions,
       gateReady: gate.ready,
       gateStatusLabel: gate.statusLabel,
+      taxiCostPreview: mergedRoute.copy.taxiCost.en?.trim() || undefined,
+      taxiPickupPreview: mergedRoute.copy.taxiPickupPoint.en?.trim() || undefined,
       mergedRoute,
     });
   }
@@ -78,6 +88,7 @@ export function buildPackBulkImportPreviewState(input: {
   return {
     document: input.document,
     packIdMismatch,
+    ignoredOutOfScopeRouteIds,
     hubs,
   };
 }

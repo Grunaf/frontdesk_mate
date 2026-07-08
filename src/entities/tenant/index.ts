@@ -39,7 +39,7 @@ export {
   resolveGuestBedId,
 } from './lib/resolveGuestBedId';
 export type { LandingRoomType, TenantLandingSettings } from './model/landing';
-export type { CityPackId, TenantRecord, TenantSettings } from './model/settings';
+export type { CityPackId, TenantLocalArrivalMode, TenantLocalArrivalPath, TenantRecord, TenantSettings } from './model/settings';
 export {
   applyCityPackNeedNowPlaceIds,
   resolveCityPackNeedNowPlaceIdsForAdmin,

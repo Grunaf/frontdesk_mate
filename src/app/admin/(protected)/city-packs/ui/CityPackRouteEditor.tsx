@@ -2,12 +2,17 @@
 
 import { useState } from 'react';
 import type { RouteId } from '@/entities/hostel';
-import type { CityPackRouteContent, CityPackTransportCurrencyMode, LocalizedText } from '@/entities/city-pack/model/types';
+import type {
+  CityPackRouteContent,
+  CityPackTransportCurrencyMode,
+  HubArrivalKind,
+  LocalizedText,
+} from '@/entities/city-pack/model/types';
 import {
   copyRouteEnToRu,
   isLocalizedFilled,
 } from '@/entities/city-pack/lib/resolveLocalizedLocaleStatus';
-import { formatRouteGateStatus, MAX_ROUTE_TIPS, ROUTE_PRESETS } from '@/entities/city-pack';
+import { formatRouteGateStatus, MAX_ROUTE_TIPS, ROUTE_PRESETS, resolveHubArrivalKind } from '@/entities/city-pack';
 import { cn } from '@/shared/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import { Icon } from '@/shared/ui';
@@ -100,16 +105,19 @@ export function CityPackRouteEditor({
 }) {
   const [editorMode, setEditorMode] = useState<EditorMode>('manual');
   const preset = ROUTE_PRESETS.find((entry) => entry.id === routeId);
+  const hubArrivalKind = resolveHubArrivalKind(route);
+  const isTenantLocal = hubArrivalKind === 'tenant_local';
   const gateReady = formatRouteGateStatus(route).ready;
   const isWalkOnly = route.routeMode === 'walk_only';
-  const getOffAtRequired = !isWalkOnly;
-  const walkToStopRequired = !isWalkOnly;
+  const getOffAtRequired = !isWalkOnly && !isTenantLocal;
+  const walkToStopRequired = !isWalkOnly && !isTenantLocal;
   const hubHintEditable =
     showHubHint && (routeId === 'bus_central' || routeId === 'bus_istochno');
 
   const patch = (partial: Partial<CityPackRouteContent>) => onChange({ ...route, ...partial });
   const patchCopy = (partial: Partial<CityPackRouteContent['copy']>) =>
     onChange({ ...route, copy: { ...route.copy, ...partial } });
+  const setHubArrivalKind = (next: HubArrivalKind) => patch({ hubArrivalKind: next });
 
   const tips = route.tips ?? [];
   const patchTip = (index: number, value: LocalizedText) => {
@@ -209,27 +217,91 @@ export function CityPackRouteEditor({
         onChange={(locationLabel) => patch({ locationLabel })}
       />
 
+      <fieldset className="space-y-2 rounded-md border p-3">
+        <legend className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Guest path ownership
+        </legend>
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="radio"
+            name={`hubArrivalKind-${routeId}`}
+            checked={hubArrivalKind === 'city_shared'}
+            onChange={() => setHubArrivalKind('city_shared')}
+            className="mt-1"
+          />
+          <span>
+            <span className="font-medium">Shared city route</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              City pack owns transit / walk-only to a shared get-off. Tenant adds last mile + Maps.
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="radio"
+            name={`hubArrivalKind-${routeId}`}
+            checked={hubArrivalKind === 'tenant_local'}
+            onChange={() => setHubArrivalKind('tenant_local')}
+            className="mt-1"
+          />
+          <span>
+            <span className="font-medium">Local (hostel-owned)</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              City pack keeps hub meta only. Each tenant fills the full hub → door path.
+            </span>
+          </span>
+        </label>
+        {isTenantLocal ? (
+          <p className="rounded-md border border-amber-200 bg-amber-50/80 px-2.5 py-2 text-xs text-amber-950">
+            Tenant fills full directions; city copy is not used for guest legs. Publish gate skips
+            shared step-by-step / get-off.
+          </p>
+        ) : null}
+      </fieldset>
+
       <CityPackRouteMetadataFields
         route={route}
         currencyMode={transportCurrencyMode}
         onChange={onChange}
       />
 
-      <div className="space-y-2.5 rounded-md border border-amber-200/80 bg-amber-50/30 p-3">
+      {isTenantLocal ? (
+        <p className="text-[11px] text-muted-foreground">
+          Optional city copy below is ignored for guests while this hub is Local. Switch to Shared to
+          use it.
+        </p>
+      ) : null}
+
+      <div
+        className={cn(
+          'space-y-2.5 rounded-md border p-3',
+          isTenantLocal
+            ? 'border-border/60 bg-muted/20 opacity-80'
+            : 'border-amber-200/80 bg-amber-50/30'
+        )}
+      >
         <div className="space-y-0.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-amber-900">
-            Required for publish (EN)
+          <p
+            className={cn(
+              'text-[11px] font-medium uppercase tracking-wide',
+              isTenantLocal ? 'text-muted-foreground' : 'text-amber-900'
+            )}
+          >
+            {isTenantLocal ? 'City copy (not used for guests)' : 'Required for publish (EN)'}
           </p>
           <p className="text-[11px] text-muted-foreground">
-            Fill these in English. RU is optional and can wait.
-            {isWalkOnly ? ' Walk-only hubs skip Walk to stop and Get off at.' : null}
+            {isTenantLocal
+              ? 'Soft / skipped for Local hubs. Fill only if you may switch this hub back to Shared later.'
+              : `Fill these in English. RU is optional and can wait.${
+                  isWalkOnly ? ' Walk-only hubs skip Walk to stop and Get off at.' : ''
+                }`}
           </p>
         </div>
         <AdminLocalizedInput
           label="Card title"
           value={route.copy.publicTitle}
           onChange={(publicTitle) => patchCopy({ publicTitle })}
-          gateRequired
+          gateRequired={!isTenantLocal}
         />
         <AdminLocalizedInput
           label="Card summary"
@@ -237,7 +309,7 @@ export function CityPackRouteEditor({
           onChange={(publicSummary) => patchCopy({ publicSummary })}
           multiline
           rows={2}
-          gateRequired
+          gateRequired={!isTenantLocal}
         />
         {!isWalkOnly ? (
           <AdminLocalizedInput
@@ -255,7 +327,7 @@ export function CityPackRouteEditor({
           onChange={(publicText) => patchCopy({ publicText })}
           multiline
           rows={3}
-          gateRequired
+          gateRequired={!isTenantLocal}
         />
         {!isWalkOnly ? (
         <AdminLocalizedInput
@@ -267,13 +339,13 @@ export function CityPackRouteEditor({
         ) : null}
       </div>
 
-      {!gateReady ? (
+      {!gateReady && !isTenantLocal ? (
         <p className="text-[11px] text-muted-foreground">
           Tips unlock when required EN is Ready.
         </p>
       ) : null}
 
-      {gateReady ? (
+      {gateReady || isTenantLocal ? (
         <CollapsibleBlock
           title="Good to know (optional)"
           summary={tipsSectionSummary(route)}
@@ -282,6 +354,9 @@ export function CityPackRouteEditor({
           <p className="text-[11px] text-muted-foreground">
             Short tips shown under the step-by-step modal (max {MAX_ROUTE_TIPS}). Not required for
             publish.
+            {isTenantLocal
+              ? ' For Local hubs, guest tips usually come from the tenant form.'
+              : ''}
           </p>
           {hubHintEditable ? (
             <AdminLocalizedInput

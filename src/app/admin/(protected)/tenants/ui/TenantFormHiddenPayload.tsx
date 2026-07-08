@@ -13,8 +13,11 @@ import {
 import {
   parseArrivalWalkByRouteJson,
   parseArrivalWalkToHostelJson,
+  serializeArrivalGetOffAtByRouteJson,
+  serializeArrivalLocalByRouteJson,
   serializeArrivalRouteTipsByRouteJson,
   serializeArrivalWalkByRouteJson,
+  serializeArrivalWalkMapsUrlByRouteJson,
   serializeArrivalWalkToHostelJson,
 } from '../lib/parseArrivalTransportSettings';
 
@@ -105,6 +108,21 @@ export function TenantFormHiddenPayload({
         type="hidden"
         name="arrivalWalkByRouteJson"
         value={serializeArrivalWalkByRouteJson(mergedSettings.arrivalWalkToHostelByRoute)}
+      />
+      <input
+        type="hidden"
+        name="arrivalWalkMapsUrlByRouteJson"
+        value={serializeArrivalWalkMapsUrlByRouteJson(mergedSettings.arrivalWalkMapsUrlByRoute)}
+      />
+      <input
+        type="hidden"
+        name="arrivalGetOffAtByRouteJson"
+        value={serializeArrivalGetOffAtByRouteJson(mergedSettings.arrivalGetOffAtByRoute)}
+      />
+      <input
+        type="hidden"
+        name="arrivalLocalByRouteJson"
+        value={serializeArrivalLocalByRouteJson(mergedSettings.arrivalLocalByRoute)}
       />
       <input
         type="hidden"

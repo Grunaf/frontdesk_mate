@@ -179,5 +179,8 @@ export function mapBulkImportHubToRouteContent(
   const preview = hubImportToGuidedPreview(hub, enforcementSource);
   let next = applyGuidedFillPreview(packId, routeId, existing, preview, content);
   next = patchTaxiCopyFields(next, hub.taxi);
+  if (hub.hubArrivalKind === 'tenant_local' || hub.hubArrivalKind === 'city_shared') {
+    next = { ...next, hubArrivalKind: hub.hubArrivalKind };
+  }
   return next;
 }

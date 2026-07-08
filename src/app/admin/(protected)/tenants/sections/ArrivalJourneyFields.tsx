@@ -82,6 +82,7 @@ export function ArrivalJourneyFields({
   tenantSlug,
   settings,
   cityPackId,
+  cityPackLabel,
   cityPackContent,
   readinessInput,
   scope = 'full',
@@ -110,6 +111,7 @@ export function ArrivalJourneyFields({
                     settings={settings}
                     cityPackId={cityPackId}
                     cityPackContent={cityPackContent}
+                    cityPackLabel={cityPackLabel}
                   />
                   <p className="text-sm text-muted-foreground">
                     Taxi phone override is in <strong>Reception & hostel</strong>.

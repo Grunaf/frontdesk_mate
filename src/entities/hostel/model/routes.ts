@@ -16,6 +16,8 @@ export {
 export type RouteCategory = 'airport' | 'bus' | 'train';
 export type RouteId = 'airport' | 'bus_central' | 'bus_istochno' | 'train_station';
 export type RouteMode = 'transit' | 'walk_only';
+/** Who owns guest legs — mirrors city-pack HubArrivalKind. */
+export type HubArrivalKind = 'city_shared' | 'tenant_local';
 
 /** Public-transit metadata. Omit stops/ticketPrice/officialRouteUrl when not applicable. */
 export interface PublicTransportConfig {
@@ -44,6 +46,14 @@ export function getRouteMode(route: RouteConfig): RouteMode {
 
 export function isWalkOnlyRoute(route: RouteConfig): boolean {
   return getRouteMode(route) === 'walk_only';
+}
+
+export function getHubArrivalKind(route: RouteConfig): HubArrivalKind {
+  return route.hubArrivalKind === 'tenant_local' ? 'tenant_local' : 'city_shared';
+}
+
+export function isTenantLocalRoute(route: RouteConfig): boolean {
+  return getHubArrivalKind(route) === 'tenant_local';
 }
 
 export function getActiveRoutes(
@@ -83,6 +93,8 @@ export interface RouteConfig {
   isActive?: boolean;
   /** Walk-only routes skip the transit leg and use a footprints icon. */
   routeMode?: RouteMode;
+  /** city_shared (default): city owns transit/get-off; tenant_local: tenant owns full path. */
+  hubArrivalKind?: HubArrivalKind;
   titleKey: string;
   hintKey?: string;
   locationKey: string;

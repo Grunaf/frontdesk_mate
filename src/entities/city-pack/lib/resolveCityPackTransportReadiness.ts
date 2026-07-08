@@ -5,6 +5,7 @@ import {
   resolveAdminCityPackEnabledRoutes,
   resolveAdminCityPackRoutes,
 } from './resolveAdminCityPackTransport';
+import { isTenantLocalHub } from './resolveHubArrivalKind';
 import { isLocalizedFilled } from './resolveLocalizedLocaleStatus';
 
 export interface CityPackTransportReadinessResult {
@@ -47,6 +48,10 @@ function readRouteGateField(
 }
 
 function gateFieldsForRoute(route: CityPackRouteContent | undefined) {
+  // Local hubs: tenant owns guest legs — city publish gate skips shared copy.
+  if (isTenantLocalHub(route)) {
+    return [];
+  }
   if (route?.routeMode === 'walk_only') {
     return ROUTE_GATE_FIELDS.filter(
       (field) => field.id !== 'publicGetOffAt' && field.id !== 'publicPreview'
@@ -76,6 +81,15 @@ export function formatRouteGateStatus(route: CityPackRouteContent | undefined): 
   /** Compact chip label, e.g. "Missing (2)". */
   shortLabel: string;
 } {
+  if (isTenantLocalHub(route)) {
+    return {
+      ready: true,
+      missingFields: [],
+      statusLabel: 'Local — tenant owns path',
+      shortLabel: 'Local',
+    };
+  }
+
   const missingFields = resolveRouteGateMissingFields(route);
   if (missingFields.length === 0) {
     return { ready: true, missingFields: [], statusLabel: 'Ready', shortLabel: 'Ready' };

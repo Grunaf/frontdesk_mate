@@ -29,6 +29,12 @@ const baseSettings: TenantSettings = {
     accessPoints: [{ id: 'main', kind: 'outside', label: 'Main', sortOrder: 0, code: '1234' }],
   },
   arrivalWalkToHostel: { en: 'Walk from the hub to {address}.' },
+  arrivalWalkMapsUrlByRoute: {
+    airport: 'https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=Airport&destination=Hostel',
+    bus_central: 'https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=Bus&destination=Hostel',
+    bus_istochno: 'https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=East&destination=Hostel',
+    train_station: 'https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=Train&destination=Hostel',
+  },
   heroBgUrl: '/hero.jpg',
   houseRules: [
     {

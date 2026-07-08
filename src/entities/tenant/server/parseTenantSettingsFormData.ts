@@ -17,8 +17,11 @@ import { isBookingProvider } from '@/entities/tenant';
 import { normalizeGuestStayForSave } from '@/entities/tenant/lib/resolveBedDisplay';
 import { finalizeGuestStayForSave } from '@/entities/tenant/lib/normalizeGuestStaySettings';
 import {
+  parseArrivalGetOffAtByRouteJson,
+  parseArrivalLocalByRouteJson,
   parseArrivalRouteTipsByRouteJson,
   parseArrivalWalkByRouteJson,
+  parseArrivalWalkMapsUrlByRouteJson,
   parseArrivalWalkToHostelJson,
 } from '@/app/admin/(protected)/tenants/lib/parseArrivalTransportSettings';
 import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
@@ -406,6 +409,15 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
       (String(formData.get('arrivalWalkToHostel') || '').trim() || undefined),
     arrivalWalkToHostelByRoute: parseArrivalWalkByRouteJson(
       String(formData.get('arrivalWalkByRouteJson') || '')
+    ),
+    arrivalWalkMapsUrlByRoute: parseArrivalWalkMapsUrlByRouteJson(
+      String(formData.get('arrivalWalkMapsUrlByRouteJson') || '')
+    ),
+    arrivalGetOffAtByRoute: parseArrivalGetOffAtByRouteJson(
+      String(formData.get('arrivalGetOffAtByRouteJson') || '')
+    ),
+    arrivalLocalByRoute: parseArrivalLocalByRouteJson(
+      String(formData.get('arrivalLocalByRouteJson') || '')
     ),
     arrivalRouteTipsByRoute: parseArrivalRouteTipsByRouteJson(
       String(formData.get('arrivalRouteTipsByRouteJson') || '')

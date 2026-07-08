@@ -120,6 +120,7 @@ function mergeRoutesWithContent(
         id: routeId,
         category: dbRoute.category,
         routeMode: dbRoute.routeMode,
+        hubArrivalKind: dbRoute.hubArrivalKind,
         isActive: dbRoute.isActive,
         titleKey: '',
         locationKey: '',

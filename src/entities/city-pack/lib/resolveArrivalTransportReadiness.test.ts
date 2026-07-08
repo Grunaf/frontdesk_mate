@@ -64,10 +64,70 @@ describe('resolveArrivalWalkReadiness', () => {
     expect(
       resolveArrivalWalkReadiness({
         cityPackId: 'custom-pack',
-        settings: { arrivalWalkToHostel: 'Go left at the corner' },
+        settings: {
+          arrivalWalkToHostel: 'Go left at the corner',
+          arrivalWalkMapsUrlByRoute: { airport: 'https://www.google.com/maps/dir/?api=1&destination=Hostel' },
+        },
         cityPackContent: {
           enabledRoutes: ['airport'],
           routes: {},
+        },
+      }).complete
+    ).toBe(true);
+  });
+
+  it('is incomplete when walk is set but walking Maps link is missing', () => {
+    const result = resolveArrivalWalkReadiness({
+      cityPackId: 'custom-pack',
+      settings: {
+        arrivalWalkToHostel: 'Go left at the corner',
+      },
+      cityPackContent: {
+        enabledRoutes: ['airport'],
+        routes: {},
+      },
+    });
+    expect(result.complete).toBe(false);
+    expect(result.detail).toMatch(/walking Maps link/i);
+  });
+
+  it('requires Local full path + Maps for tenant_local hubs', () => {
+    const airport = {
+      ...buildCityPackRoutesFromCode('sarajevo').airport!,
+      hubArrivalKind: 'tenant_local' as const,
+    };
+    const incomplete = resolveArrivalWalkReadiness({
+      cityPackId: 'custom-pack',
+      settings: {
+        arrivalWalkMapsUrlByRoute: {
+          airport: 'https://www.google.com/maps/dir/?api=1&destination=Hostel',
+        },
+      },
+      cityPackContent: {
+        enabledRoutes: ['airport'],
+        routes: { airport },
+      },
+    });
+    expect(incomplete.complete).toBe(false);
+    expect(incomplete.detail).toMatch(/Local hubs/i);
+
+    expect(
+      resolveArrivalWalkReadiness({
+        cityPackId: 'custom-pack',
+        settings: {
+          arrivalLocalByRoute: {
+            airport: {
+              mode: 'walk',
+              primaryText: { en: 'Walk from the plaza to our door.' },
+            },
+          },
+          arrivalWalkMapsUrlByRoute: {
+            airport: 'https://www.google.com/maps/dir/?api=1&destination=Hostel',
+          },
+        },
+        cityPackContent: {
+          enabledRoutes: ['airport'],
+          routes: { airport },
         },
       }).complete
     ).toBe(true);
@@ -81,6 +141,9 @@ describe('resolveArrivalWalkReadiness', () => {
           arrivalWalkToHostelByRoute: {
             airport: 'Walk from the stop to our door',
           },
+          arrivalWalkMapsUrlByRoute: {
+            airport: 'https://www.google.com/maps/dir/?api=1&destination=Hostel',
+          },
         },
         cityPackContent,
       }).complete
@@ -93,6 +156,10 @@ describe('resolveArrivalWalkReadiness', () => {
           arrivalWalkToHostelByRoute: {
             airport: 'Walk from the stop to our door',
             bus_central: 'Enter the courtyard',
+          },
+          arrivalWalkMapsUrlByRoute: {
+            airport: 'https://www.google.com/maps/dir/?api=1&destination=Hostel',
+            bus_central: 'https://www.google.com/maps/dir/?api=1&destination=Hostel',
           },
         },
         cityPackContent,

@@ -28,11 +28,14 @@ describe('buildPackBulkJsonPrompt', () => {
       cityLabel: 'Tivat',
       notes: 'Brief',
       research,
+      researchRouteIds: ['airport'],
     });
 
     expect(text).toContain(research);
     expect(text).toContain('OUTPUT FORMAT');
     expect(text).toContain('"packId"');
     expect(text).toContain('Do not use web search in this step');
+    expect(text).toContain('Include in routes ONLY these routeIds');
+    expect(text).toContain('airport');
   });
 });

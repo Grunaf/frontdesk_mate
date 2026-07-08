@@ -50,6 +50,18 @@ describe('resolveRouteGateMissingFields', () => {
     expect(resolveRouteGateMissingFields(route)).toEqual([]);
   });
 
+  it('skips all copy gates for tenant_local hubs', () => {
+    const route = createBlankCityPackRouteContent('bus_central');
+    route.hubArrivalKind = 'tenant_local';
+
+    expect(resolveRouteGateMissingFields(route)).toEqual([]);
+    expect(formatRouteGateStatus(route)).toMatchObject({
+      ready: true,
+      shortLabel: 'Local',
+      statusLabel: 'Local — tenant owns path',
+    });
+  });
+
   it('formats Ready vs Missing status', () => {
     const routes = buildCityPackRoutesFromCode('sarajevo');
     expect(formatRouteGateStatus(routes.airport)).toMatchObject({

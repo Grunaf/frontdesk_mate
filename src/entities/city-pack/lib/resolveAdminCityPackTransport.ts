@@ -30,6 +30,7 @@ export function createBlankCityPackRouteContent(routeId: RouteId): CityPackRoute
   return {
     category: meta.category,
     routeMode: 'transit',
+    hubArrivalKind: 'city_shared',
     locationLabel: emptyLocalized(),
     copy: {
       publicTitle: emptyLocalized(),

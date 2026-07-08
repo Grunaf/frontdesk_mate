@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from '@/shared/i18n';
+import { useLocale, useTranslations } from '@/shared/i18n';
 import { useTenant } from '@/entities/tenant';
+import type { AppLocale } from '@/entities/city-pack/model/types';
 import { getRouteFeedbackLink } from '../lib/getRouteFeedbackLink';
-import { resolveRouteCopyField, resolveRouteHint } from '../lib/resolveRouteCopy';
+import { resolveRouteCardSummary, resolveRouteCardTitle } from '../lib/resolveRouteCardCopy';
+import { resolveRouteHint } from '../lib/resolveRouteCopy';
 import {
   Button,
   ExternalServiceTouchLink,
@@ -22,8 +24,10 @@ import { TaxiBackupCard } from './TaxiBackupCard';
 import { TaxiBackupSheet } from './TaxiBackupSheet';
 
 export function DirectionPicker() {
-  const { hostel, routes: arrivalRoutes, routeCategories, contentKeys, cityPack } = useTenant();
+  const { hostel, routes: arrivalRoutes, routeCategories, contentKeys, cityPack, settings } =
+    useTenant();
   const routes = useTranslations();
+  const locale = useLocale() as AppLocale;
   const directions = useTranslations('pages.arrivalJourney.directions');
 
   const [activeRouteId, setActiveRouteId] = useState<RouteId>('airport');
@@ -58,10 +62,19 @@ export function DirectionPicker() {
     (route) => route.category === activeCategory && route.hintKey
   );
 
+  const primaryTitle = resolveRouteCardTitle(currentRoute, routes, settings, locale);
+  const primarySummary = resolveRouteCardSummary(currentRoute, routes, settings, locale);
+  const alternativeTitle = alternativeRoute
+    ? resolveRouteCardTitle(alternativeRoute, routes, settings, locale)
+    : '';
+  const alternativeSummary = alternativeRoute
+    ? resolveRouteCardSummary(alternativeRoute, routes, settings, locale)
+    : '';
+
   const routeFeedbackLink = getRouteFeedbackLink(
     hostel.contacts.feedbackPhone.raw ?? '',
     directions('routeFeedbackMessage', {
-      route: resolveRouteCopyField(currentRoute, 'publicTitle', routes),
+      route: primaryTitle,
     })
   );
 
@@ -148,6 +161,10 @@ export function DirectionPicker() {
         <PublicRouteSummaryCard
           route={currentRoute}
           alternativeRoute={alternativeRoute}
+          primaryTitle={primaryTitle}
+          primarySummary={primarySummary}
+          alternativeTitle={alternativeTitle || undefined}
+          alternativeSummary={alternativeSummary || undefined}
           onPrimaryRouteClick={() => setPrimaryDetailsOpen(true)}
           onAlternativeRouteClick={
             alternativeRoute ? () => setAlternativeDetailsOpen(true) : undefined
@@ -174,8 +191,8 @@ export function DirectionPicker() {
           open={primaryDetailsOpen}
           onOpenChange={setPrimaryDetailsOpen}
           route={currentRoute}
-          title={resolveRouteCopyField(currentRoute, 'publicTitle', routes)}
-          subtitle={resolveRouteCopyField(currentRoute, 'publicSummary', routes)}
+          title={primaryTitle}
+          subtitle={primarySummary}
         />
 
         {alternativeRoute && (
@@ -183,8 +200,8 @@ export function DirectionPicker() {
             open={alternativeDetailsOpen}
             onOpenChange={setAlternativeDetailsOpen}
             route={alternativeRoute}
-            title={resolveRouteCopyField(alternativeRoute, 'publicTitle', routes)}
-            subtitle={resolveRouteCopyField(alternativeRoute, 'publicSummary', routes)}
+            title={alternativeTitle}
+            subtitle={alternativeSummary}
           />
         )}
 

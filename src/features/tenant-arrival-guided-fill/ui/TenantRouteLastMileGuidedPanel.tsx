@@ -2,6 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import type { RouteId } from '@/entities/hostel';
+import type { CityPackRouteContent } from '@/entities/city-pack/model/types';
+import {
+  buildLastMileCityBoundary,
+  detectLastMileWalkOverlap,
+  formatLastMileBoundaryForPrompt,
+} from '@/entities/city-pack';
 import { cn } from '@/shared/lib/utils';
 import {
   canGenerateTenantLastMile,
@@ -91,13 +97,16 @@ export function TenantRouteLastMileGuidedPanel({
   tenantSlug,
   routeId,
   hubLabel,
-  cityContext,
+  cityRoute,
+  getOffOverrideEn,
   onApply,
 }: {
   tenantSlug: string;
   routeId: RouteId;
   hubLabel: string;
-  cityContext?: string;
+  cityRoute?: CityPackRouteContent;
+  /** Tenant get-off override (EN); empty inherits city pack. */
+  getOffOverrideEn?: string;
   onApply: (payload: { walkEn: string; tipsEn?: string[] }) => void;
 }) {
   const [answers, setAnswers] = useState<TenantLastMileAnswerMap>({});
@@ -109,7 +118,19 @@ export function TenantRouteLastMileGuidedPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const questions = useMemo(() => getTenantLastMileInterviewQuestions(hubLabel), [hubLabel]);
+  const boundary = useMemo(
+    () => buildLastMileCityBoundary(cityRoute, { getOffOverrideEn }),
+    [cityRoute, getOffOverrideEn]
+  );
+  const cityBoundaryBlock = useMemo(
+    () => formatLastMileBoundaryForPrompt(boundary),
+    [boundary]
+  );
+
+  const questions = useMemo(
+    () => getTenantLastMileInterviewQuestions(hubLabel, boundary),
+    [hubLabel, boundary]
+  );
   const progress = useMemo(() => getTenantLastMileProgress(questions, answers), [questions, answers]);
   const canGenerate = canGenerateTenantLastMile(questions, answers);
 
@@ -117,11 +138,16 @@ export function TenantRouteLastMileGuidedPanel({
     () =>
       compileTenantLastMileSource({
         hubLabel,
-        cityContext,
+        cityBoundaryBlock,
         questions,
         answers,
       }),
-    [hubLabel, cityContext, questions, answers]
+    [hubLabel, cityBoundaryBlock, questions, answers]
+  );
+
+  const overlapWarnings = useMemo(
+    () => (walkPreview ? detectLastMileWalkOverlap(walkPreview, boundary) : []),
+    [walkPreview, boundary]
   );
 
   const visibleFollowUps = openQuestions.filter((q) => !skippedFollowUp.includes(q.id));
@@ -153,7 +179,7 @@ export function TenantRouteLastMileGuidedPanel({
       tenantSlug,
       routeId,
       hubLabel,
-      cityContext,
+      cityBoundaryBlock,
       rawInput: compiled,
       followUpAnswers: followUp,
       mode: 'full',
@@ -181,8 +207,13 @@ export function TenantRouteLastMileGuidedPanel({
   return (
     <div className="mt-2 space-y-2 rounded-md border border-violet-200/70 bg-violet-50/20 p-2.5">
       <p className="text-[11px] text-muted-foreground">
-        Guided last mile — only this hostel&apos;s walk. City pack transit copy is not changed.
+        Guided last mile — door only. City pack already shows transit / get-off.
       </p>
+      {boundary?.hasAnchoredStart ? (
+        <p className="text-[11px] text-muted-foreground">
+          Last-mile start: <span className="text-foreground">{boundary.anchorLabelEn}</span>
+        </p>
+      ) : null}
       <p className="text-[11px] text-muted-foreground">
         Required: {progress.resolvedRequired}/{progress.requiredTotal}
       </p>
@@ -238,6 +269,11 @@ export function TenantRouteLastMileGuidedPanel({
       {error ? <p className="text-[11px] text-red-700">{error}</p> : null}
       {walkPreview ? (
         <div className="space-y-1">
+          {overlapWarnings.map((warning) => (
+            <p key={warning} className="text-[11px] text-amber-900">
+              {warning}
+            </p>
+          ))}
           <p className="whitespace-pre-wrap rounded-md border bg-background p-2 text-sm">{walkPreview}</p>
           {previewTips?.length ? (
             <ul className="list-disc pl-4 text-xs text-muted-foreground">

@@ -65,9 +65,18 @@ export interface CityPackRouteTaxi {
   durationMin: { min: number; max: number };
 }
 
+/**
+ * Who owns guest legs for this hub:
+ * - city_shared (default): city transit/walk_only to shared get-off; tenant last mile + Maps
+ * - tenant_local: city only hub meta; tenant owns full hub→door path
+ */
+export type HubArrivalKind = 'city_shared' | 'tenant_local';
+
 export interface CityPackRouteContent {
   category: RouteCategory;
   routeMode?: RouteMode;
+  /** Defaults to city_shared when missing (legacy packs). */
+  hubArrivalKind?: HubArrivalKind;
   isActive?: boolean;
   hint?: LocalizedText;
   locationLabel: LocalizedText;

@@ -37,7 +37,9 @@ export type TenantLastMileFillRequest = {
   tenantSlug: string;
   routeId: string;
   hubLabel: string;
+  /** @deprecated Prefer cityBoundaryBlock */
   cityContext?: string;
+  cityBoundaryBlock?: string;
   rawInput: string;
   followUpAnswers?: Record<string, string>;
   mode: 'full' | 'regenerate';

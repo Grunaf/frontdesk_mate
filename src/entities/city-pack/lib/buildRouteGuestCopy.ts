@@ -52,6 +52,7 @@ export function mergeDbRouteOntoCodeRoute(
     ...codeRoute,
     category: dbRoute.category,
     routeMode: dbRoute.routeMode ?? codeRoute.routeMode,
+    hubArrivalKind: dbRoute.hubArrivalKind ?? codeRoute.hubArrivalKind ?? 'city_shared',
     isActive: dbRoute.isActive ?? codeRoute.isActive,
     metadata: {
       taxiPriceKM: taxi.priceKM,

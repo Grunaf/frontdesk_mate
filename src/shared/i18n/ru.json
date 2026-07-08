@@ -649,6 +649,7 @@
           "onFootRoute": "Пешком"
         },
         "goodToKnow": "Полезно знать",
+        "openWalkingRouteInMaps": "Открыть пеший маршрут в Google Maps",
         "actionButton": "К дверям и кодам",
         "checkInToContinue": "Войти, чтобы продолжить"
       },

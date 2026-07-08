@@ -3,18 +3,26 @@
 import { useTranslations } from '@/shared/i18n';
 import { CardTitle, Icon } from '@/shared/ui';
 import { ChevronRight, ExternalLink } from 'lucide-react';
-import { hasOfficialRouteSchedule, type RouteConfig } from '@/entities/hostel';
+import { hasOfficialRouteSchedule, isTenantLocalRoute, type RouteConfig } from '@/entities/hostel';
 import { resolveRouteCopyField } from '../lib/resolveRouteCopy';
 import { getRouteDisplayIcon, TransitLegMeta } from './PublicRouteItinerary';
 
 export function PublicRouteSummaryCard({
   route,
   alternativeRoute,
+  primaryTitle,
+  primarySummary,
+  alternativeTitle,
+  alternativeSummary,
   onPrimaryRouteClick,
   onAlternativeRouteClick,
 }: {
   route: RouteConfig;
   alternativeRoute?: RouteConfig;
+  primaryTitle?: string;
+  primarySummary?: string;
+  alternativeTitle?: string;
+  alternativeSummary?: string;
   onPrimaryRouteClick: () => void;
   onAlternativeRouteClick?: () => void;
 }) {
@@ -22,7 +30,9 @@ export function PublicRouteSummaryCard({
   const directions = useTranslations('pages.arrivalJourney.directions');
   const RouteIcon = getRouteDisplayIcon(route);
   const AlternativeRouteIcon = alternativeRoute ? getRouteDisplayIcon(alternativeRoute) : null;
-  const showOfficialSchedule = hasOfficialRouteSchedule(route);
+  const showOfficialSchedule = hasOfficialRouteSchedule(route) && !isTenantLocalRoute(route);
+  const title = primaryTitle ?? resolveRouteCopyField(route, 'publicTitle', routes);
+  const summary = primarySummary ?? resolveRouteCopyField(route, 'publicSummary', routes);
 
   return (
     <div className="space-y-4">
@@ -36,13 +46,11 @@ export function PublicRouteSummaryCard({
             <Icon icon={RouteIcon} className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1 space-y-2">
-            <CardTitle className="text-foreground">
-              {resolveRouteCopyField(route, 'publicTitle', routes)}
-            </CardTitle>
-            <p className="text-sm leading-relaxed text-foreground/90">
-              {resolveRouteCopyField(route, 'publicSummary', routes)}
-            </p>
-            <TransitLegMeta route={route} routes={routes} directions={directions} />
+            <CardTitle className="text-foreground">{title}</CardTitle>
+            <p className="text-sm leading-relaxed text-foreground/90">{summary}</p>
+            {!isTenantLocalRoute(route) ? (
+              <TransitLegMeta route={route} routes={routes} directions={directions} />
+            ) : null}
           </div>
           <Icon icon={ChevronRight} className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
@@ -71,12 +79,15 @@ export function PublicRouteSummaryCard({
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <CardTitle className="text-sm text-foreground">
-              {resolveRouteCopyField(alternativeRoute, 'publicTitle', routes)}
+              {alternativeTitle ?? resolveRouteCopyField(alternativeRoute, 'publicTitle', routes)}
             </CardTitle>
             <p className="text-xs leading-relaxed text-foreground/90">
-              {resolveRouteCopyField(alternativeRoute, 'publicSummary', routes)}
+              {alternativeSummary ??
+                resolveRouteCopyField(alternativeRoute, 'publicSummary', routes)}
             </p>
-            <TransitLegMeta route={alternativeRoute} routes={routes} directions={directions} />
+            {!isTenantLocalRoute(alternativeRoute) ? (
+              <TransitLegMeta route={alternativeRoute} routes={routes} directions={directions} />
+            ) : null}
           </div>
           <Icon icon={ChevronRight} className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
         </button>

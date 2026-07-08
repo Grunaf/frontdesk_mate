@@ -14,7 +14,15 @@ import {
   Icon,
 } from '@/shared/ui';
 import { ExternalLink } from 'lucide-react';
-import { hasOfficialRouteSchedule, type RouteConfig } from '@/entities/hostel';
+import {
+  hasOfficialRouteSchedule,
+  isTenantLocalRoute,
+  isWalkOnlyRoute,
+  type RouteConfig,
+} from '@/entities/hostel';
+import { resolveWalkingMapsUrlFromSettings } from '../lib/buildWalkingMapsUrl';
+import { resolveGetOffAtForGuest } from '../lib/resolveGetOffAt';
+import { resolveTenantLocalArrivalForGuest } from '../lib/resolveTenantLocalArrival';
 import { mergeArrivalRouteTipsForGuest, readTenantRouteTips } from '@/entities/tenant/lib/mergeArrivalRouteTipsForGuest';
 import {
   getRouteDisplayIcon,
@@ -40,8 +48,15 @@ export function PublicRouteDetailsSheet({
   const locale = useLocale() as AppLocale;
   const directions = useTranslations('pages.arrivalJourney.directions');
   const RouteIcon = getRouteDisplayIcon(route);
-  const showOfficialSchedule = hasOfficialRouteSchedule(route);
+  const showOfficialSchedule = hasOfficialRouteSchedule(route) && !isTenantLocalRoute(route);
   const address = hostel.contacts.address.display ?? '';
+  const tenantLocal = isTenantLocalRoute(route)
+    ? resolveTenantLocalArrivalForGuest({
+        settings,
+        routeId: route.id,
+        locale,
+      })
+    : undefined;
 
   const walkToHostel = resolveWalkToHostelText({
     route,
@@ -51,11 +66,23 @@ export function PublicRouteDetailsSheet({
     locale,
   });
 
+  const getOffAt = resolveGetOffAtForGuest({
+    route,
+    routes,
+    settings,
+    locale,
+  });
+
   const routeTips = mergeArrivalRouteTipsForGuest({
-    cityPackTips: route.guestCopy?.tips,
+    cityPackTips: isTenantLocalRoute(route) ? undefined : route.guestCopy?.tips,
     tenantTips: readTenantRouteTips(settings.arrivalRouteTipsByRoute, route.id),
     locale,
   });
+
+  const walkingMapsUrl =
+    isWalkOnlyRoute(route) || isTenantLocalRoute(route)
+      ? resolveWalkingMapsUrlFromSettings(route, settings)
+      : undefined;
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
@@ -79,6 +106,9 @@ export function PublicRouteDetailsSheet({
             directions={directions}
             walkToHostel={walkToHostel}
             routeTips={routeTips}
+            walkingMapsUrl={walkingMapsUrl}
+            getOffAt={getOffAt}
+            tenantLocal={tenantLocal}
           />
         </BottomSheetBody>
 

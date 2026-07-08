@@ -649,6 +649,7 @@
           "onFootRoute": "On foot"
         },
         "goodToKnow": "Good to know",
+        "openWalkingRouteInMaps": "Open walking route in Google Maps",
         "actionButton": "How to Enter",
         "checkInToContinue": "Check in to continue"
       },

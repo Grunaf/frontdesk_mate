@@ -34,6 +34,7 @@ const taxiBlockSchema = z
 
 const hubSchema = z.object({
   primaryRouteMode: z.enum(['transit', 'walk_only']).optional(),
+  hubArrivalKind: z.enum(['city_shared', 'tenant_local']).optional(),
   transit: copyBlockSchema,
   walk: copyBlockSchema,
   taxi: taxiBlockSchema,
@@ -105,9 +106,11 @@ export function parsePackBulkImportJson(raw: string): PackBulkImportParseResult 
     }
     routes[routeId] = {
       primaryRouteMode: hub.primaryRouteMode,
+      hubArrivalKind: hub.hubArrivalKind,
       transit: hub.transit,
       walk: hub.walk,
       taxi: hub.taxi,
+      metadata: hub.metadata,
       openQuestions: hub.openQuestions,
     };
   }

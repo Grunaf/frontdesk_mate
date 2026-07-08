@@ -34,6 +34,9 @@ export interface TenantFormDraft {
   launchBookingPath?: 'engine' | 'wa';
   arrivalWalkToHostel?: LocalizedField;
   arrivalWalkToHostelByRoute?: Partial<Record<RouteId, LocalizedField>>;
+  arrivalWalkMapsUrlByRoute?: Partial<Record<RouteId, string>>;
+  arrivalGetOffAtByRoute?: Partial<Record<RouteId, LocalizedField>>;
+  arrivalLocalByRoute?: TenantSettings['arrivalLocalByRoute'];
   arrivalRouteTipsByRoute?: Partial<Record<RouteId, LocalizedText[]>>;
   checkInTime?: string;
   checkOutTime?: string;
@@ -96,6 +99,15 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       : {}),
     ...(draft.arrivalWalkToHostelByRoute !== undefined
       ? { arrivalWalkToHostelByRoute: draft.arrivalWalkToHostelByRoute }
+      : {}),
+    ...(draft.arrivalWalkMapsUrlByRoute !== undefined
+      ? { arrivalWalkMapsUrlByRoute: draft.arrivalWalkMapsUrlByRoute }
+      : {}),
+    ...(draft.arrivalGetOffAtByRoute !== undefined
+      ? { arrivalGetOffAtByRoute: draft.arrivalGetOffAtByRoute }
+      : {}),
+    ...(draft.arrivalLocalByRoute !== undefined
+      ? { arrivalLocalByRoute: draft.arrivalLocalByRoute }
       : {}),
     ...(draft.arrivalRouteTipsByRoute !== undefined
       ? { arrivalRouteTipsByRoute: draft.arrivalRouteTipsByRoute }

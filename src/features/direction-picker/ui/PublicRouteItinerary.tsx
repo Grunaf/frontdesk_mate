@@ -4,12 +4,15 @@ import { useTranslations } from '@/shared/i18n';
 import { Icon } from '@/shared/ui';
 import { Bus, Clock3, Footprints, MapPin, Route, Ticket, Train, type LucideIcon } from 'lucide-react';
 import {
+  isTenantLocalRoute,
   isWalkOnlyRoute,
   type RouteConfig,
 } from '@/entities/hostel';
 import { cn } from '@/shared/lib/utils';
 import { resolveRouteCopyField, resolveRouteFareLabel } from '../lib/resolveRouteCopy';
+import type { ResolvedTenantLocalArrival } from '../lib/resolveTenantLocalArrival';
 import { resolveWalkToHostelText } from '../lib/resolveWalkToHostel';
+import { TouchLink } from '@/shared/ui';
 
 function RouteTimelineLeg({
   icon,
@@ -82,7 +85,7 @@ export function TransitLegMeta({
 }
 
 export function getRouteDisplayIcon(route: RouteConfig): LucideIcon {
-  if (isWalkOnlyRoute(route)) {
+  if (isWalkOnlyRoute(route) || (isTenantLocalRoute(route) && route.routeMode !== 'transit')) {
     return Footprints;
   }
 
@@ -104,12 +107,100 @@ function PublicRouteGoodToKnow({ title, tips }: { title: string; tips: string[] 
   );
 }
 
+function MapsCta({
+  walkingMapsUrl,
+  label,
+}: {
+  walkingMapsUrl?: string;
+  label: string;
+}) {
+  if (!walkingMapsUrl) {
+    return null;
+  }
+  return (
+    <div className="mt-3">
+      <TouchLink external href={walkingMapsUrl} className="text-sm">
+        {label}
+      </TouchLink>
+    </div>
+  );
+}
+
+function TenantLocalItinerary({
+  local,
+  directions,
+  walkingMapsUrl,
+  tips,
+}: {
+  local: ResolvedTenantLocalArrival;
+  directions: ReturnType<typeof useTranslations<'pages.arrivalJourney.directions'>>;
+  walkingMapsUrl?: string;
+  tips?: string[];
+}) {
+  if (local.mode === 'walk') {
+    return (
+      <>
+        <div className="pt-1">
+          <RouteTimelineLeg icon={Footprints} isLast title={directions('legs.onFootRoute')}>
+            <p className="text-sm leading-relaxed text-foreground/90">{local.primaryText}</p>
+          </RouteTimelineLeg>
+        </div>
+        <MapsCta walkingMapsUrl={walkingMapsUrl} label={directions('openWalkingRouteInMaps')} />
+        {tips?.length ? (
+          <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={tips} />
+        ) : null}
+      </>
+    );
+  }
+
+  const showGetOff = local.getOffAt.length > 0;
+  const showWalk = local.walkToHostel.length > 0;
+  const walkIsLast = showWalk || !showGetOff;
+
+  return (
+    <>
+      <div className="pt-1">
+        <RouteTimelineLeg
+          icon={Bus}
+          isLast={!showGetOff && !showWalk}
+          title={directions('legs.boardAndRide')}
+        >
+          <p className="text-sm leading-relaxed text-foreground/90">{local.primaryText}</p>
+        </RouteTimelineLeg>
+
+        {showGetOff ? (
+          <RouteTimelineLeg
+            icon={MapPin}
+            isLast={!showWalk}
+            title={directions('legs.getOff')}
+          >
+            <p className="text-sm leading-relaxed text-foreground/90">{local.getOffAt}</p>
+          </RouteTimelineLeg>
+        ) : null}
+
+        {showWalk ? (
+          <RouteTimelineLeg icon={Footprints} isLast={walkIsLast} title={directions('legs.walkToHostel')}>
+            <p className="text-sm leading-relaxed text-foreground/90">{local.walkToHostel}</p>
+          </RouteTimelineLeg>
+        ) : null}
+      </div>
+      <MapsCta walkingMapsUrl={walkingMapsUrl} label={directions('openWalkingRouteInMaps')} />
+      {tips?.length ? (
+        <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={tips} />
+      ) : null}
+    </>
+  );
+}
+
 export function PublicRouteItinerary({
   route,
   routes,
   directions,
   walkToHostel,
   routeTips,
+  walkingMapsUrl,
+  getOffAt: getOffAtProp,
+  tenantLocal,
 }: {
   route: RouteConfig;
   routes: ReturnType<typeof useTranslations>;
@@ -117,12 +208,31 @@ export function PublicRouteItinerary({
   walkToHostel: string;
   /** City pack + tenant tips merged for locale. */
   routeTips?: string[];
+  /** Google Maps walking directions when URL is stored. */
+  walkingMapsUrl?: string;
+  /** Effective get-off (tenant override || city). When omitted, uses city route copy. */
+  getOffAt?: string;
+  /** When set, renders one timeline from tenant (city legs unused). */
+  tenantLocal?: ResolvedTenantLocalArrival;
 }) {
+  const tips = routeTips ?? route.guestCopy?.tips;
+
+  if (tenantLocal && tenantLocal.primaryText) {
+    return (
+      <TenantLocalItinerary
+        local={tenantLocal}
+        directions={directions}
+        walkingMapsUrl={walkingMapsUrl}
+        tips={tips}
+      />
+    );
+  }
+
   const walkOnly = isWalkOnlyRoute(route);
   const TransitIcon = getRouteDisplayIcon(route);
-  const getOffAt = resolveRouteCopyField(route, 'publicGetOffAt', routes).trim();
+  const getOffAt =
+    getOffAtProp?.trim() || resolveRouteCopyField(route, 'publicGetOffAt', routes).trim();
   const showGetOffLeg = !walkOnly && getOffAt.length > 0;
-  const tips = routeTips ?? route.guestCopy?.tips;
 
   if (walkOnly) {
     return (
@@ -141,6 +251,7 @@ export function PublicRouteItinerary({
             <p className="text-sm leading-relaxed text-foreground/90">{walkToHostel}</p>
           </RouteTimelineLeg>
         </div>
+        <MapsCta walkingMapsUrl={walkingMapsUrl} label={directions('openWalkingRouteInMaps')} />
         {tips?.length ? (
           <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={tips} />
         ) : null}

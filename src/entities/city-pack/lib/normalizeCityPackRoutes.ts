@@ -5,12 +5,18 @@ import type {
   CityPackRouteContent,
   CityPackRouteCopy,
   CityPackTransportCurrencyMode,
+  HubArrivalKind,
 } from '../model/types';
 import { toLocalizedText, type LocalizedText } from '../model/localized';
 import { MAX_ROUTE_TIPS } from './constants';
 import { inferCityPackTransportCurrency } from './inferCityPackTransportCurrency';
 import { normalizeRouteTaxiForCurrency } from './normalizeRouteTaxiForCurrency';
+import { resolveHubArrivalKind } from './resolveHubArrivalKind';
 import { syncHubApproxTravelTime } from './syncHubApproxTravelTime';
+
+function normalizeHubArrivalKind(value: HubArrivalKind | undefined): HubArrivalKind {
+  return resolveHubArrivalKind({ hubArrivalKind: value });
+}
 
 const ROUTE_CATEGORY: Record<RouteId, RouteCategory> = {
   airport: 'airport',
@@ -58,6 +64,7 @@ function normalizeRouteContent(
   const base: CityPackRouteContent = {
     category,
     routeMode: route.routeMode,
+    hubArrivalKind: normalizeHubArrivalKind(route.hubArrivalKind),
     isActive: route.isActive,
     hint: toLocalizedText(route.hint),
     locationLabel: softLocalized(route.locationLabel),

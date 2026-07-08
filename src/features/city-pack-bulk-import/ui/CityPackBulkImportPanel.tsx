@@ -84,6 +84,7 @@ export function CityPackBulkImportPanel({
       document: parsed.document,
       currentRoutes: routes,
       transportCurrencyMode: currencyContent,
+      researchRouteIds,
     });
     setPreview(state);
     setSelectedRouteIds(state.hubs.map((hub) => hub.routeId));
@@ -114,6 +115,7 @@ export function CityPackBulkImportPanel({
       cityLabel,
       notes,
       research: pastedResearch,
+      researchRouteIds,
       transportCurrencyMode,
     });
     const ok = await copyText(text);
@@ -302,6 +304,14 @@ export function CityPackBulkImportPanel({
             </p>
           ) : null}
 
+          {preview?.ignoredOutOfScopeRouteIds.length ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-sm text-amber-950">
+              Ignored (not in research scope):{' '}
+              {preview.ignoredOutOfScopeRouteIds.join(', ')}. Narrow Step 1 hubs or add them to
+              research before re-importing.
+            </p>
+          ) : null}
+
           {preview ? (
             <div className="space-y-2">
               {preview.hubs.map((hub) => (
@@ -390,6 +400,12 @@ function HubPreviewCard({
           {hub.openQuestions.length > 0 ? (
             <p className="text-[11px] text-muted-foreground">
               Open questions: {hub.openQuestions.length}
+            </p>
+          ) : null}
+          {hub.taxiCostPreview || hub.taxiPickupPreview ? (
+            <p className="text-[11px] text-muted-foreground">
+              Taxi card:{' '}
+              {[hub.taxiCostPreview, hub.taxiPickupPreview].filter(Boolean).join(' · ')}
             </p>
           ) : null}
         </div>

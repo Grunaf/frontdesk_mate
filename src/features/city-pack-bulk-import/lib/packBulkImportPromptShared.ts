@@ -21,6 +21,7 @@ export const PACK_BULK_JSON_SCHEMA = `Reply with a single JSON object only (no m
   "routes": {
     "<routeId>": {
       "primaryRouteMode": "transit" | "walk_only",
+      "hubArrivalKind": "city_shared" | "tenant_local" (optional, default city_shared),
       "transit": {
         "publicTitle": "string",
         "publicSummary": "string",
@@ -31,9 +32,9 @@ export const PACK_BULK_JSON_SCHEMA = `Reply with a single JSON object only (no m
       },
       "walk": { "... same copy fields as transit ..." },
       "taxi": {
-        "taxiCost": "string or { \\"en\\": \\"...\\" }",
-        "taxiPickupPoint": "string or { \\"en\\": \\"...\\" }",
-        "tips": ["string", ... max 5]
+        "taxiCost": "string or { \\"en\\": \\"...\\" } — guest taxi card headline price/range",
+        "taxiPickupPoint": "string or { \\"en\\": \\"...\\" } — where guests queue (desk, stand, arrivals curb)",
+        "tips": ["string", ... max 5] — meter rules, night surcharge, when taxi is backup (NOT step-by-step in transit)"
       },
       "metadata": {
         "transitDurationMin": number,
@@ -57,5 +58,7 @@ Rules for routes object:
 - English only in all string fields.
 - Do not invent stops, prices, durations, or line numbers unless stated in the research report or operator notes with a source.
 - One primary scenario in transit publicText/publicSummary (bus OR walk steps — not taxi). Put taxi backup in tips[] or taxi.tips[], never mixed into transit steps.
+- Taxi card block: fill taxi.taxiCost, taxi.taxiPickupPoint, taxi.tips when research mentions taxi; keep taxi out of transit.publicText.
 - primaryRouteMode must match the main guest path (transit vs walk_only).
-- metadata: numeric prices/durations ONLY when stated in research; eur_only → taxiEurMin/Max; local_and_eur → also taxiKmMin/Max and ticketKioskKm/ticketDriverKm when given.`;
+- hubArrivalKind: city_shared (default) — city owns transit/get-off; tenant_local — city meta only, tenants own full hub→door (soft city copy gate).
+- metadata: numeric prices/durations ONLY when stated in research; eur_only → taxiEurMin/Max; local_and_eur → also taxiKmMin/Max and ticketKioskKm/ticketDriverKm when given. Taxi numbers live in metadata only — not in copy strings.`;

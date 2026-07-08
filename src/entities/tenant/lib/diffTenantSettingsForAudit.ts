@@ -31,6 +31,9 @@ const TOP_LEVEL_AUDIT_KEYS: (keyof TenantSettings)[] = [
   'faqPackId',
   'arrivalWalkToHostel',
   'arrivalWalkToHostelByRoute',
+  'arrivalWalkMapsUrlByRoute',
+  'arrivalGetOffAtByRoute',
+  'arrivalLocalByRoute',
   'arrivalRouteTipsByRoute',
 ];
 

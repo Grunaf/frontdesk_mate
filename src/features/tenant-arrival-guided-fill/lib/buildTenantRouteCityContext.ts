@@ -3,18 +3,24 @@ import type { CityPackRouteContent } from '@/entities/city-pack/model/types';
 import { resolveLocalizedText } from '@/entities/city-pack/model/localized';
 
 export function buildTenantRouteCityContext(
-  cityRoute: CityPackRouteContent | undefined
+  cityRoute: CityPackRouteContent | undefined,
+  options?: { getOffOverrideEn?: string }
 ): string | undefined {
   if (!cityRoute) {
     return undefined;
   }
 
   const parts: string[] = [];
-  const getOff = resolveLocalizedText(cityRoute.copy.publicGetOffAt, 'en').trim();
+  const cityGetOff = resolveLocalizedText(cityRoute.copy.publicGetOffAt, 'en').trim();
+  const getOff = options?.getOffOverrideEn?.trim() || cityGetOff;
   const summary = resolveLocalizedText(cityRoute.copy.publicSummary, 'en').trim();
 
   if (getOff) {
-    parts.push(`Typical get-off: ${getOff}`);
+    parts.push(
+      options?.getOffOverrideEn?.trim()
+        ? `Hostel get-off override: ${getOff}`
+        : `Typical get-off: ${getOff}`
+    );
   }
   if (summary) {
     parts.push(`City route summary: ${summary}`);
@@ -25,7 +31,8 @@ export function buildTenantRouteCityContext(
 
 export function buildTenantRouteCityContextForRouteId(
   cityRoutes: Partial<Record<RouteId, CityPackRouteContent>>,
-  routeId: RouteId
+  routeId: RouteId,
+  options?: { getOffOverrideEn?: string }
 ): string | undefined {
-  return buildTenantRouteCityContext(cityRoutes[routeId]);
+  return buildTenantRouteCityContext(cityRoutes[routeId], options);
 }
