@@ -32,6 +32,10 @@ function mergeRecommendedTaxi(
     phoneRaw: dbTaxi?.phoneRaw?.trim() || codeTaxi?.phoneRaw,
     phoneMask: dbTaxi?.phoneMask?.trim() || codeTaxi?.phoneMask,
     phoneFormatPreset: dbTaxi?.phoneFormatPreset || codeTaxi?.phoneFormatPreset,
+    whatsappEnabled:
+      dbTaxi?.whatsappEnabled !== undefined
+        ? dbTaxi.whatsappEnabled
+        : codeTaxi?.whatsappEnabled,
   };
 }
 

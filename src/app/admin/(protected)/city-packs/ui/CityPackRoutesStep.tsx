@@ -47,6 +47,7 @@ function CityPackRoutesStepBody({
   taxiPhone,
   taxiMask,
   taxiPreset,
+  taxiWhatsappEnabled,
   transportCurrencyMode,
   onEnabledRoutesChange,
   onRoutesChange,
@@ -55,6 +56,7 @@ function CityPackRoutesStepBody({
   onTaxiPhoneChange,
   onTaxiMaskChange,
   onTaxiPresetChange,
+  onTaxiWhatsappEnabledChange,
 }: {
   packId: string;
   packLabel: string;
@@ -66,6 +68,7 @@ function CityPackRoutesStepBody({
   taxiPhone: string;
   taxiMask: string;
   taxiPreset: PhoneDisplayPresetId;
+  taxiWhatsappEnabled: boolean;
   transportCurrencyMode: import('@/entities/city-pack').CityPackTransportCurrencyMode;
   onEnabledRoutesChange: (routes: RouteId[]) => void;
   onRoutesChange: (routes: Partial<Record<RouteId, CityPackRouteContent>>) => void;
@@ -74,6 +77,7 @@ function CityPackRoutesStepBody({
   onTaxiPhoneChange: (value: string) => void;
   onTaxiMaskChange: (value: string) => void;
   onTaxiPresetChange: (value: PhoneDisplayPresetId) => void;
+  onTaxiWhatsappEnabledChange: (value: boolean) => void;
 }) {
   const { locale } = useAdminEditingLocale();
   const packHubRouteIds = useMemo(() => listAdminCityPackHubRouteIds(routes), [routes]);
@@ -166,11 +170,13 @@ function CityPackRoutesStepBody({
                   taxiPhone={taxiPhone}
                   taxiMask={taxiMask}
                   taxiPreset={taxiPreset}
+                  taxiWhatsappEnabled={taxiWhatsappEnabled}
                   warnings={warnings}
                   onTaxiNameChange={onTaxiNameChange}
                   onTaxiPhoneChange={onTaxiPhoneChange}
                   onTaxiMaskChange={onTaxiMaskChange}
                   onTaxiPresetChange={onTaxiPresetChange}
+                  onTaxiWhatsappEnabledChange={onTaxiWhatsappEnabledChange}
                   onWarningsChange={onWarningsChange}
                 />
               );
@@ -190,11 +196,13 @@ function CityPackRoutesStepBody({
       onTaxiNameChange,
       onTaxiPhoneChange,
       onTaxiPresetChange,
+      onTaxiWhatsappEnabledChange,
       onWarningsChange,
       taxiMask,
       taxiName,
       taxiPhone,
       taxiPreset,
+      taxiWhatsappEnabled,
       warnings,
     ]
   );
@@ -341,6 +349,7 @@ export function CityPackRoutesStep(props: {
   taxiPhone: string;
   taxiMask: string;
   taxiPreset: PhoneDisplayPresetId;
+  taxiWhatsappEnabled: boolean;
   transportCurrencyMode: import('@/entities/city-pack').CityPackTransportCurrencyMode;
   onEnabledRoutesChange: (routes: RouteId[]) => void;
   onRoutesChange: (routes: Partial<Record<RouteId, CityPackRouteContent>>) => void;
@@ -349,6 +358,7 @@ export function CityPackRoutesStep(props: {
   onTaxiPhoneChange: (value: string) => void;
   onTaxiMaskChange: (value: string) => void;
   onTaxiPresetChange: (value: PhoneDisplayPresetId) => void;
+  onTaxiWhatsappEnabledChange: (value: boolean) => void;
 }) {
   return (
     <AdminEditingLocaleProvider>

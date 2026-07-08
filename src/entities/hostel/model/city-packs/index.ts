@@ -54,6 +54,8 @@ export interface RecommendedTaxi {
   phoneRaw?: string;
   phoneMask?: string;
   phoneFormatPreset?: string;
+  /** When false, guest taxi backup hides WhatsApp (call still shown). Omitted = enabled. */
+  whatsappEnabled?: boolean;
 }
 
 export type PreTripTipId = 'sundayClosure';

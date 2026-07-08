@@ -36,7 +36,23 @@ describe('resolveCityPackForGuest', () => {
       name: 'Zuti Taxi',
       phoneRaw: '38761123456',
       phoneMask: undefined,
+      phoneFormatPreset: undefined,
+      whatsappEnabled: undefined,
     });
+  });
+
+  it('merges whatsappEnabled from DB over code default', () => {
+    const pack = resolveCityPackForGuest({
+      packId: 'kotor',
+      locale: 'en',
+      packStatus: 'ready',
+      enabledRoutes: ['airport'],
+      content: {
+        recommendedTaxi: { name: 'Red Taxi', phoneRaw: '38267019719', whatsappEnabled: false },
+      },
+    });
+
+    expect(pack.recommendedTaxi?.whatsappEnabled).toBe(false);
   });
 
   it('attaches guestCopy from code seed when DB routes are absent', () => {

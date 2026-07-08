@@ -119,6 +119,9 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
       pack.content.recommendedTaxi?.phoneFormatPreset
     )
   );
+  const [taxiWhatsappEnabled, setTaxiWhatsappEnabled] = useState(
+    () => pack.content.recommendedTaxi?.whatsappEnabled !== false
+  );
 
   const content = useMemo<CityPackContent>(
     () => ({
@@ -134,10 +137,11 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
             phoneRaw: taxiPhone.trim() || undefined,
             phoneMask: taxiMask.trim() || undefined,
             phoneFormatPreset: taxiPreset,
+            ...(taxiWhatsappEnabled ? {} : { whatsappEnabled: false }),
           }
         : undefined,
     }),
-    [enabledRoutes, places, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, taxiPreset, transportCurrencyMode, warnings]
+    [enabledRoutes, places, preTripSundayClosure, routes, taxiMask, taxiName, taxiPhone, taxiPreset, taxiWhatsappEnabled, transportCurrencyMode, warnings]
   );
 
   const placesCount = countGatePlaces(content);
@@ -275,6 +279,11 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
         <input type="hidden" name="recommendedTaxiPhoneRaw" value={taxiPhone} />
         <input type="hidden" name="recommendedTaxiPhoneMask" value={taxiMask} />
         <input type="hidden" name="recommendedTaxiPhoneFormatPreset" value={taxiPreset} />
+        <input
+          type="hidden"
+          name="recommendedTaxiWhatsappEnabled"
+          value={taxiWhatsappEnabled ? 'true' : 'false'}
+        />
         <input type="hidden" name="transportCurrencyMode" value={transportCurrencyMode} />
 
         {stepId === 'identity' ? (
@@ -398,6 +407,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
             taxiPhone={taxiPhone}
             taxiMask={taxiMask}
             taxiPreset={taxiPreset}
+            taxiWhatsappEnabled={taxiWhatsappEnabled}
             onEnabledRoutesChange={handleEnabledRoutesChange}
             onRoutesChange={setRoutes}
             onWarningsChange={setWarnings}
@@ -405,6 +415,7 @@ export function CityPackWizard({ pack, saved, error }: CityPackWizardProps) {
             onTaxiPhoneChange={setTaxiPhone}
             onTaxiMaskChange={setTaxiMask}
             onTaxiPresetChange={setTaxiPreset}
+            onTaxiWhatsappEnabledChange={setTaxiWhatsappEnabled}
             transportCurrencyMode={transportCurrencyMode}
           />
         ) : null}

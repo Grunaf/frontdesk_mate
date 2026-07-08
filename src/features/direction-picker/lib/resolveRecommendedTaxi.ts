@@ -8,6 +8,7 @@ export interface ResolvedRecommendedTaxi {
   phoneRaw: string;
   phoneMask: string;
   href: string;
+  whatsappEnabled: boolean;
 }
 
 export function resolveRecommendedTaxi(
@@ -37,5 +38,6 @@ export function resolveRecommendedTaxi(
       )
     ),
     href: `tel:+${normalized}`,
+    whatsappEnabled: packTaxi.whatsappEnabled !== false,
   };
 }

@@ -54,15 +54,16 @@ export function TaxiBackupSheet({
     cityPack.guestWarnings?.taxiMeterWarning ??
     (contentKeys.taxiMeterWarning ? routes(contentKeys.taxiMeterWarning) : '');
 
-  const taxiWhatsappLink = recommendedTaxi
-    ? createWhatsappLink(
-        recommendedTaxi.phoneRaw,
-        taxiActions('whatsappTaxiMessage', {
-          pickupPoint,
-          address: destination,
-        })
-      )
-    : null;
+  const taxiWhatsappLink =
+    recommendedTaxi?.whatsappEnabled
+      ? createWhatsappLink(
+          recommendedTaxi.phoneRaw,
+          taxiActions('whatsappTaxiMessage', {
+            pickupPoint,
+            address: destination,
+          })
+        )
+      : null;
 
   const receptionBackup = resolveReceptionTaxiBackup(
     hostel,
@@ -81,7 +82,7 @@ export function TaxiBackupSheet({
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
-      <BottomSheetContent className="px-0 pb-0">
+      <BottomSheetContent size="large" className="px-0 pb-0">
         <BottomSheetHeader className="space-y-3 px-6 pb-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {directions('backupTitle')}
