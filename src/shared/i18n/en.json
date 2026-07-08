@@ -286,12 +286,7 @@
               }
             }
           },
-          "preTrip": {
-            "sundayClosure": {
-              "title": "Sunday Closure",
-              "description": "Sunday in Bosnia — a non-working day. Shops, supermarkets and most establishments are closed. Plan your purchases!"
-            }
-          },
+          "preTrip": {},
           "marketing": {
             "heroSubtitle": "Your green oasis in the heart of Sarajevo",
             "heroImageAlt": "{hostelName} — hostel photo"
@@ -602,6 +597,10 @@
         "luggage": {
           "title": "Luggage Storage",
           "description": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
+        },
+        "sundayClosure": {
+          "title": "Sunday Closure",
+          "description": "Sunday in Bosnia — a non-working day. Shops, supermarkets and most establishments are closed. Plan your purchases!"
         },
         "timing": {
           "checkIn": "Check-in time",
@@ -1419,14 +1418,15 @@
       "viewFullGuide": "Room map & directions"
     },
     "taxi": {
-      "bookTaxiTitle": "Book a taxi",
       "needHelpTitle": "Need help?",
       "callTaxi": "Call {taxiName}",
       "whatsappTaxi": "Message {taxiName} on WhatsApp",
       "whatsappTaxiMessage": "Hello! Please send a taxi to {pickupPoint}. Destination: {address}.",
       "askReceptionHoursHint": "Reception hours: {open}–{close}.",
       "askReceptionOpensHint": "Reception opens at {open}.",
-      "safetyTipsTitle": "Before you call — safety tips",
+      "zoneAtHubTitle": "Getting a taxi here",
+      "zoneDealTitle": "Before you get in",
+      "zoneCallLead": "Prefer to book by phone?",
       "receptionTaxiMessage": "Hi {hostelName}! I'm at {pickupPoint} and need a taxi to {address}. Can you help me book one?",
       "noTaxiNumber": "No taxi number configured — use WhatsApp reception to help book a ride.",
       "noContactFallback": "Contact details are not configured yet."

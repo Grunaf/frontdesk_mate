@@ -17,6 +17,7 @@ import { mergeDbRouteOntoCodeRoute } from './buildRouteGuestCopy';
 import { resolveCityPackTransportReadiness } from './resolveCityPackTransportReadiness';
 import type { AppLocale, CityPackContent, CityPackContentWarnings, CityPackStatus } from '../model/types';
 import { resolveLocalizedText } from '../model/localized';
+import { resolvePackTaxiCityRulesLines } from './resolvePackTaxiCityRules';
 
 function mergeRecommendedTaxi(
   codeTaxi: RecommendedTaxi | undefined,
@@ -32,6 +33,10 @@ function mergeRecommendedTaxi(
     phoneRaw: dbTaxi?.phoneRaw?.trim() || codeTaxi?.phoneRaw,
     phoneMask: dbTaxi?.phoneMask?.trim() || codeTaxi?.phoneMask,
     phoneFormatPreset: dbTaxi?.phoneFormatPreset || codeTaxi?.phoneFormatPreset,
+    whatsappEnabled:
+      dbTaxi?.whatsappEnabled !== undefined
+        ? dbTaxi.whatsappEnabled
+        : codeTaxi?.whatsappEnabled,
   };
 }
 
@@ -74,23 +79,31 @@ function resolveGuestWarnings(
     return undefined;
   }
 
+  const taxiCityRulesLines = resolvePackTaxiCityRulesLines(warnings, locale);
   const taxiStandWarning = warnings.taxiStand
     ? resolveLocalizedText(warnings.taxiStand, locale)
     : '';
   const taxiMeterWarning = warnings.taxiMeter
     ? resolveLocalizedText(warnings.taxiMeter, locale)
     : '';
+  const busClarificationQuestion = warnings.busClarification
+    ? resolveLocalizedText(warnings.busClarification, locale)
+    : undefined;
 
-  if (!taxiStandWarning && !taxiMeterWarning && !warnings.busClarification) {
+  if (
+    taxiCityRulesLines.length === 0 &&
+    !taxiStandWarning &&
+    !taxiMeterWarning &&
+    !busClarificationQuestion
+  ) {
     return undefined;
   }
 
   return {
-    taxiStandWarning,
-    taxiMeterWarning,
-    busClarificationQuestion: warnings.busClarification
-      ? resolveLocalizedText(warnings.busClarification, locale)
-      : undefined,
+    taxiCityRulesLines: taxiCityRulesLines.length > 0 ? taxiCityRulesLines : undefined,
+    taxiStandWarning: taxiStandWarning || undefined,
+    taxiMeterWarning: taxiMeterWarning || undefined,
+    busClarificationQuestion,
   };
 }
 

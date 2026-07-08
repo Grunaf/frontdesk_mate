@@ -144,10 +144,19 @@ export function normalizeCityPackWarnings(
     return undefined;
   }
 
+  const taxiCityRules = toLocalizedText(warnings.taxiCityRules);
+  const taxiStand = toLocalizedText(warnings.taxiStand);
+  const taxiMeter = toLocalizedText(warnings.taxiMeter);
+  const busClarification = toLocalizedText(warnings.busClarification);
+
+  if (taxiCityRules) {
+    return busClarification ? { taxiCityRules, busClarification } : { taxiCityRules };
+  }
+
   const next = {
-    taxiStand: toLocalizedText(warnings.taxiStand),
-    taxiMeter: toLocalizedText(warnings.taxiMeter),
-    busClarification: toLocalizedText(warnings.busClarification),
+    taxiStand,
+    taxiMeter,
+    busClarification,
   };
 
   if (!next.taxiStand && !next.taxiMeter && !next.busClarification) {

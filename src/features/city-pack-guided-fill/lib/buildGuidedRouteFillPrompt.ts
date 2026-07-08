@@ -13,12 +13,12 @@ Rules:
 - publicText: imperative steps for boarding and riding only (not get-off — use publicGetOffAt).
 - publicGetOffAt: where to exit transit; omit for walk-only (set routeMode to walk_only).
 - publicPreview: walk from hub to stop/platform only (not final walk to hostel — tenant settings).
-- transitScheduleAdvice: 1-2 short lines (each max 10 words) with schedule reliability/frequency notes.
-- transitTicketPayment: 1-2 short lines (each max 10 words) with where/how to buy/validate tickets.
+- transitScheduleAdvice: 1 short line (max 15 words) with schedule reliability/frequency notes.
+- transitTicketPayment: 1 short line (max 15 words) with where/how to buy/validate tickets.
 - tips: up to 2 short optional bullets, ranked by guest impact/severity (highest first).
 - Never duplicate facts between tips and transitScheduleAdvice/transitTicketPayment.
 - locationLabelEn: short hub name if obvious from input (e.g. "Airport", "Main bus station").
-- metadata: numeric fields ONLY when explicitly stated in operator input (prices, durations, ticket kiosk/driver KM). Never guess. For eur_only packs use taxiEurMin/Max; for local_and_eur also taxiKmMin/Max and ticketKioskKm/ticketDriverKm when given.`;
+- metadata: numeric fields ONLY when explicitly stated in operator input (prices, durations, ticket kiosk/driver KM). Never guess. Prefer single values: taxiEur, taxiKm, taxiDuration. For compatibility, taxiEurMin/Max, taxiKmMin/Max, taxiDurationMin/Max are also accepted.`;
 
 function formatFollowUps(followUpAnswers?: Record<string, string>): string {
   if (!followUpAnswers || Object.keys(followUpAnswers).length === 0) {

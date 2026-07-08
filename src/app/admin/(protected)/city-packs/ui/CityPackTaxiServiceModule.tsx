@@ -1,41 +1,52 @@
 'use client';
 
+import { useMemo } from 'react';
 import type { CityPackContentWarnings } from '@/entities/city-pack/model/types';
+import { coalesceCityPackTaxiCityRulesForAdmin } from '@/entities/city-pack/lib/resolvePackTaxiCityRules';
 import type { PhoneDisplayPresetId } from '@/shared/lib/phoneDisplay';
 import { AdminPhoneFieldInline } from '../../tenants/ui/AdminPhoneField';
 import { AdminLocalizedInput } from './AdminLocalizedInput';
 
 export const CITY_PACK_TAXI_SERVICE_INTRO =
-  'Shown on guest arrival taxi backup (name, phone) and as stand/meter warnings in the direction flow. Per-hostel taxi phone overrides live in tenant Reception settings.';
+  'Shown on guest arrival taxi backup (name, phone) and city-wide taxi rules in the direction flow. Per-hostel taxi phone overrides live in tenant Reception settings; WhatsApp on/off applies to whichever number guests see.';
 
 export const TAXI_NAME_LABEL = 'Taxi name';
 export const TAXI_PHONE_LABEL = 'Taxi phone';
-export const TAXI_STAND_WARNING_LABEL = 'Taxi stand warning';
-export const TAXI_METER_WARNING_LABEL = 'Taxi meter warning';
+export const TAXI_CITY_RULES_LABEL = 'City taxi rules';
+export const TAXI_WHATSAPP_LABEL = 'Guests can message this taxi on WhatsApp';
 
 export function CityPackTaxiServiceModule({
   taxiName,
   taxiPhone,
   taxiMask,
   taxiPreset,
+  taxiWhatsappEnabled,
   warnings,
   onTaxiNameChange,
   onTaxiPhoneChange,
   onTaxiMaskChange,
   onTaxiPresetChange,
+  onTaxiWhatsappEnabledChange,
   onWarningsChange,
 }: {
   taxiName: string;
   taxiPhone: string;
   taxiMask: string;
   taxiPreset: PhoneDisplayPresetId;
+  taxiWhatsappEnabled: boolean;
   warnings: CityPackContentWarnings;
   onTaxiNameChange: (value: string) => void;
   onTaxiPhoneChange: (value: string) => void;
   onTaxiMaskChange: (value: string) => void;
   onTaxiPresetChange: (value: PhoneDisplayPresetId) => void;
+  onTaxiWhatsappEnabledChange: (value: boolean) => void;
   onWarningsChange: (warnings: CityPackContentWarnings) => void;
 }) {
+  const taxiCityRulesValue = useMemo(
+    () => coalesceCityPackTaxiCityRulesForAdmin(warnings),
+    [warnings]
+  );
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{CITY_PACK_TAXI_SERVICE_INTRO}</p>
@@ -58,19 +69,28 @@ export function CityPackTaxiServiceModule({
           onPresetChange={onTaxiPresetChange}
         />
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={taxiWhatsappEnabled}
+          onChange={(event) => onTaxiWhatsappEnabledChange(event.target.checked)}
+        />
+        {TAXI_WHATSAPP_LABEL}
+      </label>
       <AdminLocalizedInput
-        label={TAXI_STAND_WARNING_LABEL}
-        value={warnings.taxiStand}
-        onChange={(taxiStand) => onWarningsChange({ ...warnings, taxiStand })}
+        label={TAXI_CITY_RULES_LABEL}
+        value={taxiCityRulesValue}
+        onChange={(taxiCityRules) =>
+          onWarningsChange({
+            ...warnings,
+            taxiCityRules,
+            taxiStand: undefined,
+            taxiMeter: undefined,
+          })
+        }
         multiline
-        rows={2}
-      />
-      <AdminLocalizedInput
-        label={TAXI_METER_WARNING_LABEL}
-        value={warnings.taxiMeter}
-        onChange={(taxiMeter) => onWarningsChange({ ...warnings, taxiMeter })}
-        multiline
-        rows={2}
+        rows={4}
+        hint="Guest zone B: meter, fixed fares, scams — blank line between paragraphs."
       />
     </div>
   );

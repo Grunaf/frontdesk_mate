@@ -38,7 +38,7 @@ export const CITY_PACK_ROUTES_ADMIN_MODULES: CityPackRoutesModuleDefinition[] = 
   {
     id: 'taxi-service',
     label: 'Taxi service',
-    description: 'Recommended taxi for guests and stand/meter warnings.',
+    description: 'Recommended taxi for guests and city-wide taxi rules.',
   },
   {
     id: 'hub-warnings',
@@ -55,6 +55,8 @@ export type CityPackRoutesModuleInput = {
 
 function hasTaxiWarnings(warnings: CityPackContentWarnings): boolean {
   return (
+    isLocalizedFilled(warnings.taxiCityRules, 'en') ||
+    isLocalizedFilled(warnings.taxiCityRules, 'ru') ||
     isLocalizedFilled(warnings.taxiStand, 'en') ||
     isLocalizedFilled(warnings.taxiStand, 'ru') ||
     isLocalizedFilled(warnings.taxiMeter, 'en') ||

@@ -49,6 +49,8 @@ function readContent(formData: FormData, packId: string): CityPackContent {
   const taxiPhoneFormatPreset = normalizePhoneDisplayPreset(
     String(formData.get('recommendedTaxiPhoneFormatPreset') || '')
   );
+  const taxiWhatsappEnabled =
+    String(formData.get('recommendedTaxiWhatsappEnabled') || 'true') !== 'false';
   const taxiPhoneMask = resolveStoredPhoneMask(
     taxiPhoneRaw,
     taxiPhoneMaskInput,
@@ -86,6 +88,7 @@ function readContent(formData: FormData, packId: string): CityPackContent {
           phoneRaw: taxiPhoneRaw || undefined,
           phoneMask: taxiPhoneMask || undefined,
           phoneFormatPreset: taxiPhoneFormatPreset ?? (taxiPhoneRaw ? 'auto' : undefined),
+          ...(taxiWhatsappEnabled ? {} : { whatsappEnabled: false }),
         }
       : undefined,
   };

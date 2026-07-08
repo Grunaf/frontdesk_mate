@@ -31,8 +31,8 @@ const copyBlockSchema = z
     publicText: z.string().optional(),
     publicGetOffAt: z.string().optional(),
     publicWalkToHostel: z.string().optional(),
-    transitScheduleAdvice: z.array(z.string()).max(2).optional(),
-    transitTicketPayment: z.array(z.string()).max(2).optional(),
+    transitScheduleAdvice: z.array(z.string()).max(1).optional(),
+    transitTicketPayment: z.array(z.string()).max(1).optional(),
     tips: z.array(z.string()).max(2).optional(),
   })
   .optional();
@@ -59,10 +59,13 @@ const hubSchema = z.object({
       transitStops: z.number().optional(),
       ticketKioskKm: z.number().optional(),
       ticketDriverKm: z.number().optional(),
+      taxiEur: z.number().optional(),
       taxiEurMin: z.number().optional(),
       taxiEurMax: z.number().optional(),
+      taxiKm: z.number().optional(),
       taxiKmMin: z.number().optional(),
       taxiKmMax: z.number().optional(),
+      taxiDuration: z.number().optional(),
       taxiDurationMin: z.number().optional(),
       taxiDurationMax: z.number().optional(),
     })

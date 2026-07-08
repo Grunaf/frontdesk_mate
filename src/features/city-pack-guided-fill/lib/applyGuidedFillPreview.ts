@@ -28,7 +28,7 @@ function toLocalizedEnLines(
   const lines = values
     .map((line) => line.trim())
     .filter(Boolean)
-    .slice(0, 2)
+    .slice(0, 1)
     .map((line, index) => toLocalizedEn(line, previous?.[index] ?? { en: '' }));
 
   return lines.length ? lines : previous;

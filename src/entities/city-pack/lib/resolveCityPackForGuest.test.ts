@@ -36,7 +36,23 @@ describe('resolveCityPackForGuest', () => {
       name: 'Zuti Taxi',
       phoneRaw: '38761123456',
       phoneMask: undefined,
+      phoneFormatPreset: undefined,
+      whatsappEnabled: undefined,
     });
+  });
+
+  it('merges whatsappEnabled from DB over code default', () => {
+    const pack = resolveCityPackForGuest({
+      packId: 'kotor',
+      locale: 'en',
+      packStatus: 'ready',
+      enabledRoutes: ['airport'],
+      content: {
+        recommendedTaxi: { name: 'Red Taxi', phoneRaw: '38267019719', whatsappEnabled: false },
+      },
+    });
+
+    expect(pack.recommendedTaxi?.whatsappEnabled).toBe(false);
   });
 
   it('attaches guestCopy from code seed when DB routes are absent', () => {
@@ -50,6 +66,27 @@ describe('resolveCityPackForGuest', () => {
 
     expect(pack.routes.airport?.guestCopy?.publicTitle).toContain('Trolleybus');
     expect(pack.guestWarnings?.taxiStandWarning).toContain('official stands');
+    expect(pack.guestWarnings?.taxiCityRulesLines?.length).toBeGreaterThan(0);
+  });
+
+  it('uses taxiCityRules from DB for guest zone B', () => {
+    const pack = resolveCityPackForGuest({
+      packId: 'sarajevo',
+      locale: 'en',
+      packStatus: 'ready',
+      enabledRoutes: ['airport'],
+      content: {
+        enabledRoutes: ['airport'],
+        warnings: {
+          taxiCityRules: { en: 'Only use licensed taxis.\n\nAgree the fare before you board.' },
+        },
+      },
+    });
+
+    expect(pack.guestWarnings?.taxiCityRulesLines).toEqual([
+      'Only use licensed taxis.',
+      'Agree the fare before you board.',
+    ]);
   });
 
   it('prefers DB route copy over code/i18n', () => {

@@ -8,8 +8,9 @@ function formatTaxiCardChecklist(hubLabel: string): string {
   );
   const lines = [
     'Taxi card (guest backup — not the main step-by-step path):',
-    '  - Typical metered price or range to hostel district (source?)',
-    '  - Official taxi stand / desk / pickup point at this hub',
+    '  - Typical metered price or range to hostel district (source?) → taxiCost + metadata only',
+    '  - Official taxi stand / desk / pickup at this hub → taxi.taxiPickupPoint (zone A)',
+    '  - Hub-specific where/deal bullets → taxi.tips[0] where here, taxi.tips[1] before boarding (no fares, no call/book taxi)',
     '  - When taxi is backup vs public transport (night, no service)',
     '  - Keep all price/currency details out of tips; store them only in taxiCost/metadata',
   ];
@@ -51,7 +52,7 @@ export function formatPackBulkInterviewChecklist(routeIds: RouteId[]): string {
     sections.push('  - Schedule reliability/frequency (peak, evening, weekend)');
     sections.push('  - Ticket payment path (kiosk/driver/app/online + validation)');
     sections.push(
-      '  - Keep final guest advice concise: each line max 10 words (for schedule/payment blocks)'
+      '  - Keep final guest advice concise: one line max 15 words (for schedule/payment blocks)'
     );
     sections.push('');
     sections.push(formatQuestionBlock(hubLabel, 'walk_only', 'If walk-only from this hub'));

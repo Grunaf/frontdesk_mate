@@ -117,6 +117,12 @@ export function CityPackRouteEditor({
   const patch = (partial: Partial<CityPackRouteContent>) => onChange({ ...route, ...partial });
   const patchCopy = (partial: Partial<CityPackRouteContent['copy']>) =>
     onChange({ ...route, copy: { ...route.copy, ...partial } });
+  const patchAdviceLine = (key: 'transitScheduleAdvice' | 'transitTicketPayment', value: LocalizedText) => {
+    const hasValue = isLocalizedFilled(value, 'en') || isLocalizedFilled(value, 'ru');
+    patchCopy({ [key]: hasValue ? [value] : undefined });
+  };
+  const scheduleAdvice = route.copy.transitScheduleAdvice ?? [];
+  const ticketPaymentAdvice = route.copy.transitTicketPayment ?? [];
   const setHubArrivalKind = (next: HubArrivalKind) => patch({ hubArrivalKind: next });
 
   const tips = route.tips ?? [];
@@ -337,6 +343,24 @@ export function CityPackRouteEditor({
           gateRequired={getOffAtRequired}
         />
         ) : null}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <AdminLocalizedInput
+            label="Schedule advice"
+            hint="Short reliability note (up to 15 words)."
+            value={scheduleAdvice[0] ?? { en: '' }}
+            onChange={(value) => patchAdviceLine('transitScheduleAdvice', value)}
+            multiline
+            rows={3}
+          />
+          <AdminLocalizedInput
+            label="Ticket payment"
+            hint="Where/how to buy and validate tickets (up to 15 words)."
+            value={ticketPaymentAdvice[0] ?? { en: '' }}
+            onChange={(value) => patchAdviceLine('transitTicketPayment', value)}
+            multiline
+            rows={3}
+          />
+        </div>
       </div>
 
       {!gateReady && !isTenantLocal ? (

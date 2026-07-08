@@ -25,8 +25,8 @@ export const guidedRouteFillModelSchema = z.object({
   publicText: z.string().optional(),
   publicGetOffAt: z.string().optional(),
   publicPreview: z.string().optional(),
-  transitScheduleAdvice: z.array(z.string()).max(2).optional(),
-  transitTicketPayment: z.array(z.string()).max(2).optional(),
+  transitScheduleAdvice: z.array(z.string()).max(1).optional(),
+  transitTicketPayment: z.array(z.string()).max(1).optional(),
   tips: z.array(z.string()).max(2).optional(),
   metadata: z
     .object({
@@ -34,10 +34,13 @@ export const guidedRouteFillModelSchema = z.object({
       transitStops: z.number().optional(),
       ticketKioskKm: z.number().optional(),
       ticketDriverKm: z.number().optional(),
+      taxiEur: z.number().optional(),
       taxiEurMin: z.number().optional(),
       taxiEurMax: z.number().optional(),
+      taxiKm: z.number().optional(),
       taxiKmMin: z.number().optional(),
       taxiKmMax: z.number().optional(),
+      taxiDuration: z.number().optional(),
       taxiDurationMin: z.number().optional(),
       taxiDurationMax: z.number().optional(),
     })
@@ -73,11 +76,11 @@ export function modelOutputToPreview(output: GuidedRouteFillModelOutput): Guided
   const transitScheduleAdvice = output.transitScheduleAdvice
     ?.map((line) => line.trim())
     .filter(Boolean)
-    .slice(0, 2);
+    .slice(0, 1);
   const transitTicketPayment = output.transitTicketPayment
     ?.map((line) => line.trim())
     .filter(Boolean)
-    .slice(0, 2);
+    .slice(0, 1);
 
   if (transitScheduleAdvice?.length) {
     copy.transitScheduleAdvice = transitScheduleAdvice;
