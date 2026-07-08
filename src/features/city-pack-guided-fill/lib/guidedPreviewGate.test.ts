@@ -10,13 +10,16 @@ describe('guidedPreviewGate', () => {
       copy: {
         publicTitle: 'Airport bus',
         publicSummary: 'Take the bus',
+        publicPreview: 'Walk to the stop outside arrivals',
         publicText: 'Board at stop A',
         publicGetOffAt: 'Main gate',
       },
       openQuestions: [],
     };
 
-    expect(isGuidedPreviewGateReady('kotor', 'airport', route, preview).ready).toBe(true);
+    const gate = isGuidedPreviewGateReady('kotor', 'airport', route, preview);
+    expect(gate.missingFields).toEqual([]);
+    expect(gate.ready).toBe(true);
   });
 
   it('is not ready when get off missing on transit', () => {
@@ -31,6 +34,8 @@ describe('guidedPreviewGate', () => {
       openQuestions: [],
     };
 
-    expect(isGuidedPreviewGateReady('kotor', 'airport', route, preview).ready).toBe(false);
+    const gate = isGuidedPreviewGateReady('kotor', 'airport', route, preview);
+    expect(gate.missingFields).toContain('Get off at');
+    expect(gate.ready).toBe(false);
   });
 });
