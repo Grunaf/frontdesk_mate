@@ -56,7 +56,7 @@ test.describe('guest concierge stay chip', () => {
     await expect(strip).toBeHidden();
   });
 
-  test('room map link opens settlement tab in arrival guide', async ({ page }) => {
+  test('room map link opens register tab when tourism registration is incomplete', async ({ page }) => {
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
     await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
 
@@ -64,12 +64,17 @@ test.describe('guest concierge stay chip', () => {
       name: /Show room map|room map|Карта комнаты|направления/i,
     });
     await roomMapLink.scrollIntoViewIfNeeded();
-    await roomMapLink.click();
-
-    await expect(page).toHaveURL(/\/stay-setup\?.*step=(room|settlement)/, {
+    await expect(roomMapLink).toHaveAttribute('href', /\/stay-setup\?.*step=register/, {
       timeout: config.navTimeoutMs,
     });
-    await expect(page.getByRole('heading', { name: /Find your bed|Your room|Settlement/i })).toBeVisible();
+    await roomMapLink.click();
+
+    await expect(page).toHaveURL(/\/stay-setup\?.*step=register/, {
+      timeout: config.navTimeoutMs,
+    });
+    await expect(
+      page.getByRole('heading', { name: /Tourist registration|Туристическая регистрация/i })
+    ).toBeVisible();
   });
 
   test('hides stay chip on arrival guide', async ({ page }) => {
