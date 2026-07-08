@@ -47,6 +47,11 @@ export function formatPackBulkInterviewChecklist(routeIds: RouteId[]): string {
     sections.push(
       formatQuestionBlock(hubLabel, 'transit', 'If public transit is used')
     );
+    sections.push('  - Schedule reliability/frequency (peak, evening, weekend)');
+    sections.push('  - Ticket payment path (kiosk/driver/app/online + validation)');
+    sections.push(
+      '  - Keep final guest advice concise: each line max 10 words (for schedule/payment blocks)'
+    );
     sections.push('');
     sections.push(formatQuestionBlock(hubLabel, 'walk_only', 'If walk-only from this hub'));
     sections.push('');

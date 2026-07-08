@@ -2,7 +2,17 @@
 
 import { useTranslations } from '@/shared/i18n';
 import { Icon } from '@/shared/ui';
-import { Bus, Clock3, Footprints, MapPin, Route, Ticket, Train, type LucideIcon } from 'lucide-react';
+import {
+  Banknote,
+  Bus,
+  Clock3,
+  Footprints,
+  MapPin,
+  Route,
+  Ticket,
+  Train,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   isTenantLocalRoute,
   isWalkOnlyRoute,
@@ -54,6 +64,8 @@ export function TransitLegMeta({
   const walkOnly = isWalkOnlyRoute(route);
   const fareLabel = resolveRouteFareLabel(route, routes);
   const showFareChip = Boolean(fareLabel || fareLabelKey || ticketPrice);
+  const approxTicketPrice =
+    ticketPrice ? Math.round((ticketPrice.kioskKM + ticketPrice.driverKM) / 2) : undefined;
 
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -64,16 +76,15 @@ export function TransitLegMeta({
             ? fareLabel
             : fareLabelKey
             ? routes(fareLabelKey)
-            : directions('labels.ticket', {
-                kiosk: ticketPrice!.kioskKM.toFixed(2),
-                driver: ticketPrice!.driverKM.toFixed(2),
+            : directions('labels.ticketApprox', {
+                value: approxTicketPrice!,
               })}
         </span>
       )}
       {!walkOnly && stops !== undefined && (
         <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs text-foreground/90">
           <Icon icon={Route} className="h-3 w-3 text-muted-foreground" />
-          {directions('labels.stops', { count: stops })}
+          {directions('labels.stopsApprox', { count: stops })}
         </span>
       )}
       <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs text-foreground/90">
@@ -107,6 +118,59 @@ function PublicRouteGoodToKnow({ title, tips }: { title: string; tips: string[] 
   );
 }
 
+function dedupeTipsAgainstAdvice(
+  tips: string[] | undefined,
+  scheduleAdvice: string[] | undefined,
+  ticketPaymentAdvice: string[] | undefined
+): string[] | undefined {
+  if (!tips?.length) {
+    return undefined;
+  }
+
+  const adviceSet = new Set(
+    [...(scheduleAdvice ?? []), ...(ticketPaymentAdvice ?? [])]
+      .map((line) => line.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  const deduped = tips
+    .map((tip) => tip.trim())
+    .filter((tip) => tip.length > 0 && !adviceSet.has(tip.toLowerCase()))
+    .slice(0, 2);
+
+  return deduped.length ? deduped : undefined;
+}
+
+function TransitAdviceBlock({
+  icon,
+  title,
+  lines,
+}: {
+  icon: LucideIcon;
+  title: string;
+  lines: string[];
+}) {
+  if (lines.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border bg-muted/30 p-3">
+      <div className="flex items-start gap-2">
+        <Icon icon={icon} className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          {lines.map((line) => (
+            <p key={line} className="text-sm leading-relaxed text-foreground/90">
+              {line}
+            </p>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MapsCta({
   walkingMapsUrl,
   label,
@@ -131,11 +195,15 @@ function TenantLocalItinerary({
   directions,
   walkingMapsUrl,
   tips,
+  scheduleAdvice,
+  ticketPaymentAdvice,
 }: {
   local: ResolvedTenantLocalArrival;
   directions: ReturnType<typeof useTranslations<'pages.arrivalJourney.directions'>>;
   walkingMapsUrl?: string;
   tips?: string[];
+  scheduleAdvice?: string[];
+  ticketPaymentAdvice?: string[];
 }) {
   if (local.mode === 'walk') {
     return (
@@ -184,6 +252,18 @@ function TenantLocalItinerary({
           </RouteTimelineLeg>
         ) : null}
       </div>
+      <div className="mt-2">
+        <TransitAdviceBlock
+          icon={Clock3}
+          title={directions('transitAdvice.schedule.title')}
+          lines={scheduleAdvice ?? []}
+        />
+        <TransitAdviceBlock
+          icon={Banknote}
+          title={directions('transitAdvice.payment.title')}
+          lines={ticketPaymentAdvice ?? []}
+        />
+      </div>
       <MapsCta walkingMapsUrl={walkingMapsUrl} label={directions('openWalkingRouteInMaps')} />
       {tips?.length ? (
         <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={tips} />
@@ -215,7 +295,13 @@ export function PublicRouteItinerary({
   /** When set, renders one timeline from tenant (city legs unused). */
   tenantLocal?: ResolvedTenantLocalArrival;
 }) {
-  const tips = routeTips ?? route.guestCopy?.tips;
+  const scheduleAdvice = route.guestCopy?.transitScheduleAdvice?.slice(0, 2);
+  const ticketPaymentAdvice = route.guestCopy?.transitTicketPayment?.slice(0, 2);
+  const tips = dedupeTipsAgainstAdvice(
+    routeTips ?? route.guestCopy?.tips,
+    scheduleAdvice,
+    ticketPaymentAdvice
+  );
 
   if (tenantLocal && tenantLocal.primaryText) {
     return (
@@ -224,6 +310,8 @@ export function PublicRouteItinerary({
         directions={directions}
         walkingMapsUrl={walkingMapsUrl}
         tips={tips}
+        scheduleAdvice={scheduleAdvice}
+        ticketPaymentAdvice={ticketPaymentAdvice}
       />
     );
   }
@@ -286,6 +374,18 @@ export function PublicRouteItinerary({
       <RouteTimelineLeg icon={Footprints} isLast title={directions('legs.walkToHostel')}>
         <p className="text-sm leading-relaxed text-foreground/90">{walkToHostel}</p>
       </RouteTimelineLeg>
+      </div>
+      <div className="mt-2">
+        <TransitAdviceBlock
+          icon={Clock3}
+          title={directions('transitAdvice.schedule.title')}
+          lines={scheduleAdvice ?? []}
+        />
+        <TransitAdviceBlock
+          icon={Banknote}
+          title={directions('transitAdvice.payment.title')}
+          lines={ticketPaymentAdvice ?? []}
+        />
       </div>
       {tips?.length ? (
         <PublicRouteGoodToKnow title={directions('goodToKnow')} tips={tips} />

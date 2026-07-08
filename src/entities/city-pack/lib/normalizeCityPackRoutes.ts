@@ -30,6 +30,15 @@ function softLocalized(value: LocalizedText | undefined): LocalizedText {
 }
 
 function softCopy(copy: CityPackRouteCopy | undefined): CityPackRouteCopy {
+  const scheduleAdvice = copy?.transitScheduleAdvice
+    ?.slice(0, 2)
+    .map((line) => softLocalized(line))
+    .filter((line) => line.en.trim().length > 0);
+  const ticketPayment = copy?.transitTicketPayment
+    ?.slice(0, 2)
+    .map((line) => softLocalized(line))
+    .filter((line) => line.en.trim().length > 0);
+
   return {
     publicTitle: softLocalized(copy?.publicTitle),
     publicSummary: softLocalized(copy?.publicSummary),
@@ -37,6 +46,8 @@ function softCopy(copy: CityPackRouteCopy | undefined): CityPackRouteCopy {
     publicText: softLocalized(copy?.publicText),
     publicGetOffAt: softLocalized(copy?.publicGetOffAt),
     publicWalkToHostel: { en: '' },
+    transitScheduleAdvice: scheduleAdvice?.length ? scheduleAdvice : undefined,
+    transitTicketPayment: ticketPayment?.length ? ticketPayment : undefined,
     taxiCost: softLocalized(copy?.taxiCost),
     taxiPickupPoint: softLocalized(copy?.taxiPickupPoint),
   };

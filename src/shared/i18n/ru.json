@@ -628,13 +628,19 @@
         "officialRouteLink": "Официальный источник маршрута",
         "labels": {
           "ticket": "Билет: {kiosk} KM в киоске / {driver} KM у водителя",
+          "ticketApprox": "~{value} KM",
           "stops": "{count} остановок",
+          "stopsApprox": "~{count} остановок",
           "duration": "~{minutes} мин",
           "freeTransit": "Бесплатный общественный транспорт",
           "flatFare": "Стоимость: {amount}",
+          "fairPricePrefix": "Честная цена",
           "taxiPrice": "{minKM}–{maxKM} KM ({minEUR}–{maxEUR} €)",
           "taxiPriceEurOnly": "{minEUR}–{maxEUR} €",
-          "taxiDuration": "~{min}–{max} мин"
+          "taxiPriceApprox": "~{valueKM} KM (~{valueEUR} €)",
+          "taxiPriceEurOnlyApprox": "~{valueEUR} €",
+          "taxiDuration": "~{min}–{max} мин",
+          "taxiDurationApprox": "~{value} мин"
         },
         "steps": {
           "walk": "Пешком",
@@ -647,6 +653,18 @@
           "getOff": "Выход",
           "walkToHostel": "До хостела",
           "onFootRoute": "Пешком"
+        },
+        "transitAdvice": {
+          "schedule": {
+            "title": "Расписание транспорта",
+            "line1": "Проверьте время отправления перед выходом к остановке.",
+            "line2": "Вечером и в выходные интервалы обычно больше."
+          },
+          "payment": {
+            "title": "Как платить за билет",
+            "line1": "Держите мелкие наличные в местной валюте.",
+            "line2": "На некоторых линиях оплата только у водителя."
+          }
         },
         "goodToKnow": "Полезно знать",
         "openWalkingRouteInMaps": "Открыть пеший маршрут в Google Maps",

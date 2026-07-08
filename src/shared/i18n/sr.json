@@ -628,13 +628,19 @@
         "officialRouteLink": "Official route source",
         "labels": {
           "ticket": "Ticket: {kiosk} KM kiosk / {driver} KM driver",
+          "ticketApprox": "~{value} KM",
           "stops": "{count} stops",
+          "stopsApprox": "~{count} stops",
           "duration": "~{minutes} min",
           "freeTransit": "Free public transport",
           "flatFare": "Fare: {amount}",
+          "fairPricePrefix": "Fer cena",
           "taxiPrice": "{minKM}–{maxKM} KM ({minEUR}–{maxEUR} €)",
           "taxiPriceEurOnly": "{minEUR}–{maxEUR} €",
-          "taxiDuration": "~{min}–{max} min"
+          "taxiPriceApprox": "~{valueKM} KM (~{valueEUR} €)",
+          "taxiPriceEurOnlyApprox": "~{valueEUR} €",
+          "taxiDuration": "~{min}–{max} min",
+          "taxiDurationApprox": "~{value} min"
         },
         "steps": {
           "walk": "Walk",
@@ -647,6 +653,18 @@
           "getOff": "Get off",
           "walkToHostel": "Walk to hostel",
           "onFootRoute": "On foot"
+        },
+        "transitAdvice": {
+          "schedule": {
+            "title": "Savet za red voznje",
+            "line1": "Proveri polaske pre nego sto krenes ka stanici.",
+            "line2": "Uvece i vikendom razmaci izmedju vozila su obicno duzi."
+          },
+          "payment": {
+            "title": "Placanje karte",
+            "line1": "Imaj sitan kes u lokalnoj valuti.",
+            "line2": "Na nekim linijama karta se placa samo kod vozaca."
+          }
         },
         "goodToKnow": "Good to know",
         "openWalkingRouteInMaps": "Open walking route in Google Maps",

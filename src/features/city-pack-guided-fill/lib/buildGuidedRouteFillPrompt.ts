@@ -13,7 +13,10 @@ Rules:
 - publicText: imperative steps for boarding and riding only (not get-off — use publicGetOffAt).
 - publicGetOffAt: where to exit transit; omit for walk-only (set routeMode to walk_only).
 - publicPreview: walk from hub to stop/platform only (not final walk to hostel — tenant settings).
-- tips: up to 5 short optional bullets (payment, night taxi, etc.).
+- transitScheduleAdvice: 1-2 short lines (each max 10 words) with schedule reliability/frequency notes.
+- transitTicketPayment: 1-2 short lines (each max 10 words) with where/how to buy/validate tickets.
+- tips: up to 2 short optional bullets, ranked by guest impact/severity (highest first).
+- Never duplicate facts between tips and transitScheduleAdvice/transitTicketPayment.
 - locationLabelEn: short hub name if obvious from input (e.g. "Airport", "Main bus station").
 - metadata: numeric fields ONLY when explicitly stated in operator input (prices, durations, ticket kiosk/driver KM). Never guess. For eur_only packs use taxiEurMin/Max; for local_and_eur also taxiKmMin/Max and ticketKioskKm/ticketDriverKm when given.`;
 
@@ -68,6 +71,8 @@ export function guidedRouteFillFieldLabel(field: GuidedRouteFillFieldKey): strin
     publicText: 'Step-by-step (ride)',
     publicGetOffAt: 'Get off at',
     publicPreview: 'Walk to stop',
+    transitScheduleAdvice: 'Schedule advice',
+    transitTicketPayment: 'Ticket payment',
     tips: 'Good to know tips',
   };
   return labels[field];

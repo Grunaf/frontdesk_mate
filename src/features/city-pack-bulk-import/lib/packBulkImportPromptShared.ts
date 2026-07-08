@@ -28,7 +28,9 @@ export const PACK_BULK_JSON_SCHEMA = `Reply with a single JSON object only (no m
         "publicPreview": "string",
         "publicText": "string",
         "publicGetOffAt": "string",
-        "tips": ["string", ... max 5]
+        "transitScheduleAdvice": ["string", ... 1-2 lines, max 10 words each],
+        "transitTicketPayment": ["string", ... 1-2 lines, max 10 words each],
+        "tips": ["string", ... max 2, highest-impact only]
       },
       "walk": { "... same copy fields as transit ..." },
       "taxi": {
@@ -58,6 +60,9 @@ Rules for routes object:
 - English only in all string fields.
 - Do not invent stops, prices, durations, or line numbers unless stated in the research report or operator notes with a source.
 - One primary scenario in transit publicText/publicSummary (bus OR walk steps — not taxi). Put taxi backup in tips[] or taxi.tips[], never mixed into transit steps.
+- transitScheduleAdvice/transitTicketPayment must be research-specific, concise (max 10 words per line), and non-generic.
+- Keep tips[] to max 2 items, prioritized by guest impact/severity.
+- Never duplicate the same fact between tips[] and transitScheduleAdvice/transitTicketPayment.
 - Taxi card block: fill taxi.taxiCost, taxi.taxiPickupPoint, taxi.tips when research mentions taxi; keep taxi out of transit.publicText.
 - primaryRouteMode must match the main guest path (transit vs walk_only).
 - hubArrivalKind: city_shared (default) — city owns transit/get-off; tenant_local — city meta only, tenants own full hub→door (soft city copy gate).

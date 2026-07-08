@@ -9,6 +9,8 @@ const openQuestionSchema = z.object({
     'publicText',
     'publicGetOffAt',
     'publicPreview',
+    'transitScheduleAdvice',
+    'transitTicketPayment',
     'tips',
     'routeMode',
   ]),
@@ -23,7 +25,9 @@ export const guidedRouteFillModelSchema = z.object({
   publicText: z.string().optional(),
   publicGetOffAt: z.string().optional(),
   publicPreview: z.string().optional(),
-  tips: z.array(z.string()).max(5).optional(),
+  transitScheduleAdvice: z.array(z.string()).max(2).optional(),
+  transitTicketPayment: z.array(z.string()).max(2).optional(),
+  tips: z.array(z.string()).max(2).optional(),
   metadata: z
     .object({
       transitDurationMin: z.number().optional(),
@@ -65,7 +69,22 @@ export function modelOutputToPreview(output: GuidedRouteFillModelOutput): Guided
     }
   }
 
-  const tips = output.tips?.map((tip) => tip.trim()).filter(Boolean).slice(0, 5);
+  const tips = output.tips?.map((tip) => tip.trim()).filter(Boolean).slice(0, 2);
+  const transitScheduleAdvice = output.transitScheduleAdvice
+    ?.map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+  const transitTicketPayment = output.transitTicketPayment
+    ?.map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (transitScheduleAdvice?.length) {
+    copy.transitScheduleAdvice = transitScheduleAdvice;
+  }
+  if (transitTicketPayment?.length) {
+    copy.transitTicketPayment = transitTicketPayment;
+  }
 
   return {
     routeMode: output.routeMode,

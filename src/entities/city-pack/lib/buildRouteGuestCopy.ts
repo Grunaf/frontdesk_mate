@@ -25,6 +25,14 @@ export function buildRouteGuestCopy(
   const { copy, transit, taxi } = content;
   const pickupFromCopy = resolveLocalizedText(copy.taxiPickupPoint, locale);
   const pickupFallback = resolveLocalizedText(content.locationLabel, locale);
+  const scheduleAdvice = copy.transitScheduleAdvice
+    ?.map((line) => resolveLocalizedText(line, locale).trim())
+    .filter(Boolean)
+    .slice(0, 2);
+  const ticketPaymentAdvice = copy.transitTicketPayment
+    ?.map((line) => resolveLocalizedText(line, locale).trim())
+    .filter(Boolean)
+    .slice(0, 2);
 
   return {
     publicTitle: resolveLocalizedText(copy.publicTitle, locale),
@@ -33,6 +41,8 @@ export function buildRouteGuestCopy(
     publicText: resolveLocalizedText(copy.publicText, locale),
     publicGetOffAt: resolveLocalizedText(copy.publicGetOffAt, locale),
     publicWalkToHostel: '',
+    transitScheduleAdvice: scheduleAdvice?.length ? scheduleAdvice : undefined,
+    transitTicketPayment: ticketPaymentAdvice?.length ? ticketPaymentAdvice : undefined,
     taxiCost: resolveTaxiCost(copy, taxi, locale),
     taxiPickupPoint: pickupFromCopy || pickupFallback,
     fareLabel: transit.fareLabel ? resolveLocalizedText(transit.fareLabel, locale) : undefined,

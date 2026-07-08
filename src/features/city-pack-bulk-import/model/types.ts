@@ -11,6 +11,8 @@ export type PackBulkImportCopyBlock = {
   publicText?: string;
   publicGetOffAt?: string;
   publicWalkToHostel?: string;
+  transitScheduleAdvice?: string[];
+  transitTicketPayment?: string[];
   tips?: string[];
 };
 

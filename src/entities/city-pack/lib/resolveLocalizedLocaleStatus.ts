@@ -18,6 +18,8 @@ export function resolveRouteLocaleStatus(route: CityPackRouteContent): { en: boo
     route.copy.publicWalkToHostel,
     route.copy.taxiCost,
     route.copy.taxiPickupPoint,
+    ...(route.copy.transitScheduleAdvice ?? []),
+    ...(route.copy.transitTicketPayment ?? []),
     route.transit.fareLabel,
   ];
 
@@ -57,6 +59,8 @@ export function copyRouteEnToRu(route: CityPackRouteContent): CityPackRouteConte
       publicText: copyLocalizedEnToRu(copy.publicText),
       publicGetOffAt: copyLocalizedEnToRu(copy.publicGetOffAt),
       publicWalkToHostel: copyLocalizedEnToRu(copy.publicWalkToHostel),
+      transitScheduleAdvice: copy.transitScheduleAdvice?.map((line) => copyLocalizedEnToRu(line)),
+      transitTicketPayment: copy.transitTicketPayment?.map((line) => copyLocalizedEnToRu(line)),
       taxiCost: copyLocalizedEnToRu(copy.taxiCost),
       taxiPickupPoint: copyLocalizedEnToRu(copy.taxiPickupPoint),
     },

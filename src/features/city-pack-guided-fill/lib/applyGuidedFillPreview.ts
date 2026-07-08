@@ -17,6 +17,23 @@ function toLocalizedEn(value: string | undefined, previous: { en: string; ru?: s
   return { en: value.trim(), ru: previous.ru?.trim() ? previous.ru : undefined };
 }
 
+function toLocalizedEnLines(
+  values: string[] | undefined,
+  previous: { en: string; ru?: string }[] | undefined
+): { en: string; ru?: string }[] | undefined {
+  if (!values?.length) {
+    return previous;
+  }
+
+  const lines = values
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((line, index) => toLocalizedEn(line, previous?.[index] ?? { en: '' }));
+
+  return lines.length ? lines : previous;
+}
+
 export function applyGuidedFillPreview(
   packId: string,
   routeId: RouteId,
@@ -44,8 +61,20 @@ export function applyGuidedFillPreview(
     };
   }
 
-  for (const [key, value] of Object.entries(preview.copy) as [keyof typeof preview.copy, string][]) {
-    if (key === 'publicWalkToHostel' || !value?.trim()) {
+  for (const [key, value] of Object.entries(preview.copy) as [
+    keyof typeof preview.copy,
+    string | string[],
+  ][]) {
+    if (key === 'publicWalkToHostel') {
+      continue;
+    }
+
+    if (key === 'transitScheduleAdvice' || key === 'transitTicketPayment') {
+      next.copy[key] = toLocalizedEnLines(value as string[] | undefined, next.copy[key]);
+      continue;
+    }
+
+    if (typeof value !== 'string' || !value.trim()) {
       continue;
     }
     next.copy[key] = toLocalizedEn(value, next.copy[key]);

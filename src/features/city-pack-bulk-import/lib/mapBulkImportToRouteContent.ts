@@ -1,10 +1,10 @@
 import type { RouteId } from '@/entities/hostel';
 import type { CityPackContent, CityPackRouteContent } from '@/entities/city-pack/model/types';
-import { MAX_ROUTE_TIPS } from '@/entities/city-pack';
 import { applyGuidedFillPreview } from '@/features/city-pack-guided-fill';
 import { enforceGuidedSingleScenario } from '@/features/city-pack-guided-fill/lib/enforceGuidedSingleScenario';
 import type {
   GuidedRouteCopyFieldKey,
+  GuidedRouteCopyPayload,
   GuidedRouteFillPreview,
 } from '@/features/city-pack-guided-fill/model/types';
 import type {
@@ -20,7 +20,10 @@ const COPY_KEYS: GuidedRouteCopyFieldKey[] = [
   'publicPreview',
   'publicText',
   'publicGetOffAt',
+  'transitScheduleAdvice',
+  'transitTicketPayment',
 ];
+const MAX_BULK_AI_TIPS = 2;
 
 function trimOrUndefined(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -39,15 +42,23 @@ function readLocalizedEn(value: string | { en?: string } | undefined): string | 
 
 function copyBlockToPartialCopy(
   block: PackBulkImportCopyBlock | undefined
-): Partial<Record<GuidedRouteCopyFieldKey, string>> {
+): GuidedRouteCopyPayload {
   if (!block) {
     return {};
   }
 
-  const copy: Partial<Record<GuidedRouteCopyFieldKey, string>> = {};
+  const copy: GuidedRouteCopyPayload = {};
   for (const key of COPY_KEYS) {
-    const value = trimOrUndefined(block[key]);
-    if (value) {
+    if (key === 'transitScheduleAdvice' || key === 'transitTicketPayment') {
+      const lines = block[key]?.map((line) => line.trim()).filter(Boolean).slice(0, 2);
+      if (lines?.length) {
+        copy[key] = lines;
+      }
+      continue;
+    }
+
+    const value = trimOrUndefined(block[key] as string | undefined);
+    if (value && key !== 'transitScheduleAdvice' && key !== 'transitTicketPayment') {
       copy[key] = value;
     }
   }
@@ -67,7 +78,7 @@ function mergeTips(
       }
       seen.add(normalized.toLowerCase());
       merged.push(normalized);
-      if (merged.length >= MAX_ROUTE_TIPS) {
+      if (merged.length >= MAX_BULK_AI_TIPS) {
         return merged;
       }
     }

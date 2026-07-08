@@ -6,9 +6,21 @@ export type GuidedRouteCopyFieldKey =
   | 'publicSummary'
   | 'publicText'
   | 'publicGetOffAt'
-  | 'publicPreview';
+  | 'publicPreview'
+  | 'transitScheduleAdvice'
+  | 'transitTicketPayment';
 
 export type GuidedRouteFillFieldKey = GuidedRouteCopyFieldKey | 'tips';
+
+export type GuidedRouteCopyPayload = {
+  publicTitle?: string;
+  publicSummary?: string;
+  publicText?: string;
+  publicGetOffAt?: string;
+  publicPreview?: string;
+  transitScheduleAdvice?: string[];
+  transitTicketPayment?: string[];
+};
 
 export type GuidedRouteOpenQuestion = {
   id: string;
@@ -20,7 +32,7 @@ export type GuidedRouteOpenQuestion = {
 export type GuidedRouteFillPreview = {
   routeMode?: RouteMode;
   locationLabelEn?: string;
-  copy: Partial<Record<GuidedRouteCopyFieldKey, string>>;
+  copy: GuidedRouteCopyPayload;
   tips?: string[];
   metadata?: RouteMetadataImport;
   openQuestions: GuidedRouteOpenQuestion[];

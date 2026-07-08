@@ -628,13 +628,19 @@
         "officialRouteLink": "Official route source",
         "labels": {
           "ticket": "Ticket: {kiosk} KM kiosk / {driver} KM driver",
+          "ticketApprox": "~{value} KM",
           "stops": "{count} stops",
+          "stopsApprox": "~{count} stops",
           "duration": "~{minutes} min",
           "freeTransit": "Free public transport",
           "flatFare": "Fare: {amount}",
+          "fairPricePrefix": "Fair price",
           "taxiPrice": "{minKM}–{maxKM} KM ({minEUR}–{maxEUR} €)",
           "taxiPriceEurOnly": "{minEUR}–{maxEUR} €",
-          "taxiDuration": "~{min}–{max} min"
+          "taxiPriceApprox": "~{valueKM} KM (~{valueEUR} €)",
+          "taxiPriceEurOnlyApprox": "~{valueEUR} €",
+          "taxiDuration": "~{min}–{max} min",
+          "taxiDurationApprox": "~{value} min"
         },
         "steps": {
           "walk": "Walk",
@@ -647,6 +653,18 @@
           "getOff": "Get off",
           "walkToHostel": "Walk to hostel",
           "onFootRoute": "On foot"
+        },
+        "transitAdvice": {
+          "schedule": {
+            "title": "Schedule advice",
+            "line1": "Check departure times before you leave for the stop.",
+            "line2": "Evening and weekend intervals are usually longer."
+          },
+          "payment": {
+            "title": "Ticket payment",
+            "line1": "Keep small cash in local currency for transport.",
+            "line2": "Some lines accept onboard payment only."
+          }
         },
         "goodToKnow": "Good to know",
         "openWalkingRouteInMaps": "Open walking route in Google Maps",

@@ -78,6 +78,10 @@ export interface RouteGuestCopy {
   publicText: string;
   publicGetOffAt: string;
   publicWalkToHostel: string;
+  /** AI research-based schedule advice (1-2 short lines). */
+  transitScheduleAdvice?: string[];
+  /** AI research-based ticket/payment advice (1-2 short lines). */
+  transitTicketPayment?: string[];
   taxiCost: string;
   taxiPickupPoint: string;
   fareLabel?: string;

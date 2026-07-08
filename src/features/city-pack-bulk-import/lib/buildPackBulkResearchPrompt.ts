@@ -15,6 +15,9 @@ Rules:
 - Do not invent line numbers, stops, prices, or durations. If not found, write "Not found" for that item.
 - Structure your answer in clear sections per arrival hub (use routeId in headings).
 - Cover the checklist questions; mark gaps explicitly.
+- Capture facts needed for:
+  - transitScheduleAdvice (service frequency, delays, schedule reliability),
+  - transitTicketPayment (where/how to buy, onboard vs kiosk/app, validation).
 - English only in the report body.
 - Output: structured markdown report (headings, bullet lists). No JSON.`;
 

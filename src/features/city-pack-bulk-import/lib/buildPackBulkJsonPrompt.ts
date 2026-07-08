@@ -55,6 +55,8 @@ Convert the research into one pack JSON object for the hostel admin app.`;
     '',
     'Pack-level: output multiple hubs in routes{}. Each hub follows the same single-scenario rules independently.',
     'Fill taxi{} as a separate guest taxi card (cost, pickup, tips) plus metadata taxiEur*/taxiKm*/taxiDuration* when research states numbers.',
+    'Fill transitScheduleAdvice/transitTicketPayment from research; each line max 10 words, non-generic, no duplication with tips.',
+    'tips[] must be max 2 and sorted by importance (highest guest impact first).',
     'Use ONLY the research report (+ operator notes) for factual content. Do not use web search in this step.',
     '',
     '--- USER ---',

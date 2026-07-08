@@ -47,6 +47,10 @@ export interface CityPackRouteCopy {
   publicText: LocalizedText;
   publicGetOffAt: LocalizedText;
   publicWalkToHostel: LocalizedText;
+  /** AI research-based schedule advice lines (1-2). */
+  transitScheduleAdvice?: LocalizedText[];
+  /** AI research-based ticket/payment advice lines (1-2). */
+  transitTicketPayment?: LocalizedText[];
   taxiCost: LocalizedText;
   taxiPickupPoint: LocalizedText;
 }
