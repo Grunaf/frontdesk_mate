@@ -50,7 +50,6 @@ export function PreTripInfo() {
   const common = useTranslations('domains.hostel.common');
   const { cityPack, settings } = useTenant();
   const paymentT = useTranslations(cityPack.locale.paymentNamespace);
-  const preTripT = useTranslations(cityPack.locale.preTripNamespace);
   const hostel = useHostelConfig();
   const showSundayTip = cityPack.preTripTips?.includes('sundayClosure');
   const showCheckIn = shouldShowPreTripCheckIn(settings);
@@ -94,8 +93,8 @@ export function PreTripInfo() {
       <InfoRow
         key="sunday"
         icon={Lock}
-        title={preTripT('sundayClosure.title')}
-        description={preTripT('sundayClosure.description')}
+        title={preparation('sundayClosure.title')}
+        description={preparation('sundayClosure.description')}
       />
     );
   }

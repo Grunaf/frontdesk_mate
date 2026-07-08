@@ -286,12 +286,7 @@
               }
             }
           },
-          "preTrip": {
-            "sundayClosure": {
-              "title": "Закрыто по воскресеньям",
-              "description": "Воскресенье в Боснии — нерабочий день. Магазины и многие заведения закрыты. Запланируйте покупки заранее!"
-            }
-          },
+          "preTrip": {},
           "marketing": {
             "heroSubtitle": "Ваш зелёный оазис в центре Сараево",
             "heroImageAlt": "{hostelName} — фото хостела"
@@ -602,6 +597,10 @@
         "luggage": {
           "title": "Luggage Storage",
           "description": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
+        },
+        "sundayClosure": {
+          "title": "Закрыто по воскресеньям",
+          "description": "Воскресенье в Боснии — нерабочий день. Магазины и многие заведения закрыты. Запланируйте покупки заранее!"
         },
         "timing": {
           "checkIn": "Check-in time",

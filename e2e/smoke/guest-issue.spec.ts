@@ -5,6 +5,13 @@ import { checkInWithPin, openConcierge } from '../helpers/guest';
 
 const config = loadE2eConfig();
 
+/** components.guestIssue.cardTitle — Concierge report card */
+const issueReportCardButton =
+  /Notice a fault in the hostel\?|Заметили поломку в хостеле\?/i;
+
+/** components.guestIssue.myStayLink — inside My stay sheet */
+const issueReportFromMyStayButton = /Report issue|Сообщить о поломке/i;
+
 test.describe.configure({ mode: 'serial' });
 
 test.describe('guest issue report', () => {
@@ -16,7 +23,7 @@ test.describe('guest issue report', () => {
 
   test('shows report card and sends shower issue', async ({ page }) => {
     const reportTrigger = page.getByRole('button', {
-      name: /Something not working\?|Что-то не работает\?/i,
+      name: issueReportCardButton,
     });
     await reportTrigger.scrollIntoViewIfNeeded();
     await expect(reportTrigger).toBeVisible();
@@ -40,7 +47,7 @@ test.describe('guest issue report', () => {
       .filter({ hasText: /For reception|Для ресепшена/i });
     await expect(staySheet).toBeVisible();
     const reportFromStay = staySheet.getByRole('button', {
-      name: /Report issue|Сообщить о поломке/i,
+      name: issueReportFromMyStayButton,
     });
     await reportFromStay.scrollIntoViewIfNeeded();
     await reportFromStay.click();
@@ -59,10 +66,7 @@ test.describe('reception issues tab', () => {
 
     await checkInWithPin(guestPage, config);
     await openConcierge(guestPage, config);
-    await guestPage
-      .getByRole('button', { name: /Report issue|Сообщить о поломке/i })
-      .first()
-      .click();
+    await guestPage.getByRole('button', { name: issueReportCardButton }).click();
     await guestPage.getByRole('tab', { name: /Toilet|Туалет/i }).click();
     await guestPage.getByRole('button', { name: /Send report|Отправить/i }).click();
     await expect(guestPage.getByText(/Sent to reception|Отправлено ресепшену/i)).toBeVisible();

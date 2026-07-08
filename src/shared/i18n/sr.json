@@ -286,12 +286,7 @@
               }
             }
           },
-          "preTrip": {
-            "sundayClosure": {
-              "title": "Sunday Closure",
-              "description": "Sunday in Bosnia — a non-working day. Shops, supermarkets and most establishments are closed. Plan your purchases!"
-            }
-          },
+          "preTrip": {},
           "marketing": {
             "heroSubtitle": "Your green oasis in the heart of Sarajevo",
             "heroImageAlt": "{hostelName} — hostel photo"
@@ -602,6 +597,10 @@
         "luggage": {
           "title": "Luggage Storage",
           "description": "You can arrive before {time} or leave your bags after check-out. Luggage storage at the reception is completely free!"
+        },
+        "sundayClosure": {
+          "title": "Sunday Closure",
+          "description": "Sunday in Bosnia — a non-working day. Shops, supermarkets and most establishments are closed. Plan your purchases!"
         },
         "timing": {
           "checkIn": "Check-in time",
