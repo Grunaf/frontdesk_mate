@@ -63,8 +63,7 @@ export function coalesceCityPackTaxiCityRulesForAdmin(
     return { en: '' };
   }
 
-  return {
-    en: enParts.length > 0 ? enParts.join('\n\n') : undefined,
-    ru: ruParts.length > 0 ? ruParts.join('\n\n') : undefined,
-  };
+  const en = enParts.length > 0 ? enParts.join('\n\n') : '';
+  const ru = ruParts.length > 0 ? ruParts.join('\n\n') : undefined;
+  return ru ? { en, ru } : { en };
 }
