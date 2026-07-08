@@ -63,6 +63,7 @@ export function copyRouteEnToRu(route: CityPackRouteContent): CityPackRouteConte
       transitTicketPayment: copy.transitTicketPayment?.map((line) => copyLocalizedEnToRu(line)),
       taxiCost: copyLocalizedEnToRu(copy.taxiCost),
       taxiPickupPoint: copyLocalizedEnToRu(copy.taxiPickupPoint),
+      taxiTips: copy.taxiTips?.map((tip) => copyLocalizedEnToRu(tip)),
     },
     transit: {
       ...route.transit,

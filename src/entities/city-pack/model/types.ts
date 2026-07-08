@@ -53,6 +53,8 @@ export interface CityPackRouteCopy {
   transitTicketPayment?: LocalizedText[];
   taxiCost: LocalizedText;
   taxiPickupPoint: LocalizedText;
+  /** Taxi backup sheet operational tips (max 2); not shown in route Good to know. */
+  taxiTips?: LocalizedText[];
 }
 
 export interface CityPackRouteTransit {

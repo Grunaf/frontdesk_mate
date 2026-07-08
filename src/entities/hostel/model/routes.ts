@@ -84,6 +84,8 @@ export interface RouteGuestCopy {
   transitTicketPayment?: string[];
   taxiCost: string;
   taxiPickupPoint: string;
+  /** Hub taxi operational tips for backup sheet (max 2). */
+  taxiTips?: string[];
   fareLabel?: string;
   hint?: string;
   /** Resolved hub tips for active locale (city pack / tenant). */

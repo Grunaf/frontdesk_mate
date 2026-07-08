@@ -24,6 +24,7 @@ import { resolveReceptionTaxiBackup } from '../lib/resolveReceptionTaxiBackup';
 import { resolveRecommendedTaxi } from '../lib/resolveRecommendedTaxi';
 import { resolveRouteCopyField } from '../lib/resolveRouteCopy';
 import { ReceptionContactActions, ReceptionContactHint, useReceptionContactLabels } from '@/features/reception-contact';
+import { MAX_TAXI_TIPS } from '@/entities/city-pack';
 import { inferCityPackTransportCurrencyMode } from '@/entities/city-pack/lib/inferCityPackTransportCurrency';
 import { TaxiRouteSummary } from './TaxiBackupCard';
 
@@ -76,6 +77,7 @@ export function TaxiBackupSheet({
   const hasTaxi = Boolean(recommendedTaxi);
   const hasReception = Boolean(receptionBackup);
   const currencyMode = inferCityPackTransportCurrencyMode(cityPackId, cityPackContent);
+  const operationalTaxiTips = (route.guestCopy?.taxiTips ?? []).slice(0, MAX_TAXI_TIPS);
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
@@ -97,6 +99,19 @@ export function TaxiBackupSheet({
 
         <BottomSheetBody className="pb-4">
           <div className="space-y-4">
+            {operationalTaxiTips.length > 0 ? (
+              <ul className="space-y-2 rounded-xl border bg-muted/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+                {operationalTaxiTips.map((tip) => (
+                  <li key={tip} className="flex gap-2">
+                    <span className="text-muted-foreground/80" aria-hidden>
+                      •
+                    </span>
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
             <Accordion type="single" collapsible className="rounded-xl border bg-muted/30">
               <AccordionItem value="safety" className="border-0">
                 <AccordionTrigger className="px-4 py-3 text-xs font-medium hover:no-underline">

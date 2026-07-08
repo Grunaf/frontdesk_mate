@@ -2,6 +2,7 @@ import type { RouteConfig, RouteGuestCopy } from '@/entities/hostel';
 import type { AppLocale } from '../model/types';
 import type { CityPackRouteContent } from '../model/types';
 import { applyTemplate, resolveLocalizedText } from '../model/localized';
+import { MAX_TAXI_TIPS } from './constants';
 import { resolveRouteTipsForGuest } from './resolveRouteTipsForGuest';
 
 function resolveTaxiCost(
@@ -45,6 +46,7 @@ export function buildRouteGuestCopy(
     transitTicketPayment: ticketPaymentAdvice?.length ? ticketPaymentAdvice : undefined,
     taxiCost: resolveTaxiCost(copy, taxi, locale),
     taxiPickupPoint: pickupFromCopy || pickupFallback,
+    taxiTips: resolveRouteTipsForGuest(copy.taxiTips, locale)?.slice(0, MAX_TAXI_TIPS),
     fareLabel: transit.fareLabel ? resolveLocalizedText(transit.fareLabel, locale) : undefined,
     hint: content.hint ? resolveLocalizedText(content.hint, locale) : undefined,
     tips: resolveRouteTipsForGuest(content.tips, locale),

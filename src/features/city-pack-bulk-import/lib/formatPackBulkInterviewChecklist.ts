@@ -11,6 +11,7 @@ function formatTaxiCardChecklist(hubLabel: string): string {
     '  - Typical metered price or range to hostel district (source?)',
     '  - Official taxi stand / desk / pickup point at this hub',
     '  - When taxi is backup vs public transport (night, no service)',
+    '  - Keep all price/currency details out of tips; store them only in taxiCost/metadata',
   ];
   for (const question of taxiQuestions) {
     const hint = question.hint ? ` (${question.hint})` : '';

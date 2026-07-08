@@ -8,7 +8,7 @@ import type {
   HubArrivalKind,
 } from '../model/types';
 import { toLocalizedText, type LocalizedText } from '../model/localized';
-import { MAX_ROUTE_TIPS } from './constants';
+import { MAX_ROUTE_TIPS, MAX_TAXI_TIPS } from './constants';
 import { inferCityPackTransportCurrency } from './inferCityPackTransportCurrency';
 import { normalizeRouteTaxiForCurrency } from './normalizeRouteTaxiForCurrency';
 import { resolveHubArrivalKind } from './resolveHubArrivalKind';
@@ -38,6 +38,10 @@ function softCopy(copy: CityPackRouteCopy | undefined): CityPackRouteCopy {
     ?.slice(0, 2)
     .map((line) => softLocalized(line))
     .filter((line) => line.en.trim().length > 0);
+  const taxiTips = copy?.taxiTips
+    ?.slice(0, MAX_TAXI_TIPS)
+    .map((tip) => softLocalized(tip))
+    .filter((tip) => tip.en.trim().length > 0);
 
   return {
     publicTitle: softLocalized(copy?.publicTitle),
@@ -50,6 +54,7 @@ function softCopy(copy: CityPackRouteCopy | undefined): CityPackRouteCopy {
     transitTicketPayment: ticketPayment?.length ? ticketPayment : undefined,
     taxiCost: softLocalized(copy?.taxiCost),
     taxiPickupPoint: softLocalized(copy?.taxiPickupPoint),
+    taxiTips: taxiTips?.length ? taxiTips : undefined,
   };
 }
 

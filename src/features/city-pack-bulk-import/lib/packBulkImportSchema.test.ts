@@ -28,6 +28,19 @@ describe('parsePackBulkImportJson', () => {
     }
   });
 
+  it('rejects more than 2 taxi tips on a hub', () => {
+    const raw = JSON.stringify({
+      packId: 'x',
+      routes: {
+        airport: {
+          taxi: { tips: ['One', 'Two', 'Three'] },
+        },
+      },
+    });
+    const result = parsePackBulkImportJson(raw);
+    expect(result.ok).toBe(false);
+  });
+
   it('rejects invalid route keys', () => {
     const raw = JSON.stringify({
       packId: 'x',
@@ -48,13 +61,14 @@ describe('hubImportToGuidedPreview', () => {
           publicText: 'Board bus 37. At night take a taxi instead.',
           publicGetOffAt: 'Gate',
         },
-        taxi: { tips: ['Taxi stand outside arrivals'] },
+        taxi: { tips: ['Use the official taxi desk outside arrivals'] },
       },
       notes
     );
 
     expect(preview.copy.publicText).toBe('Board bus 37.');
     expect(preview.tips?.some((tip) => /taxi/i.test(tip))).toBe(true);
+    expect(preview.tips?.some((tip) => /official taxi desk/i.test(tip))).toBe(false);
   });
 });
 
@@ -91,7 +105,7 @@ describe('applyPackBulkImportPreview', () => {
     expect(routes.airport?.copy.publicTitle.en).toBe('Shuttle');
   });
 
-  it('maps taxi tips to route tips without polluting publicText', () => {
+  it('maps taxi tips to copy.taxiTips without polluting Good to know', () => {
     const existing = createBlankCityPackRouteContent('airport');
     const { routes } = applyPackBulkImportPreview({
       packId: 'demo',
@@ -104,10 +118,11 @@ describe('applyPackBulkImportPreview', () => {
             transit: {
               publicText: 'Take the public bus.',
               publicGetOffAt: 'Center',
+              tips: ['Sunday buses are limited'],
             },
             taxi: {
               taxiCost: { en: '€15–20' },
-              tips: ['Use official taxi desk'],
+              tips: ['Use official taxi desk', 'Insist on the meter'],
             },
           },
         },
@@ -120,7 +135,12 @@ describe('applyPackBulkImportPreview', () => {
 
     const next = routes.airport!;
     expect(next.copy.publicText.en).not.toMatch(/official taxi desk/i);
-    expect(next.tips?.some((tip) => /official taxi desk/i.test(tip.en))).toBe(true);
+    expect(next.tips?.some((tip) => /official taxi desk/i.test(tip.en))).toBe(false);
+    expect(next.tips?.some((tip) => /Sunday buses/i.test(tip.en))).toBe(true);
+    expect(next.copy.taxiTips?.map((tip) => tip.en)).toEqual([
+      'Use official taxi desk',
+      'Insist on the meter',
+    ]);
     expect(next.copy.taxiCost.en).toBe('€15–20');
   });
 

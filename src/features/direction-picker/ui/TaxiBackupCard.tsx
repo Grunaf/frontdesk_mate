@@ -6,6 +6,7 @@ import { inferCityPackTransportCurrencyMode } from '@/entities/city-pack/lib/inf
 import { CardTitle, Icon } from '@/shared/ui';
 import { Banknote, Car, ChevronRight, Clock3 } from 'lucide-react';
 import { type RouteConfig } from '@/entities/hostel';
+import { buildTaxiRouteSummaryChipLabels } from '../lib/formatTaxiRouteSummaryChips';
 
 function TaxiRouteSummary({
   route,
@@ -17,20 +18,16 @@ function TaxiRouteSummary({
   currencyMode: 'eur_only' | 'local_and_eur';
 }) {
   const { taxiPriceKM, taxiPriceEUR, taxiDurationMin } = route.metadata;
-  const avgTaxiPriceKM = Math.round((taxiPriceKM.min + taxiPriceKM.max) / 2);
-  const avgTaxiPriceEUR = Math.round((taxiPriceEUR.min + taxiPriceEUR.max) / 2);
-  const avgTaxiDurationMin = Math.round((taxiDurationMin.min + taxiDurationMin.max) / 2);
-
-  const priceLabel =
-    currencyMode === 'local_and_eur'
-      ? directions('labels.taxiPriceApprox', {
-          valueKM: avgTaxiPriceKM,
-          valueEUR: avgTaxiPriceEUR,
-        })
-      : directions('labels.taxiPriceEurOnlyApprox', {
-          valueEUR: avgTaxiPriceEUR,
-        });
-  const fairPriceLabel = `${directions('labels.fairPricePrefix')}: ${priceLabel}`;
+  const { fairPriceLabel, durationLabel } = buildTaxiRouteSummaryChipLabels({
+    currencyMode,
+    taxiPriceKM,
+    taxiPriceEUR,
+    taxiDurationMin,
+    fairPricePrefix: directions('labels.fairPricePrefix'),
+    taxiPriceApprox: (params) => directions('labels.taxiPriceApprox', params),
+    taxiPriceEurOnlyApprox: (params) => directions('labels.taxiPriceEurOnlyApprox', params),
+    taxiDurationApprox: (params) => directions('labels.taxiDurationApprox', params),
+  });
 
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -40,9 +37,7 @@ function TaxiRouteSummary({
       </span>
       <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs text-foreground/90">
         <Icon icon={Clock3} className="h-3 w-3 text-muted-foreground" />
-        {directions('labels.taxiDurationApprox', {
-          value: avgTaxiDurationMin,
-        })}
+        {durationLabel}
       </span>
     </div>
   );

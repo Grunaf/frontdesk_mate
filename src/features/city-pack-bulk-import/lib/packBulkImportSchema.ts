@@ -30,7 +30,7 @@ const taxiBlockSchema = z
   .object({
     taxiCost: localizedEnSchema,
     taxiPickupPoint: localizedEnSchema,
-    tips: z.array(z.string()).max(5).optional(),
+    tips: z.array(z.string()).max(2).optional(),
   })
   .optional();
 

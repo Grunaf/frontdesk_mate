@@ -1,3 +1,4 @@
+import { MAX_TAXI_TIPS } from '@/entities/city-pack';
 import type { RouteId } from '@/entities/hostel';
 import type { CityPackContent, CityPackRouteContent } from '@/entities/city-pack/model/types';
 import { applyGuidedFillPreview } from '@/features/city-pack-guided-fill';
@@ -24,6 +25,8 @@ const COPY_KEYS: GuidedRouteCopyFieldKey[] = [
   'transitTicketPayment',
 ];
 const MAX_BULK_AI_TIPS = 2;
+const PRICE_IN_TIP_PATTERN =
+  /\b(?:\d+[.,]?\d*\s?(?:€|eur|usd|gbp|km|kм|руб|rsd|din|price|fare)|(?:€|\$|£)\s?\d+[.,]?\d*|price\s*range|fare\s*range)\b/i;
 
 function trimOrUndefined(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -73,7 +76,11 @@ function mergeTips(
   for (const group of groups) {
     for (const tip of group ?? []) {
       const normalized = tip.trim();
-      if (!normalized || seen.has(normalized.toLowerCase())) {
+      if (
+        !normalized ||
+        seen.has(normalized.toLowerCase()) ||
+        PRICE_IN_TIP_PATTERN.test(normalized)
+      ) {
         continue;
       }
       seen.add(normalized.toLowerCase());
@@ -130,6 +137,30 @@ function hasTaxiBlockContent(taxi: PackBulkImportTaxiBlock): boolean {
   );
 }
 
+function patchTaxiTipsFields(
+  route: CityPackRouteContent,
+  taxi: PackBulkImportTaxiBlock | undefined
+): CityPackRouteContent {
+  const tips = taxi?.tips
+    ?.map((tip) => tip.trim())
+    .filter((tip) => tip && !PRICE_IN_TIP_PATTERN.test(tip))
+    .slice(0, MAX_TAXI_TIPS);
+  if (!tips?.length) {
+    return route;
+  }
+
+  return {
+    ...route,
+    copy: {
+      ...route.copy,
+      taxiTips: tips.map((en) => ({
+        en,
+        ru: route.copy.taxiTips?.find((entry) => entry.en === en)?.ru,
+      })),
+    },
+  };
+}
+
 export function hubImportToGuidedPreview(
   hub: PackBulkImportHubImport,
   enforcementSource: string
@@ -140,7 +171,7 @@ export function hubImportToGuidedPreview(
   const preview: GuidedRouteFillPreview = {
     routeMode,
     copy: copyBlockToPartialCopy(primaryBlock),
-    tips: mergeTips(primaryBlock?.tips, hub.taxi?.tips),
+    tips: mergeTips(primaryBlock?.tips),
     metadata: hub.metadata,
     openQuestions: hub.openQuestions ?? [],
   };
@@ -190,6 +221,7 @@ export function mapBulkImportHubToRouteContent(
   const preview = hubImportToGuidedPreview(hub, enforcementSource);
   let next = applyGuidedFillPreview(packId, routeId, existing, preview, content);
   next = patchTaxiCopyFields(next, hub.taxi);
+  next = patchTaxiTipsFields(next, hub.taxi);
   if (hub.hubArrivalKind === 'tenant_local' || hub.hubArrivalKind === 'city_shared') {
     next = { ...next, hubArrivalKind: hub.hubArrivalKind };
   }
