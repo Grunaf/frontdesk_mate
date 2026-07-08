@@ -14,8 +14,8 @@ const JSON_OUTPUT_HINT = `Reply with a single JSON object only (no markdown fenc
   "publicText": "string",
   "publicGetOffAt": "string",
   "publicPreview": "string",
-  "transitScheduleAdvice": ["string", ... 1-2 lines, max 10 words each],
-  "transitTicketPayment": ["string", ... 1-2 lines, max 10 words each],
+  "transitScheduleAdvice": ["string", ... 1 line, max 15 words],
+  "transitTicketPayment": ["string", ... 1 line, max 15 words],
   "tips": ["string", ... max 2, highest-impact only],
   "openQuestions": [{ "id": "stable-id", "field": "publicText|publicGetOffAt|...", "question": "string" }]
 }`;

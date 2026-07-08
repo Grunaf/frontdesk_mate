@@ -61,65 +61,65 @@ export function CityPackRouteMetadataFields({
         <p className="text-[11px] text-muted-foreground">{HUB_TRIP_ESTIMATES_INTRO}</p>
       </div>
 
-      <NumberField
-        label="Approx. travel time (min)"
-        value={resolveHubApproxTravelMinutes(route)}
-        onChange={(minutes) => onChange(applyHubApproxTravelMinutes(route, minutes))}
-      />
-
-      {!isWalkOnly && showLocalKm ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <NumberField
-            label="Bus ticket kiosk (KM)"
-            value={route.transit.ticketPrice?.kioskKM ?? 0}
-            onChange={(kioskKM) =>
-              patchTransit({
-                ticketPrice: {
-                  kioskKM,
-                  driverKM: route.transit.ticketPrice?.driverKM ?? 0,
-                },
-              })
-            }
-          />
-          <NumberField
-            label="Bus ticket on board (KM)"
-            value={route.transit.ticketPrice?.driverKM ?? 0}
-            onChange={(driverKM) =>
-              patchTransit({
-                ticketPrice: {
-                  kioskKM: route.transit.ticketPrice?.kioskKM ?? 0,
-                  driverKM,
-                },
-              })
-            }
-          />
-        </div>
-      ) : null}
-
-      <NumberField
-        label="Taxi fair price (€)"
-        value={Math.round((route.taxi.priceEUR.min + route.taxi.priceEUR.max) / 2)}
-        onChange={(value) =>
-          patchTaxi({
-            priceEUR: { min: value, max: value },
-            ...(currencyMode === 'eur_only' ? { priceKM: { min: value, max: value } } : {}),
-          })
-        }
-      />
-
-      {showLocalKm ? (
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <NumberField
-          label="Taxi fair price (KM)"
-          value={Math.round((route.taxi.priceKM.min + route.taxi.priceKM.max) / 2)}
-          onChange={(value) => patchTaxi({ priceKM: { min: value, max: value } })}
+          label="Approx. travel time (min)"
+          value={resolveHubApproxTravelMinutes(route)}
+          onChange={(minutes) => onChange(applyHubApproxTravelMinutes(route, minutes))}
         />
-      ) : null}
 
-      <NumberField
-        label="Taxi duration (min)"
-        value={Math.round((route.taxi.durationMin.min + route.taxi.durationMin.max) / 2)}
-        onChange={(value) => patchTaxi({ durationMin: { min: value, max: value } })}
-      />
+        {!isWalkOnly && showLocalKm ? (
+          <>
+            <NumberField
+              label="Bus ticket kiosk (KM)"
+              value={route.transit.ticketPrice?.kioskKM ?? 0}
+              onChange={(kioskKM) =>
+                patchTransit({
+                  ticketPrice: {
+                    kioskKM,
+                    driverKM: route.transit.ticketPrice?.driverKM ?? 0,
+                  },
+                })
+              }
+            />
+            <NumberField
+              label="Bus ticket on board (KM)"
+              value={route.transit.ticketPrice?.driverKM ?? 0}
+              onChange={(driverKM) =>
+                patchTransit({
+                  ticketPrice: {
+                    kioskKM: route.transit.ticketPrice?.kioskKM ?? 0,
+                    driverKM,
+                  },
+                })
+              }
+            />
+          </>
+        ) : null}
+        <NumberField
+          label="Taxi fair price (€)"
+          value={Math.round((route.taxi.priceEUR.min + route.taxi.priceEUR.max) / 2)}
+          onChange={(value) =>
+            patchTaxi({
+              priceEUR: { min: value, max: value },
+              ...(currencyMode === 'eur_only' ? { priceKM: { min: value, max: value } } : {}),
+            })
+          }
+        />
+        {showLocalKm ? (
+          <NumberField
+            label="Taxi fair price (KM)"
+            value={Math.round((route.taxi.priceKM.min + route.taxi.priceKM.max) / 2)}
+            onChange={(value) => patchTaxi({ priceKM: { min: value, max: value } })}
+          />
+        ) : null}
+
+        <NumberField
+          label="Taxi duration (min)"
+          value={Math.round((route.taxi.durationMin.min + route.taxi.durationMin.max) / 2)}
+          onChange={(value) => patchTaxi({ durationMin: { min: value, max: value } })}
+        />
+      </div>
     </div>
   );
 }

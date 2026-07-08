@@ -1418,7 +1418,6 @@
       "viewFullGuide": "Room map & directions"
     },
     "taxi": {
-      "bookTaxiTitle": "Book a taxi",
       "needHelpTitle": "Need help?",
       "callTaxi": "Call {taxiName}",
       "whatsappTaxi": "Message {taxiName} on WhatsApp",

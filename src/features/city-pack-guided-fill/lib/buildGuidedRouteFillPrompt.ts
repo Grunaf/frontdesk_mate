@@ -13,8 +13,8 @@ Rules:
 - publicText: imperative steps for boarding and riding only (not get-off — use publicGetOffAt).
 - publicGetOffAt: where to exit transit; omit for walk-only (set routeMode to walk_only).
 - publicPreview: walk from hub to stop/platform only (not final walk to hostel — tenant settings).
-- transitScheduleAdvice: 1-2 short lines (each max 10 words) with schedule reliability/frequency notes.
-- transitTicketPayment: 1-2 short lines (each max 10 words) with where/how to buy/validate tickets.
+- transitScheduleAdvice: 1 short line (max 15 words) with schedule reliability/frequency notes.
+- transitTicketPayment: 1 short line (max 15 words) with where/how to buy/validate tickets.
 - tips: up to 2 short optional bullets, ranked by guest impact/severity (highest first).
 - Never duplicate facts between tips and transitScheduleAdvice/transitTicketPayment.
 - locationLabelEn: short hub name if obvious from input (e.g. "Airport", "Main bus station").

@@ -167,8 +167,7 @@ export function TaxiBackupSheet({
 
         {hasTaxi ? (
           <BottomSheetFooter className="border-t border-border/60">
-            <p className="text-xs text-muted-foreground">{taxiActions('zoneCallLead')}</p>
-            <p className="text-xs font-medium text-muted-foreground">{taxiActions('bookTaxiTitle')}</p>
+            <p className="text-xs font-medium text-muted-foreground">{taxiActions('zoneCallLead')}</p>
             <div className="flex flex-col gap-2">
               <Button asChild size="sm" variant="default" className="h-11 w-full">
                 <a href={recommendedTaxi!.href} className="flex items-center justify-center gap-1.5">

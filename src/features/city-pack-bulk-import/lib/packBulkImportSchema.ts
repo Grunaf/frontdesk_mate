@@ -31,8 +31,8 @@ const copyBlockSchema = z
     publicText: z.string().optional(),
     publicGetOffAt: z.string().optional(),
     publicWalkToHostel: z.string().optional(),
-    transitScheduleAdvice: z.array(z.string()).max(2).optional(),
-    transitTicketPayment: z.array(z.string()).max(2).optional(),
+    transitScheduleAdvice: z.array(z.string()).max(1).optional(),
+    transitTicketPayment: z.array(z.string()).max(1).optional(),
     tips: z.array(z.string()).max(2).optional(),
   })
   .optional();

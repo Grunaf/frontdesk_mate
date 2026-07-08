@@ -1418,7 +1418,6 @@
       "viewFullGuide": "Схема комнаты и маршрут"
     },
     "taxi": {
-      "bookTaxiTitle": "Заказать такси",
       "needHelpTitle": "Нужна помощь?",
       "callTaxi": "Позвонить {taxiName}",
       "whatsappTaxi": "Написать {taxiName} в WhatsApp",
