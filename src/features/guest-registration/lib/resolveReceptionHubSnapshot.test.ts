@@ -27,6 +27,10 @@ function makeStay(overrides: Partial<GuestStayRecordWithLink> = {}): GuestStayRe
     check_in_at: '2026-07-08T14:00:00.000Z',
     check_out_at: '2026-07-10T23:59:59.999Z',
     activated_at: null,
+    desk_checked_in_at: null,
+    key_issued_at: null,
+    passport_checked_at: null,
+    tax_collected_at: null,
     revoked_at: null,
     created_at: '2026-07-08T10:00:00.000Z',
     magicLinkUrl: 'https://example.com/check-in',
@@ -72,8 +76,21 @@ describe('resolveReceptionHubSnapshot', () => {
     expect(afterRollover.expectedToday).toEqual([]);
   });
 
-  it('excludes arrived guests from arrival buckets', () => {
+  it('excludes desk-checked-in guests from arrival buckets', () => {
     const now = new Date('2026-07-09T08:30:00.000Z');
+    const stay = makeStay({
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      desk_checked_in_at: '2026-07-09T09:00:00.000Z',
+    });
+
+    const snapshot = resolveReceptionHubSnapshot(settings, [stay], now);
+
+    expect(snapshot.expectedToday).toEqual([]);
+    expect(snapshot.noShow).toEqual([]);
+  });
+
+  it('keeps guest in arrival buckets when only guest app is open', () => {
+    const now = new Date('2026-07-09T10:00:00.000Z');
     const stay = makeStay({
       check_in_at: '2026-07-09T14:00:00.000Z',
       activated_at: '2026-07-09T09:00:00.000Z',
@@ -81,8 +98,7 @@ describe('resolveReceptionHubSnapshot', () => {
 
     const snapshot = resolveReceptionHubSnapshot(settings, [stay], now);
 
-    expect(snapshot.expectedToday).toEqual([]);
-    expect(snapshot.noShow).toEqual([]);
+    expect(snapshot.expectedToday.map((entry) => entry.id)).toEqual(['stay-1']);
   });
 
   it('lists free beds for operational night excluding occupied reservations', () => {

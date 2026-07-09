@@ -53,7 +53,7 @@ export async function getStaySetupStatusAction(
   }
 
   const { data, error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .select('stay_contact_whatsapp, tourism_contact_whatsapp')
     .eq('id', session.stayId)
     .maybeSingle();

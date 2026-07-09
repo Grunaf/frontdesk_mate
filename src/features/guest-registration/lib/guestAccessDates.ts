@@ -66,6 +66,17 @@ export function formatDisplayDate(isoDate: string): string {
   return parseUtcDate(isoDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/** Reception desk arrival timestamp (full ISO, local time + date). */
+export function formatReceptionDateTime(isoTimestamp: string): string {
+  const date = new Date(isoTimestamp);
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export function formatAccessPeriodSummary(
   checkInDate: string,
   checkOutDate: string,

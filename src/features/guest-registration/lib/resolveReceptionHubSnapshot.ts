@@ -31,11 +31,11 @@ function sortByCheckIn(stays: GuestStayRecordWithLink[]): GuestStayRecordWithLin
   );
 }
 
-/** Reception “arrived” toggle — guest has been marked in at the desk (opens app path). */
+/** Reception “arrived” — guest processed at the desk (not guest app open). */
 export function hasGuestArrivedAtReception(
-  stay: Pick<GuestStayRecordWithLink, 'activated_at'>
+  stay: Pick<GuestStayRecordWithLink, 'desk_checked_in_at'>
 ): boolean {
-  return Boolean(stay.activated_at);
+  return Boolean(stay.desk_checked_in_at);
 }
 
 function isAwaitingArrival(stay: GuestStayRecordWithLink, now: Date): boolean {

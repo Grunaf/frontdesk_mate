@@ -56,7 +56,7 @@ export async function completeTourismRegistrationAction(
 
   const completedAt = new Date().toISOString();
   const { data, error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .update({
       tourism_registration_completed_at: completedAt,
       updated_at: completedAt,

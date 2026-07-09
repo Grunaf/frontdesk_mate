@@ -14,9 +14,11 @@ import {
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import {
   createGuestStayAction,
+  completeDeskCheckInAction,
   listActiveGuestStaysAction,
   reissueGuestStayAction,
   revokeGuestStayAction,
+  updateGuestReservationAction,
 } from '../actions/receptionActions';
 import {
   addNights,
@@ -40,7 +42,6 @@ import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
-import { ReceptionStayDetailShell } from './ReceptionStayDetailShell';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 
@@ -52,12 +53,13 @@ interface ReceptionCheckInPanelProps {
   initialOpenIssues: GuestIssueRecord[];
 }
 
-interface ReissueDraft {
+interface EditReservationDraft {
   stayId: string;
   guestName: string;
   bedId: string;
   checkInDate: string;
   checkOutDate: string;
+  intent: 'changeDates' | 'moveBed';
 }
 
 type DeskTab = 'desk' | 'plan' | 'access' | 'issues';
@@ -95,8 +97,10 @@ export function ReceptionCheckInPanel({
   const [selectedStayId, setSelectedStayId] = useState<string | null>(null);
   const [stayPins, setStayPins] = useState<Record<string, string>>({});
   const [pendingRevokeStayId, setPendingRevokeStayId] = useState<string | null>(null);
-  const [pendingReissueStay, setPendingReissueStay] = useState<GuestStayRecordWithLink | null>(null);
-  const [reissueDraft, setReissueDraft] = useState<ReissueDraft | null>(null);
+  const [pendingReissueAccessStay, setPendingReissueAccessStay] =
+    useState<GuestStayRecordWithLink | null>(null);
+  const [markArrivedError, setMarkArrivedError] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<EditReservationDraft | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const tenantSettings = settings ?? {};
@@ -153,6 +157,7 @@ export function ReceptionCheckInPanel({
   );
 
   const openStayDetail = useCallback((stayId: string) => {
+    setMarkArrivedError(null);
     setSelectedStayId(stayId);
   }, []);
 
@@ -164,13 +169,13 @@ export function ReceptionCheckInPanel({
     const ids = new Set<string>();
     for (const bedId of bedOptions) {
       const overlaps = stays.some((stay) => {
-        if (reissueDraft?.stayId === stay.id) return false;
+        if (editDraft?.stayId === stay.id) return false;
         return stayOverlapsBedNightRange(stay, bedId, accessPeriod.checkInAt, accessPeriod.checkOutAt);
       });
       if (overlaps) ids.add(bedId);
     }
     return ids;
-  }, [accessPeriod.checkInAt, accessPeriod.checkOutAt, bedOptions, reissueDraft?.stayId, stays]);
+  }, [accessPeriod.checkInAt, accessPeriod.checkOutAt, bedOptions, editDraft?.stayId, stays]);
 
   const bedsByRoom = useMemo(
     () =>
@@ -199,7 +204,7 @@ export function ReceptionCheckInPanel({
   }, [bedId, bedOptions, overlappingBedIds]);
 
   const handleModeChange = (nextMode: GuestAccessFormMode) => {
-    if (reissueDraft) return;
+    if (editDraft) return;
     setMode(nextMode);
     if (nextMode === 'walk-in') {
       const nextDates = defaultWalkInDates();
@@ -226,6 +231,8 @@ export function ReceptionCheckInPanel({
         return 'Hostel not found.';
       case 'not_found':
         return 'Access not found or already revoked.';
+      case 'already_revoked':
+        return 'Access was revoked — cannot mark arrival.';
       case 'db_unavailable':
         return 'Database unavailable. Run migrations and check SUPABASE_SECRET_KEY.';
       case 'unknown':
@@ -235,8 +242,8 @@ export function ReceptionCheckInPanel({
     }
   };
 
-  const clearReissueDraft = () => {
-    setReissueDraft(null);
+  const clearEditDraft = () => {
+    setEditDraft(null);
     setError(null);
     const nextDates = defaultWalkInDates();
     setMode('walk-in');
@@ -246,13 +253,17 @@ export function ReceptionCheckInPanel({
     setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
   };
 
-  const beginReissueDraft = (stay: GuestStayRecordWithLink) => {
-    setReissueDraft({
+  const beginEditDraft = (
+    stay: GuestStayRecordWithLink,
+    intent: EditReservationDraft['intent']
+  ) => {
+    setEditDraft({
       stayId: stay.id,
       guestName: stay.guest_name ?? '',
       bedId: stay.bed_id,
       checkInDate: toDateInput(stay.check_in_at),
       checkOutDate: toDateInput(stay.check_out_at),
+      intent,
     });
     setMode('custom');
     setGuestName(stay.guest_name ?? '');
@@ -276,24 +287,53 @@ export function ReceptionCheckInPanel({
       return;
     }
 
+    if (editDraft?.intent === 'moveBed' && bedId === editDraft.bedId) {
+      setError('Choose a different bed to move this guest.');
+      return;
+    }
+
     startTransition(async () => {
       try {
-        const result = reissueDraft
-          ? await reissueGuestStayAction({
-              tenantSlug,
-              stayId: reissueDraft.stayId,
-              bedId,
-              guestName: guestName.trim() || undefined,
-              checkInDate,
-              checkOutDate,
-            })
-          : await createGuestStayAction({
-              tenantSlug,
-              bedId,
-              guestName: guestName.trim() || undefined,
-              checkInDate,
-              checkOutDate,
-            });
+        if (editDraft) {
+          const result = await updateGuestReservationAction({
+            tenantSlug,
+            stayId: editDraft.stayId,
+            bedId,
+            guestName: guestName.trim() || undefined,
+            checkInDate,
+            checkOutDate,
+          });
+
+          if (!result.ok) {
+            setError(createErrorMessage(result.error));
+            if (result.error === 'access_overlap') {
+              await refreshStays();
+            }
+            return;
+          }
+
+          setStays((current) =>
+            current.map((stay) =>
+              stay.id === result.stay.id
+                ? {
+                    ...result.stay,
+                    magicLinkUrl: stay.magicLinkUrl,
+                  }
+                : stay
+            )
+          );
+          openStayDetail(result.stay.id);
+          clearEditDraft();
+          return;
+        }
+
+        const result = await createGuestStayAction({
+          tenantSlug,
+          bedId,
+          guestName: guestName.trim() || undefined,
+          checkInDate,
+          checkOutDate,
+        });
 
         if (!result.ok) {
           setError(createErrorMessage(result.error));
@@ -308,31 +348,63 @@ export function ReceptionCheckInPanel({
           magicLinkUrl: result.magicLinkUrl,
         };
 
-        setStays((current) => {
-          const withoutOld = reissueDraft
-            ? current.filter((stay) => stay.id !== reissueDraft.stayId)
-            : current;
-          return [stayWithLink, ...withoutOld];
-        });
+        setStays((current) => [stayWithLink, ...current]);
         openStayDetail(result.stay.id);
-        setStayPins((current) => {
-          const next = { ...current, [result.stay.id]: result.guestPin };
-          if (reissueDraft) {
-            delete next[reissueDraft.stayId];
-          }
-          return next;
-        });
-
-        if (reissueDraft) {
-          clearReissueDraft();
-        } else {
-          setGuestName('');
-          const nextAvailable = availableBedIds.filter((id) => id !== bedId);
-          setBedId(nextAvailable[0] ?? '');
-        }
+        setStayPins((current) => ({ ...current, [result.stay.id]: result.guestPin }));
+        setGuestName('');
+        const nextAvailable = availableBedIds.filter((id) => id !== bedId);
+        setBedId(nextAvailable[0] ?? '');
       } catch {
         setError('Something went wrong. Try again or check the server logs.');
       }
+    });
+  };
+
+  const handleReissueAccess = (stayId: string) => {
+    setError(null);
+
+    startTransition(async () => {
+      const result = await reissueGuestStayAction({ tenantSlug, stayId });
+      if (!result.ok) {
+        setError(createErrorMessage(result.error));
+        return;
+      }
+
+      const stayWithLink: GuestStayRecordWithLink = {
+        ...result.stay,
+        magicLinkUrl: result.magicLinkUrl,
+      };
+
+      setStays((current) =>
+        current.map((stay) => (stay.id === stayId ? stayWithLink : stay))
+      );
+      openStayDetail(stayId);
+      setStayPins((current) => ({ ...current, [stayId]: result.guestPin }));
+      setPendingReissueAccessStay(null);
+    });
+  };
+
+  const handleMarkArrived = ({ stayId, keyIssued }: { stayId: string; keyIssued: boolean }) => {
+    setMarkArrivedError(null);
+
+    startTransition(async () => {
+      const result = await completeDeskCheckInAction({ tenantSlug, stayId, keyIssued });
+      if (!result.ok) {
+        setMarkArrivedError(createErrorMessage(result.error));
+        return;
+      }
+
+      setStays((current) =>
+        current.map((stay) =>
+          stay.id === stayId
+            ? {
+                ...stay,
+                desk_checked_in_at: result.stay.desk_checked_in_at,
+                key_issued_at: result.stay.key_issued_at,
+              }
+            : stay
+        )
+      );
     });
   };
 
@@ -355,8 +427,8 @@ export function ReceptionCheckInPanel({
       if (selectedStayId === stayId) {
         closeStayDetail();
       }
-      if (reissueDraft?.stayId === stayId) {
-        clearReissueDraft();
+      if (editDraft?.stayId === stayId) {
+        clearEditDraft();
       }
       setPendingRevokeStayId(null);
     });
@@ -368,7 +440,7 @@ export function ReceptionCheckInPanel({
   };
 
   const handleSelectFreeNight = (nextBedId: string, nightDate: string) => {
-    if (reissueDraft) return;
+    if (editDraft) return;
     setMode('custom');
     setCheckInDate(nightDate);
     setCheckOutDate(addNights(nightDate, 1));
@@ -417,52 +489,56 @@ export function ReceptionCheckInPanel({
       />
 
       <ReissueAccessDialog
-        open={pendingReissueStay !== null}
-        guestLabel={pendingReissueStay?.guest_name ?? undefined}
+        open={pendingReissueAccessStay !== null}
+        guestLabel={pendingReissueAccessStay?.guest_name ?? undefined}
         isPending={isPending}
-        onCancel={() => setPendingReissueStay(null)}
+        onCancel={() => setPendingReissueAccessStay(null)}
         onConfirm={() => {
-          if (pendingReissueStay) {
-            closeStayDetail();
-            beginReissueDraft(pendingReissueStay);
-            setPendingReissueStay(null);
+          if (pendingReissueAccessStay) {
+            handleReissueAccess(pendingReissueAccessStay.id);
           }
         }}
       />
 
-      <ReceptionStayDetailShell
-        open={selectedStay !== null}
-        onClose={closeStayDetail}
-      >
-        {selectedStay ? (
-          <ReceptionGuestStayDetail
-            stay={selectedStay}
-            stayPins={stayPins}
-            isPending={isPending}
-            hostelName={tenantName}
-            guestAccessMessageTemplate={guestAccessMessageTemplate}
-            guestAccessPinMissingText={guestAccessPinMissingText}
-            resolveBedLabel={resolveBedLabel}
-            omitBedFromGuestMessage={omitBedFromGuestMessage}
-            tourismRegistrationRequired={tourismRegistrationRequired}
-            tenantSlug={tenantSlug}
-            onTourismExportedAtChange={(stayId, tourismExportedAt) => {
-              setStays((current) =>
-                current.map((stay) =>
-                  stay.id === stayId ? { ...stay, tourism_exported_at: tourismExportedAt } : stay
-                )
-              );
-            }}
-            onRevoke={(stayId) => {
-              setPendingRevokeStayId(stayId);
-            }}
-            onChangeDates={(stay) => {
-              closeStayDetail();
-              setPendingReissueStay(stay);
-            }}
-          />
-        ) : null}
-      </ReceptionStayDetailShell>
+      {selectedStay ? (
+        <ReceptionGuestStayDetail
+          open={selectedStay !== null}
+          onClose={closeStayDetail}
+          stay={selectedStay}
+          stayPins={stayPins}
+          isPending={isPending}
+          hostelName={tenantName}
+          guestAccessMessageTemplate={guestAccessMessageTemplate}
+          guestAccessPinMissingText={guestAccessPinMissingText}
+          resolveBedLabel={resolveBedLabel}
+          omitBedFromGuestMessage={omitBedFromGuestMessage}
+          tourismRegistrationRequired={tourismRegistrationRequired}
+          tenantSlug={tenantSlug}
+          onTourismExportedAtChange={(stayId, tourismExportedAt) => {
+            setStays((current) =>
+              current.map((stay) =>
+                stay.id === stayId ? { ...stay, tourism_exported_at: tourismExportedAt } : stay
+              )
+            );
+          }}
+          onRevoke={(stayId) => {
+            setPendingRevokeStayId(stayId);
+          }}
+          onChangeDates={(stay) => {
+            closeStayDetail();
+            beginEditDraft(stay, 'changeDates');
+          }}
+          onMoveBed={(stay) => {
+            closeStayDetail();
+            beginEditDraft(stay, 'moveBed');
+          }}
+          onReissueAccess={(stay) => {
+            setPendingReissueAccessStay(stay);
+          }}
+          onMarkArrived={handleMarkArrived}
+          markArrivedError={markArrivedError}
+        />
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] lg:items-start">
         <aside
@@ -472,7 +548,7 @@ export function ReceptionCheckInPanel({
           <IssueGuestAccessForm
             mode={mode}
             onModeChange={handleModeChange}
-            modeLocked={Boolean(reissueDraft)}
+            modeLocked={Boolean(editDraft)}
             guestName={guestName}
             onGuestNameChange={setGuestName}
             bedId={bedId}
@@ -484,14 +560,16 @@ export function ReceptionCheckInPanel({
               setCheckInDate(nextFrom);
               setCheckOutDate(nextUntil);
             }}
-            reissueGuestLabel={reissueDraft?.guestName}
-            onCancelReissue={reissueDraft ? clearReissueDraft : undefined}
+            reissueGuestLabel={editDraft?.guestName}
+            editIntent={editDraft?.intent}
+            onCancelReissue={editDraft ? clearEditDraft : undefined}
             bedsAvailabilityHint={bedsAvailabilityHint}
             error={error}
             isPending={isPending}
             rangeValid={rangeValid}
             canSubmit={rangeValid && availableBedIds.length > 0 && Boolean(bedId)}
-            isReissue={Boolean(reissueDraft)}
+            isReissue={false}
+            isEditingReservation={Boolean(editDraft)}
             onSubmit={handleSubmit}
           />
         </aside>

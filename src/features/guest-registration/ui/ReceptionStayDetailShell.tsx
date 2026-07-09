@@ -1,8 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { RECEPTION_STAY_DETAIL_TITLE_ID } from './ReceptionGuestStayDetail';
-import { Button, Sheet, SheetContent } from '@/shared/ui';
+import { X } from 'lucide-react';
+import {
+  BOTTOM_SHEET_SIZES,
+  BottomSheet,
+  BottomSheetBody,
+  BottomSheetContent,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  Button,
+} from '@/shared/ui';
+
+export const RECEPTION_STAY_DETAIL_TITLE_ID = 'reception-stay-detail-title';
 
 function useIsBelowLg(): boolean {
   const [isBelowLg, setIsBelowLg] = useState(false);
@@ -18,10 +28,12 @@ function useIsBelowLg(): boolean {
   return isBelowLg;
 }
 
-interface ReceptionStayDetailShellProps {
+export interface ReceptionStayDetailShellProps {
   open: boolean;
   onClose: () => void;
-  children: ReactNode;
+  header: ReactNode;
+  body: ReactNode;
+  footer: ReactNode;
 }
 
 function useCloseOnEscape(open: boolean, onClose: () => void) {
@@ -41,15 +53,12 @@ function useCloseOnEscape(open: boolean, onClose: () => void) {
 function DesktopStayDetailDialog({
   open,
   onClose,
-  children,
-  labelledBy,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: ReactNode;
-  labelledBy: string;
-}) {
+  header,
+  body,
+  footer,
+}: ReceptionStayDetailShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const labelledBy = RECEPTION_STAY_DETAIL_TITLE_ID;
 
   useCloseOnEscape(open, onClose);
 
@@ -77,21 +86,26 @@ function DesktopStayDetailDialog({
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className="max-h-[min(90vh,720px)] w-full max-w-lg overflow-y-auto rounded-xl border bg-background p-5 shadow-lg outline-none"
+        className="flex max-h-[min(90vh,800px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border bg-background shadow-lg outline-none"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative">
+        <div className="relative shrink-0 border-b border-border/60 px-6 py-4 pr-14">
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0"
+            size="icon-sm"
+            className="absolute top-3 right-3"
             onClick={onClose}
           >
-            Close
+            <X />
+            <span className="sr-only">Close</span>
           </Button>
-          {children}
+          {header}
         </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">{body}</div>
+
+        <div className="shrink-0 border-t border-border/60 px-6 py-4">{footer}</div>
       </div>
     </div>
   );
@@ -100,35 +114,42 @@ function DesktopStayDetailDialog({
 function MobileStayDetailSheet({
   open,
   onClose,
-  children,
-  labelledBy,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: ReactNode;
-  labelledBy: string;
-}) {
+  header,
+  body,
+  footer,
+}: ReceptionStayDetailShellProps) {
+  const labelledBy = RECEPTION_STAY_DETAIL_TITLE_ID;
+
   return (
-    <Sheet
+    <BottomSheet
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onClose();
       }}
     >
-      <SheetContent
-        side="bottom"
-        className="max-h-[90vh] overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
+      <BottomSheetContent
+        size={BOTTOM_SHEET_SIZES.large}
+        className="flex flex-col px-0 pb-0"
         aria-labelledby={labelledBy}
       >
-        {children}
-      </SheetContent>
-    </Sheet>
+        <BottomSheetHeader className="px-6 pb-3">{header}</BottomSheetHeader>
+        <BottomSheetBody className="space-y-4 pb-4">{body}</BottomSheetBody>
+        <BottomSheetFooter className="border-t border-border/60 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {footer}
+        </BottomSheetFooter>
+      </BottomSheetContent>
+    </BottomSheet>
   );
 }
 
-export function ReceptionStayDetailShell({ open, onClose, children }: ReceptionStayDetailShellProps) {
+export function ReceptionStayDetailShell({
+  open,
+  onClose,
+  header,
+  body,
+  footer,
+}: ReceptionStayDetailShellProps) {
   const isBelowLg = useIsBelowLg();
-  const labelledBy = RECEPTION_STAY_DETAIL_TITLE_ID;
 
   if (!open) {
     return null;
@@ -136,15 +157,23 @@ export function ReceptionStayDetailShell({ open, onClose, children }: ReceptionS
 
   if (isBelowLg) {
     return (
-      <MobileStayDetailSheet open onClose={onClose} labelledBy={labelledBy}>
-        {children}
-      </MobileStayDetailSheet>
+      <MobileStayDetailSheet
+        open
+        onClose={onClose}
+        header={header}
+        body={body}
+        footer={footer}
+      />
     );
   }
 
   return (
-    <DesktopStayDetailDialog open onClose={onClose} labelledBy={labelledBy}>
-      {children}
-    </DesktopStayDetailDialog>
+    <DesktopStayDetailDialog
+      open
+      onClose={onClose}
+      header={header}
+      body={body}
+      footer={footer}
+    />
   );
 }

@@ -7,6 +7,10 @@ export interface GuestStayRecord {
   check_in_at: string;
   check_out_at: string;
   activated_at: string | null;
+  desk_checked_in_at: string | null;
+  key_issued_at: string | null;
+  passport_checked_at: string | null;
+  tax_collected_at: string | null;
   revoked_at: string | null;
   created_at: string;
   tourism_contact_whatsapp?: string | null;
@@ -47,11 +51,23 @@ export type CreateGuestStayResult =
 export type ReissueGuestStayInput = {
   tenantSlug: string;
   stayId: string;
+};
+
+export type UpdateGuestReservationInput = {
+  tenantSlug: string;
+  stayId: string;
   bedId: string;
   guestName?: string;
   checkInAt: string;
   checkOutAt: string;
 };
+
+export type UpdateGuestReservationResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'not_found' | 'tenant_not_found' | 'bed_not_found' | 'access_overlap' | 'db_unavailable';
+    };
 
 export type ReissueGuestStayResult =
   | { ok: true; stay: GuestStayRecord; accessToken: string; magicLinkUrl: string; guestPin: string }
@@ -66,6 +82,19 @@ export type ActivateGuestStayResult =
       ok: false;
       error: 'invalid_token' | 'expired' | 'revoked' | 'wrong_hostel' | 'db_unavailable';
       correctTenantSlug?: string;
+    };
+
+export type CompleteDeskCheckInInput = {
+  tenantSlug: string;
+  stayId: string;
+  keyIssued?: boolean;
+};
+
+export type CompleteDeskCheckInResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'not_found' | 'tenant_not_found' | 'already_revoked' | 'db_unavailable';
     };
 
 export type ActivateGuestStayByPinResult =

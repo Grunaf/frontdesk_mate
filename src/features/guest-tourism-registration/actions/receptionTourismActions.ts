@@ -29,7 +29,7 @@ async function assertStayOwnedByTenant(
   }
 
   const { data, error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .select('id')
     .eq('id', stayId)
     .eq('tenant_id', tenant.id)

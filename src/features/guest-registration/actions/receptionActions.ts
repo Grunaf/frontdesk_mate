@@ -5,11 +5,18 @@ import { assertReceptionAuthenticated } from '@/app/reception/lib/receptionSessi
 import { getTenantRecord } from '@/entities/tenant/server';
 import {
   createGuestStay,
+  completeDeskCheckIn,
   listActiveGuestStays,
   reissueGuestStay,
   revokeGuestStay,
+  updateGuestReservation,
 } from '@/entities/guest-stay/server';
-import type { CreateGuestStayResult, ReissueGuestStayResult } from '@/entities/guest-stay/server';
+import type {
+  CreateGuestStayResult,
+  ReissueGuestStayResult,
+  CompleteDeskCheckInResult,
+  UpdateGuestReservationResult,
+} from '@/entities/guest-stay/server';
 
 export type CreateGuestStayActionResult =
   | CreateGuestStayResult
@@ -97,10 +104,6 @@ export type ReissueGuestStayActionResult =
 export async function reissueGuestStayAction(input: {
   tenantSlug: string;
   stayId: string;
-  bedId: string;
-  guestName?: string;
-  checkInDate: string;
-  checkOutDate: string;
   locale?: string;
 }): Promise<ReissueGuestStayActionResult> {
   try {
@@ -110,17 +113,10 @@ export async function reissueGuestStayAction(input: {
   }
 
   try {
-    const tenant = await getTenantRecord(input.tenantSlug);
-    const checkInAt = resolveCheckInIso(input.checkInDate, tenant?.settings.checkInTime);
-
     const result = await reissueGuestStay(
       {
         tenantSlug: input.tenantSlug,
         stayId: input.stayId,
-        bedId: input.bedId,
-        guestName: input.guestName,
-        checkInAt,
-        checkOutAt: `${input.checkOutDate.trim()}T23:59:59.999Z`,
       },
       input.locale ?? 'en'
     );
@@ -132,6 +128,81 @@ export async function reissueGuestStayAction(input: {
     return result;
   } catch (error) {
     console.error('reissueGuestStayAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type UpdateGuestReservationActionResult =
+  | UpdateGuestReservationResult
+  | { ok: false; error: 'unauthorized' | 'unknown' };
+
+export async function updateGuestReservationAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  bedId: string;
+  guestName?: string;
+  checkInDate: string;
+  checkOutDate: string;
+}): Promise<UpdateGuestReservationActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const tenant = await getTenantRecord(input.tenantSlug);
+    const checkInAt = resolveCheckInIso(input.checkInDate, tenant?.settings.checkInTime);
+
+    const result = await updateGuestReservation({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+      bedId: input.bedId,
+      guestName: input.guestName,
+      checkInAt,
+      checkOutAt: `${input.checkOutDate.trim()}T23:59:59.999Z`,
+    });
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('updateGuestReservationAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type CompleteDeskCheckInActionResult =
+  | CompleteDeskCheckInResult
+  | { ok: false; error: 'unauthorized' | 'unknown' };
+
+export async function completeDeskCheckInAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  keyIssued?: boolean;
+}): Promise<CompleteDeskCheckInActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const result = await completeDeskCheckIn({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+      keyIssued: input.keyIssued,
+    });
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('completeDeskCheckInAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

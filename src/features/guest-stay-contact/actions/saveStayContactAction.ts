@@ -37,7 +37,7 @@ export async function saveStayContactAction(
 
   const updatedAt = new Date().toISOString();
   const { error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .update({
       stay_contact_whatsapp: whatsappResult.e164,
       updated_at: updatedAt,

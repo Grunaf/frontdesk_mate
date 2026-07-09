@@ -64,4 +64,48 @@ test.describe('reception desk smoke', () => {
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
     await expect(page.getByText('Paper PIN')).toBeVisible();
   });
+
+  test('marks guest arrived from stay detail', async ({ page }) => {
+    await loginToReceptionDesk(page, config);
+
+    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
+    await issueButton.click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
+
+    await page.getByRole('button', { name: 'Mark arrived' }).click();
+    await expect(page.getByText(/^Arrived · /)).toBeVisible({ timeout: config.navTimeoutMs });
+    await expect(page.getByRole('button', { name: 'Mark arrived' })).toHaveCount(0);
+  });
+
+  test('moves guest to another bed in place', async ({ page }) => {
+    await loginToReceptionDesk(page, config);
+
+    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
+    await issueButton.click();
+    await expect(page.getByText('Paper PIN')).toBeVisible({ timeout: config.navTimeoutMs });
+
+    const bedSelect = page.locator('#bed-id');
+    const options = bedSelect.locator('option');
+    const optionCount = await options.count();
+    test.skip(optionCount < 2, 'Need at least two beds configured for move-bed smoke');
+
+    const firstBedValue = await options.nth(0).getAttribute('value');
+    const secondBedValue = await options.nth(1).getAttribute('value');
+    expect(firstBedValue).toBeTruthy();
+    expect(secondBedValue).toBeTruthy();
+
+    await page.getByRole('button', { name: 'Move bed' }).click();
+    await expect(page.getByText('PIN and link stay the same')).toBeVisible({
+      timeout: config.navTimeoutMs,
+    });
+
+    await bedSelect.selectOption(secondBedValue!);
+    await page.getByRole('button', { name: 'Save reservation' }).click();
+
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
+    await expect(page.getByText('Paper PIN')).toBeVisible();
+    await expect(bedSelect).toHaveValue(secondBedValue!);
+  });
 });

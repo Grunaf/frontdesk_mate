@@ -34,7 +34,7 @@ export default async function StaySetupPage({ params }: StaySetupPageProps) {
       const admin = getSupabaseAdmin();
       if (admin) {
         const { data } = await admin
-          .from('guest_stays')
+          .from('guest_reservations')
           .select('stay_contact_whatsapp, tourism_contact_whatsapp')
           .eq('id', session.stayId)
           .maybeSingle();

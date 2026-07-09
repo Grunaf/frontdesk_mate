@@ -71,12 +71,29 @@ async function revokeSmokeStays(tenantId: string): Promise<void> {
   if (!admin) return;
 
   const revokedAt = new Date().toISOString();
-  const { error } = await admin
-    .from('guest_stays')
-    .update({ revoked_at: revokedAt })
+
+  const { data: reservations } = await admin
+    .from('guest_reservations')
+    .select('id')
     .eq('tenant_id', tenantId)
     .eq('guest_name', E2E_SMOKE_GUEST_NAME)
+    .eq('status', 'planned');
+
+  const reservationIds = (reservations ?? []).map((row) => String(row.id));
+  if (reservationIds.length === 0) {
+    return;
+  }
+
+  await admin
+    .from('guest_access_grants')
+    .update({ revoked_at: revokedAt, updated_at: revokedAt })
+    .in('reservation_id', reservationIds)
     .is('revoked_at', null);
+
+  const { error } = await admin
+    .from('guest_reservations')
+    .update({ status: 'cancelled', updated_at: revokedAt })
+    .in('id', reservationIds);
 
   if (error) {
     console.error('[e2e provision] revoke smoke stays failed:', error.message);
@@ -106,10 +123,10 @@ async function pickBedId(
     : bedIds;
 
   const { data, error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .select('bed_id, check_in_at, check_out_at')
     .eq('tenant_id', tenantId)
-    .is('revoked_at', null);
+    .eq('status', 'planned');
 
   if (error) {
     console.error('[e2e provision] bed overlap query failed:', error.message);
@@ -177,34 +194,53 @@ export async function provisionGuestStayForSmoke(input: {
 
   const guestPin = generateGuestPin();
   const accessToken = generateAccessToken();
+  const nowIso = new Date().toISOString();
 
-  const { data, error } = await admin
-    .from('guest_stays')
+  const { data: reservation, error: reservationError } = await admin
+    .from('guest_reservations')
     .insert({
       tenant_id: tenant.id,
       bed_id: bedId,
       guest_name: E2E_SMOKE_GUEST_NAME,
       check_in_at: checkInAt,
       check_out_at: checkOutAt,
-      access_token_hash: hashAccessToken(accessToken),
-      access_token_encrypted: encryptAccessToken(accessToken),
-      pin_hash: hashGuestPin(tenant.slug, guestPin),
+      status: 'planned',
+      created_at: nowIso,
+      updated_at: nowIso,
     })
     .select('id')
     .single();
 
-  if (error || !data) {
-    console.error('[e2e provision] insert failed:', error?.message ?? 'unknown');
+  if (reservationError || !reservation) {
+    console.error('[e2e provision] reservation insert failed:', reservationError?.message ?? 'unknown');
+    return null;
+  }
+
+  const reservationId = String(reservation.id);
+
+  const { error: grantError } = await admin.from('guest_access_grants').insert({
+    tenant_id: tenant.id,
+    reservation_id: reservationId,
+    access_token_hash: hashAccessToken(accessToken),
+    access_token_encrypted: encryptAccessToken(accessToken),
+    pin_hash: hashGuestPin(tenant.slug, guestPin),
+    created_at: nowIso,
+    updated_at: nowIso,
+  });
+
+  if (grantError) {
+    console.error('[e2e provision] grant insert failed:', grantError.message);
+    await admin.from('guest_reservations').delete().eq('id', reservationId);
     return null;
   }
 
   console.info(
-    `[e2e provision] created smoke stay ${String(data.id)} on bed ${bedId} for ${input.tenantSlug}`
+    `[e2e provision] created smoke reservation ${reservationId} on bed ${bedId} for ${input.tenantSlug}`
   );
 
   return {
     guestPin,
-    stayId: String(data.id),
+    stayId: reservationId,
     tenantSlug: tenant.slug,
     bedId,
     provisionedAt: new Date().toISOString(),

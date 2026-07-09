@@ -51,7 +51,7 @@ export async function getTourismRegistrationByStayId(
   if (!admin) return null;
 
   const { data: stayRow, error: stayError } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .select(STAY_TOURISM_COLUMNS)
     .eq('id', stayId)
     .maybeSingle();
@@ -102,7 +102,7 @@ export async function setTourismExportedAt(
   }
 
   const { data, error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .update({
       tourism_exported_at: exported ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
@@ -174,7 +174,7 @@ export async function listStaysWithTourismGuestsPastCheckOut(
   const safeLimit = Math.max(1, Math.min(limit, 500));
 
   const { data, error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .select('id, tenant_id, check_out_at, guest_stay_tourism_guests!inner(id)')
     .lte('check_out_at', checkOutOnOrBeforeIso)
     .limit(safeLimit);
@@ -236,7 +236,7 @@ export async function clearTourismContactWhatsappForStay(stayId: string): Promis
   if (!admin) return false;
 
   const { error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .update({
       tourism_contact_whatsapp: null,
       updated_at: new Date().toISOString(),
@@ -258,7 +258,7 @@ export async function getStayTourismCompletionTimestamp(
   if (!admin) return null;
 
   const { data, error } = await admin
-    .from('guest_stays')
+    .from('guest_reservations')
     .select('tourism_registration_completed_at')
     .eq('id', stayId)
     .maybeSingle();

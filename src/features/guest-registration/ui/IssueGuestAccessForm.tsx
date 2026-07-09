@@ -26,6 +26,7 @@ interface IssueGuestAccessFormProps {
   checkOutDate: string;
   onDatesChange: (next: { checkInDate: string; checkOutDate: string }) => void;
   reissueGuestLabel?: string;
+  editIntent?: 'moveBed' | 'changeDates';
   onCancelReissue?: () => void;
   bedsAvailabilityHint: string | null;
   error: string | null;
@@ -33,6 +34,7 @@ interface IssueGuestAccessFormProps {
   rangeValid: boolean;
   canSubmit: boolean;
   isReissue: boolean;
+  isEditingReservation?: boolean;
   onSubmit: () => void;
 }
 
@@ -54,6 +56,7 @@ export function IssueGuestAccessForm({
   checkOutDate,
   onDatesChange,
   reissueGuestLabel,
+  editIntent = 'changeDates',
   onCancelReissue,
   bedsAvailabilityHint,
   error,
@@ -61,15 +64,20 @@ export function IssueGuestAccessForm({
   rangeValid,
   canSubmit,
   isReissue,
+  isEditingReservation = false,
   onSubmit,
 }: IssueGuestAccessFormProps) {
   const submitLabel = isPending
-    ? isReissue
-      ? 'Re-issuing…'
-      : 'Issuing…'
-    : isReissue
-      ? 'Save new access'
-      : 'Issue access';
+    ? isEditingReservation
+      ? 'Saving…'
+      : isReissue
+        ? 'Re-issuing…'
+        : 'Issuing…'
+    : isEditingReservation
+      ? 'Save reservation'
+      : isReissue
+        ? 'Save new access'
+        : 'Issue access';
 
   return (
     <div className="space-y-3">
@@ -79,9 +87,13 @@ export function IssueGuestAccessForm({
         </h2>
       </div>
 
-      {isReissue && onCancelReissue ? (
-        <div className="flex items-center justify-between gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-950">
-          <span>Re-issuing {reissueGuestLabel || 'guest'} — new PIN and link.</span>
+      {isEditingReservation && onCancelReissue ? (
+        <div className="flex items-center justify-between gap-2 rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-950">
+          <span>
+            {editIntent === 'moveBed'
+              ? `Moving ${reissueGuestLabel || 'guest'} — PIN and link stay the same.`
+              : `Editing ${reissueGuestLabel || 'guest'} — PIN and link stay the same.`}
+          </span>
           <Button type="button" size="sm" variant="outline" onClick={onCancelReissue}>
             Cancel
           </Button>

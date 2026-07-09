@@ -3,11 +3,13 @@ import 'server-only';
 export {
   activateGuestStay,
   activateGuestStayByPin,
+  completeDeskCheckIn,
   createGuestStay,
   listActiveGuestStays,
   reissueGuestStay,
   resolveGuestSessionFromCookies,
   revokeGuestStay,
+  updateGuestReservation,
 } from './api/guestStayRepository';
 export {
   clearGuestSessionCookie,
@@ -23,4 +25,6 @@ export type {
   GuestStayRecordWithLink,
   ReissueGuestStayResult,
   ResolvedGuestSession,
+  CompleteDeskCheckInResult,
+  UpdateGuestReservationResult,
 } from './model/types';

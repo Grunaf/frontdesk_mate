@@ -14,11 +14,12 @@ import {
   guestAccessStatusLabel,
   resolveGuestAccessStatus,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
-import { formatDisplayDate } from '../lib/guestAccessDates';
+import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
 import { MagicLinkCard } from './MagicLinkCard';
+import { ReceptionStayDetailShell, RECEPTION_STAY_DETAIL_TITLE_ID } from './ReceptionStayDetailShell';
 import { Button } from '@/shared/ui';
 
-export const RECEPTION_STAY_DETAIL_TITLE_ID = 'reception-stay-detail-title';
+export { RECEPTION_STAY_DETAIL_TITLE_ID };
 
 type TourismStatusBadge = 'not_started' | 'in_progress' | 'complete' | 'documents_purged';
 
@@ -259,6 +260,8 @@ function StayTourismRegistrationBlock({
 }
 
 export interface ReceptionGuestStayDetailProps {
+  open: boolean;
+  onClose: () => void;
   stay: GuestStayRecordWithLink;
   stayPins: Record<string, string>;
   isPending: boolean;
@@ -272,9 +275,118 @@ export interface ReceptionGuestStayDetailProps {
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
   onRevoke: (stayId: string) => void;
   onChangeDates: (stay: GuestStayRecordWithLink) => void;
+  onMoveBed: (stay: GuestStayRecordWithLink) => void;
+  onReissueAccess: (stay: GuestStayRecordWithLink) => void;
+  onMarkArrived: (input: { stayId: string; keyIssued: boolean }) => void;
+  markArrivedError?: string | null;
+}
+
+function canMarkDeskArrived(stay: GuestStayRecordWithLink): boolean {
+  if (stay.revoked_at || stay.desk_checked_in_at) {
+    return false;
+  }
+  const status = resolveGuestAccessStatus(stay);
+  return status !== 'ended';
+}
+
+function ReceptionGuestStayDetailActions({
+  stay,
+  isPending,
+  onChangeDates,
+  onMoveBed,
+  onReissueAccess,
+  onRevoke,
+  onMarkArrived,
+  markArrivedError,
+}: Pick<
+  ReceptionGuestStayDetailProps,
+  | 'stay'
+  | 'isPending'
+  | 'onChangeDates'
+  | 'onMoveBed'
+  | 'onReissueAccess'
+  | 'onRevoke'
+  | 'onMarkArrived'
+  | 'markArrivedError'
+>) {
+  const [keyIssued, setKeyIssued] = useState(false);
+  const showMarkArrived = canMarkDeskArrived(stay);
+
+  return (
+    <div className="flex flex-col gap-3">
+      {markArrivedError ? <p className="text-xs text-destructive">{markArrivedError}</p> : null}
+      {showMarkArrived ? (
+        <div className="space-y-2">
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={keyIssued}
+              disabled={isPending}
+              onChange={(event) => setKeyIssued(event.target.checked)}
+            />
+            <span>Room key issued</span>
+          </label>
+          <Button
+            type="button"
+            size="default"
+            className="w-full"
+            disabled={isPending}
+            onClick={() => onMarkArrived({ stayId: stay.id, keyIssued })}
+          >
+            Mark arrived
+          </Button>
+        </div>
+      ) : null}
+      <div className="flex flex-col gap-2 lg:flex-row">
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="w-full lg:flex-1"
+          disabled={isPending}
+          onClick={() => onMoveBed(stay)}
+        >
+          Move bed
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="w-full lg:flex-1"
+          disabled={isPending}
+          onClick={() => onChangeDates(stay)}
+        >
+          Change dates
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="w-full lg:flex-1"
+          disabled={isPending}
+          onClick={() => onReissueAccess(stay)}
+        >
+          Reissue access
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          size="default"
+          className="w-full lg:flex-1"
+          disabled={isPending}
+          onClick={() => onRevoke(stay.id)}
+        >
+          Revoke access
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function ReceptionGuestStayDetail({
+  open,
+  onClose,
   stay,
   stayPins,
   isPending,
@@ -288,6 +400,10 @@ export function ReceptionGuestStayDetail({
   onTourismExportedAtChange,
   onRevoke,
   onChangeDates,
+  onMoveBed,
+  onReissueAccess,
+  onMarkArrived,
+  markArrivedError,
 }: ReceptionGuestStayDetailProps) {
   const status = resolveGuestAccessStatus(stay);
   const stayRef = formatStayReference(stay.id);
@@ -296,27 +412,34 @@ export function ReceptionGuestStayDetail({
   const guestLabel = stay.guest_name?.trim() || 'Guest';
   const bedLabel = resolveBedLabel(stay.bed_id);
 
-  return (
-    <div className="space-y-4">
-      <header className="space-y-1 pr-8">
-        <h2 id={RECEPTION_STAY_DETAIL_TITLE_ID} className="text-base font-semibold leading-tight">
-          {guestLabel}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {bedLabel}
-          {stayRef ? (
-            <span className="font-mono">
-              {' '}
-              · #{stayRef}
-            </span>
-          ) : null}
+  const header = (
+    <header className="space-y-1">
+      <h2 id={RECEPTION_STAY_DETAIL_TITLE_ID} className="text-base font-semibold leading-tight">
+        {guestLabel}
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        {bedLabel}
+        {stayRef ? (
+          <span className="font-mono">
+            {' '}
+            · #{stayRef}
+          </span>
+        ) : null}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {formatDisplayDate(checkInDay)} → {formatDisplayDate(checkOutDay)} ·{' '}
+        {guestAccessStatusLabel(status)}
+      </p>
+      {stay.desk_checked_in_at ? (
+        <p className="text-xs font-medium text-emerald-800">
+          Arrived · {formatReceptionDateTime(stay.desk_checked_in_at)}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {formatDisplayDate(checkInDay)} → {formatDisplayDate(checkOutDay)} ·{' '}
-          {guestAccessStatusLabel(status)}
-        </p>
-      </header>
+      ) : null}
+    </header>
+  );
 
+  const body = (
+    <div className="space-y-4">
       {!stay.magicLinkUrl ? (
         <p className="text-xs text-muted-foreground">Link unavailable — re-issue access.</p>
       ) : (
@@ -340,27 +463,29 @@ export function ReceptionGuestStayDetail({
           onTourismExportedAtChange={onTourismExportedAtChange}
         />
       ) : null}
-
-      <div className="flex flex-col gap-2 border-t border-border/60 pt-4 sm:flex-row">
-        <Button
-          type="button"
-          variant="outline"
-          className="flex-1"
-          disabled={isPending}
-          onClick={() => onChangeDates(stay)}
-        >
-          Change dates
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          className="flex-1"
-          disabled={isPending}
-          onClick={() => onRevoke(stay.id)}
-        >
-          Revoke access
-        </Button>
-      </div>
     </div>
+  );
+
+  const footer = (
+    <ReceptionGuestStayDetailActions
+      stay={stay}
+      isPending={isPending}
+      onChangeDates={onChangeDates}
+      onMoveBed={onMoveBed}
+      onReissueAccess={onReissueAccess}
+      onRevoke={onRevoke}
+      onMarkArrived={onMarkArrived}
+      markArrivedError={markArrivedError}
+    />
+  );
+
+  return (
+    <ReceptionStayDetailShell
+      open={open}
+      onClose={onClose}
+      header={header}
+      body={body}
+      footer={footer}
+    />
   );
 }
