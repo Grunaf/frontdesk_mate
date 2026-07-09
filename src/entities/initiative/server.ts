@@ -97,7 +97,64 @@ const initiativeStore = new Map<string, Initiative>([
       staleReason: [],
     },
   ],
+  [
+    'guest-ui-system-first-refactor',
+    {
+      id: 'guest-ui-system-first-refactor',
+      title: 'Guest UI system-first refactor for shared styling primitives',
+      priority: 'P1',
+      status: 'idea',
+      summary:
+        'Перевести ключевые guest UI-компоненты на system-first подход (tokens/theme/shared UI) без изменения текущего масштаба и кегля.',
+      spec: `Проблема:
+Локальные ad-hoc стили в guest UI усложняют масштабные изменения и повышают стоимость поддержки.
+
+Цель:
+Систематизировать стилизацию в выбранных компонентах через общие токены, семантические классы и переиспользуемые UI-примитивы без визуального resize.
+
+Scope:
+- src/views/arrival-journey/ui/ArrivalJourneyCoordinator.tsx
+- src/features/guest-tourism-registration/ui/TourismRegistrationPanel.tsx
+- src/features/stay-essentials/ui/StayEssentialsReceptionSheet.tsx
+- src/features/hostel-rules/ui/HostelRules.tsx
+
+Out of scope:
+- Изменение кегля/размеров/плотности интерфейса.
+- Изменение бизнес-логики, API-контрактов и UX-флоу.
+- Рефакторинг файлов вне согласованного списка без отдельного апрува.
+
+Acceptance:
+- Устранены новые ad-hoc значения типографики/spacing/цветов в целевых компонентах.
+- Повторяемые UI-паттерны унифицированы через shared/system слой там, где это уместно.
+- Визуальное поведение сохранено (pixel-close), без намеренного изменения масштаба.
+- Зафиксированы legacy-исключения (если останутся) с обоснованием.`,
+      trackedPaths: [
+        'src/views/arrival-journey/ui/ArrivalJourneyCoordinator.tsx',
+        'src/features/guest-tourism-registration/ui/TourismRegistrationPanel.tsx',
+        'src/features/stay-essentials/ui/StayEssentialsReceptionSheet.tsx',
+        'src/features/hostel-rules/ui/HostelRules.tsx',
+      ],
+      relatedFiles: [],
+      tags: ['guest-app', 'ui-system-first', 'refactor'],
+      lastReviewedAt: null,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+      staleScore: 0,
+      isStale: false,
+      staleReason: [],
+    },
+  ],
 ]);
+
+let initiativeIdCounter = 0;
+
+function generateInitiativeId(): string {
+  initiativeIdCounter = (initiativeIdCounter + 1) % Number.MAX_SAFE_INTEGER;
+  const timestamp = Date.now().toString(36);
+  const counter = initiativeIdCounter.toString(36);
+  const random = Math.random().toString(36).slice(2, 8);
+  return `initiative-${timestamp}-${counter}-${random}`;
+}
 
 function normalizePath(raw: string): string {
   return raw.trim().replaceAll('\\', '/').replace(/\/+/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
@@ -387,7 +444,7 @@ export async function createInitiative(input: CreateInitiativeInput): Promise<In
   const nowIso = new Date().toISOString();
   const trackedPaths = normalizePathArray(input.trackedPaths, MAX_TRACKED_PATHS);
   const initiative: Initiative = {
-    id: `initiative-${Date.now().toString(36)}`,
+    id: generateInitiativeId(),
     title: input.title.trim(),
     status: input.status ?? 'idea',
     priority: input.priority ?? 'P1',

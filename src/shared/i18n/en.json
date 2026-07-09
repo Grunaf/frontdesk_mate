@@ -1647,16 +1647,45 @@
       "subtitle": "Track drafts and detect stale specs after code changes.",
       "filters": {
         "all": "All",
-        "onlyStale": "Only stale"
+        "onlyStale": "Only stale",
+        "priority": "Priority",
+        "status": "Status",
+        "tag": "Tag",
+        "search": "Search"
       },
       "actions": {
         "recalculate": "Recalculate",
-        "markReviewed": "Mark as reviewed"
+        "markReviewed": "Mark as reviewed",
+        "new": "New initiative",
+        "edit": "Edit",
+        "save": "Save changes",
+        "create": "Create initiative"
+      },
+      "columns": {
+        "title": "Title",
+        "priority": "Priority",
+        "status": "Status",
+        "freshness": "Freshness",
+        "lastReviewed": "Last reviewed",
+        "updated": "Updated"
       },
       "freshness": {
         "fresh": "Fresh",
         "warning": "Warning",
         "stale": "Stale"
+      },
+      "states": {
+        "empty": "No initiatives in this view.",
+        "errorPrefix": "Data error:"
+      },
+      "form": {
+        "title": "Title",
+        "priority": "Priority",
+        "status": "Status",
+        "summary": "Summary",
+        "spec": "Spec",
+        "trackedPaths": "Tracked paths",
+        "tags": "Tags"
       },
       "reasons": {
         "reviewAge": "Review age is high",

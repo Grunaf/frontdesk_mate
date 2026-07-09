@@ -121,3 +121,86 @@ export async function markInitiativeAsReviewedAction(formData: FormData) {
   revalidatePath(`/admin/initiatives/${id}`);
   redirect(`/admin/initiatives/${id}?saved=1`);
 }
+
+function parseLinesField(formData: FormData, key: string): string[] {
+  const raw = String(formData.get(key) || '');
+  return raw
+    .split('\n')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function parseCommaSeparatedField(formData: FormData, key: string): string[] {
+  const raw = String(formData.get(key) || '');
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function readStringField(formData: FormData, key: string): string {
+  return String(formData.get(key) || '').trim();
+}
+
+export async function createInitiativeFromFormAction(formData: FormData) {
+  await assertAdminAuthenticated();
+
+  const result = await createInitiativeAction({
+    title: readStringField(formData, 'title'),
+    priority: readStringField(formData, 'priority') as CreateInitiativeInput['priority'],
+    status: readStringField(formData, 'status') as CreateInitiativeInput['status'],
+    summary: readStringField(formData, 'summary'),
+    spec: readStringField(formData, 'spec'),
+    trackedPaths: parseLinesField(formData, 'trackedPaths'),
+    tags: parseCommaSeparatedField(formData, 'tags'),
+  });
+
+  if (!result.ok) {
+    redirect(`/admin/initiatives/new?error=${encodeURIComponent(result.error.message)}`);
+  }
+
+  redirect(`/admin/initiatives/${result.data.item.id}?created=1`);
+}
+
+export async function updateInitiativeFromFormAction(formData: FormData) {
+  await assertAdminAuthenticated();
+
+  const id = readStringField(formData, 'id');
+  if (!id) {
+    redirect('/admin/initiatives?error=missing-id');
+  }
+
+  const result = await updateInitiativeAction(id, {
+    title: readStringField(formData, 'title'),
+    priority: readStringField(formData, 'priority') as UpdateInitiativePatch['priority'],
+    status: readStringField(formData, 'status') as UpdateInitiativePatch['status'],
+    summary: readStringField(formData, 'summary'),
+    spec: readStringField(formData, 'spec'),
+    trackedPaths: parseLinesField(formData, 'trackedPaths'),
+    tags: parseCommaSeparatedField(formData, 'tags'),
+  });
+
+  if (!result.ok) {
+    redirect(`/admin/initiatives/${id}/edit?error=${encodeURIComponent(result.error.message)}`);
+  }
+
+  redirect(`/admin/initiatives/${id}?updated=1`);
+}
+
+export async function recalculateInitiativeAction(formData: FormData) {
+  await assertAdminAuthenticated();
+
+  const id = readStringField(formData, 'id');
+  if (!id) {
+    redirect('/admin/initiatives?error=missing-id');
+  }
+
+  const result = await recalculateInitiativesStaleAction({ ids: [id] });
+  if (!result.ok) {
+    redirect(`/admin/initiatives/${id}?error=${encodeURIComponent(result.error.message)}`);
+  }
+
+  revalidatePath('/admin/initiatives');
+  revalidatePath(`/admin/initiatives/${id}`);
+  redirect(`/admin/initiatives/${id}?recalculated=1`);
+}

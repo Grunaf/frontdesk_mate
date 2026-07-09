@@ -1,29 +1,19 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { getInitiativeForAdmin } from '@/entities/initiative/server';
-import { MarkAsReviewedButton } from '@/features/initiative-review';
-import { markInitiativeAsReviewedAction } from '../actions';
-
-function formatReviewedAt(value: string | null): string {
-  if (!value) return 'Not reviewed yet';
-  try {
-    return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(
-      new Date(value)
-    );
-  } catch {
-    return value;
-  }
-}
+import { markInitiativeAsReviewedAction, recalculateInitiativeAction } from '../actions';
+import { formatDateTime, resolveFreshnessBadge, STATUS_LABELS } from '../ui/initiative-ui';
 
 interface InitiativeDetailPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; created?: string; updated?: string; recalculated?: string; error?: string }>;
 }
 
 export default async function InitiativeDetailPage({ params, searchParams }: InitiativeDetailPageProps) {
   const { id } = await params;
-  const { saved, error: saveError } = await searchParams;
+  const { saved, created, updated, recalculated, error: saveError } = await searchParams;
   const { initiative, error } = await getInitiativeForAdmin(id);
 
   if (!initiative && !error) {
@@ -40,41 +30,65 @@ export default async function InitiativeDetailPage({ params, searchParams }: Ini
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link href="/admin/initiatives" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Initiatives
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold">{initiative.title}</h2>
-          <Badge variant="outline">{initiative.priority}</Badge>
-          <Badge variant="muted">{initiative.status}</Badge>
-          <Badge className={initiative.isStale ? 'bg-destructive/10 text-destructive' : 'bg-green-100 text-green-800'}>
-            {initiative.isStale ? 'Stale' : initiative.freshness === 'warning' ? 'Warning' : 'Fresh'}
-          </Badge>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Link href="/admin/initiatives" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Initiatives
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-semibold">{initiative.title}</h2>
+            <Badge variant="outline">{initiative.priority}</Badge>
+            <Badge variant="muted">{STATUS_LABELS[initiative.status]}</Badge>
+            <Badge className={resolveFreshnessBadge(initiative.freshness).className}>
+              {resolveFreshnessBadge(initiative.freshness).label}
+            </Badge>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground">{initiative.summary}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/admin/initiatives/${initiative.id}/edit`}>Edit</Link>
+          </Button>
+          <form action={recalculateInitiativeAction}>
+            <input type="hidden" name="id" value={initiative.id} />
+            <Button type="submit" variant="outline">
+              Recalculate stale
+            </Button>
+          </form>
+          <form action={markInitiativeAsReviewedAction}>
+            <input type="hidden" name="id" value={initiative.id} />
+            <Button type="submit">Mark as reviewed</Button>
+          </form>
+        </div>
       </div>
 
-      {saved === '1' ? (
-        <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
-          Review timestamp updated.
-        </p>
-      ) : null}
+      {saved === '1' ? <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">Review timestamp updated.</p> : null}
+      {created === '1' ? <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">Initiative created.</p> : null}
+      {updated === '1' ? <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">Initiative updated.</p> : null}
+      {recalculated === '1' ? <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">Stale score recalculated.</p> : null}
       {saveError ? (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
           {decodeURIComponent(saveError)}
         </p>
       ) : null}
 
-      <div className="rounded-xl border bg-background p-4 text-sm">
-        <p className="text-muted-foreground">Stale score</p>
-        <p className="text-2xl font-semibold">{initiative.staleScore}</p>
-        <p className="mt-2 text-muted-foreground">
-          Last reviewed: <span className="text-foreground">{formatReviewedAt(initiative.lastReviewedAt)}</span>
-        </p>
-        <p className="text-muted-foreground">
-          Changes in tracked paths: <span className="text-foreground">{initiative.changesCount}</span>
-        </p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border bg-background p-4 text-sm">
+          <p className="text-muted-foreground">Freshness meta</p>
+          <p className="mt-1 text-2xl font-semibold">{initiative.staleScore}</p>
+          <p className="mt-2 text-muted-foreground">
+            Last reviewed: <span className="text-foreground">{formatDateTime(initiative.lastReviewedAt)}</span>
+          </p>
+          <p className="text-muted-foreground">
+            Updated: <span className="text-foreground">{formatDateTime(initiative.updatedAt)}</span>
+          </p>
+          <p className="text-muted-foreground">
+            Changes in tracked paths: <span className="text-foreground">{initiative.changesCount}</span>
+          </p>
+        </div>
+        <div className="rounded-xl border bg-background p-4 text-sm">
+          <p className="font-medium">Summary</p>
+          <p className="mt-2 text-muted-foreground whitespace-pre-wrap">{initiative.summary}</p>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-background p-4">
@@ -105,8 +119,6 @@ export default async function InitiativeDetailPage({ params, searchParams }: Ini
           ))}
         </ul>
       </div>
-
-      <MarkAsReviewedButton id={initiative.id} action={markInitiativeAsReviewedAction} />
     </div>
   );
 }

@@ -92,7 +92,7 @@ export function calculateStale({
   }
 
   const ageScore = neverReviewed ? 60 : resolveAgeScore(daysSinceReview);
-  const pathChangeScore = changesCount > 0 ? 35 : 0;
+  const pathChangeScore = changesCount > 0 ? 60 : 0;
   const churnScore = resolveChurnScore(changesCount);
   const staleScore = clamp(ageScore + pathChangeScore + churnScore, 0, 100);
   const freshness = resolveFreshness(staleScore);
