@@ -10,7 +10,7 @@ import {
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 import { badgeVariants, Icon } from '@/shared/ui';
-import { BedSingle } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 import { GuestStaySheet } from './GuestStaySheet';
 
 export function GuestStayChip() {
@@ -42,7 +42,7 @@ export function GuestStayChip() {
         onClick={() => setSheetOpen(true)}
         aria-label={t('openDetail', { summary: chipLabel })}
       >
-        <Icon icon={BedSingle} size={22} className="text-foreground" />
+        <Icon icon={UserRound} size={22} className="text-foreground" />
       </button>
 
       <GuestStaySheet
