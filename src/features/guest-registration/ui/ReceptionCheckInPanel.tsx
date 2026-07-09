@@ -39,6 +39,8 @@ import { ReceptionHubView } from './ReceptionHubView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
+import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
+import { ReceptionStayDetailShell } from './ReceptionStayDetailShell';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 
@@ -90,7 +92,7 @@ export function ReceptionCheckInPanel({
   const [issuedAccessFilter, setIssuedAccessFilter] = useState<IssuedAccessFilter>('today');
   const [error, setError] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
-  const [expandedStayId, setExpandedStayId] = useState<string | null>(null);
+  const [selectedStayId, setSelectedStayId] = useState<string | null>(null);
   const [stayPins, setStayPins] = useState<Record<string, string>>({});
   const [pendingRevokeStayId, setPendingRevokeStayId] = useState<string | null>(null);
   const [pendingReissueStay, setPendingReissueStay] = useState<GuestStayRecordWithLink | null>(null);
@@ -144,6 +146,19 @@ export function ReceptionCheckInPanel({
     () => formatReceptionDeskStats(resolveReceptionDeskStats(tenantSettings, stays)),
     [tenantSettings, stays]
   );
+
+  const selectedStay = useMemo(
+    () => (selectedStayId ? stays.find((stay) => stay.id === selectedStayId) ?? null : null),
+    [selectedStayId, stays]
+  );
+
+  const openStayDetail = useCallback((stayId: string) => {
+    setSelectedStayId(stayId);
+  }, []);
+
+  const closeStayDetail = useCallback(() => {
+    setSelectedStayId(null);
+  }, []);
 
   const overlappingBedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -299,8 +314,7 @@ export function ReceptionCheckInPanel({
             : current;
           return [stayWithLink, ...withoutOld];
         });
-        setExpandedStayId(result.stay.id);
-        setDeskTab('access');
+        openStayDetail(result.stay.id);
         setStayPins((current) => {
           const next = { ...current, [result.stay.id]: result.guestPin };
           if (reissueDraft) {
@@ -338,8 +352,8 @@ export function ReceptionCheckInPanel({
         delete next[stayId];
         return next;
       });
-      if (expandedStayId === stayId) {
-        setExpandedStayId(null);
+      if (selectedStayId === stayId) {
+        closeStayDetail();
       }
       if (reissueDraft?.stayId === stayId) {
         clearReissueDraft();
@@ -348,17 +362,9 @@ export function ReceptionCheckInPanel({
     });
   };
 
-  const focusStay = (stayId: string) => {
-    setDeskTab('access');
-    setExpandedStayId(stayId);
-    requestAnimationFrame(() => {
-      document.getElementById(`stay-${stayId}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
-  };
-
-  const focusStayFromAccessList = (stayId: string) => {
+  const openStayDetailFromRefSearch = (stayId: string) => {
     setIssuedAccessFilter('all');
-    focusStay(stayId);
+    openStayDetail(stayId);
   };
 
   const handleSelectFreeNight = (nextBedId: string, nightDate: string) => {
@@ -417,11 +423,46 @@ export function ReceptionCheckInPanel({
         onCancel={() => setPendingReissueStay(null)}
         onConfirm={() => {
           if (pendingReissueStay) {
+            closeStayDetail();
             beginReissueDraft(pendingReissueStay);
             setPendingReissueStay(null);
           }
         }}
       />
+
+      <ReceptionStayDetailShell
+        open={selectedStay !== null}
+        onClose={closeStayDetail}
+      >
+        {selectedStay ? (
+          <ReceptionGuestStayDetail
+            stay={selectedStay}
+            stayPins={stayPins}
+            isPending={isPending}
+            hostelName={tenantName}
+            guestAccessMessageTemplate={guestAccessMessageTemplate}
+            guestAccessPinMissingText={guestAccessPinMissingText}
+            resolveBedLabel={resolveBedLabel}
+            omitBedFromGuestMessage={omitBedFromGuestMessage}
+            tourismRegistrationRequired={tourismRegistrationRequired}
+            tenantSlug={tenantSlug}
+            onTourismExportedAtChange={(stayId, tourismExportedAt) => {
+              setStays((current) =>
+                current.map((stay) =>
+                  stay.id === stayId ? { ...stay, tourism_exported_at: tourismExportedAt } : stay
+                )
+              );
+            }}
+            onRevoke={(stayId) => {
+              setPendingRevokeStayId(stayId);
+            }}
+            onChangeDates={(stay) => {
+              closeStayDetail();
+              setPendingReissueStay(stay);
+            }}
+          />
+        ) : null}
+      </ReceptionStayDetailShell>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] lg:items-start">
         <aside
@@ -470,7 +511,7 @@ export function ReceptionCheckInPanel({
               <ReceptionHubView
                 snapshot={hubSnapshot}
                 resolveBedLabel={resolveBedLabel}
-                onViewStay={focusStay}
+                onViewStay={openStayDetail}
               />
             </TabsContent>
 
@@ -479,7 +520,7 @@ export function ReceptionCheckInPanel({
                 embedded
                 settings={tenantSettings}
                 stays={stays}
-                onViewStay={focusStay}
+                onViewStay={openStayDetail}
                 onSelectFreeNight={handleSelectFreeNight}
               />
             </TabsContent>
@@ -489,30 +530,10 @@ export function ReceptionCheckInPanel({
                 stays={stays}
                 filter={issuedAccessFilter}
                 onFilterChange={setIssuedAccessFilter}
-                expandedStayId={expandedStayId}
-                onToggleExpanded={(stayId) =>
-                  setExpandedStayId((current) => (current === stayId ? null : stayId))
-                }
-                onRevoke={(stayId) => setPendingRevokeStayId(stayId)}
-                onChangeDates={(stay) => setPendingReissueStay(stay)}
-                onFocusStay={focusStayFromAccessList}
-                stayPins={stayPins}
-                isPending={isPending}
+                onOpenStayDetail={openStayDetail}
+                onFindStayByRef={openStayDetailFromRefSearch}
                 revokeError={revokeError}
-                hostelName={tenantName}
-                guestAccessMessageTemplate={guestAccessMessageTemplate}
-                guestAccessPinMissingText={guestAccessPinMissingText}
                 resolveBedLabel={resolveBedLabel}
-                omitBedFromGuestMessage={omitBedFromGuestMessage}
-                tourismRegistrationRequired={tourismRegistrationRequired}
-                tenantSlug={tenantSlug}
-                onTourismExportedAtChange={(stayId, tourismExportedAt) => {
-                  setStays((current) =>
-                    current.map((stay) =>
-                      stay.id === stayId ? { ...stay, tourism_exported_at: tourismExportedAt } : stay
-                    )
-                  );
-                }}
               />
             </TabsContent>
 
@@ -520,7 +541,7 @@ export function ReceptionCheckInPanel({
               <IssuesList
                 tenantSlug={tenantSlug}
                 initialIssues={initialOpenIssues}
-                onFocusStay={focusStay}
+                onFocusStay={openStayDetail}
                 isActive={deskTab === 'issues'}
                 onOpenCountChange={setOpenIssueCount}
               />

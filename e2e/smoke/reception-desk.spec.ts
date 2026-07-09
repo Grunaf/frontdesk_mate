@@ -49,6 +49,19 @@ test.describe('reception desk smoke', () => {
 
     await page.getByRole('textbox', { name: 'Find stay by ref' }).fill(refText!);
     await page.getByRole('button', { name: 'Find' }).click();
-    await expect(page.locator(`#stay-`)).toBeVisible();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
+    await expect(page.getByText('Paper PIN')).toBeVisible();
+  });
+
+  test('opens guest detail from desk without switching to access tab', async ({ page }) => {
+    await loginToReceptionDesk(page, config);
+
+    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
+    await issueButton.click();
+
+    await expect(page.getByRole('tab', { name: 'Desk' })).toHaveAttribute('data-active', '');
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
+    await expect(page.getByText('Paper PIN')).toBeVisible();
   });
 });
