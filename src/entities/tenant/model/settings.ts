@@ -3,9 +3,11 @@ import type { LocalizedField, LocalizedText } from '@/entities/city-pack/model/t
 import type { ArrivalAccessConfig } from './accessPoints';
 import type { TenantBookingSettings } from './booking';
 import type { GuestStayConfig } from './guestStay';
+import type { ReceptionBookingSettings } from './receptionBooking';
 
 export type { ArrivalAccessConfig, AccessPoint, ArrivalLayoutKind } from './accessPoints';
 export type { GuestStayConfig, TourismRegistrationConfig, StayBed, StayFloor, StayRoom } from './guestStay';
+export type { BookingPlatformOption, ReceptionBookingSettings } from './receptionBooking';
 
 import type { TenantLandingSettings } from './landing';
 import type { TenantHostelSettings } from './hostelSettings';
@@ -113,6 +115,8 @@ export interface TenantSettings {
   hostel?: TenantHostelSettings;
   /** Rooms, beds, and optional floor path hints for "find your bed". */
   guestStay?: GuestStayConfig;
+  /** Reception desk booking channels (not landing booking engine). */
+  receptionBooking?: ReceptionBookingSettings;
   arrivalAccess?: ArrivalAccessConfig;
   /** @deprecated migrated to houseRules — read via getHouseRules() */
   activeRulesKeys?: string[];

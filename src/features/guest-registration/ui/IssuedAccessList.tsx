@@ -4,6 +4,9 @@ import { type FormEvent, useState } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { findStayByReference } from '@/entities/guest-stay/lib/findStayByReference';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
+import type { TenantSettings } from '@/entities/tenant';
+import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
+import { formatReservationBookingBalanceListHint } from '@/entities/guest-stay/lib/formatReservationBookingBalance';
 import {
   guestAccessStatusLabel,
   resolveGuestAccessStatus,
@@ -32,6 +35,7 @@ interface IssuedAccessListProps {
   onFindStayByRef: (stayId: string) => void;
   revokeError: string | null;
   resolveBedLabel: (bedId: string) => string;
+  tenantSettings?: TenantSettings;
 }
 
 const FILTER_ITEMS = [
@@ -51,10 +55,12 @@ function StayRow({
   stay,
   resolveBedLabel,
   onOpenStayDetail,
+  tenantSettings,
 }: {
   stay: GuestStayRecordWithLink;
   resolveBedLabel: (bedId: string) => string;
   onOpenStayDetail: (stayId: string) => void;
+  tenantSettings?: TenantSettings;
 }) {
   const status = resolveGuestAccessStatus(stay);
   const stayRef = formatStayReference(stay.id);
@@ -62,6 +68,12 @@ function StayRow({
   const checkOutDay = stay.check_out_at.slice(0, 10);
   const guestLabel = stay.guest_name?.trim();
   const bedLabel = resolveBedLabel(stay.bed_id);
+  const bookingLine = formatReceptionBookingSourceSummary(
+    tenantSettings,
+    stay.booking_platform_id,
+    stay.booking_external_id
+  );
+  const balanceHint = formatReservationBookingBalanceListHint(stay);
 
   return (
     <li id={`stay-${stay.id}`} className="rounded-lg border bg-background px-3 py-2.5">
@@ -80,6 +92,12 @@ function StayRow({
             {formatDisplayDate(checkInDay)} → {formatDisplayDate(checkOutDay)} ·{' '}
             {guestAccessStatusLabel(status)}
           </p>
+          {bookingLine ? (
+            <p className="text-[11px] text-muted-foreground">{bookingLine}</p>
+          ) : null}
+          {balanceHint ? (
+            <p className="text-[11px] text-muted-foreground">{balanceHint}</p>
+          ) : null}
           {!stay.magicLinkUrl ? (
             <p className="mt-1 text-xs text-muted-foreground">Link unavailable — re-issue access.</p>
           ) : null}
@@ -106,6 +124,7 @@ export function IssuedAccessList({
   onFindStayByRef,
   revokeError,
   resolveBedLabel,
+  tenantSettings,
 }: IssuedAccessListProps) {
   const [refQuery, setRefQuery] = useState('');
   const [refError, setRefError] = useState<string | null>(null);
@@ -190,6 +209,7 @@ export function IssuedAccessList({
                         stay={stay}
                         resolveBedLabel={resolveBedLabel}
                         onOpenStayDetail={onOpenStayDetail}
+                        tenantSettings={tenantSettings}
                       />
                     ))}
                   </ul>

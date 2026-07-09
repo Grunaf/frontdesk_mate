@@ -2,10 +2,14 @@ import 'server-only';
 
 import { buildGuestMagicLinkUrl } from '../lib/buildMagicLinkUrl';
 import { decryptAccessToken } from '../lib/accessToken';
+import {
+  readBookingAmountCurrencyFromRow,
+  readBookingAmountMinorFromRow,
+} from '../lib/validateReservationBookingBalance';
 import type { GuestStayRecord } from '../model/types';
 
 export const GUEST_RESERVATION_COLUMNS =
-  'id, tenant_id, guest_id, guest_name, bed_id, check_in_at, check_out_at, status, desk_checked_in_at, key_issued_at, passport_checked_at, tax_collected_at, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, stay_contact_whatsapp, created_at, updated_at';
+  'id, tenant_id, guest_id, guest_name, bed_id, check_in_at, check_out_at, status, desk_checked_in_at, key_issued_at, passport_checked_at, tax_collected_at, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, stay_contact_whatsapp, booking_platform_id, booking_external_id, booking_amount_due_minor, booking_amount_currency, booking_paid_at, created_at, updated_at';
 
 export const GUEST_ACCESS_GRANT_COLUMNS =
   'id, tenant_id, reservation_id, access_token_hash, access_token_encrypted, pin_hash, activated_at, revoked_at, created_at, updated_at';
@@ -55,6 +59,17 @@ export function mapReservationGrantToStayRecord(
     tourism_exported_at: reservation.tourism_exported_at
       ? String(reservation.tourism_exported_at)
       : null,
+    booking_platform_id: reservation.booking_platform_id
+      ? String(reservation.booking_platform_id)
+      : null,
+    booking_external_id: reservation.booking_external_id
+      ? String(reservation.booking_external_id)
+      : null,
+    booking_amount_due_minor: readBookingAmountMinorFromRow(reservation.booking_amount_due_minor),
+    booking_amount_currency: readBookingAmountCurrencyFromRow(
+      reservation.booking_amount_currency
+    ),
+    booking_paid_at: reservation.booking_paid_at ? String(reservation.booking_paid_at) : null,
   };
 }
 

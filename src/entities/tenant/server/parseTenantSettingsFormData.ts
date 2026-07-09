@@ -16,6 +16,7 @@ import type { AccessPoint, ArrivalLayoutKind, TenantSettings } from '@/entities/
 import { isBookingProvider } from '@/entities/tenant';
 import { normalizeGuestStayForSave } from '@/entities/tenant/lib/resolveBedDisplay';
 import { finalizeGuestStayForSave } from '@/entities/tenant/lib/normalizeGuestStaySettings';
+import { normalizeReceptionBookingForSave } from '@/entities/tenant/lib/normalizeReceptionBookingSettings';
 import {
   parseArrivalGetOffAtByRouteJson,
   parseArrivalLocalByRouteJson,
@@ -288,6 +289,20 @@ function readPhoneField(
   };
 }
 
+function parseReceptionBooking(formData: FormData): TenantSettings['receptionBooking'] {
+  const raw = String(formData.get('receptionBookingJson') || '').trim();
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as TenantSettings['receptionBooking'];
+    return normalizeReceptionBookingForSave(parsed ?? undefined);
+  } catch {
+    return undefined;
+  }
+}
+
 function parseHostelJson(formData: FormData): TenantHostelSettings | undefined {
   const raw = String(formData.get('hostelJson') || '').trim();
   if (!raw) {
@@ -356,6 +371,7 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
     landing: parseLanding(formData),
     hostel,
     guestStay,
+    receptionBooking: parseReceptionBooking(formData),
     arrivalAccess: {
       layoutKind: arrivalAccessInput.layoutKind,
       dayMode: arrivalAccessInput.dayMode,

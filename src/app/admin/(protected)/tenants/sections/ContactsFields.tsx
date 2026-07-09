@@ -25,6 +25,7 @@ import { AdminFieldRow } from '../ui/AdminField';
 import { AdminSettingsDrillDown } from '../ui/AdminSettingsDrillDown';
 import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { HostelPolicyFields } from './HostelPolicyFields';
+import { ReceptionBookingPlatformsFields } from './ReceptionBookingPlatformsFields';
 import { ReceptionDeskPinFields } from '@/features/owner-reception-desk';
 
 export type ContactsFieldsScope = 'full' | 'launch-core';
@@ -160,6 +161,7 @@ function ReceptionDeskModule({
           />
         </>
       ) : null}
+      <ReceptionBookingPlatformsFields settings={settings} />
     </div>
   );
 }

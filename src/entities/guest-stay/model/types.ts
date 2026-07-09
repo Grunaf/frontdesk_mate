@@ -17,6 +17,11 @@ export interface GuestStayRecord {
   stay_contact_whatsapp?: string | null;
   tourism_registration_completed_at?: string | null;
   tourism_exported_at?: string | null;
+  booking_platform_id?: string | null;
+  booking_external_id?: string | null;
+  booking_amount_due_minor?: number | null;
+  booking_amount_currency?: string | null;
+  booking_paid_at?: string | null;
 }
 
 export interface GuestStayRecordWithLink extends GuestStayRecord {
@@ -42,11 +47,23 @@ export type CreateGuestStayInput = {
   guestName?: string;
   checkInAt: string;
   checkOutAt: string;
+  bookingPlatformId?: string;
+  bookingExternalId?: string;
+  bookingAmountDue?: string | number;
 };
 
 export type CreateGuestStayResult =
   | { ok: true; stay: GuestStayRecord; accessToken: string; magicLinkUrl: string; guestPin: string }
-  | { ok: false; error: 'tenant_not_found' | 'bed_not_found' | 'access_overlap' | 'db_unavailable' };
+  | {
+      ok: false;
+      error:
+        | 'tenant_not_found'
+        | 'bed_not_found'
+        | 'access_overlap'
+        | 'db_unavailable'
+        | 'invalid_booking_source'
+        | 'invalid_booking_balance';
+    };
 
 export type ReissueGuestStayInput = {
   tenantSlug: string;
@@ -60,13 +77,40 @@ export type UpdateGuestReservationInput = {
   guestName?: string;
   checkInAt: string;
   checkOutAt: string;
+  bookingPlatformId?: string;
+  bookingExternalId?: string;
+  bookingAmountDue?: string | number;
 };
 
 export type UpdateGuestReservationResult =
   | { ok: true; stay: GuestStayRecord }
   | {
       ok: false;
-      error: 'not_found' | 'tenant_not_found' | 'bed_not_found' | 'access_overlap' | 'db_unavailable';
+      error:
+        | 'not_found'
+        | 'tenant_not_found'
+        | 'bed_not_found'
+        | 'access_overlap'
+        | 'db_unavailable'
+        | 'invalid_booking_source'
+        | 'invalid_booking_balance';
+    };
+
+export type SetGuestReservationBookingPaidInput = {
+  tenantSlug: string;
+  stayId: string;
+  paid: boolean;
+};
+
+export type SetGuestReservationBookingPaidResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error:
+        | 'not_found'
+        | 'tenant_not_found'
+        | 'no_balance_recorded'
+        | 'db_unavailable';
     };
 
 export type ReissueGuestStayResult =

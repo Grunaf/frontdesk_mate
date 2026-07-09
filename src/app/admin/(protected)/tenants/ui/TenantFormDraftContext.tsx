@@ -47,6 +47,7 @@ export interface TenantFormDraft {
   reception?: Omit<NonNullable<TenantSettings['reception']>, 'deskPinHash'>;
   booking?: TenantBookingSettings;
   arrivalAccess?: ArrivalAccessConfig;
+  receptionBooking?: TenantSettings['receptionBooking'];
 }
 
 interface UpdateDraftOptions {
@@ -161,6 +162,7 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
           },
         }
       : {}),
+    ...(draft.receptionBooking !== undefined ? { receptionBooking: draft.receptionBooking } : {}),
   };
 
   if (draft.houseRules !== undefined) {

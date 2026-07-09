@@ -40,6 +40,67 @@ export function getCurrencyDefinition(code: CurrencyCode): CurrencyDefinition {
   return CURRENCY_REGISTRY.find((entry) => entry.code === code) ?? CURRENCY_REGISTRY[0];
 }
 
+export function minorUnitsToMajorAmount(minor: number, currency: CurrencyCode): number {
+  const { decimals } = getCurrencyDefinition(currency);
+  const factor = 10 ** decimals;
+  return minor / factor;
+}
+
+export function majorAmountToMinorUnits(amount: number, currency: CurrencyCode): number {
+  const { decimals } = getCurrencyDefinition(currency);
+  const factor = 10 ** decimals;
+  return Math.round(amount * factor);
+}
+
+export function parseDecimalMoneyInput(
+  raw: string | number | undefined | null,
+  currency: CurrencyCode
+): number | null {
+  if (raw === undefined || raw === null) {
+    return null;
+  }
+
+  if (typeof raw === 'number') {
+    if (!Number.isFinite(raw) || raw < 0) {
+      return null;
+    }
+    return majorAmountToMinorUnits(raw, currency);
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = trimmed.replace(/[^\d.,-]/g, '').replace(',', '.');
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return null;
+  }
+
+  return majorAmountToMinorUnits(amount, currency);
+}
+
+export function formatMinorAsDecimalInput(
+  minor: number | null | undefined,
+  currency: CurrencyCode
+): string {
+  if (minor == null) {
+    return '';
+  }
+
+  const { decimals } = getCurrencyDefinition(currency);
+  return minorUnitsToMajorAmount(minor, currency).toFixed(decimals);
+}
+
+export function formatMoneyFromMinor(
+  minor: number,
+  currency: CurrencyCode,
+  locale = 'en'
+): string {
+  return formatMoneyAmount(minorUnitsToMajorAmount(minor, currency), currency, locale);
+}
+
 export function formatMoneyAmount(
   amount: number,
   currency: CurrencyCode,

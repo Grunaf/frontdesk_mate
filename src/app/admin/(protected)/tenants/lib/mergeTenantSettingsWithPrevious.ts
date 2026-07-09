@@ -90,6 +90,10 @@ export function mergeTenantSettingsWithPrevious(
     merged.booking = previous.booking;
   }
 
+  if (!formData.has('receptionBookingJson')) {
+    merged.receptionBooking = previous.receptionBooking;
+  }
+
   if (!formData.has('arrivalLayoutKind')) {
     merged.arrivalAccess = previous.arrivalAccess;
   } else {

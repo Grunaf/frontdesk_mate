@@ -10,6 +10,7 @@ export {
   resolveGuestSessionFromCookies,
   revokeGuestStay,
   updateGuestReservation,
+  setGuestReservationBookingPaid,
 } from './api/guestStayRepository';
 export {
   clearGuestSessionCookie,
@@ -27,4 +28,5 @@ export type {
   ResolvedGuestSession,
   CompleteDeskCheckInResult,
   UpdateGuestReservationResult,
+  SetGuestReservationBookingPaidResult,
 } from './model/types';

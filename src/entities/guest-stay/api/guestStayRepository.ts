@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import { getTenantRecord } from '@/entities/tenant/server';
+import type { TenantSettings } from '@/entities/tenant';
 import {
   encryptAccessToken,
   generateAccessToken,
@@ -13,6 +14,8 @@ import { buildGuestMagicLinkUrl } from '../lib/buildMagicLinkUrl';
 import { buildGuestSessionPayload, readGuestSessionFromCookies } from '../lib/guestSession';
 import { guestAccessBedNightsOverlap } from '../lib/guestAccessIntervals';
 import { bedExistsInGuestStay } from '../lib/validateBedForTenant';
+import { validateReservationBookingSource } from '../lib/validateReservationBookingSource';
+import { resolveReservationBookingBalance } from '../lib/validateReservationBookingBalance';
 import {
   buildMagicLinkFromGrantRow,
   GUEST_ACCESS_GRANT_COLUMNS,
@@ -34,6 +37,8 @@ import type {
   ResolvedGuestSession,
   UpdateGuestReservationInput,
   UpdateGuestReservationResult,
+  SetGuestReservationBookingPaidInput,
+  SetGuestReservationBookingPaidResult,
 } from '../model/types';
 
 function isStayActive(row: Pick<GuestStayRecord, 'revoked_at' | 'check_out_at'>): boolean {
@@ -185,6 +190,48 @@ function validateReservationDates(checkInAt: Date, checkOutAt: Date): boolean {
   );
 }
 
+function resolveBookingSourceFields(
+  settings: TenantSettings,
+  bookingPlatformId?: string,
+  bookingExternalId?: string
+): { ok: true; platformId: string | null; externalId: string | null } | { ok: false } {
+  const validation = validateReservationBookingSource({
+    settings,
+    bookingPlatformId,
+    bookingExternalId,
+  });
+  if (validation) {
+    return { ok: false };
+  }
+
+  const platformId = bookingPlatformId?.trim() || null;
+  const externalId = bookingExternalId?.trim() || null;
+  return { ok: true, platformId, externalId };
+}
+
+function resolveBookingBalanceFields(
+  settings: TenantSettings,
+  bookingAmountDue?: string | number
+):
+  | { ok: true; amountMinor: number | null; currency: string | null; paidAt: string | null | undefined }
+  | { ok: false } {
+  const resolved = resolveReservationBookingBalance({ settings, bookingAmountDue });
+  if (!resolved.ok) {
+    return { ok: false };
+  }
+
+  if (resolved.amountMinor == null) {
+    return { ok: true, amountMinor: null, currency: null, paidAt: null };
+  }
+
+  return {
+    ok: true,
+    amountMinor: resolved.amountMinor,
+    currency: resolved.currency,
+    paidAt: undefined,
+  };
+}
+
 export async function createGuestStay(
   input: CreateGuestStayInput,
   locale = 'en'
@@ -217,6 +264,20 @@ export async function createGuestStay(
     return { ok: false, error: 'access_overlap' };
   }
 
+  const bookingFields = resolveBookingSourceFields(
+    tenant.settings,
+    input.bookingPlatformId,
+    input.bookingExternalId
+  );
+  if (!bookingFields.ok) {
+    return { ok: false, error: 'invalid_booking_source' };
+  }
+
+  const balanceFields = resolveBookingBalanceFields(tenant.settings, input.bookingAmountDue);
+  if (!balanceFields.ok) {
+    return { ok: false, error: 'invalid_booking_balance' };
+  }
+
   const nowIso = new Date().toISOString();
   const { data: reservation, error: reservationError } = await admin
     .from('guest_reservations')
@@ -226,6 +287,11 @@ export async function createGuestStay(
       bed_id: bedId,
       check_in_at: checkInIso,
       check_out_at: checkOutIso,
+      booking_platform_id: bookingFields.platformId,
+      booking_external_id: bookingFields.externalId,
+      booking_amount_due_minor: balanceFields.amountMinor,
+      booking_amount_currency: balanceFields.currency,
+      booking_paid_at: null,
       status: 'planned',
       created_at: nowIso,
       updated_at: nowIso,
@@ -327,6 +393,29 @@ export async function updateGuestReservation(
     return { ok: false, error: 'access_overlap' };
   }
 
+  const bookingFields = resolveBookingSourceFields(
+    tenant.settings,
+    input.bookingPlatformId,
+    input.bookingExternalId
+  );
+  if (!bookingFields.ok) {
+    return { ok: false, error: 'invalid_booking_source' };
+  }
+
+  const balanceFields = resolveBookingBalanceFields(tenant.settings, input.bookingAmountDue);
+  if (!balanceFields.ok) {
+    return { ok: false, error: 'invalid_booking_balance' };
+  }
+
+  const bookingPaidAt =
+    balanceFields.paidAt === undefined
+      ? balanceFields.amountMinor == null
+        ? null
+        : (existing as Record<string, unknown>).booking_paid_at
+          ? String((existing as Record<string, unknown>).booking_paid_at)
+          : null
+      : balanceFields.paidAt;
+
   const { data: updated, error: updateError } = await admin
     .from('guest_reservations')
     .update({
@@ -334,6 +423,11 @@ export async function updateGuestReservation(
       guest_name: input.guestName?.trim() || null,
       check_in_at: checkInIso,
       check_out_at: checkOutIso,
+      booking_platform_id: bookingFields.platformId,
+      booking_external_id: bookingFields.externalId,
+      booking_amount_due_minor: balanceFields.amountMinor,
+      booking_amount_currency: balanceFields.currency,
+      booking_paid_at: bookingPaidAt,
       updated_at: new Date().toISOString(),
     })
     .eq('id', input.stayId)
@@ -347,6 +441,78 @@ export async function updateGuestReservation(
       return { ok: false, error: 'access_overlap' };
     }
     console.error('updateGuestReservation update:', updateError?.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const stay = mapReservationGrantToStayRecord(
+    updated as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
+  if (!stay) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  return { ok: true, stay };
+}
+
+export async function setGuestReservationBookingPaid(
+  input: SetGuestReservationBookingPaidInput
+): Promise<SetGuestReservationBookingPaidResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'tenant_not_found' };
+  }
+
+  const { data: existing, error: loadError } = await admin
+    .from('guest_reservations')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('setGuestReservationBookingPaid load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const existingRow = existing as Record<string, unknown>;
+  const amountMinor = existingRow.booking_amount_due_minor;
+  if (amountMinor == null || amountMinor === '') {
+    return { ok: false, error: 'no_balance_recorded' };
+  }
+
+  const grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
+  if (!grant) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const paidAt = input.paid ? new Date().toISOString() : null;
+
+  const { data: updated, error: updateError } = await admin
+    .from('guest_reservations')
+    .update({
+      booking_paid_at: paidAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .maybeSingle();
+
+  if (updateError || !updated) {
+    console.error('setGuestReservationBookingPaid update:', updateError?.message);
     return { ok: false, error: 'db_unavailable' };
   }
 
@@ -573,7 +739,6 @@ export async function activateGuestStayByPin(input: {
     return { ok: false, error: 'invalid_pin' };
   }
 
-  const row = data as Record<string, unknown>;
   const reservationRaw = row.guest_reservations;
   const reservation = (
     Array.isArray(reservationRaw) ? reservationRaw[0] : reservationRaw

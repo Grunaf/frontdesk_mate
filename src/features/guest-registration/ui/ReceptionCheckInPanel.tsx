@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { GuestIssueRecord } from '@/entities/guest-issue';
 import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccessIntervals';
@@ -10,7 +10,18 @@ import {
   resolveGuestAccessMessageTemplate,
   resolveGuestAccessPinMissingText,
   resolveTourismRegistrationRequired,
+  listReceptionBookingPlatforms,
 } from '@/entities/tenant';
+import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
+import {
+  reservationBookingSourceErrorMessage,
+  validateReservationBookingSource,
+} from '@/entities/guest-stay/lib/validateReservationBookingSource';
+import {
+  reservationBookingBalanceErrorMessage,
+  resolveReservationBookingBalance,
+} from '@/entities/guest-stay/lib/validateReservationBookingBalance';
+import { formatMinorAsDecimalInput, getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import {
   createGuestStayAction,
@@ -36,14 +47,14 @@ import {
   resolveReceptionDeskStats,
 } from '../lib/resolveReceptionDeskStats';
 import { BedAccessCalendar } from './BedAccessCalendar';
-import { IssueGuestAccessForm } from './IssueGuestAccessForm';
+import { ReceptionIssueAccessOverlay } from './ReceptionIssueAccessOverlay';
 import { ReceptionHubView } from './ReceptionHubView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from '@/shared/ui';
 
 interface ReceptionCheckInPanelProps {
   tenantSlug: string;
@@ -59,6 +70,9 @@ interface EditReservationDraft {
   bedId: string;
   checkInDate: string;
   checkOutDate: string;
+  bookingPlatformId: string;
+  bookingExternalId: string;
+  bookingAmountDue: string;
   intent: 'changeDates' | 'moveBed';
 }
 
@@ -80,15 +94,26 @@ export function ReceptionCheckInPanel({
   initialOpenIssues,
 }: ReceptionCheckInPanelProps) {
   const bedOptions = useMemo(() => listGuestStayBedIds(settings ?? {}), [settings]);
+  const tenantSettings = settings ?? {};
+  const bookingPlatformOptions = useMemo(
+    () => listReceptionBookingPlatforms(tenantSettings),
+    [tenantSettings]
+  );
+  const showBookingSourceFields = bookingPlatformOptions.length > 0;
+  const tenantCurrency = useMemo(() => resolveTenantCurrency(tenantSettings), [tenantSettings]);
+  const bookingBalanceCurrencySymbol = getCurrencyDefinition(tenantCurrency.primary).symbol;
   const checkInTime = settings?.checkInTime ?? '14:00';
   const walkInDefaults = defaultWalkInDates();
-  const issueFormRef = useRef<HTMLDivElement>(null);
 
   const [stays, setStays] = useState(initialStays);
+  const [issueOverlayOpen, setIssueOverlayOpen] = useState(false);
   const [deskTab, setDeskTab] = useState<DeskTab>('desk');
   const [openIssueCount, setOpenIssueCount] = useState(initialOpenIssues.length);
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
+  const [bookingPlatformId, setBookingPlatformId] = useState('');
+  const [bookingExternalId, setBookingExternalId] = useState('');
+  const [bookingAmountDue, setBookingAmountDue] = useState('');
   const [checkInDate, setCheckInDate] = useState(walkInDefaults.checkInDate);
   const [checkOutDate, setCheckOutDate] = useState(walkInDefaults.checkOutDate);
   const [issuedAccessFilter, setIssuedAccessFilter] = useState<IssuedAccessFilter>('today');
@@ -103,7 +128,6 @@ export function ReceptionCheckInPanel({
   const [editDraft, setEditDraft] = useState<EditReservationDraft | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const tenantSettings = settings ?? {};
   const omitBedFromGuestMessage = useMemo(
     () => isRoomMapModuleEnabled(tenantSettings),
     [tenantSettings]
@@ -203,6 +227,34 @@ export function ReceptionCheckInPanel({
     setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
   }, [bedId, bedOptions, overlappingBedIds]);
 
+  const resetCreateIssueForm = useCallback(() => {
+    setError(null);
+    const nextDates = defaultWalkInDates();
+    setMode('walk-in');
+    setCheckInDate(nextDates.checkInDate);
+    setCheckOutDate(nextDates.checkOutDate);
+    setGuestName('');
+    setBookingPlatformId('');
+    setBookingExternalId('');
+    setBookingAmountDue('');
+    setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
+  }, [bedOptions, overlappingBedIds]);
+
+  const clearEditDraft = useCallback(() => {
+    setEditDraft(null);
+    setIssueOverlayOpen(false);
+    resetCreateIssueForm();
+  }, [resetCreateIssueForm]);
+
+  const closeIssueOverlay = useCallback(() => {
+    if (editDraft) {
+      clearEditDraft();
+      return;
+    }
+    resetCreateIssueForm();
+    setIssueOverlayOpen(false);
+  }, [editDraft, clearEditDraft, resetCreateIssueForm]);
+
   const handleModeChange = (nextMode: GuestAccessFormMode) => {
     if (editDraft) return;
     setMode(nextMode);
@@ -233,6 +285,12 @@ export function ReceptionCheckInPanel({
         return 'Access not found or already revoked.';
       case 'already_revoked':
         return 'Access was revoked — cannot mark arrival.';
+      case 'invalid_booking_source':
+        return 'Check booking platform and reference.';
+      case 'invalid_booking_balance':
+        return 'Enter a valid stay balance amount (0 or greater).';
+      case 'no_balance_recorded':
+        return 'No stay balance recorded for this reservation.';
       case 'db_unavailable':
         return 'Database unavailable. Run migrations and check SUPABASE_SECRET_KEY.';
       case 'unknown':
@@ -242,36 +300,38 @@ export function ReceptionCheckInPanel({
     }
   };
 
-  const clearEditDraft = () => {
-    setEditDraft(null);
-    setError(null);
-    const nextDates = defaultWalkInDates();
-    setMode('walk-in');
-    setCheckInDate(nextDates.checkInDate);
-    setCheckOutDate(nextDates.checkOutDate);
-    setGuestName('');
-    setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
-  };
-
   const beginEditDraft = (
     stay: GuestStayRecordWithLink,
     intent: EditReservationDraft['intent']
   ) => {
+    const platformId = stay.booking_platform_id ?? '';
+    const externalId = stay.booking_external_id ?? '';
+    const balanceDue =
+      stay.booking_amount_due_minor != null &&
+      stay.booking_amount_currency &&
+      isCurrencyCode(stay.booking_amount_currency)
+        ? formatMinorAsDecimalInput(stay.booking_amount_due_minor, stay.booking_amount_currency)
+        : '';
     setEditDraft({
       stayId: stay.id,
       guestName: stay.guest_name ?? '',
       bedId: stay.bed_id,
       checkInDate: toDateInput(stay.check_in_at),
       checkOutDate: toDateInput(stay.check_out_at),
+      bookingPlatformId: platformId,
+      bookingExternalId: externalId,
+      bookingAmountDue: balanceDue,
       intent,
     });
     setMode('custom');
     setGuestName(stay.guest_name ?? '');
+    setBookingPlatformId(platformId);
+    setBookingExternalId(externalId);
+    setBookingAmountDue(balanceDue);
     setCheckInDate(toDateInput(stay.check_in_at));
     setCheckOutDate(toDateInput(stay.check_out_at));
     setBedId(stay.bed_id);
     setError(null);
-    issueFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
   const handleSubmit = () => {
@@ -284,6 +344,25 @@ export function ReceptionCheckInPanel({
 
     if (!bedId) {
       setError('Select a bed');
+      return;
+    }
+
+    const bookingValidation = validateReservationBookingSource({
+      settings: tenantSettings,
+      bookingPlatformId,
+      bookingExternalId,
+    });
+    if (bookingValidation) {
+      setError(reservationBookingSourceErrorMessage(bookingValidation));
+      return;
+    }
+
+    const balanceValidation = resolveReservationBookingBalance({
+      settings: tenantSettings,
+      bookingAmountDue,
+    });
+    if (!balanceValidation.ok) {
+      setError(reservationBookingBalanceErrorMessage(balanceValidation.error));
       return;
     }
 
@@ -302,6 +381,9 @@ export function ReceptionCheckInPanel({
             guestName: guestName.trim() || undefined,
             checkInDate,
             checkOutDate,
+            bookingPlatformId: bookingPlatformId || undefined,
+            bookingExternalId: bookingExternalId.trim() || undefined,
+            bookingAmountDue,
           });
 
           if (!result.ok) {
@@ -333,6 +415,9 @@ export function ReceptionCheckInPanel({
           guestName: guestName.trim() || undefined,
           checkInDate,
           checkOutDate,
+          bookingPlatformId: bookingPlatformId || undefined,
+          bookingExternalId: bookingExternalId.trim() || undefined,
+          bookingAmountDue,
         });
 
         if (!result.ok) {
@@ -351,7 +436,8 @@ export function ReceptionCheckInPanel({
         setStays((current) => [stayWithLink, ...current]);
         openStayDetail(result.stay.id);
         setStayPins((current) => ({ ...current, [result.stay.id]: result.guestPin }));
-        setGuestName('');
+        resetCreateIssueForm();
+        setIssueOverlayOpen(false);
         const nextAvailable = availableBedIds.filter((id) => id !== bedId);
         setBedId(nextAvailable[0] ?? '');
       } catch {
@@ -445,7 +531,7 @@ export function ReceptionCheckInPanel({
     setCheckInDate(nightDate);
     setCheckOutDate(addNights(nightDate, 1));
     setBedId(nextBedId);
-    issueFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setIssueOverlayOpen(true);
   };
 
   const bedsAvailabilityHint = rangeValid
@@ -465,16 +551,21 @@ export function ReceptionCheckInPanel({
   return (
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reception desk</p>
           <h1 className="truncate text-xl font-semibold">{tenantName}</h1>
           <p className="text-xs text-muted-foreground">{deskStats}</p>
         </div>
-        <form method="POST" action="/api/reception/logout">
-          <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
-            Sign out
-          </button>
-        </form>
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <Button type="button" size="sm" onClick={() => setIssueOverlayOpen(true)}>
+            Issue guest access
+          </Button>
+          <form method="POST" action="/api/reception/logout">
+            <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
       <RevokeAccessDialog
@@ -514,11 +605,17 @@ export function ReceptionCheckInPanel({
           omitBedFromGuestMessage={omitBedFromGuestMessage}
           tourismRegistrationRequired={tourismRegistrationRequired}
           tenantSlug={tenantSlug}
+          tenantSettings={tenantSettings}
           onTourismExportedAtChange={(stayId, tourismExportedAt) => {
             setStays((current) =>
               current.map((stay) =>
                 stay.id === stayId ? { ...stay, tourism_exported_at: tourismExportedAt } : stay
               )
+            );
+          }}
+          onStayBookingBalanceChange={(updatedStay) => {
+            setStays((current) =>
+              current.map((stay) => (stay.id === updatedStay.id ? updatedStay : stay))
             );
           }}
           onRevoke={(stayId) => {
@@ -540,41 +637,46 @@ export function ReceptionCheckInPanel({
         />
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] lg:items-start">
-        <aside
-          ref={issueFormRef}
-          className="rounded-xl border bg-card p-4 lg:sticky lg:top-4"
-        >
-          <IssueGuestAccessForm
-            mode={mode}
-            onModeChange={handleModeChange}
-            modeLocked={Boolean(editDraft)}
-            guestName={guestName}
-            onGuestNameChange={setGuestName}
-            bedId={bedId}
-            onBedIdChange={setBedId}
-            bedsByRoom={bedsByRoom}
-            checkInDate={checkInDate}
-            checkOutDate={checkOutDate}
-            onDatesChange={({ checkInDate: nextFrom, checkOutDate: nextUntil }) => {
-              setCheckInDate(nextFrom);
-              setCheckOutDate(nextUntil);
-            }}
-            reissueGuestLabel={editDraft?.guestName}
-            editIntent={editDraft?.intent}
-            onCancelReissue={editDraft ? clearEditDraft : undefined}
-            bedsAvailabilityHint={bedsAvailabilityHint}
-            error={error}
-            isPending={isPending}
-            rangeValid={rangeValid}
-            canSubmit={rangeValid && availableBedIds.length > 0 && Boolean(bedId)}
-            isReissue={false}
-            isEditingReservation={Boolean(editDraft)}
-            onSubmit={handleSubmit}
-          />
-        </aside>
+      <ReceptionIssueAccessOverlay
+        open={issueOverlayOpen || editDraft !== null}
+        onClose={closeIssueOverlay}
+        mode={mode}
+        onModeChange={handleModeChange}
+        modeLocked={Boolean(editDraft)}
+        guestName={guestName}
+        onGuestNameChange={setGuestName}
+        bookingPlatformId={bookingPlatformId}
+        onBookingPlatformIdChange={setBookingPlatformId}
+        bookingExternalId={bookingExternalId}
+        onBookingExternalIdChange={setBookingExternalId}
+        bookingPlatformOptions={bookingPlatformOptions}
+        showBookingSourceFields={showBookingSourceFields}
+        bookingAmountDue={bookingAmountDue}
+        onBookingAmountDueChange={setBookingAmountDue}
+        bookingBalanceCurrencySymbol={bookingBalanceCurrencySymbol}
+        bedId={bedId}
+        onBedIdChange={setBedId}
+        bedsByRoom={bedsByRoom}
+        checkInDate={checkInDate}
+        checkOutDate={checkOutDate}
+        onDatesChange={({ checkInDate: nextFrom, checkOutDate: nextUntil }) => {
+          setCheckInDate(nextFrom);
+          setCheckOutDate(nextUntil);
+        }}
+        reissueGuestLabel={editDraft?.guestName}
+        editIntent={editDraft?.intent}
+        onCancelReissue={editDraft ? clearEditDraft : undefined}
+        bedsAvailabilityHint={bedsAvailabilityHint}
+        error={error}
+        isPending={isPending}
+        rangeValid={rangeValid}
+        canSubmit={rangeValid && availableBedIds.length > 0 && Boolean(bedId)}
+        isReissue={false}
+        isEditingReservation={Boolean(editDraft)}
+        onSubmit={handleSubmit}
+      />
 
-        <section className="min-w-0 rounded-xl border bg-card p-4">
+      <section className="min-w-0 rounded-xl border bg-card p-4">
           <Tabs value={deskTab} onValueChange={(value) => setDeskTab(value as DeskTab)}>
             <TabsList variant="line" className="mb-4 w-full justify-start">
               <TabsTrigger value="desk">Desk</TabsTrigger>
@@ -612,6 +714,7 @@ export function ReceptionCheckInPanel({
                 onFindStayByRef={openStayDetailFromRefSearch}
                 revokeError={revokeError}
                 resolveBedLabel={resolveBedLabel}
+                tenantSettings={tenantSettings}
               />
             </TabsContent>
 
@@ -625,8 +728,7 @@ export function ReceptionCheckInPanel({
               />
             </TabsContent>
           </Tabs>
-        </section>
-      </div>
+      </section>
     </div>
   );
 }

@@ -65,6 +65,16 @@ export type {
   StayFloor,
   StayRoom,
 } from './model/guestStay';
+export type { BookingPlatformOption, ReceptionBookingSettings } from './model/receptionBooking';
+export { SUGGESTED_RECEPTION_BOOKING_PLATFORMS } from './model/receptionBooking';
+export {
+  normalizeReceptionBookingForSave,
+  normalizeReceptionBookingOnRead,
+  listReceptionBookingPlatforms,
+  resolveReceptionBookingPlatformLabel,
+  formatReceptionBookingSourceSummary,
+  slugifyBookingPlatformId,
+} from './lib/normalizeReceptionBookingSettings';
 export {
   BOOKING_PROVIDER_LABELS,
   isBookingProvider,

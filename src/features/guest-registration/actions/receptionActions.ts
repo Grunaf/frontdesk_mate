@@ -10,12 +10,14 @@ import {
   reissueGuestStay,
   revokeGuestStay,
   updateGuestReservation,
+  setGuestReservationBookingPaid,
 } from '@/entities/guest-stay/server';
 import type {
   CreateGuestStayResult,
   ReissueGuestStayResult,
   CompleteDeskCheckInResult,
   UpdateGuestReservationResult,
+  SetGuestReservationBookingPaidResult,
 } from '@/entities/guest-stay/server';
 
 export type CreateGuestStayActionResult =
@@ -34,6 +36,9 @@ export async function createGuestStayAction(input: {
   guestName?: string;
   checkInDate: string;
   checkOutDate: string;
+  bookingPlatformId?: string;
+  bookingExternalId?: string;
+  bookingAmountDue?: string;
   locale?: string;
 }): Promise<CreateGuestStayActionResult> {
   try {
@@ -53,6 +58,9 @@ export async function createGuestStayAction(input: {
         guestName: input.guestName,
         checkInAt,
         checkOutAt: `${input.checkOutDate.trim()}T23:59:59.999Z`,
+        bookingPlatformId: input.bookingPlatformId,
+        bookingExternalId: input.bookingExternalId,
+        bookingAmountDue: input.bookingAmountDue,
       },
       input.locale ?? 'en'
     );
@@ -143,6 +151,9 @@ export async function updateGuestReservationAction(input: {
   guestName?: string;
   checkInDate: string;
   checkOutDate: string;
+  bookingPlatformId?: string;
+  bookingExternalId?: string;
+  bookingAmountDue?: string;
 }): Promise<UpdateGuestReservationActionResult> {
   try {
     await assertReceptionAuthenticated(input.tenantSlug);
@@ -161,6 +172,9 @@ export async function updateGuestReservationAction(input: {
       guestName: input.guestName,
       checkInAt,
       checkOutAt: `${input.checkOutDate.trim()}T23:59:59.999Z`,
+      bookingPlatformId: input.bookingPlatformId,
+      bookingExternalId: input.bookingExternalId,
+      bookingAmountDue: input.bookingAmountDue,
     });
 
     if (result.ok) {
@@ -170,6 +184,39 @@ export async function updateGuestReservationAction(input: {
     return result;
   } catch (error) {
     console.error('updateGuestReservationAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type SetGuestReservationBookingPaidActionResult =
+  | SetGuestReservationBookingPaidResult
+  | { ok: false; error: 'unauthorized' | 'unknown' };
+
+export async function setGuestReservationBookingPaidAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  paid: boolean;
+}): Promise<SetGuestReservationBookingPaidActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const result = await setGuestReservationBookingPaid({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+      paid: input.paid,
+    });
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('setGuestReservationBookingPaidAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

@@ -13,6 +13,7 @@ import {
 } from '@/shared/ui';
 
 export const RECEPTION_STAY_DETAIL_TITLE_ID = 'reception-stay-detail-title';
+export const RECEPTION_ISSUE_ACCESS_TITLE_ID = 'reception-issue-access-title';
 
 function useIsBelowLg(): boolean {
   const [isBelowLg, setIsBelowLg] = useState(false);
@@ -34,6 +35,8 @@ export interface ReceptionStayDetailShellProps {
   header: ReactNode;
   body: ReactNode;
   footer: ReactNode;
+  /** Defaults to {@link RECEPTION_STAY_DETAIL_TITLE_ID}. */
+  titleId?: string;
 }
 
 function useCloseOnEscape(open: boolean, onClose: () => void) {
@@ -56,9 +59,10 @@ function DesktopStayDetailDialog({
   header,
   body,
   footer,
+  titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
 }: ReceptionStayDetailShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const labelledBy = RECEPTION_STAY_DETAIL_TITLE_ID;
+  const labelledBy = titleId;
 
   useCloseOnEscape(open, onClose);
 
@@ -117,8 +121,9 @@ function MobileStayDetailSheet({
   header,
   body,
   footer,
+  titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
 }: ReceptionStayDetailShellProps) {
-  const labelledBy = RECEPTION_STAY_DETAIL_TITLE_ID;
+  const labelledBy = titleId;
 
   return (
     <BottomSheet
@@ -148,6 +153,7 @@ export function ReceptionStayDetailShell({
   header,
   body,
   footer,
+  titleId,
 }: ReceptionStayDetailShellProps) {
   const isBelowLg = useIsBelowLg();
 
@@ -163,6 +169,7 @@ export function ReceptionStayDetailShell({
         header={header}
         body={body}
         footer={footer}
+        titleId={titleId}
       />
     );
   }
@@ -174,6 +181,7 @@ export function ReceptionStayDetailShell({
       header={header}
       body={body}
       footer={footer}
+      titleId={titleId}
     />
   );
 }

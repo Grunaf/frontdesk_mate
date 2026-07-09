@@ -208,6 +208,11 @@ export function TenantFormHiddenPayload({
       <input type="hidden" name="accessPointsJson" value={JSON.stringify(accessPoints)} />
       <input type="hidden" name="arrivalLandmark" value={mergedSettings.arrivalAccess?.landmark ?? ''} />
       <input type="hidden" name="bedFloorMapJson" value={bedFloorMapJson} />
+      <input
+        type="hidden"
+        name="receptionBookingJson"
+        value={JSON.stringify(mergedSettings.receptionBooking ?? { platforms: [] })}
+      />
     </div>
   );
 }

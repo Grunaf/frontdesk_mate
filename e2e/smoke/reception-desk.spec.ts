@@ -4,6 +4,13 @@ import { loginToReceptionDesk } from '../helpers/reception';
 
 const config = loadE2eConfig();
 
+async function openIssueGuestAccessOverlay(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Issue guest access' }).click();
+  await expect(page.getByRole('heading', { name: 'Issue guest access' })).toBeVisible({
+    timeout: config.navTimeoutMs,
+  });
+}
+
 test.describe('reception desk smoke', () => {
   test.beforeEach(() => {
     test.skip(!config.receptionDeskPin, 'Set E2E_RECEPTION_DESK_PIN in e2e/env.local');
@@ -11,7 +18,6 @@ test.describe('reception desk smoke', () => {
 
   test('signs in and shows issue access form', async ({ page }) => {
     await loginToReceptionDesk(page, config);
-    await expect(page.getByRole('heading', { name: 'Issue guest access' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Desk' })).toBeVisible();
     await expect(page.getByText('Operational day ·')).toBeVisible();
     await expect(page.getByText('Free beds', { exact: true })).toBeVisible();
@@ -19,10 +25,14 @@ test.describe('reception desk smoke', () => {
     await expect(page.getByRole('tab', { name: 'Plan' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Access' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Issues' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Issue guest access' })).toBeVisible();
+
+    await openIssueGuestAccessOverlay(page);
   });
 
   test('issues tonight access and shows PIN once', async ({ page }) => {
     await loginToReceptionDesk(page, config);
+    await openIssueGuestAccessOverlay(page);
 
     const issueButton = page.getByRole('button', { name: 'Issue access' });
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
@@ -35,6 +45,7 @@ test.describe('reception desk smoke', () => {
 
   test('finds issued stay by guest ref on access tab', async ({ page }) => {
     await loginToReceptionDesk(page, config);
+    await openIssueGuestAccessOverlay(page);
 
     const issueButton = page.getByRole('button', { name: 'Issue access' });
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
@@ -55,6 +66,7 @@ test.describe('reception desk smoke', () => {
 
   test('opens guest detail from desk without switching to access tab', async ({ page }) => {
     await loginToReceptionDesk(page, config);
+    await openIssueGuestAccessOverlay(page);
 
     const issueButton = page.getByRole('button', { name: 'Issue access' });
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
@@ -67,6 +79,7 @@ test.describe('reception desk smoke', () => {
 
   test('marks guest arrived from stay detail', async ({ page }) => {
     await loginToReceptionDesk(page, config);
+    await openIssueGuestAccessOverlay(page);
 
     const issueButton = page.getByRole('button', { name: 'Issue access' });
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
@@ -80,21 +93,22 @@ test.describe('reception desk smoke', () => {
 
   test('moves guest to another bed in place', async ({ page }) => {
     await loginToReceptionDesk(page, config);
-
-    const issueButton = page.getByRole('button', { name: 'Issue access' });
-    await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
-    await issueButton.click();
-    await expect(page.getByText('Paper PIN')).toBeVisible({ timeout: config.navTimeoutMs });
+    await openIssueGuestAccessOverlay(page);
 
     const bedSelect = page.locator('#bed-id');
     const options = bedSelect.locator('option');
     const optionCount = await options.count();
     test.skip(optionCount < 2, 'Need at least two beds configured for move-bed smoke');
 
-    const firstBedValue = await options.nth(0).getAttribute('value');
     const secondBedValue = await options.nth(1).getAttribute('value');
-    expect(firstBedValue).toBeTruthy();
+    const secondBedLabel = (await options.nth(1).textContent())?.trim();
     expect(secondBedValue).toBeTruthy();
+    expect(secondBedLabel).toBeTruthy();
+
+    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
+    await issueButton.click();
+    await expect(page.getByText('Paper PIN')).toBeVisible({ timeout: config.navTimeoutMs });
 
     await page.getByRole('button', { name: 'Move bed' }).click();
     await expect(page.getByText('PIN and link stay the same')).toBeVisible({
@@ -106,6 +120,6 @@ test.describe('reception desk smoke', () => {
 
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
     await expect(page.getByText('Paper PIN')).toBeVisible();
-    await expect(bedSelect).toHaveValue(secondBedValue!);
+    await expect(page.getByRole('dialog').getByText(secondBedLabel!)).toBeVisible();
   });
 });

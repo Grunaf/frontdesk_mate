@@ -148,7 +148,9 @@ select
   gs.created_at,
   gs.updated_at
 from guest_stays gs
-where not exists (
+where gs.pin_hash is not null
+  and gs.access_token_hash is not null
+  and not exists (
   select 1
   from guest_access_grants g
   where g.reservation_id = gs.id

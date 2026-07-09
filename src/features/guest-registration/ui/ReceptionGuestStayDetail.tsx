@@ -4,12 +4,15 @@ import { useEffect, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { isTourismRegistrationComplete } from '@/entities/guest-tourism-registration';
 import type { GuestTourismRegistrationSummary } from '@/entities/guest-tourism-registration';
+import type { TenantSettings } from '@/entities/tenant';
+import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
 import {
   getTourismDocumentSignedUrlAction,
   loadTourismRegistrationForReceptionAction,
   setTourismExportedAction,
 } from '@/features/guest-tourism-registration';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
+import { formatReservationBookingBalanceSummary } from '@/entities/guest-stay/lib/formatReservationBookingBalance';
 import {
   guestAccessStatusLabel,
   resolveGuestAccessStatus,
@@ -18,6 +21,7 @@ import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDa
 import { MagicLinkCard } from './MagicLinkCard';
 import { ReceptionStayDetailShell, RECEPTION_STAY_DETAIL_TITLE_ID } from './ReceptionStayDetailShell';
 import { Button } from '@/shared/ui';
+import { setGuestReservationBookingPaidAction } from '../actions/receptionActions';
 
 export { RECEPTION_STAY_DETAIL_TITLE_ID };
 
@@ -259,6 +263,76 @@ function StayTourismRegistrationBlock({
   );
 }
 
+function StayBookingBalanceBlock({
+  stay,
+  tenantSlug,
+  onStayUpdated,
+}: {
+  stay: GuestStayRecordWithLink;
+  tenantSlug: string;
+  onStayUpdated?: (stay: GuestStayRecordWithLink) => void;
+}) {
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isPending, startAction] = useTransition();
+
+  const summary = formatReservationBookingBalanceSummary(stay);
+  const hasBalance = stay.booking_amount_due_minor != null && stay.booking_amount_currency;
+  const isPaid = Boolean(stay.booking_paid_at);
+
+  const handleTogglePaid = () => {
+    startAction(async () => {
+      setActionError(null);
+      const result = await setGuestReservationBookingPaidAction({
+        tenantSlug,
+        stayId: stay.id,
+        paid: !isPaid,
+      });
+      if (!result.ok) {
+        setActionError(
+          result.error === 'no_balance_recorded'
+            ? 'No stay balance recorded.'
+            : result.error === 'unauthorized'
+              ? 'Sign in again at reception desk.'
+              : 'Could not update payment status.'
+        );
+        return;
+      }
+
+      onStayUpdated?.({
+        ...stay,
+        ...result.stay,
+        magicLinkUrl: stay.magicLinkUrl,
+      });
+    });
+  };
+
+  if (!hasBalance) {
+    return (
+      <p className="text-xs text-muted-foreground">No balance recorded for this stay.</p>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Stay balance
+      </p>
+      <p className="text-sm">{summary}</p>
+      {actionError ? <p className="text-xs text-destructive">{actionError}</p> : null}
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-8"
+        disabled={isPending}
+        onClick={handleTogglePaid}
+      >
+        {isPaid ? 'Mark unpaid' : 'Mark as paid'}
+      </Button>
+    </div>
+  );
+}
+
 export interface ReceptionGuestStayDetailProps {
   open: boolean;
   onClose: () => void;
@@ -273,12 +347,14 @@ export interface ReceptionGuestStayDetailProps {
   tourismRegistrationRequired?: boolean;
   tenantSlug?: string;
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
+  onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
   onRevoke: (stayId: string) => void;
   onChangeDates: (stay: GuestStayRecordWithLink) => void;
   onMoveBed: (stay: GuestStayRecordWithLink) => void;
   onReissueAccess: (stay: GuestStayRecordWithLink) => void;
   onMarkArrived: (input: { stayId: string; keyIssued: boolean }) => void;
   markArrivedError?: string | null;
+  tenantSettings?: TenantSettings;
 }
 
 function canMarkDeskArrived(stay: GuestStayRecordWithLink): boolean {
@@ -398,12 +474,14 @@ export function ReceptionGuestStayDetail({
   tourismRegistrationRequired = false,
   tenantSlug,
   onTourismExportedAtChange,
+  onStayBookingBalanceChange,
   onRevoke,
   onChangeDates,
   onMoveBed,
   onReissueAccess,
   onMarkArrived,
   markArrivedError,
+  tenantSettings,
 }: ReceptionGuestStayDetailProps) {
   const status = resolveGuestAccessStatus(stay);
   const stayRef = formatStayReference(stay.id);
@@ -411,6 +489,11 @@ export function ReceptionGuestStayDetail({
   const checkOutDay = stay.check_out_at.slice(0, 10);
   const guestLabel = stay.guest_name?.trim() || 'Guest';
   const bedLabel = resolveBedLabel(stay.bed_id);
+  const bookingSourceLine = formatReceptionBookingSourceSummary(
+    tenantSettings,
+    stay.booking_platform_id,
+    stay.booking_external_id
+  );
 
   const header = (
     <header className="space-y-1">
@@ -435,6 +518,9 @@ export function ReceptionGuestStayDetail({
           Arrived · {formatReceptionDateTime(stay.desk_checked_in_at)}
         </p>
       ) : null}
+      {bookingSourceLine ? (
+        <p className="text-xs text-muted-foreground">{bookingSourceLine}</p>
+      ) : null}
     </header>
   );
 
@@ -455,6 +541,14 @@ export function ReceptionGuestStayDetail({
           omitBedFromMessage={omitBedFromGuestMessage}
         />
       )}
+
+      {tenantSlug ? (
+        <StayBookingBalanceBlock
+          stay={stay}
+          tenantSlug={tenantSlug}
+          onStayUpdated={onStayBookingBalanceChange}
+        />
+      ) : null}
 
       {tourismRegistrationRequired && tenantSlug ? (
         <StayTourismRegistrationBlock
