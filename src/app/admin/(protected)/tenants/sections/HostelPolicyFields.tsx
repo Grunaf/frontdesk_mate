@@ -26,19 +26,27 @@ export function HostelPolicyFields({
   const { updateDraft } = useTenantFormDraft();
 
   const timeFields = (
-    <AdminFieldRow>
+    <div className="space-y-4">
+      <AdminFieldRow>
+        <AdminTimeField
+          label="Check-in from"
+          value={settings?.checkInTime ?? ''}
+          onChange={(value) => updateDraft({ checkInTime: value })}
+          missing={isTenantFieldMissing('checkInTime', readinessInput)}
+        />
+        <AdminTimeField
+          label="Check-out until"
+          value={settings?.checkOutTime ?? ''}
+          onChange={(value) => updateDraft({ checkOutTime: value })}
+        />
+      </AdminFieldRow>
       <AdminTimeField
-        label="Check-in from"
-        value={settings?.checkInTime ?? ''}
-        onChange={(value) => updateDraft({ checkInTime: value })}
-        missing={isTenantFieldMissing('checkInTime', readinessInput)}
+        label="Operational day starts at"
+        value={settings?.operationalDayStartTime ?? ''}
+        onChange={(value) => updateDraft({ operationalDayStartTime: value })}
+        hint="Used with property date (UTC v1)."
       />
-      <AdminTimeField
-        label="Check-out until"
-        value={settings?.checkOutTime ?? ''}
-        onChange={(value) => updateDraft({ checkOutTime: value })}
-      />
-    </AdminFieldRow>
+    </div>
   );
 
   if (scope === 'launch-core') {

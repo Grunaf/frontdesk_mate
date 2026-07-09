@@ -22,25 +22,25 @@ import {
   addNights,
   defaultWalkInDates,
   formatDisplayDate,
-  todayUtcDate,
   type GuestAccessFormMode,
   type IssuedAccessFilter,
   isValidAccessRange,
 } from '../lib/guestAccessDates';
 import { resolveBedInventory, flattenBedInventory } from '../lib/resolveBedInventory';
+import { resolveReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
 import { resolveGuestAccessPeriod } from '../lib/resolveGuestAccessPeriod';
 import {
   formatReceptionDeskStats,
   resolveReceptionDeskStats,
 } from '../lib/resolveReceptionDeskStats';
 import { BedAccessCalendar } from './BedAccessCalendar';
-import { BedInventoryGrid } from './BedInventoryGrid';
 import { IssueGuestAccessForm } from './IssueGuestAccessForm';
+import { ReceptionHubView } from './ReceptionHubView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
-import { SegmentedChipBar, Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 
 interface ReceptionCheckInPanelProps {
   tenantSlug: string;
@@ -58,8 +58,7 @@ interface ReissueDraft {
   checkOutDate: string;
 }
 
-type DeskTab = 'tonight' | 'plan' | 'access' | 'issues';
-type BedsNightSegment = 'today' | 'tomorrow';
+type DeskTab = 'desk' | 'plan' | 'access' | 'issues';
 
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
@@ -82,8 +81,7 @@ export function ReceptionCheckInPanel({
   const issueFormRef = useRef<HTMLDivElement>(null);
 
   const [stays, setStays] = useState(initialStays);
-  const [deskTab, setDeskTab] = useState<DeskTab>('tonight');
-  const [bedsNightSegment, setBedsNightSegment] = useState<BedsNightSegment>('today');
+  const [deskTab, setDeskTab] = useState<DeskTab>('desk');
   const [openIssueCount, setOpenIssueCount] = useState(initialOpenIssues.length);
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
@@ -111,14 +109,17 @@ export function ReceptionCheckInPanel({
     [checkInDate, checkOutDate, checkInTime]
   );
 
-  const bedsNightDate = useMemo(() => {
-    const today = todayUtcDate();
-    return bedsNightSegment === 'today' ? today : addNights(today, 1);
-  }, [bedsNightSegment]);
+  const hubSnapshot = useMemo(
+    () => resolveReceptionHubSnapshot(tenantSettings, stays),
+    [tenantSettings, stays]
+  );
 
   const inventory = useMemo(
-    () => resolveBedInventory(tenantSettings, stays, { nightDate: bedsNightDate }),
-    [tenantSettings, stays, bedsNightDate]
+    () =>
+      resolveBedInventory(tenantSettings, stays, {
+        nightDate: hubSnapshot.operational.operationalDate,
+      }),
+    [tenantSettings, stays, hubSnapshot.operational.operationalDate]
   );
   const guestAccessMessageTemplate = useMemo(
     () => resolveGuestAccessMessageTemplate(tenantSettings),
@@ -143,14 +144,6 @@ export function ReceptionCheckInPanel({
     () => formatReceptionDeskStats(resolveReceptionDeskStats(tenantSettings, stays)),
     [tenantSettings, stays]
   );
-
-  const bedsNightSegmentItems = useMemo(() => {
-    const today = todayUtcDate();
-    return [
-      { id: 'today' as const, label: `Today · ${formatDisplayDate(today)}` },
-      { id: 'tomorrow' as const, label: `Tomorrow · ${formatDisplayDate(addNights(today, 1))}` },
-    ];
-  }, []);
 
   const overlappingBedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -465,7 +458,7 @@ export function ReceptionCheckInPanel({
         <section className="min-w-0 rounded-xl border bg-card p-4">
           <Tabs value={deskTab} onValueChange={(value) => setDeskTab(value as DeskTab)}>
             <TabsList variant="line" className="mb-4 w-full justify-start">
-              <TabsTrigger value="tonight">Tonight</TabsTrigger>
+              <TabsTrigger value="desk">Desk</TabsTrigger>
               <TabsTrigger value="plan">Plan</TabsTrigger>
               <TabsTrigger value="access">Access</TabsTrigger>
               <TabsTrigger value="issues">
@@ -473,26 +466,12 @@ export function ReceptionCheckInPanel({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="tonight" className="space-y-3">
-              <SegmentedChipBar
-                bleed={false}
-                ariaLabel="Beds night"
-                items={bedsNightSegmentItems}
-                value={bedsNightSegment}
-                onValueChange={(id) => setBedsNightSegment(id as BedsNightSegment)}
-                className="mb-1"
+            <TabsContent value="desk">
+              <ReceptionHubView
+                snapshot={hubSnapshot}
+                resolveBedLabel={resolveBedLabel}
+                onViewStay={focusStay}
               />
-              <BedInventoryGrid
-                compact
-                roomGroups={inventory.roomGroups}
-                onViewOccupiedStay={focusStay}
-              />
-              {inventory.orphanStays.length > 0 ? (
-                <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-950">
-                  {inventory.orphanStays.length} access record(s) on unknown beds — fix the room map in
-                  admin.
-                </p>
-              ) : null}
             </TabsContent>
 
             <TabsContent value="plan">

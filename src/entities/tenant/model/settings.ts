@@ -54,6 +54,11 @@ export interface TenantSettings {
   booking?: TenantBookingSettings;
   checkInTime?: string;
   checkOutTime?: string;
+  /**
+   * Wall-clock start of the reception operational day (`HH:mm`, default `06:00` at use sites).
+   * Used with property calendar dates in UTC v1 — not full IANA timezone yet.
+   */
+  operationalDayStartTime?: string;
   cityTax?: string;
   selfCheckInTimeAfter?: string;
   laundryCost?: string;

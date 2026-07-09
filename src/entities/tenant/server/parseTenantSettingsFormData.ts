@@ -346,6 +346,9 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
     checkInTime: normalizeTimeValue(String(formData.get('checkInTime') || '')),
     checkOutTime: normalizeTimeValue(String(formData.get('checkOutTime') || '')),
     selfCheckInTimeAfter: normalizeTimeValue(String(formData.get('selfCheckInTimeAfter') || '')),
+    operationalDayStartTime: normalizeTimeValue(
+      String(formData.get('operationalDayStartTime') || '')
+    ),
     cityTax: undefined,
     laundryCost: laundryPrice,
     heroBgUrl: String(formData.get('heroBgUrl') || '') || undefined,

@@ -12,9 +12,10 @@ test.describe('reception desk smoke', () => {
   test('signs in and shows issue access form', async ({ page }) => {
     await loginToReceptionDesk(page, config);
     await expect(page.getByRole('heading', { name: 'Issue guest access' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Tonight' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: /Today ·/ })).toBeVisible();
-    await expect(page.getByRole('tab', { name: /Tomorrow ·/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Desk' })).toBeVisible();
+    await expect(page.getByText('Operational day ·')).toBeVisible();
+    await expect(page.getByText('Free beds', { exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Today ·/ })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Plan' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Access' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Issues' })).toBeVisible();

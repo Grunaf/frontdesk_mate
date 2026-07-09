@@ -134,6 +134,11 @@ export function TenantFormHiddenPayload({
       <input type="hidden" name="checkInTime" value={mergedSettings.checkInTime ?? ''} />
       <input type="hidden" name="checkOutTime" value={mergedSettings.checkOutTime ?? ''} />
       <input type="hidden" name="selfCheckInTimeAfter" value={mergedSettings.selfCheckInTimeAfter ?? ''} />
+      <input
+        type="hidden"
+        name="operationalDayStartTime"
+        value={mergedSettings.operationalDayStartTime ?? ''}
+      />
       <input type="hidden" name="wifiName" value={mergedSettings.wifi?.name ?? ''} />
       <input type="hidden" name="wifiPassword" value={mergedSettings.wifi?.password ?? ''} />
       <input type="hidden" name="phoneRaw" value={mergedSettings.contacts?.phoneRaw ?? ''} />

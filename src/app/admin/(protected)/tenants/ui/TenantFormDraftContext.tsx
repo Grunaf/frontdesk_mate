@@ -41,6 +41,7 @@ export interface TenantFormDraft {
   checkInTime?: string;
   checkOutTime?: string;
   selfCheckInTimeAfter?: string;
+  operationalDayStartTime?: string;
   wifi?: TenantSettings['wifi'];
   contacts?: TenantSettings['contacts'];
   reception?: Omit<NonNullable<TenantSettings['reception']>, 'deskPinHash'>;
@@ -116,6 +117,9 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
     ...(draft.checkOutTime !== undefined ? { checkOutTime: draft.checkOutTime || undefined } : {}),
     ...(draft.selfCheckInTimeAfter !== undefined
       ? { selfCheckInTimeAfter: draft.selfCheckInTimeAfter || undefined }
+      : {}),
+    ...(draft.operationalDayStartTime !== undefined
+      ? { operationalDayStartTime: draft.operationalDayStartTime || undefined }
       : {}),
     ...(draft.wifi !== undefined
       ? {

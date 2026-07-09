@@ -55,6 +55,9 @@ export function mergeTenantSettingsWithPrevious(
   if (!formData.has('selfCheckInTimeAfter')) {
     merged.selfCheckInTimeAfter = previous.selfCheckInTimeAfter;
   }
+  if (!formData.has('operationalDayStartTime')) {
+    merged.operationalDayStartTime = previous.operationalDayStartTime;
+  }
 
   if (!formData.has('wifiName')) {
     merged.wifi = previous.wifi;
