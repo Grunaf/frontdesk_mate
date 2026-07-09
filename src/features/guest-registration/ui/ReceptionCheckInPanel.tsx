@@ -22,6 +22,7 @@ import {
   addNights,
   defaultWalkInDates,
   formatDisplayDate,
+  todayUtcDate,
   type GuestAccessFormMode,
   type IssuedAccessFilter,
   isValidAccessRange,
@@ -39,7 +40,7 @@ import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
+import { SegmentedChipBar, Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 
 interface ReceptionCheckInPanelProps {
   tenantSlug: string;
@@ -57,7 +58,8 @@ interface ReissueDraft {
   checkOutDate: string;
 }
 
-type DeskTab = 'now' | 'plan' | 'access' | 'issues';
+type DeskTab = 'tonight' | 'plan' | 'access' | 'issues';
+type BedsNightSegment = 'today' | 'tomorrow';
 
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
@@ -80,7 +82,8 @@ export function ReceptionCheckInPanel({
   const issueFormRef = useRef<HTMLDivElement>(null);
 
   const [stays, setStays] = useState(initialStays);
-  const [deskTab, setDeskTab] = useState<DeskTab>('now');
+  const [deskTab, setDeskTab] = useState<DeskTab>('tonight');
+  const [bedsNightSegment, setBedsNightSegment] = useState<BedsNightSegment>('today');
   const [openIssueCount, setOpenIssueCount] = useState(initialOpenIssues.length);
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
@@ -108,7 +111,15 @@ export function ReceptionCheckInPanel({
     [checkInDate, checkOutDate, checkInTime]
   );
 
-  const inventory = useMemo(() => resolveBedInventory(tenantSettings, stays), [tenantSettings, stays]);
+  const bedsNightDate = useMemo(() => {
+    const today = todayUtcDate();
+    return bedsNightSegment === 'today' ? today : addNights(today, 1);
+  }, [bedsNightSegment]);
+
+  const inventory = useMemo(
+    () => resolveBedInventory(tenantSettings, stays, { nightDate: bedsNightDate }),
+    [tenantSettings, stays, bedsNightDate]
+  );
   const guestAccessMessageTemplate = useMemo(
     () => resolveGuestAccessMessageTemplate(tenantSettings),
     [tenantSettings]
@@ -129,9 +140,17 @@ export function ReceptionCheckInPanel({
     [inventory]
   );
   const deskStats = useMemo(
-    () => formatReceptionDeskStats(resolveReceptionDeskStats(inventory, stays)),
-    [inventory, stays]
+    () => formatReceptionDeskStats(resolveReceptionDeskStats(tenantSettings, stays)),
+    [tenantSettings, stays]
   );
+
+  const bedsNightSegmentItems = useMemo(() => {
+    const today = todayUtcDate();
+    return [
+      { id: 'today' as const, label: `Today · ${formatDisplayDate(today)}` },
+      { id: 'tomorrow' as const, label: `Tomorrow · ${formatDisplayDate(addNights(today, 1))}` },
+    ];
+  }, []);
 
   const overlappingBedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -446,7 +465,7 @@ export function ReceptionCheckInPanel({
         <section className="min-w-0 rounded-xl border bg-card p-4">
           <Tabs value={deskTab} onValueChange={(value) => setDeskTab(value as DeskTab)}>
             <TabsList variant="line" className="mb-4 w-full justify-start">
-              <TabsTrigger value="now">Now</TabsTrigger>
+              <TabsTrigger value="tonight">Tonight</TabsTrigger>
               <TabsTrigger value="plan">Plan</TabsTrigger>
               <TabsTrigger value="access">Access</TabsTrigger>
               <TabsTrigger value="issues">
@@ -454,7 +473,15 @@ export function ReceptionCheckInPanel({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="now" className="space-y-3">
+            <TabsContent value="tonight" className="space-y-3">
+              <SegmentedChipBar
+                bleed={false}
+                ariaLabel="Beds night"
+                items={bedsNightSegmentItems}
+                value={bedsNightSegment}
+                onValueChange={(id) => setBedsNightSegment(id as BedsNightSegment)}
+                className="mb-1"
+              />
               <BedInventoryGrid
                 compact
                 roomGroups={inventory.roomGroups}

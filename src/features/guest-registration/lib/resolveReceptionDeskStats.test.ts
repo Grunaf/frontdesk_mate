@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
-import { resolveBedInventory } from './resolveBedInventory';
 import { formatReceptionDeskStats, resolveReceptionDeskStats } from './resolveReceptionDeskStats';
 
 const now = new Date('2026-06-22T12:00:00.000Z');
@@ -31,7 +30,7 @@ function makeStay(overrides: Partial<GuestStayRecordWithLink> = {}): GuestStayRe
 }
 
 describe('resolveReceptionDeskStats', () => {
-  it('counts in-use beds and arriving today guests', () => {
+  it('counts beds occupied for tonight and arriving-today guests', () => {
     const stays = [
       makeStay({ activated_at: '2026-06-20T10:00:00.000Z', check_in_at: '2026-06-20T14:00:00.000Z' }),
       makeStay({
@@ -41,12 +40,26 @@ describe('resolveReceptionDeskStats', () => {
         check_in_at: '2026-06-22T14:00:00.000Z',
       }),
     ];
-    const inventory = resolveBedInventory(settings, stays, now);
-    const stats = resolveReceptionDeskStats(inventory, stays, now);
+    const stats = resolveReceptionDeskStats(settings, stays, now);
 
-    expect(stats.inUse).toBe(1);
-    expect(stats.free).toBe(1);
+    expect(stats.inUse).toBe(2);
+    expect(stats.free).toBe(0);
     expect(stats.arrivingToday).toBe(1);
-    expect(formatReceptionDeskStats(stats)).toBe('1 in use · 1 free · 1 arriving today');
+    expect(formatReceptionDeskStats(stats)).toBe('2 in use · 0 free · 1 arriving today');
+  });
+
+  it('does not count tomorrow-only stays as in use tonight', () => {
+    const stays = [
+      makeStay({
+        id: 'stay-tomorrow',
+        bed_id: 'bed-1',
+        check_in_at: '2026-06-23T14:00:00.000Z',
+        check_out_at: '2026-06-25T23:59:59.999Z',
+      }),
+    ];
+    const stats = resolveReceptionDeskStats(settings, stays, now);
+
+    expect(stats.inUse).toBe(0);
+    expect(stats.free).toBe(2);
   });
 });

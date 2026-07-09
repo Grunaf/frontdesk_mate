@@ -1,7 +1,7 @@
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
-import type { BedInventorySnapshot } from './resolveBedInventory';
-import { flattenBedInventory } from './resolveBedInventory';
-import { groupIssuedAccess } from './guestAccessDates';
+import type { TenantSettings } from '@/entities/tenant';
+import { resolveBedInventory, flattenBedInventory } from './resolveBedInventory';
+import { groupIssuedAccess, todayUtcDate } from './guestAccessDates';
 
 export interface ReceptionDeskStats {
   inUse: number;
@@ -9,12 +9,20 @@ export interface ReceptionDeskStats {
   arrivingToday: number;
 }
 
+/**
+ * Header stats always use **tonight** (UTC nightDate), not the Beds tab segment or in-window access.
+ * `arrivingToday` follows `groupIssuedAccess` (check-in date === today UTC).
+ */
 export function resolveReceptionDeskStats(
-  inventory: BedInventorySnapshot,
+  settings: TenantSettings,
   stays: GuestStayRecordWithLink[],
   now: Date = new Date()
 ): ReceptionDeskStats {
-  const beds = flattenBedInventory(inventory);
+  const tonightInventory = resolveBedInventory(settings, stays, {
+    nightDate: todayUtcDate(now),
+    now,
+  });
+  const beds = flattenBedInventory(tonightInventory);
   const inUse = beds.filter((entry) => entry.status === 'occupied').length;
   const free = beds.length - inUse;
   const grouped = groupIssuedAccess(stays, now);

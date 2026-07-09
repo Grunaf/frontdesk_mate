@@ -1,10 +1,15 @@
 import { resolveBedUnitType } from '@/entities/room/model/bed-type';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
-import { isGuestAccessInWindow } from '@/entities/guest-stay/lib/guestAccessIntervals';
+import {
+  guestAccessCoversNight,
+  resolveNightCellStatus,
+  type BedNightCellStatus,
+} from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { GuestStayConfig, StayBed } from '@/entities/tenant/model/guestStay';
 import type { TenantSettings } from '@/entities/tenant';
 import { resolveBedDisplayLabel } from '@/entities/tenant/lib/resolveBedDisplay';
+import { todayUtcDate } from './guestAccessDates';
 
 export type BedInventoryStatus = 'free' | 'occupied';
 
@@ -16,6 +21,7 @@ export interface BedInventoryEntry {
   status: BedInventoryStatus;
   stay?: GuestStayRecordWithLink;
   nextAccess?: GuestStayRecordWithLink;
+  nightCellStatus?: BedNightCellStatus;
 }
 
 export interface BedInventoryRoomGroup {
@@ -27,6 +33,11 @@ export interface BedInventoryRoomGroup {
 export interface BedInventorySnapshot {
   roomGroups: BedInventoryRoomGroup[];
   orphanStays: GuestStayRecordWithLink[];
+}
+
+export interface ResolveBedInventoryOptions {
+  nightDate: string;
+  now?: Date;
 }
 
 function findStayBedForGuestId(configBeds: StayBed[], bedId: string): StayBed | null {
@@ -66,37 +77,67 @@ function resolveRoomLabel(guestStay: GuestStayConfig | undefined, roomId: string
   return room?.label?.trim() || roomId;
 }
 
-function resolveStaysForBed(
+function normalizeResolveOptions(
+  options: ResolveBedInventoryOptions | Date = new Date()
+): { nightDate: string; now: Date } {
+  if (options instanceof Date) {
+    const now = options;
+    return { nightDate: todayUtcDate(now), now };
+  }
+
+  const now = options.now ?? new Date();
+  return { nightDate: options.nightDate, now };
+}
+
+function resolveStaysForBedOnNight(
   bedId: string,
   activeStays: GuestStayRecordWithLink[],
+  nightDate: string,
   now: Date
-): { current?: GuestStayRecordWithLink; next?: GuestStayRecordWithLink } {
+): {
+  current?: GuestStayRecordWithLink;
+  next?: GuestStayRecordWithLink;
+  nightCellStatus?: BedNightCellStatus;
+} {
   const bedStays = activeStays
     .filter((stay) => stay.bed_id === bedId)
     .sort((a, b) => new Date(a.check_in_at).getTime() - new Date(b.check_in_at).getTime());
 
-  const current = bedStays.find((stay) => isGuestAccessInWindow(stay, now));
-  const nowMs = now.getTime();
-  const next = bedStays.find(
-    (stay) => !stay.revoked_at && new Date(stay.check_in_at).getTime() > nowMs
-  );
+  const current = bedStays.find((stay) => guestAccessCoversNight(stay, nightDate));
+  const next = current
+    ? undefined
+    : bedStays.find(
+        (stay) =>
+          !guestAccessCoversNight(stay, nightDate) && stay.check_in_at.slice(0, 10) > nightDate
+      );
 
-  return { current, next: current ? undefined : next };
+  const nightCellStatus = current
+    ? (resolveNightCellStatus(current, nightDate, now) ?? 'occupied')
+    : undefined;
+
+  return { current, next, nightCellStatus };
 }
 
 function buildEntry(
   settings: TenantSettings,
   bedId: string,
   activeStays: GuestStayRecordWithLink[],
+  nightDate: string,
   now: Date
 ): BedInventoryEntry {
-  const { current, next } = resolveStaysForBed(bedId, activeStays, now);
+  const { current, next, nightCellStatus } = resolveStaysForBedOnNight(
+    bedId,
+    activeStays,
+    nightDate,
+    now
+  );
   return {
     bedId,
     displayLabel: resolveBedDisplayLabel(settings, bedId) ?? bedId,
     status: current ? 'occupied' : 'free',
     stay: current,
     nextAccess: next,
+    nightCellStatus,
   };
 }
 
@@ -109,8 +150,9 @@ function appendUniqueRoomId(order: string[], roomId: string): void {
 export function resolveBedInventory(
   settings: TenantSettings,
   stays: GuestStayRecordWithLink[],
-  now: Date = new Date()
+  options: ResolveBedInventoryOptions | Date = new Date()
 ): BedInventorySnapshot {
+  const { nightDate, now } = normalizeResolveOptions(options);
   const guestStay = settings.guestStay;
   const configBeds = guestStay?.beds ?? [];
   const activeStays = stays.filter((stay) => !stay.revoked_at);
@@ -128,7 +170,7 @@ export function resolveBedInventory(
     if (processedIds.has(bedId)) return;
     processedIds.add(bedId);
     ensureRoom(roomId);
-    entriesByRoom.get(roomId)!.push(buildEntry(settings, bedId, activeStays, now));
+    entriesByRoom.get(roomId)!.push(buildEntry(settings, bedId, activeStays, nightDate, now));
   };
 
   const roomOrder: string[] = [];
@@ -176,7 +218,9 @@ export function resolveBedInventory(
     })
     .filter((group): group is BedInventoryRoomGroup => group !== null);
 
-  const orphanStays = activeStays.filter((stay) => !configuredBedIds.has(stay.bed_id));
+  const orphanStays = activeStays.filter(
+    (stay) => !configuredBedIds.has(stay.bed_id) && guestAccessCoversNight(stay, nightDate)
+  );
 
   return { roomGroups, orphanStays };
 }

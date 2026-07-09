@@ -1,6 +1,7 @@
 'use client';
 
 import type { BedInventoryRoomGroup } from '../lib/resolveBedInventory';
+import type { BedNightCellStatus } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { cn } from '@/shared/lib/utils';
 
 interface BedInventoryGridProps {
@@ -11,6 +12,17 @@ interface BedInventoryGridProps {
 
 function formatAccessFrom(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function occupiedStatusLabel(nightCellStatus?: BedNightCellStatus): string {
+  return nightCellStatus === 'scheduled' ? 'Scheduled' : 'In use';
+}
+
+function occupiedChipClassName(nightCellStatus?: BedNightCellStatus): string {
+  if (nightCellStatus === 'scheduled') {
+    return 'border-amber-200/80 bg-amber-50 text-amber-950 hover:bg-amber-100/80';
+  }
+  return 'border-primary/20 bg-primary/10 hover:bg-primary/15';
 }
 
 export function BedInventoryGrid({
@@ -30,7 +42,7 @@ export function BedInventoryGrid({
     return (
       <div className="space-y-4">
         <p className="text-xs text-muted-foreground">
-          {freeCount} free · {occupiedCount} in use
+          {freeCount} free · {occupiedCount} reserved this night
         </p>
         {roomGroups.map((group) => (
           <section key={group.roomId} className="space-y-2">
@@ -44,17 +56,28 @@ export function BedInventoryGrid({
                     <div className="rounded-lg border bg-muted/10 px-3 py-2 text-sm">
                       <span className="font-medium">{entry.displayLabel}</span>
                       <p className="text-xs text-muted-foreground">Free</p>
+                      {entry.nextAccess ? (
+                        <p className="text-xs text-muted-foreground">
+                          Access from {formatAccessFrom(entry.nextAccess.check_in_at)}
+                        </p>
+                      ) : null}
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={() => entry.stay && onViewOccupiedStay(entry.stay.id)}
-                      className="w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted/30"
+                      className={cn(
+                        'w-full rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted/30',
+                        entry.nightCellStatus === 'scheduled' && 'border-amber-200/80 bg-amber-50'
+                      )}
                     >
                       <span className="font-medium">{entry.displayLabel}</span>
                       <p className="truncate text-xs text-muted-foreground">
-                        {entry.stay?.guest_name || 'In use'}
+                        {entry.stay?.guest_name || occupiedStatusLabel(entry.nightCellStatus)}
                       </p>
+                      {entry.nightCellStatus === 'scheduled' ? (
+                        <p className="text-[11px] text-amber-900/80">{occupiedStatusLabel('scheduled')}</p>
+                      ) : null}
                     </button>
                   )}
                 </li>
@@ -93,17 +116,27 @@ export function BedInventoryGrid({
                 );
               }
 
+              const guestLabel = entry.stay?.guest_name || entry.displayLabel;
+              const title =
+                entry.nightCellStatus === 'scheduled' && entry.stay
+                  ? `${guestLabel} · check-in ${formatAccessFrom(entry.stay.check_in_at)}`
+                  : guestLabel;
+
               return (
                 <button
                   key={entry.bedId}
                   type="button"
+                  title={title}
                   onClick={() => entry.stay && onViewOccupiedStay(entry.stay.id)}
                   className={cn(
-                    'inline-flex h-8 max-w-full items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 text-xs font-medium',
-                    'truncate hover:bg-primary/15'
+                    'inline-flex h-8 max-w-full items-center rounded-full border px-2.5 text-xs font-medium truncate',
+                    occupiedChipClassName(entry.nightCellStatus)
                   )}
                 >
-                  {entry.stay?.guest_name || entry.displayLabel}
+                  {guestLabel}
+                  {entry.nightCellStatus === 'scheduled' ? (
+                    <span className="ml-1 font-normal opacity-80">· Soon</span>
+                  ) : null}
                 </button>
               );
             })}
