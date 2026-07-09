@@ -1,16 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/shared/ui/badge';
-import type { InitiativeStaleReason } from '@/entities/initiative';
 import { getInitiativeForAdmin } from '@/entities/initiative/server';
 import { MarkAsReviewedButton } from '@/features/initiative-review';
 import { markInitiativeAsReviewedAction } from '../actions';
-
-const REASON_LABELS: Record<InitiativeStaleReason, string> = {
-  review_age: 'Review age is high',
-  tracked_changes: 'Tracked paths changed after review',
-  high_churn: 'High code churn in tracked paths',
-};
 
 function formatReviewedAt(value: string | null): string {
   if (!value) return 'Not reviewed yet';
@@ -40,7 +33,7 @@ export default async function InitiativeDetailPage({ params, searchParams }: Ini
   if (!initiative) {
     return (
       <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-        Data error: {error ?? 'Unknown error'}
+        Data error: {error?.message ?? 'Unknown error'}
       </p>
     );
   }
@@ -80,7 +73,7 @@ export default async function InitiativeDetailPage({ params, searchParams }: Ini
           Last reviewed: <span className="text-foreground">{formatReviewedAt(initiative.lastReviewedAt)}</span>
         </p>
         <p className="text-muted-foreground">
-          Changed files in tracked paths: <span className="text-foreground">{initiative.changedFilesCount}</span>
+          Changes in tracked paths: <span className="text-foreground">{initiative.changesCount}</span>
         </p>
       </div>
 
@@ -91,7 +84,7 @@ export default async function InitiativeDetailPage({ params, searchParams }: Ini
         ) : (
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             {initiative.staleReason.map((reason) => (
-              <li key={reason}>{REASON_LABELS[reason]}</li>
+              <li key={reason}>{reason}</li>
             ))}
           </ul>
         )}

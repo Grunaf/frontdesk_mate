@@ -1,9 +1,18 @@
 export type {
-  InitiativeCard,
+  CreateInitiativeInput,
   InitiativeFreshness,
+  Initiative,
   InitiativeListItem,
+  InitiativeListInput,
+  InitiativeListOutput,
   InitiativePriority,
-  InitiativeStaleReason,
+  InitiativeMutationResult,
+  InitiativeWarning,
+  InitiativeErrorCode,
+  InitiativeErrorPayload,
+  InitiativeFieldError,
+  RecalculateInitiativesInput,
   InitiativeStatus,
+  UpdateInitiativePatch,
 } from './model/types';
-export { STALE_THRESHOLD, buildInitiativeStaleSnapshot } from './model/stale';
+export { STALE_THRESHOLD, buildInitiativeStaleSnapshot, calculateStale } from './model/stale';

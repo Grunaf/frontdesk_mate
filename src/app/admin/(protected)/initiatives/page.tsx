@@ -84,7 +84,7 @@ export default async function AdminInitiativesPage({ searchParams }: AdminInitia
 
       {error ? (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-          Data error: {error}
+          Data error: {error.message}
         </p>
       ) : null}
 
