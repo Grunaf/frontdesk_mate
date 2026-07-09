@@ -1642,6 +1642,28 @@
     }
   },
   "admin": {
+    "initiatives": {
+      "title": "Initiatives",
+      "subtitle": "Track drafts and detect stale specs after code changes.",
+      "filters": {
+        "all": "All",
+        "onlyStale": "Only stale"
+      },
+      "actions": {
+        "recalculate": "Recalculate",
+        "markReviewed": "Mark as reviewed"
+      },
+      "freshness": {
+        "fresh": "Fresh",
+        "warning": "Warning",
+        "stale": "Stale"
+      },
+      "reasons": {
+        "reviewAge": "Review age is high",
+        "trackedChanges": "Tracked paths changed after review",
+        "highChurn": "High code churn in tracked paths"
+      }
+    },
     "guestCheckIn": {
       "magicLink": {
         "title": "Guest check-in ready",

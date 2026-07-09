@@ -28,6 +28,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <Link href="/admin/city-packs" className="text-sm text-muted-foreground hover:text-foreground">
                   City packs
                 </Link>
+                <Link href="/admin/initiatives" className="text-sm text-muted-foreground hover:text-foreground">
+                  Initiatives
+                </Link>
                 <Link
                   href="/admin/city-pack-requests"
                   className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
