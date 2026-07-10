@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loadE2eConfig } from '../fixtures';
+import { loadE2eConfig, e2eGuestAppUrl } from '../fixtures';
 import { checkInWithPin, openConcierge } from '../helpers/guest';
 
 const config = loadE2eConfig();
@@ -18,22 +18,12 @@ test.describe('guest tourism deep links', () => {
     await openConcierge(page, config);
   });
 
-  test('room map link opens register step when tourism registration is incomplete', async ({ page }) => {
-    await page.getByRole('button', { name: /My stay|Проживание/ }).click();
-    await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
-
-    const roomMapLink = page.getByRole('link', {
-      name: /Show room map|room map|Карта комнаты|направления/i,
-    });
-    await roomMapLink.scrollIntoViewIfNeeded();
-    await expect(roomMapLink).toHaveAttribute('href', /step=register/, {
-      timeout: config.navTimeoutMs,
-    });
-    await roomMapLink.click();
+  test('welcome register deep link opens arrival register tab', async ({ page }) => {
+    await page.goto(`${e2eGuestAppUrl(config, '/welcome')}?step=register`);
 
     await expect(page).toHaveURL(/\/welcome\?.*step=register/, { timeout: config.navTimeoutMs });
     await expect(
-      page.getByRole('tab', { name: /Tourist registration|Туристическая регистрация/i })
+      page.getByRole('tab', { name: /Tourist registration|Туристическая регистрация|Guest registration/i })
     ).toBeVisible();
   });
 });

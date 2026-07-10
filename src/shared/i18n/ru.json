@@ -1448,6 +1448,9 @@
       "sheetPasswordLabel": "Пароль"
     },
     "stayEssentials": {
+      "preCheckInBanner": {
+        "description": "До заселения заполните регистрацию гостей и укажите номер телефона для связи."
+      },
       "bridges": {
         "arrivalGuide": "Гид по заезду",
         "staySetup": "Данные гостей",

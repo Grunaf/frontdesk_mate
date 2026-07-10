@@ -161,7 +161,8 @@ Requires reception PIN in tenant settings and `E2E_RECEPTION_DESK_PIN` in `e2e/e
 | S2 | Tap stay chip | Sheet: **For reception** block (bed, dates, **Ref #XXXXXX**); optional **Registered as** if name issued; copy icon in header; extend notice; room map link; footer WA extend (includes ref) | ☐ | ☐ | |
 | S3 | Open Arrival guide (`/welcome`) | Stay chip **hidden**; header back shows **Concierge** label; no reception strip on welcome | ☐ | ☐ | |
 | S3b | Concierge → **See all** on guide/services/faq | Header: icon-only back (no label), no brand, no My stay; back returns to Concierge | ☐ | ☐ | |
-| S4 | Sheet → **Show room map** link | Lands on Settlement (`?step=settlement`); **Settlement** tab scrolled into view in chip bar | ☐ | ☐ | |
+| S4 | Sheet → **Show room map** link (registration incomplete) | Lands on **`/registration`** (guest registration + contact prerequisites) | ☐ | ☐ | |
+| S4b | Sheet → **Show room map** (registration complete) | Lands on **stay-setup** (`?step=room` or essentials per `resolveGuestStaySetupPath`) | ☐ | ☐ | |
 | S5 | Concierge reception strip | **Fixed** at bottom; opens WA. On short viewport (≤520px height): compact single-line label, no hints | ☐ | ☐ | |
 | S6 | Tap **copy icon** in For reception header | Clipboard has hostel, bed line, dates, Ref; icon briefly shows check | ☐ | ☐ | |
 | S7 | My stay or rules sheet open on Concierge | Reception strip **hidden** until sheet closes | ☐ | ☐ | |

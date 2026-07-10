@@ -10,6 +10,7 @@ export { useActionFeedback, useLinkPressFeedback } from './action-feedback';
 export { AppLink, RoutePendingProvider, useAppNavigation, useRoutePending } from './navigation';
 export { PressableTileButton, PressableAnchor, pressablePendingClass, pressableTileActiveClass, pressableTileClassName } from './pressable';
 export { SegmentedChipBar, type SegmentedChipBarProps, type SegmentedChipItem } from './SegmentedChipBar';
+export { StepRingProgress } from './StepRingProgress';
 export { BaseHeader } from './BaseHeader/BaseHeader';
 export { AppHeaderShell } from './BaseHeader/AppHeaderShell';
 export { AppGuestScrollMain } from './BaseHeader/AppGuestScrollMain';

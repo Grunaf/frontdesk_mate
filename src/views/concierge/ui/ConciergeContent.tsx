@@ -10,7 +10,7 @@ import { GuestExtrasBlock } from '@/features/guest-services';
 import { HostelRules } from '@/features/hostel-rules';
 import { ConciergeReceptionStrip } from '@/features/reception-contact';
 import { conciergeContentStripOffsetClass } from '@/features/reception-contact/lib/conciergeStripLayout';
-import { StayEssentialsBridges } from '@/features/stay-essentials';
+import { StayEssentialsBridges, StayEssentialsPreCheckInBanner } from '@/features/stay-essentials';
 import { LocalGuide } from '@/features/welcome';
 import { useTranslations } from '@/shared/i18n';
 import { ConciergeModuleSection, FeatureGate } from '@/shared/ui';
@@ -55,7 +55,10 @@ export function ConciergeContent() {
         {!isRegistered ? <CrossHostelStrip /> : null}
 
         {/* Zone: arrival essentials */}
-        <StayEssentialsBridges />
+        <div className="space-y-2">
+          <StayEssentialsPreCheckInBanner />
+          <StayEssentialsBridges />
+        </div>
 
         {/* Zone: services */}
         {servicesCount > 0 ? (

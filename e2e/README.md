@@ -31,6 +31,7 @@ Set `E2E_PROVISION_GUEST_STAY=false` and `E2E_GUEST_PIN` to pin a manual stay in
 - Arrival route picker on welcome
 - Local Guide essentials on concierge
 - Wrong PIN error message
-- Guest tourism room map → `welcome?step=register` when `E2E_TOURISM_SMOKE=1` (skipped by default)
+- Concierge **My stay → Show room map** → `/registration` when guest registration prerequisites are incomplete (fresh provisioned stay)
+- Arrival **`welcome?step=register`** when `E2E_TOURISM_SMOKE=1` (skipped by default; tenant needs tourism registration enabled)
 
 Manual checks after green smoke: see root `SMOKE.md`.

@@ -1454,6 +1454,9 @@
       "sheetPasswordLabel": "Password"
     },
     "stayEssentials": {
+      "preCheckInBanner": {
+        "description": "Pre dolaska završite registraciju gostiju i ostavite broj telefona na koji vas možemo kontaktirati."
+      },
       "bridges": {
         "arrivalGuide": "Arrival guide",
         "wifi": "Wi‑Fi",

@@ -10,7 +10,6 @@ export const STAY_ESSENTIAL_BRIDGE_TINTS: Record<StayEssentialBridgeId, string> 
 };
 
 export const STAY_ESSENTIAL_ARRIVAL_TILE_TINT = '#f0e8dc';
-export const STAY_ESSENTIAL_STAY_SETUP_TILE_TINT = '#e8e4f0';
 
 export function resolveStayEssentialBridgeTint(bridgeId: StayEssentialBridgeId): string {
   return STAY_ESSENTIAL_BRIDGE_TINTS[bridgeId];

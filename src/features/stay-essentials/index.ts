@@ -10,3 +10,4 @@ export { STAY_ESSENTIAL_ARRIVAL_TILE_ID, STAY_ESSENTIAL_BRIDGE_ORDER } from './m
 export { StayEssentialsArrivalTile } from './ui/StayEssentialsArrivalTile';
 export { StayEssentialsBridgeCard } from './ui/StayEssentialsBridgeCard';
 export { StayEssentialsBridges } from './ui/StayEssentialsBridges';
+export { StayEssentialsPreCheckInBanner } from './ui/StayEssentialsPreCheckInBanner';

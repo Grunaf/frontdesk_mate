@@ -37,7 +37,7 @@ Automated smoke covers admin login, city packs, guest PIN, arrival routes, Local
 These items still need a quick human pass:
 
 - [ ] **Concierge hub** — `/` shows compact services, local guide, and FAQ blocks (no full explore tabs, full FAQ list, or full extras grid); drill-down `/guide`, `/services`, `/faq` opens full views; back returns to `/`; `FeatureGate` hides modules when disabled in tenant settings
-- [ ] **Stay essentials bridges** (registered guest on `/`) — horizontal bridge cards: title only, icon bottom-left, pastel tint per bridge; **border** = read state (primary unread / muted read); tap opens sheet; Wi‑Fi copy; check-out / reception / night access sheets when tenant data allows; night bridge hidden after key issued, dismiss, or outside arrival window; read state persists per stay after reload; reception strip hidden while any sheet is open
+- [ ] **Stay essentials bridges** (registered guest on `/`) — horizontal bridge cards: title only, icon bottom-left, pastel tint per bridge; **border** = read state (primary unread / muted read); tap opens sheet; Wi‑Fi copy; check-out / reception / night access sheets when tenant data allows; night bridge hidden after key issued, dismiss, or outside arrival window; read state persists per stay after reload; reception strip hidden while any sheet is open; **pre-check-in banner** (`stay-banner-registration`) when contact and/or tourism prerequisites are incomplete — tap opens `/registration` (no stay-setup bridge tile)
 - [ ] **Guest flow** — [guest-flow-pass.md](docs/qa/guest-flow-pass.md) (P0 A–E; stay chip S1–S7; reception R1–R6 if desk PIN set)
 - [ ] **Mobile width** — reception desk: issue form without scrolling, Plan calendar, Access ··· menu on touch
 - [ ] **RU locale** — switch to `/ru/welcome`, key labels not broken
@@ -46,7 +46,7 @@ These items still need a quick human pass:
 - [ ] **Guest tourism registration (MNE)** — in admin, enable tourism registration for the tenant; guest PIN → Arrival journey **Register** step: add guest (passport + entry stamp), complete registration; on reception desk, confirm tourism checkbox / panel reflects completed stay
   - [ ] **Locked Settlement** — with tourism on and registration incomplete: open **Settlement** tab (or `?step=settlement` deep link) → tourism required sheet (Chat C), not Wi‑Fi / bed map content
   - [ ] **Privacy on Register** — Register step shows tourism privacy notice before submit (Chat D)
-  - [ ] **Concierge bed map** — My stay → **Show room map** (and Find your bed card if shown) lands on `?step=register`, not settlement, until registration is complete; after complete, links open settlement
+  - [ ] **Concierge bed map** — My stay → **Show room map** (and Find your bed card if shown) lands on **`/registration`** until guest registration prerequisites are complete; after complete, links open **stay-setup** (essentials or room per tenant). Arrival journey **`welcome?step=register`** still opens the Register tab on the arrival guide (not stay-setup).
 
 When something fails in automation, open the HTML report:
 

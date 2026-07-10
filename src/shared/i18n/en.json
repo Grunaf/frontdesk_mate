@@ -1448,6 +1448,9 @@
       "sheetPasswordLabel": "Password"
     },
     "stayEssentials": {
+      "preCheckInBanner": {
+        "description": "Before check-in, complete guest registration and add a phone number we can reach you on."
+      },
       "bridges": {
         "arrivalGuide": "Arrival guide",
         "staySetup": "Guest details",

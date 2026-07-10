@@ -56,7 +56,7 @@ test.describe('guest concierge stay chip', () => {
     await expect(strip).toBeHidden();
   });
 
-  test('room map link opens register tab when tourism registration is incomplete', async ({ page }) => {
+  test('room map link opens registration when prerequisites are incomplete', async ({ page }) => {
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
     await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
 
@@ -64,16 +64,38 @@ test.describe('guest concierge stay chip', () => {
       name: /Show room map|room map|Карта комнаты|направления/i,
     });
     await roomMapLink.scrollIntoViewIfNeeded();
-    await expect(roomMapLink).toHaveAttribute('href', /\/stay-setup\?.*step=register/, {
+    await expect(roomMapLink).toHaveAttribute('href', /\/registration(?:\?|$)/, {
       timeout: config.navTimeoutMs,
     });
     await roomMapLink.click();
 
-    await expect(page).toHaveURL(/\/stay-setup\?.*step=register/, {
+    await expect(page).toHaveURL(/\/registration(?:\?|$)/, {
       timeout: config.navTimeoutMs,
     });
     await expect(
-      page.getByRole('heading', { name: /Tourist registration|Туристическая регистрация/i })
+      page.getByRole('heading', {
+        level: 1,
+        name: /Guest registration|Tourist registration|Туристическая регистрация|Регистрация гост/i,
+      })
+    ).toBeVisible();
+  });
+
+  // Fresh e2e provisioned stays have incomplete contact (and tourism when enabled on E2E_TENANT_SLUG).
+  test('pre-check-in registration banner navigates to registration', async ({ page }) => {
+    const banner = page.getByTestId('stay-banner-registration');
+    await banner.scrollIntoViewIfNeeded();
+    await expect(banner).toBeVisible({ timeout: config.navTimeoutMs });
+    await expect(page.getByTestId('stay-bridge-staySetup')).toHaveCount(0);
+
+    await banner.click();
+    await expect(page).toHaveURL(/\/registration(?:\?|$)/, {
+      timeout: config.navTimeoutMs,
+    });
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: /Guest registration|Tourist registration|Туристическая регистрация|Регистрация гост/i,
+      })
     ).toBeVisible();
   });
 

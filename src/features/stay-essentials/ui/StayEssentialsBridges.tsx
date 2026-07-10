@@ -18,7 +18,6 @@ import { useStayEssentialReadState } from '../model/useStayEssentialReadState';
 import type { StayEssentialBridgeId } from '../model/types';
 import { StayEssentialSheetStub } from './StayEssentialSheetStub';
 import { StayEssentialsArrivalTile } from './StayEssentialsArrivalTile';
-import { StayEssentialsStaySetupTile } from './StayEssentialsStaySetupTile';
 import { StayEssentialsBridgeCard } from './StayEssentialsBridgeCard';
 import { StayEssentialsCheckoutSheet } from './StayEssentialsCheckoutSheet';
 import { StayEssentialsNightAccessSheet } from './StayEssentialsNightAccessSheet';
@@ -205,7 +204,6 @@ export function StayEssentialsBridges() {
     <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="flex w-max snap-x snap-mandatory gap-2 pr-4">
         <StayEssentialsArrivalTile />
-        {isRegistered ? <StayEssentialsStaySetupTile /> : null}
         {visibleBridges.map((bridgeId) => (
           <StayEssentialBridgeItem
             key={bridgeId}
