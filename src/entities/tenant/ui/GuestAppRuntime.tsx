@@ -5,6 +5,7 @@ import type { ResolvedGuestSession } from '@/entities/guest-stay';
 import { GuestSessionProvider } from '@/features/guest-check-in';
 import { GuestIssueReportHost } from '@/features/guest-issue-report';
 import { BottomSheetOpenProvider } from '@/shared/ui/bottom-sheet-open-context';
+import { RoutePendingProvider } from '@/shared/ui';
 import { GuestRuntimeProvider } from './GuestRuntimeProvider';
 
 interface GuestAppRuntimeProps {
@@ -22,13 +23,15 @@ export function GuestAppRuntime({
 }: GuestAppRuntimeProps) {
   return (
     <GuestSessionProvider session={session} currentTenantSlug={currentTenantSlug}>
-      <BottomSheetOpenProvider>
-        <GuestIssueReportHost>
-          <Suspense fallback={null}>
-            <GuestRuntimeProvider sessionBedId={sessionBedId}>{children}</GuestRuntimeProvider>
-          </Suspense>
-        </GuestIssueReportHost>
-      </BottomSheetOpenProvider>
+      <RoutePendingProvider>
+        <BottomSheetOpenProvider>
+          <GuestIssueReportHost>
+            <Suspense fallback={null}>
+              <GuestRuntimeProvider sessionBedId={sessionBedId}>{children}</GuestRuntimeProvider>
+            </Suspense>
+          </GuestIssueReportHost>
+        </BottomSheetOpenProvider>
+      </RoutePendingProvider>
     </GuestSessionProvider>
   );
 }

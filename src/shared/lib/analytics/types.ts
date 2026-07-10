@@ -5,7 +5,8 @@ export type ReceptionContactContext =
   | 'taxi'
   | 'strip'
   | 'extend_stay'
-  | 'issue';
+  | 'issue'
+  | 'stay_essentials_contact';
 
 export type ReceptionContactChannel = 'whatsapp' | 'tel';
 

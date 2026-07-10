@@ -12,6 +12,7 @@ interface ExternalServiceIconProps {
 const SERVICE_ICON_CLASS: Record<ExternalServiceId, string> = {
   whatsapp: 'text-service-whatsapp',
   instagram: '',
+  facebook: '',
 };
 
 export function ExternalServiceIcon({ service, className }: ExternalServiceIconProps) {

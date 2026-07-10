@@ -9,11 +9,14 @@ import {
   BottomSheetContent,
   BottomSheetFooter,
   BottomSheetHeader,
+  BottomSheetTitle,
   Button,
 } from '@/shared/ui';
 
 export const RECEPTION_STAY_DETAIL_TITLE_ID = 'reception-stay-detail-title';
 export const RECEPTION_ISSUE_ACCESS_TITLE_ID = 'reception-issue-access-title';
+
+const RECEPTION_SHELL_TITLE_CLASS = 'text-base font-semibold leading-tight';
 
 function useIsBelowLg(): boolean {
   const [isBelowLg, setIsBelowLg] = useState(false);
@@ -32,6 +35,10 @@ function useIsBelowLg(): boolean {
 export interface ReceptionStayDetailShellProps {
   open: boolean;
   onClose: () => void;
+  /** Primary dialog/sheet title (Radix `DialogTitle` on mobile). */
+  accessibleTitle: string;
+  /** Optional native `title` tooltip on the primary heading. */
+  accessibleTitleTooltip?: string;
   header: ReactNode;
   body: ReactNode;
   footer: ReactNode;
@@ -56,6 +63,8 @@ function useCloseOnEscape(open: boolean, onClose: () => void) {
 function DesktopStayDetailDialog({
   open,
   onClose,
+  accessibleTitle,
+  accessibleTitleTooltip,
   header,
   body,
   footer,
@@ -104,7 +113,16 @@ function DesktopStayDetailDialog({
             <X />
             <span className="sr-only">Close</span>
           </Button>
-          {header}
+          <div className="space-y-1">
+            <h2
+              id={labelledBy}
+              className={RECEPTION_SHELL_TITLE_CLASS}
+              title={accessibleTitleTooltip}
+            >
+              {accessibleTitle}
+            </h2>
+            {header}
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">{body}</div>
@@ -118,6 +136,8 @@ function DesktopStayDetailDialog({
 function MobileStayDetailSheet({
   open,
   onClose,
+  accessibleTitle,
+  accessibleTitleTooltip,
   header,
   body,
   footer,
@@ -136,8 +156,18 @@ function MobileStayDetailSheet({
         size={BOTTOM_SHEET_SIZES.large}
         className="flex flex-col px-0 pb-0"
         aria-labelledby={labelledBy}
+        aria-describedby={undefined}
       >
-        <BottomSheetHeader className="px-6 pb-3">{header}</BottomSheetHeader>
+        <BottomSheetHeader className="space-y-1 px-6 pb-3">
+          <BottomSheetTitle
+            id={labelledBy}
+            className={RECEPTION_SHELL_TITLE_CLASS}
+            title={accessibleTitleTooltip}
+          >
+            {accessibleTitle}
+          </BottomSheetTitle>
+          {header}
+        </BottomSheetHeader>
         <BottomSheetBody className="space-y-4 pb-4">{body}</BottomSheetBody>
         <BottomSheetFooter className="border-t border-border/60 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {footer}
@@ -150,6 +180,8 @@ function MobileStayDetailSheet({
 export function ReceptionStayDetailShell({
   open,
   onClose,
+  accessibleTitle,
+  accessibleTitleTooltip,
   header,
   body,
   footer,
@@ -166,6 +198,8 @@ export function ReceptionStayDetailShell({
       <MobileStayDetailSheet
         open
         onClose={onClose}
+        accessibleTitle={accessibleTitle}
+        accessibleTitleTooltip={accessibleTitleTooltip}
         header={header}
         body={body}
         footer={footer}
@@ -178,6 +212,8 @@ export function ReceptionStayDetailShell({
     <DesktopStayDetailDialog
       open
       onClose={onClose}
+      accessibleTitle={accessibleTitle}
+      accessibleTitleTooltip={accessibleTitleTooltip}
       header={header}
       body={body}
       footer={footer}

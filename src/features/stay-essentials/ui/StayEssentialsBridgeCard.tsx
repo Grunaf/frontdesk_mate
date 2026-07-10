@@ -1,9 +1,9 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { ConciergeBell, LogOut, Moon, Wifi } from 'lucide-react';
+import { ConciergeBell, LogOut, MessageCircle, Moon, Wifi } from 'lucide-react';
 import { useTranslations } from '@/shared/i18n';
-import { Icon } from '@/shared/ui';
+import { useActionFeedback, Icon, PressableTileButton } from '@/shared/ui';
 import { resolveStayEssentialBridgeTint } from '../lib/resolveStayEssentialBridgeTint';
 import type { StayEssentialBridgeId } from '../model/types';
 import { stayEssentialsTileClassName } from './stayEssentialsTileClassName';
@@ -13,6 +13,7 @@ const BRIDGE_ICONS: Record<StayEssentialBridgeId, LucideIcon> = {
   checkout: LogOut,
   nightAccess: Moon,
   reception: ConciergeBell,
+  contact: MessageCircle,
 };
 
 interface StayEssentialsBridgeCardProps {
@@ -23,6 +24,7 @@ interface StayEssentialsBridgeCardProps {
 
 export function StayEssentialsBridgeCard({ bridgeId, isRead, onOpen }: StayEssentialsBridgeCardProps) {
   const t = useTranslations('components.stayEssentials');
+  const { pending, run } = useActionFeedback();
   const accentColor = resolveStayEssentialBridgeTint(bridgeId);
   const { className, style } = stayEssentialsTileClassName({ isRead, accentColor });
   const title = t(`bridges.${bridgeId}`);
@@ -31,9 +33,9 @@ export function StayEssentialsBridgeCard({ bridgeId, isRead, onOpen }: StayEssen
     : t('bridgeAriaLabelUnread', { title });
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    <PressableTileButton
+      pending={pending}
+      onClick={() => run(onOpen)}
       className={className}
       style={style}
       aria-label={ariaLabel}
@@ -53,6 +55,6 @@ export function StayEssentialsBridgeCard({ bridgeId, isRead, onOpen }: StayEssen
       <div className="absolute bottom-2 left-2 text-muted-foreground">
         <Icon icon={BRIDGE_ICONS[bridgeId]} className="h-7 w-7" />
       </div>
-    </button>
+    </PressableTileButton>
   );
 }

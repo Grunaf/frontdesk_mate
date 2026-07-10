@@ -50,6 +50,9 @@ export interface HostelConfig {
       instagram?: string;
       facebook?: string;
     };
+    guestChat: {
+      href: string;
+    };
     feedbackPhone: HostelContactLink;
   };
 }

@@ -1453,6 +1453,7 @@
         "checkout": "Check-out",
         "nightAccess": "Night access",
         "reception": "About reception",
+        "contact": "Get in touch",
         "staySetup": "Podaci o gostu"
       },
       "bridgeAriaLabelUnread": "{title} — not viewed",
@@ -1489,6 +1490,19 @@
         "luggageTitle": "Luggage storage",
         "selfCheckInAfter": "After {time}, you can use the app door codes if reception is closed.",
         "footerHint": "Use the button below to message reception."
+      },
+      "contact": {
+        "emailButton": "Email us",
+        "instagramButton": "Instagram",
+        "facebookButton": "Facebook",
+        "guestChatHeading": "WhatsApp for guests",
+        "guestChatDescriptionGroup": "Hostel announcements and a place to connect with other guests.",
+        "guestChatDescriptionReception": "Message reception with questions about your stay.",
+        "guestChatButton": "Open in WhatsApp",
+        "guestChatButtonReception": "Message reception on WhatsApp",
+        "guestChatMessage": "Hi, I have a question about my stay at {hostelName}",
+        "guestChatTeaser": "Check in to open the hostel WhatsApp chat.",
+        "guestChatTeaserAction": "Check in"
       }
     },
     "registrationAlert": {

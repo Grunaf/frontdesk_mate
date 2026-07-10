@@ -1,5 +1,8 @@
-/** Shared label for header CTA and mobile FAB (reception desk, EN only). */
-export const RECEPTION_ISSUE_ACCESS_CTA_LABEL = 'Issue guest access';
+/** Desktop header CTA (reception desk, EN only). */
+export const RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL = 'New booking';
+
+/** Mobile FAB — icon-only; same action as desktop CTA. */
+export const RECEPTION_ISSUE_ACCESS_FAB_ARIA_LABEL = 'New booking';
 
 /** Mobile FAB anchor — below bottom sheets (z-50), above page chrome. */
 export const RECEPTION_ISSUE_ACCESS_FAB_POSITION_CLASS =

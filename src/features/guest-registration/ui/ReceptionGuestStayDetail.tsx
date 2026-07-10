@@ -497,9 +497,6 @@ export function ReceptionGuestStayDetail({
 
   const header = (
     <header className="space-y-1">
-      <h2 id={RECEPTION_STAY_DETAIL_TITLE_ID} className="text-base font-semibold leading-tight">
-        {guestLabel}
-      </h2>
       <p className="text-sm text-muted-foreground">
         {bedLabel}
         {stayRef ? (
@@ -577,6 +574,7 @@ export function ReceptionGuestStayDetail({
     <ReceptionStayDetailShell
       open={open}
       onClose={onClose}
+      accessibleTitle={guestLabel}
       header={header}
       body={body}
       footer={footer}

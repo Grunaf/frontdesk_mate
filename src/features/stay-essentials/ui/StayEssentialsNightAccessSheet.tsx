@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { resolveArrivalAccessPlan, useHostelConfig, useTenant } from '@/entities/tenant';
 import { useNightMode } from '@/shared/lib';
 import { SITE_CONFIG } from '@/shared/config';
@@ -15,6 +14,8 @@ import {
   BottomSheetHeader,
   BottomSheetTitle,
   Button,
+  useActionFeedback,
+  useAppNavigation,
 } from '@/shared/ui';
 
 interface StayEssentialsNightAccessSheetProps {
@@ -34,7 +35,8 @@ export function StayEssentialsNightAccessSheet({
   const { settings, guestBedId } = useTenant();
   const isNightMode = useNightMode();
   const locale = useLocale();
-  const router = useRouter();
+  const { push } = useAppNavigation();
+  const { pending: isOpeningGuide, run: runOpenGuide } = useActionFeedback();
   const plan = resolveArrivalAccessPlan(settings, hostel, isNightMode, guestBedId);
   const codedSteps = plan.steps.filter((step) => step.code);
 
@@ -43,9 +45,11 @@ export function StayEssentialsNightAccessSheet({
   }
 
   const handleOpenFullGuide = () => {
-    setInAppReturnTo(SITE_CONFIG.routes.app.concierge.path);
-    router.push(`/${locale}${SITE_CONFIG.routes.app.welcome.path}?step=arrival`);
-    onOpenChange(false);
+    runOpenGuide(() => {
+      setInAppReturnTo(SITE_CONFIG.routes.app.concierge.path);
+      push(`/${locale}${SITE_CONFIG.routes.app.welcome.path}?step=arrival`);
+      onOpenChange(false);
+    });
   };
 
   const handleDismiss = () => {
@@ -76,7 +80,13 @@ export function StayEssentialsNightAccessSheet({
             {plan.layoutKind === 'direct_to_floor' ? nightT('descriptionHostelOnly') : nightT('description')}
           </p>
 
-          <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={handleOpenFullGuide}>
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 text-sm"
+            pending={isOpeningGuide}
+            onClick={handleOpenFullGuide}
+          >
             {t('nightAccessSheet.fullAccessGuide')}
           </Button>
         </BottomSheetBody>

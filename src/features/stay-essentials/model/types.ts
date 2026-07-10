@@ -9,6 +9,7 @@ export const STAY_ESSENTIAL_BRIDGE_ORDER = [
   'checkout',
   'nightAccess',
   'reception',
+  'contact',
 ] as const;
 
 export type StayEssentialBridgeId = (typeof STAY_ESSENTIAL_BRIDGE_ORDER)[number];

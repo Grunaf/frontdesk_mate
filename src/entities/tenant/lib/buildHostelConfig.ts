@@ -25,6 +25,19 @@ function mailHref(display?: string): string {
   return display ? `mailto:${display}` : '';
 }
 
+function normalizeExternalUrl(raw?: string): string {
+  const trimmed = raw?.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
 export function buildHostelConfig(settings: TenantSettings): HostelConfig {
   const contacts = settings.contacts ?? {};
   const receptionWhatsappRaw = settings.reception?.whatsappPhoneRaw ?? contacts.phoneRaw;
@@ -101,6 +114,9 @@ export function buildHostelConfig(settings: TenantSettings): HostelConfig {
       socials: {
         instagram: contacts.instagram,
         facebook: contacts.facebook,
+      },
+      guestChat: {
+        href: normalizeExternalUrl(contacts.guestChatUrl),
       },
       feedbackPhone: {
         raw: contacts.feedbackPhoneRaw ?? contacts.phoneRaw,

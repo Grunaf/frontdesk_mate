@@ -1447,7 +1447,8 @@
         "wifi": "Wi‑Fi",
         "checkout": "Выезд",
         "nightAccess": "Ночной доступ",
-        "reception": "О ресепшене"
+        "reception": "О ресепшене",
+        "contact": "Связаться с нами"
       },
       "bridgeAriaLabelUnread": "{title} — не просмотрено",
       "bridgeAriaLabelRead": "{title} — просмотрено",
@@ -1483,6 +1484,19 @@
         "luggageTitle": "Хранение багажа",
         "selfCheckInAfter": "После {time} можно пользоваться кодами дверей в приложении, если ресепшен закрыт.",
         "footerHint": "Чтобы написать ресепшену, используйте кнопку ниже."
+      },
+      "contact": {
+        "emailButton": "Написать на email",
+        "instagramButton": "Instagram",
+        "facebookButton": "Facebook",
+        "guestChatHeading": "WhatsApp для гостей",
+        "guestChatDescriptionGroup": "Объявления от хостела и общение с другими гостями.",
+        "guestChatDescriptionReception": "Напишите ресепшену по вопросам проживания.",
+        "guestChatButton": "Открыть в WhatsApp",
+        "guestChatButtonReception": "Написать ресепшену в WhatsApp",
+        "guestChatMessage": "Здравствуйте! У меня вопрос по проживанию в {hostelName}",
+        "guestChatTeaser": "Войдите в приложение, чтобы открыть WhatsApp-чат хостела.",
+        "guestChatTeaserAction": "Войти"
       }
     },
     "registrationAlert": {

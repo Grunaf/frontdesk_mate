@@ -1,9 +1,14 @@
 export {
   ExternalServiceButton,
+  ExternalServiceIcon,
   ExternalServiceTouchLink,
   TouchLink,
 } from './external-service';
 export { Button, buttonVariants } from './button';
+export { Spinner, type SpinnerSize } from './spinner';
+export { useActionFeedback, useLinkPressFeedback } from './action-feedback';
+export { AppLink, RoutePendingProvider, useAppNavigation, useRoutePending } from './navigation';
+export { PressableTileButton, PressableAnchor, pressablePendingClass, pressableTileActiveClass, pressableTileClassName } from './pressable';
 export { SegmentedChipBar, type SegmentedChipBarProps, type SegmentedChipItem } from './SegmentedChipBar';
 export { BaseHeader } from './BaseHeader/BaseHeader';
 export { AppHeaderShell } from './BaseHeader/AppHeaderShell';

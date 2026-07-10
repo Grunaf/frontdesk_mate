@@ -84,4 +84,26 @@ describe('mergeTenantSettingsWithPrevious', () => {
 
     expect(merged.contacts?.phoneRaw).toBe('38769999999');
   });
+
+  it('applies social and guest chat fields from hidden payload', () => {
+    const formData = new FormData();
+    formData.set('instagram', 'myhostel');
+    formData.set('facebook', '@myhostel');
+    formData.set('guestChatUrl', 'https://chat.whatsapp.com/example');
+
+    const incoming: TenantSettings = {
+      contacts: {
+        instagram: 'myhostel',
+        facebook: '@myhostel',
+        guestChatUrl: 'https://chat.whatsapp.com/example',
+      },
+    };
+
+    const merged = mergeTenantSettingsWithPrevious(formData, incoming, previous);
+
+    expect(merged.contacts?.instagram).toBe('myhostel');
+    expect(merged.contacts?.facebook).toBe('@myhostel');
+    expect(merged.contacts?.guestChatUrl).toBe('https://chat.whatsapp.com/example');
+    expect(merged.contacts?.phoneRaw).toBe('38761111222');
+  });
 });

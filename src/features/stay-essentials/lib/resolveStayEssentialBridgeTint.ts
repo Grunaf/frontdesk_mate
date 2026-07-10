@@ -6,6 +6,7 @@ export const STAY_ESSENTIAL_BRIDGE_TINTS: Record<StayEssentialBridgeId, string> 
   checkout: '#efe6da',
   nightAccess: '#e4dff0',
   reception: '#dce9dc',
+  contact: '#e8e0f0',
 };
 
 export const STAY_ESSENTIAL_ARRIVAL_TILE_TINT = '#f0e8dc';

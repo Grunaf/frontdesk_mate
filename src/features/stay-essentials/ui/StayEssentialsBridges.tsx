@@ -10,6 +10,7 @@ import {
 import { useGuestSession, useIsGuestRegistered } from '@/features/guest-check-in';
 import { useNightMode } from '@/shared/lib';
 import { resolveAnonymousStayEssentialBridgeIds } from '../model/resolveAnonymousStayEssentialBridges';
+import { hasStayEssentialContactBridgeContent } from '../model/resolveStayEssentialContactContent';
 import { readNightAccessDismissed, persistNightAccessDismissed } from '../model/nightAccessDismiss';
 import { resolveShowNightAccessBridge } from '../model/resolveShowNightAccessBridge';
 import { STAY_ESSENTIAL_BRIDGE_ORDER } from '../model/types';
@@ -22,6 +23,7 @@ import { StayEssentialsBridgeCard } from './StayEssentialsBridgeCard';
 import { StayEssentialsCheckoutSheet } from './StayEssentialsCheckoutSheet';
 import { StayEssentialsNightAccessSheet } from './StayEssentialsNightAccessSheet';
 import { StayEssentialsReceptionSheet } from './StayEssentialsReceptionSheet';
+import { StayEssentialsContactSheet } from './StayEssentialsContactSheet';
 import { StayEssentialsWifiSheet } from './StayEssentialsWifiSheet';
 
 function StayEssentialBridgeItem({
@@ -64,6 +66,8 @@ function StayEssentialBridgeItem({
         />
       ) : bridgeId === 'reception' ? (
         <StayEssentialsReceptionSheet open={open} onOpenChange={handleOpenChange} />
+      ) : bridgeId === 'contact' ? (
+        <StayEssentialsContactSheet open={open} onOpenChange={handleOpenChange} />
       ) : (
         <StayEssentialSheetStub bridgeId={bridgeId} open={open} onOpenChange={handleOpenChange} />
       )}
@@ -117,6 +121,11 @@ export function StayEssentialsBridges() {
     );
   }, [hostel.reception, hostel.selfCheckInTimeAfter, settings]);
 
+  const hasContactContent = useMemo(
+    () => hasStayEssentialContactBridgeContent(hostel),
+    [hostel]
+  );
+
   const showNightAccessBridge = useMemo(
     () =>
       resolveShowNightAccessBridge({
@@ -154,7 +163,10 @@ export function StayEssentialsBridges() {
 
   const visibleBridges = useMemo(() => {
     if (!isRegistered) {
-      return resolveAnonymousStayEssentialBridgeIds(hasReceptionContent);
+      return resolveAnonymousStayEssentialBridgeIds({
+        hasReceptionContent,
+        hasContactContent,
+      });
     }
 
     return STAY_ESSENTIAL_BRIDGE_ORDER.filter((bridgeId) => {
@@ -174,9 +186,20 @@ export function StayEssentialsBridges() {
         return hasReceptionContent;
       }
 
+      if (bridgeId === 'contact') {
+        return hasContactContent;
+      }
+
       return true;
     });
-  }, [hasCheckoutContent, hasReceptionContent, hasWifiCredentials, isRegistered, showNightAccessBridge]);
+  }, [
+    hasCheckoutContent,
+    hasContactContent,
+    hasReceptionContent,
+    hasWifiCredentials,
+    isRegistered,
+    showNightAccessBridge,
+  ]);
 
   return (
     <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

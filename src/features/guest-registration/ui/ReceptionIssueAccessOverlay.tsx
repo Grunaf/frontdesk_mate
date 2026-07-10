@@ -40,13 +40,6 @@ function IssueAccessOverlayHeader({
 
   return (
     <div className="space-y-1 pr-2">
-      <h2
-        id={RECEPTION_ISSUE_ACCESS_TITLE_ID}
-        className="text-base font-semibold"
-        title="App access only — not your booking system"
-      >
-        Issue guest access
-      </h2>
       {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
     </div>
   );
@@ -84,6 +77,8 @@ export function ReceptionIssueAccessOverlay({
     <ReceptionStayDetailShell
       open={open}
       onClose={onClose}
+      accessibleTitle="Issue guest access"
+      accessibleTitleTooltip="App access only — not your booking system"
       titleId={RECEPTION_ISSUE_ACCESS_TITLE_ID}
       header={
         <IssueAccessOverlayHeader

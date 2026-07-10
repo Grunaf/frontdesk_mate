@@ -1,11 +1,28 @@
 import { STAY_ESSENTIAL_BRIDGE_ORDER, type StayEssentialBridgeId } from './types';
 
+export interface AnonymousStayEssentialBridgeInput {
+  hasReceptionContent: boolean;
+  hasContactContent: boolean;
+}
+
 export function resolveAnonymousStayEssentialBridgeIds(
-  hasReceptionContent: boolean
+  input: AnonymousStayEssentialBridgeInput
 ): StayEssentialBridgeId[] {
-  if (!hasReceptionContent) {
+  const { hasReceptionContent, hasContactContent } = input;
+
+  if (!hasReceptionContent && !hasContactContent) {
     return [];
   }
 
-  return STAY_ESSENTIAL_BRIDGE_ORDER.filter((bridgeId) => bridgeId === 'reception');
+  return STAY_ESSENTIAL_BRIDGE_ORDER.filter((bridgeId) => {
+    if (bridgeId === 'reception') {
+      return hasReceptionContent;
+    }
+
+    if (bridgeId === 'contact') {
+      return hasContactContent;
+    }
+
+    return false;
+  });
 }

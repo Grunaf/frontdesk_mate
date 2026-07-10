@@ -102,6 +102,8 @@ export interface TenantSettings {
     mapsUrl?: string;
     instagram?: string;
     facebook?: string;
+    /** Guest-only chat link (e.g. WhatsApp group) — guest app after check-in. */
+    guestChatUrl?: string;
     feedbackPhoneRaw?: string;
   };
   brand?: {

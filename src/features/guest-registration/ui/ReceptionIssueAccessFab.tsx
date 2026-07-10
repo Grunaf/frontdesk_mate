@@ -4,7 +4,7 @@ import { UserPlus } from 'lucide-react';
 import { Button } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
-  RECEPTION_ISSUE_ACCESS_CTA_LABEL,
+  RECEPTION_ISSUE_ACCESS_FAB_ARIA_LABEL,
   RECEPTION_ISSUE_ACCESS_FAB_POSITION_CLASS,
 } from './receptionIssueAccessCta';
 
@@ -24,7 +24,7 @@ export function ReceptionIssueAccessFab({ visible, onPress }: ReceptionIssueAcce
       size="icon-lg"
       className={cn(RECEPTION_ISSUE_ACCESS_FAB_POSITION_CLASS, 'rounded-full shadow-lg')}
       onClick={onPress}
-      aria-label={RECEPTION_ISSUE_ACCESS_CTA_LABEL}
+      aria-label={RECEPTION_ISSUE_ACCESS_FAB_ARIA_LABEL}
     >
       <UserPlus aria-hidden />
     </Button>

@@ -280,6 +280,30 @@ function PhonesEmailModule({
         onChange={(value) => patchContacts({ email: value || undefined })}
         width="md"
       />
+      <AdminField
+        label="Instagram"
+        value={settings?.contacts?.instagram ?? ''}
+        onChange={(value) => patchContacts({ instagram: value.trim() || undefined })}
+        placeholder="myhostel"
+        hint="Username only (with or without @). Full profile URL also works. Shown in Get in touch."
+        width="lg"
+      />
+      <AdminField
+        label="Facebook"
+        value={settings?.contacts?.facebook ?? ''}
+        onChange={(value) => patchContacts({ facebook: value.trim() || undefined })}
+        placeholder="myhostel"
+        hint="Page username only (with or without @). Full page URL also works. Shown in Get in touch."
+        width="lg"
+      />
+      <AdminField
+        label="Guest WhatsApp chat"
+        value={settings?.contacts?.guestChatUrl ?? ''}
+        onChange={(value) => patchContacts({ guestChatUrl: value.trim() || undefined })}
+        placeholder="https://chat.whatsapp.com/…"
+        hint="WhatsApp group invite link — shown to checked-in guests only. Leave empty to use reception WhatsApp (1:1) when enabled."
+        width="lg"
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { loginToReceptionDesk } from '../helpers/reception';
 const config = loadE2eConfig();
 
 async function openIssueGuestAccessOverlay(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: 'Issue guest access' }).click();
+  await page.getByRole('button', { name: 'New booking' }).click();
   await expect(page.getByRole('heading', { name: 'Issue guest access' })).toBeVisible({
     timeout: config.navTimeoutMs,
   });
@@ -25,7 +25,7 @@ test.describe('reception desk smoke', () => {
     await expect(page.getByRole('tab', { name: 'Plan' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Access' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Issues' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Issue guest access' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New booking' })).toBeVisible();
 
     await openIssueGuestAccessOverlay(page);
   });

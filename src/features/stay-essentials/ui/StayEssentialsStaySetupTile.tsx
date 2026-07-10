@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ClipboardList } from 'lucide-react';
 import { useTenant } from '@/entities/tenant';
@@ -9,7 +8,7 @@ import { getStaySetupStatusAction } from '@/features/guest-stay-contact';
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
 import { setInAppReturnTo } from '@/shared/lib';
-import { Icon } from '@/shared/ui';
+import { Icon, PressableTileButton, useAppNavigation } from '@/shared/ui';
 import { STAY_ESSENTIAL_STAY_SETUP_TILE_TINT } from '../lib/resolveStayEssentialBridgeTint';
 import { STAY_ESSENTIAL_STAY_SETUP_TILE_ID } from '../model/types';
 import { useStayEssentialTileReadState } from '../model/useStayEssentialTileReadState';
@@ -18,7 +17,7 @@ import { stayEssentialsTileClassName } from './stayEssentialsTileClassName';
 export function StayEssentialsStaySetupTile() {
   const t = useTranslations('components.stayEssentials');
   const locale = useLocale();
-  const router = useRouter();
+  const { push, pending } = useAppNavigation();
   const { slug } = useTenant();
   const isRegistered = useIsGuestRegistered();
   const { isRead, markRead } = useStayEssentialTileReadState(STAY_ESSENTIAL_STAY_SETUP_TILE_ID);
@@ -58,12 +57,12 @@ export function StayEssentialsStaySetupTile() {
   });
 
   return (
-    <button
-      type="button"
+    <PressableTileButton
+      pending={pending}
       onClick={() => {
         markRead();
         setInAppReturnTo(SITE_CONFIG.routes.app.concierge.path);
-        router.push(`/${locale}${SITE_CONFIG.routes.app.staySetup.path}`);
+        push(`/${locale}${SITE_CONFIG.routes.app.staySetup.path}`);
       }}
       className={className}
       style={style}
@@ -84,6 +83,6 @@ export function StayEssentialsStaySetupTile() {
       <div className="absolute bottom-2 left-2 text-muted-foreground">
         <Icon icon={ClipboardList} className="h-7 w-7" />
       </div>
-    </button>
+    </PressableTileButton>
   );
 }

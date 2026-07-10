@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowUpRight } from 'lucide-react';
-import { Icon } from '@/shared/ui';
+import { Icon, PressableAnchor, pressableTileActiveClass } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import type { GuestRecommendation } from '../model/guestRecommendation';
 import { resolveUtilityShortLabel } from '../lib/resolveUtilityLabel';
@@ -18,7 +18,7 @@ function EssentialsChip({ recommendation, label, openInMapsLabel }: EssentialsCh
   const className = cn(
     'flex w-[160px] shrink-0 snap-start items-start gap-1.5 rounded-2xl border border-border bg-background px-3.5 py-2.5 text-left',
     isLink &&
-      'transition-[colors,transform] hover:bg-muted/40 active:scale-[0.98] active:bg-muted/60'
+      cn(pressableTileActiveClass, 'hover:bg-muted/40 active:bg-muted/60')
   );
 
   const content = (
@@ -48,7 +48,7 @@ function EssentialsChip({ recommendation, label, openInMapsLabel }: EssentialsCh
   }
 
   return (
-    <a
+    <PressableAnchor
       href={recommendation.mapsUrl}
       target="_blank"
       rel="noopener noreferrer"
@@ -56,7 +56,7 @@ function EssentialsChip({ recommendation, label, openInMapsLabel }: EssentialsCh
       aria-label={`${label}, ${placeName} — ${openInMapsLabel}`}
     >
       {content}
-    </a>
+    </PressableAnchor>
   );
 }
 

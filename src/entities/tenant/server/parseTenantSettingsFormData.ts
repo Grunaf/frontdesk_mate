@@ -420,6 +420,9 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
         email: String(formData.get('email') || '') || undefined,
         address: String(formData.get('address') || '') || undefined,
         mapsUrl: String(formData.get('mapsUrl') || '') || undefined,
+        instagram: String(formData.get('instagram') || '').trim() || undefined,
+        facebook: String(formData.get('facebook') || '').trim() || undefined,
+        guestChatUrl: String(formData.get('guestChatUrl') || '').trim() || undefined,
         feedbackPhoneRaw: String(formData.get('feedbackPhoneRaw') || '') || undefined,
       };
     })(),

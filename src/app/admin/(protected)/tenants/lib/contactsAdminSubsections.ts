@@ -79,10 +79,22 @@ export function getContactsAdminModuleHint(
       return settings.reception?.guestAccessMessageTemplate?.trim()
         ? 'Custom template'
         : 'Uses built-in default';
-    case 'phones-email':
-      return settings.contacts?.phoneRaw?.trim()
-        ? 'Reception phone set'
-        : 'Add reception phone';
+    case 'phones-email': {
+      const parts: string[] = [];
+      if (settings.contacts?.email?.trim()) {
+        parts.push('Email');
+      }
+      if (settings.contacts?.instagram?.trim() || settings.contacts?.facebook?.trim()) {
+        parts.push('Social');
+      }
+      if (settings.contacts?.guestChatUrl?.trim() || settings.reception?.whatsappEnabled !== false) {
+        parts.push('Guest WA');
+      }
+      if (settings.contacts?.phoneRaw?.trim()) {
+        return parts.length > 0 ? parts.join(' · ') : 'Reception phone set';
+      }
+      return parts.length > 0 ? parts.join(' · ') : 'Add reception phone';
+    }
     case 'stay-policy':
       return settings.checkInTime?.trim() ? 'Check-in time set' : 'Set check-in from';
     default:

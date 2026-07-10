@@ -161,6 +161,9 @@ export function TenantFormHiddenPayload({
         value={mergedSettings.contacts?.taxiPhoneFormatPreset ?? 'auto'}
       />
       <input type="hidden" name="email" value={mergedSettings.contacts?.email ?? ''} />
+      <input type="hidden" name="instagram" value={mergedSettings.contacts?.instagram ?? ''} />
+      <input type="hidden" name="facebook" value={mergedSettings.contacts?.facebook ?? ''} />
+      <input type="hidden" name="guestChatUrl" value={mergedSettings.contacts?.guestChatUrl ?? ''} />
       <input type="hidden" name="address" value={mergedSettings.contacts?.address ?? ''} />
       <input type="hidden" name="mapsUrl" value={mergedSettings.contacts?.mapsUrl ?? ''} />
       <input type="hidden" name="feedbackPhoneRaw" value={mergedSettings.contacts?.feedbackPhoneRaw ?? ''} />

@@ -49,7 +49,7 @@ import {
 import { BedAccessCalendar } from './BedAccessCalendar';
 import { ReceptionIssueAccessOverlay } from './ReceptionIssueAccessOverlay';
 import { ReceptionIssueAccessFab } from './ReceptionIssueAccessFab';
-import { RECEPTION_ISSUE_ACCESS_CTA_LABEL } from './receptionIssueAccessCta';
+import { RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL } from './receptionIssueAccessCta';
 import { ReceptionHubView } from './ReceptionHubView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
@@ -561,11 +561,11 @@ export function ReceptionCheckInPanel({
         <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <Button
             type="button"
-            size="sm"
+            size="lg"
             className="hidden lg:inline-flex"
             onClick={() => setIssueOverlayOpen(true)}
           >
-            {RECEPTION_ISSUE_ACCESS_CTA_LABEL}
+            {RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL}
           </Button>
           <form method="POST" action="/api/reception/logout">
             <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
