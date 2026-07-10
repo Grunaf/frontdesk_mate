@@ -1,5 +1,6 @@
 import {
   Ban,
+  Bubbles,
   Clock,
   Cigarette,
   GlassWater,
@@ -33,6 +34,7 @@ export const RULE_ICON_MAP: Record<RuleIconId, LucideIcon> = {
   cigarette: Cigarette,
   glass: GlassWater,
   shield: ShieldCheck,
+  bubbles: Bubbles,
   shirt: Shirt,
   volume: Volume2,
   clock: Clock,
@@ -82,6 +84,32 @@ export const HOUSE_RULE_TEMPLATES: RuleTemplateDefinition[] = [
     render: () => ({
       summary: 'No outside drinks',
       detail: 'Alcohol consumption is allowed, but bringing your own drinks from outside is prohibited. You can purchase drinks at our hostel bar.',
+    }),
+  },
+  {
+    id: 'selfService',
+    kind: 'simple',
+    label: 'Self-service',
+    description:
+      'Guests clean up after themselves in the kitchen and common areas — wash dishes and wipe surfaces they used.',
+    icon: 'bubbles',
+    render: () => ({
+      summary: 'Clean up after yourself',
+      detail:
+        'After use in the kitchen or common areas, wash dishes and wipe tables, counters, and surfaces you touched. Leave shared spaces clean for the next guest.',
+    }),
+  },
+  {
+    id: 'labelYourFood',
+    kind: 'simple',
+    label: 'Label your food',
+    description:
+      'Label all food you store (fridge, freezer, pantry/shelves). Unlabeled or expired items may be thrown away or marked free.',
+    icon: 'clock',
+    render: () => ({
+      summary: 'Label your food',
+      detail:
+        'Put your name and date on food in the fridge, freezer, or on shared shelves. Unlabeled or expired items may be removed or marked free for other guests.',
     }),
   },
 ];

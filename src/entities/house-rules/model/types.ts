@@ -2,6 +2,8 @@ export type RuleTemplateId =
   | 'quietHours'
   | 'smoking'
   | 'alcohol'
+  | 'selfService'
+  | 'labelYourFood'
   | 'custom';
 
 export type RuleTemplateKind = 'simple' | 'configured' | 'custom';
@@ -11,6 +13,7 @@ export type RuleIconId =
   | 'cigarette'
   | 'glass'
   | 'shield'
+  | 'bubbles'
   | 'shirt'
   | 'volume'
   | 'clock'
