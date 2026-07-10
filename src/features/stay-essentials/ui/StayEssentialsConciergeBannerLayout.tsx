@@ -1,9 +1,10 @@
 'use client';
 
-import { pressableTileActiveClass, StepRingProgress } from '@/shared/ui';
+import { pressableTileActiveClass, Skeleton, StepRingProgress } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 
-type StayEssentialsConciergeBannerLayoutProps = {
+type StayEssentialsConciergeBannerLayoutDefaultProps = {
+  variant?: 'default';
   title: string;
   description: string;
   testId: string;
@@ -13,15 +14,44 @@ type StayEssentialsConciergeBannerLayoutProps = {
   onClick: () => void;
 };
 
-export function StayEssentialsConciergeBannerLayout({
-  title,
-  description,
-  testId,
-  totalSteps,
-  completedSteps,
-  pending = false,
-  onClick,
-}: StayEssentialsConciergeBannerLayoutProps) {
+type StayEssentialsConciergeBannerLayoutSkeletonProps = {
+  variant: 'skeleton';
+  testId: string;
+};
+
+export type StayEssentialsConciergeBannerLayoutProps =
+  | StayEssentialsConciergeBannerLayoutDefaultProps
+  | StayEssentialsConciergeBannerLayoutSkeletonProps;
+
+export function StayEssentialsConciergeBannerLayout(
+  props: StayEssentialsConciergeBannerLayoutProps
+) {
+  if (props.variant === 'skeleton') {
+    return (
+      <div
+        aria-busy="true"
+        data-testid={props.testId}
+        className="flex w-full items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5"
+      >
+        <span className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-4 w-3/5 max-w-[12rem]" />
+          <Skeleton className="h-3 w-full max-w-[16rem]" />
+        </span>
+        <Skeleton className="size-10 shrink-0 rounded-full" aria-hidden />
+      </div>
+    );
+  }
+
+  const {
+    title,
+    description,
+    testId,
+    totalSteps,
+    completedSteps,
+    pending = false,
+    onClick,
+  } = props;
+
   return (
     <button
       type="button"

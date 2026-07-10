@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
+import { Skeleton } from '@/shared/ui';
 
 export type GuestStayTourismSummaryState =
   | { kind: 'loading' }
@@ -34,11 +35,19 @@ export function GuestStayTourismSummaryCard({
 
   if (state.kind === 'loading') {
     return (
-      <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
+      <div
+        aria-busy="true"
+        className="space-y-2 rounded-xl border bg-muted/30 p-3"
+        data-testid="guest-stay-tourism-summary-loading"
+      >
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {t('tourismSummaryHeading')}
         </p>
-        <p className="text-sm text-muted-foreground">…</p>
+        <div className="space-y-2" aria-hidden>
+          <Skeleton className="h-4 w-full max-w-[14rem]" />
+          <Skeleton className="h-4 w-4/5 max-w-[12rem]" />
+          <Skeleton className="h-6 w-24 rounded-full" />
+        </div>
       </div>
     );
   }

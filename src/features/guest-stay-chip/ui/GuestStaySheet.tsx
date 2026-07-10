@@ -67,34 +67,55 @@ export function GuestStaySheet({
   const { openReportSheet } = useGuestIssueReport();
   const [copied, setCopied] = useState(false);
   const [tourismSummary, setTourismSummary] = useState<GuestStayTourismSummaryState | null>(null);
+  const [tourismSummaryLoaded, setTourismSummaryLoaded] = useState(false);
 
   const dateRange = formatGuestStayDateRange(checkInAt, checkOutAt, locale);
   const stayRef = formatStayReference(stayId);
   const trimmedGuestName = guestName?.trim() || null;
-  const staySetupBedMapStep = useStaySetupBedMapStep();
+  const staySetupBedMap = useStaySetupBedMapStep(true);
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
+
+  const tourismSummaryForDisplay: GuestStayTourismSummaryState | null =
+    open && tourismRegistrationRequired
+      ? tourismSummaryLoaded
+        ? tourismSummary
+        : { kind: 'loading' }
+      : null;
+
+  const registrationStatusLoading =
+    tourismRegistrationRequired &&
+    (tourismSummaryForDisplay?.kind === 'loading' || staySetupBedMap.statusLoading);
+
+  const tourismCompleteForStay =
+    !tourismRegistrationRequired || tourismSummaryForDisplay?.kind === 'complete';
+  const bedLocationLocked =
+    !registrationStatusLoading && tourismRegistrationRequired && !tourismCompleteForStay;
 
   const settlementPath = resolveGuestStaySetupPath({
     locale: routeLocale,
-    step: staySetupBedMapStep,
+    step: staySetupBedMap.step,
     tourismRequired: tourismRegistrationRequired,
-    completion: {
-      tourismRequired: tourismRegistrationRequired,
-      tourismComplete: tourismSummary?.kind === 'complete',
-      contactComplete: false,
-    },
+    completion: staySetupBedMap.completion,
   });
 
   const registerPath = resolveGuestRegistrationPath({ locale: routeLocale });
 
+  const bedNavigatePath = registrationStatusLoading
+    ? undefined
+    : bedLocationLocked
+      ? registerPath
+      : settlementPath;
+
   useEffect(() => {
     if (!open || !tourismRegistrationRequired || !slug) {
       setTourismSummary(null);
+      setTourismSummaryLoaded(false);
       return;
     }
 
     let cancelled = false;
-    setTourismSummary({ kind: 'loading' });
+    setTourismSummary(null);
+    setTourismSummaryLoaded(false);
 
     void listTourismGuestsForSessionAction(slug).then((result) => {
       if (cancelled) {
@@ -102,29 +123,29 @@ export function GuestStaySheet({
       }
       if (!result.ok) {
         setTourismSummary(null);
+        setTourismSummaryLoaded(true);
         return;
       }
 
       const guestCount = result.guests.length;
       if (result.complete) {
         setTourismSummary({ kind: 'complete', guestCount });
+        setTourismSummaryLoaded(true);
         return;
       }
       if (guestCount === 0) {
         setTourismSummary({ kind: 'not_started' });
+        setTourismSummaryLoaded(true);
         return;
       }
       setTourismSummary({ kind: 'in_progress', guestCount });
+      setTourismSummaryLoaded(true);
     });
 
     return () => {
       cancelled = true;
     };
   }, [open, slug, tourismRegistrationRequired]);
-
-  const tourismCompleteForStay =
-    !tourismRegistrationRequired || tourismSummary?.kind === 'complete';
-  const bedLocationLocked = tourismRegistrationRequired && !tourismCompleteForStay;
 
   const bedLine = useMemo(
     () =>
@@ -222,11 +243,15 @@ export function GuestStaySheet({
           <GuestStayBedLocationCard
             plan={plan}
             locked={bedLocationLocked}
-            navigatePath={bedLocationLocked ? registerPath : settlementPath}
+            navigatePath={bedNavigatePath}
+            navigateLoading={registrationStatusLoading}
           />
 
-          {tourismRegistrationRequired && tourismSummary ? (
-            <GuestStayTourismSummaryCard state={tourismSummary} registerPath={registerPath} />
+          {tourismSummaryForDisplay ? (
+            <GuestStayTourismSummaryCard
+              state={tourismSummaryForDisplay}
+              registerPath={registerPath}
+            />
           ) : null}
 
           <div className="space-y-1.5 rounded-xl border bg-muted/30 p-3">

@@ -144,6 +144,60 @@ Acceptance:
       staleReason: [],
     },
   ],
+  [
+    'stay-setup-status-ssr',
+    {
+      id: 'stay-setup-status-ssr',
+      title: 'Stay setup status: SSR initial + banner skeleton',
+      priority: 'P1',
+      status: 'planned',
+      summary:
+        'Убрать задержку появления registration/settlement баннеров и повторные client-fetch статуса tourism/contact на concierge, sheet и смежных экранах.',
+      spec: `Проблема:
+Статус registration (tourism + contact) подтягивается после mount через getStaySetupStatusAction; до ответа баннеры рендерят null, tourism-блок грузится с задержкой — гость может пропустить CTA.
+
+Цель:
+1) Общий server resolver stay-setup status (как на stay-setup/registration page) и initial props на concierge (и при необходимости app layout).
+2) Client revalidate после save, не единственный источник truth.
+3) Skeleton на баннерах, пока статус неизвестен (без layout shift).
+
+Scope:
+- src/features/guest-stay-contact (getStaySetupStatusAction / shared server helper)
+- src/features/stay-essentials/ui/StayEssentialsPreCheckInBanner.tsx
+- src/features/stay-essentials/ui/StayEssentialsSettlementBanner.tsx
+- src/features/stay-essentials/ui/StayEssentialsConciergeBannerLayout.tsx
+- src/views/concierge/ui/ConciergeContent.tsx
+- app-site concierge page (SSR initial)
+- src/features/guest-stay-chip/ui/GuestStaySheet.tsx (по возможности тот же context/initial)
+- src/features/find-your-bed (useStaySetupBedMapStep) — опционально в фазе 2
+
+Out of scope:
+- Полный перенос settlement progress из localStorage на сервер.
+- Рефактор tourism upload UX.
+
+Acceptance:
+- Concierge: баннер виден на первом paint (SSR) или skeleton, не «пусто → через секунды».
+- Один resolver, меньше дублирующих useEffect fetch.
+- Unit-тесты resolve* banner остаются зелёными.`,
+      trackedPaths: [
+        'src/features/guest-stay-contact',
+        'src/features/stay-essentials',
+        'src/views/concierge',
+        'src/app/app-site',
+        'src/features/guest-stay-chip/ui/GuestStaySheet.tsx',
+        'src/features/find-your-bed',
+        'src/views/stay-setup/model/useStaySetupCompletionSync.ts',
+      ],
+      relatedFiles: [],
+      tags: ['guest-app', 'stay-setup', 'registration', 'performance'],
+      lastReviewedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      staleScore: 0,
+      isStale: false,
+      staleReason: [],
+    },
+  ],
 ]);
 
 let initiativeIdCounter = 0;

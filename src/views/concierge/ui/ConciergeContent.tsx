@@ -12,6 +12,7 @@ import { ConciergeReceptionStrip } from '@/features/reception-contact';
 import { conciergeContentStripOffsetClass } from '@/features/reception-contact/lib/conciergeStripLayout';
 import {
   StayEssentialsBridges,
+  StayEssentialsConciergeBannerRoot,
   StayEssentialsPreCheckInBanner,
   StayEssentialsSettlementBanner,
 } from '@/features/stay-essentials';
@@ -60,8 +61,10 @@ export function ConciergeContent() {
 
         {/* Zone: arrival essentials */}
         <div className="space-y-2">
-          <StayEssentialsPreCheckInBanner />
-          <StayEssentialsSettlementBanner />
+          <StayEssentialsConciergeBannerRoot>
+            <StayEssentialsPreCheckInBanner />
+            <StayEssentialsSettlementBanner />
+          </StayEssentialsConciergeBannerRoot>
           <StayEssentialsBridges />
         </div>
 

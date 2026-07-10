@@ -20,6 +20,7 @@ type StaySetupBedMapStep = 'registration' | 'essentials' | 'room';
 type StaySetupBedMapState = {
   step: StaySetupBedMapStep;
   completion: StaySetupCompletion;
+  statusLoading: boolean;
 };
 
 function useStaySetupBedMapState(): StaySetupBedMapState {
@@ -40,6 +41,9 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
     let cancelled = false;
     void getStaySetupStatusAction(slug).then((result) => {
       if (cancelled || !result.ok) {
+        if (!cancelled) {
+          setStatus(null);
+        }
         return;
       }
       setStatus({
@@ -52,6 +56,8 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
       cancelled = true;
     };
   }, [isRegistered, slug]);
+
+  const statusLoading = isRegistered && Boolean(slug?.trim()) && status === null;
 
   const completion: StaySetupCompletion = {
     tourismRequired: tourismRegistrationRequired,
@@ -66,7 +72,7 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
     preferSettlement: true,
   });
 
-  return { step, completion };
+  return { step, completion, statusLoading };
 }
 
 /** Deep link step for bed map / settlement when stay-setup gates may apply. */
