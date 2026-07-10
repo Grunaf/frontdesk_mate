@@ -1240,11 +1240,18 @@
         "cta": "Register now"
       },
       "tabs": {
+        "registration": "Tourist registration",
         "register": "Tourist registration",
         "contact": "Contact",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
         "settlement": "Settlement"
+      },
+      "registration": {
+        "cta": "Continue to registration",
+        "allCompleteCta": "Continue to Wi‑Fi & rules",
+        "completeHint": "Guest registration and contact details are complete.",
+        "incompleteHint": "Complete guest registration and contact details on the registration page."
       },
       "register": {
         "actionButton": "Continue to settlement",

@@ -13,3 +13,9 @@ export {
   useGuestSession,
   useIsGuestRegistered,
 } from './ui/GuestSessionProvider';
+export { resolveGuestRegistrationPath } from './lib/resolveGuestRegistrationPath';
+export {
+  resolveGuestStaySetupPath,
+  resolveStaySetupDeepLinkStep,
+  type StaySetupDeepLinkStep,
+} from './lib/resolveGuestStaySetupPath';

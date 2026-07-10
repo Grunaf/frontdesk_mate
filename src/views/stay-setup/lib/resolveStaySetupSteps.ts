@@ -1,4 +1,4 @@
-export type StaySetupStep = 'register' | 'contact' | 'essentials' | 'room';
+export type StaySetupStep = 'registration' | 'essentials' | 'room';
 
 export type StaySetupCompletion = {
   tourismRequired: boolean;
@@ -8,7 +8,13 @@ export type StaySetupCompletion = {
 
 const LEGACY_URL_STEP_ALIASES: Record<string, StaySetupStep> = {
   settlement: 'room',
+  register: 'registration',
+  contact: 'registration',
 };
+
+export function isStaySetupRegistrationComplete(completion: StaySetupCompletion): boolean {
+  return (!completion.tourismRequired || completion.tourismComplete) && completion.contactComplete;
+}
 
 export function normalizeStaySetupUrlStep(step: string | null): StaySetupStep | null {
   if (!step) {
@@ -16,12 +22,7 @@ export function normalizeStaySetupUrlStep(step: string | null): StaySetupStep | 
   }
 
   const normalized = LEGACY_URL_STEP_ALIASES[step] ?? step;
-  if (
-    normalized === 'register' ||
-    normalized === 'contact' ||
-    normalized === 'essentials' ||
-    normalized === 'room'
-  ) {
+  if (normalized === 'registration' || normalized === 'essentials' || normalized === 'room') {
     return normalized;
   }
 
@@ -30,10 +31,14 @@ export function normalizeStaySetupUrlStep(step: string | null): StaySetupStep | 
 
 export function resolveNextStaySetupStep(
   currentStep: StaySetupStep,
-  tourismRequired: boolean,
+  _tourismRequired: boolean,
   completion: StaySetupCompletion
 ): StaySetupStep | null {
-  const steps = resolveStaySetupStepOrder(tourismRequired, completion);
+  if (currentStep === 'registration' && !isStaySetupRegistrationComplete(completion)) {
+    return null;
+  }
+
+  const steps = resolveStaySetupStepOrder(_tourismRequired, completion);
   const index = steps.indexOf(currentStep);
   if (index === -1) {
     return null;
@@ -41,7 +46,7 @@ export function resolveNextStaySetupStep(
 
   for (let i = index + 1; i < steps.length; i += 1) {
     const step = steps[i];
-    if (step === 'contact' && completion.contactComplete) {
+    if (step === 'registration' && isStaySetupRegistrationComplete(completion)) {
       continue;
     }
     return step;
@@ -65,32 +70,18 @@ export function resolvePreviousStaySetupStep(
 }
 
 export function resolveStaySetupStepOrder(
-  tourismRequired: boolean,
+  _tourismRequired: boolean,
   _completion: StaySetupCompletion
 ): StaySetupStep[] {
-  const steps: StaySetupStep[] = [];
-
-  if (tourismRequired) {
-    steps.push('register');
-  }
-
-  steps.push('contact');
-  steps.push('essentials');
-  steps.push('room');
-
-  return steps;
+  return ['registration', 'essentials', 'room'];
 }
 
 export function resolveFirstIncompleteStaySetupStep(
-  tourismRequired: boolean,
+  _tourismRequired: boolean,
   completion: StaySetupCompletion
 ): StaySetupStep {
-  if (tourismRequired && !completion.tourismComplete) {
-    return 'register';
-  }
-
-  if (!completion.contactComplete) {
-    return 'contact';
+  if (!isStaySetupRegistrationComplete(completion)) {
+    return 'registration';
   }
 
   return 'essentials';
@@ -99,26 +90,19 @@ export function resolveFirstIncompleteStaySetupStep(
 export function isStaySetupStepLocked(
   step: StaySetupStep,
   isRegistered: boolean,
-  tourismRequired: boolean,
+  _tourismRequired: boolean,
   completion: StaySetupCompletion
 ): boolean {
   if (!isRegistered) {
     return false;
   }
 
-  if (step === 'register') {
+  if (step === 'registration') {
     return false;
   }
 
-  if (step === 'contact') {
-    return tourismRequired && !completion.tourismComplete;
-  }
-
   if (step === 'essentials' || step === 'room') {
-    if (tourismRequired && !completion.tourismComplete) {
-      return true;
-    }
-    return !completion.contactComplete;
+    return !isStaySetupRegistrationComplete(completion);
   }
 
   return false;
@@ -126,16 +110,12 @@ export function isStaySetupStepLocked(
 
 export function isValidStaySetupUrlStep(
   step: string | null,
-  tourismRequired: boolean,
+  _tourismRequired: boolean,
   _contactComplete: boolean
 ): step is StaySetupStep {
   const normalized = normalizeStaySetupUrlStep(step);
   if (!normalized) {
     return false;
-  }
-
-  if (normalized === 'register') {
-    return tourismRequired;
   }
 
   return true;

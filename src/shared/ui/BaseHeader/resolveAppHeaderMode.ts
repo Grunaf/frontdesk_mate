@@ -11,7 +11,10 @@ export function resolveAppHeaderMode(cleanPath: string): AppHeaderMode {
     return 'arrivalGuide';
   }
 
-  if (cleanPath === SITE_CONFIG.routes.app.staySetup.path) {
+  if (
+    cleanPath === SITE_CONFIG.routes.app.staySetup.path ||
+    cleanPath === SITE_CONFIG.routes.app.registration.path
+  ) {
     return 'arrivalGuide';
   }
 

@@ -8,27 +8,27 @@ import {
 } from './resolveStaySetupSteps';
 
 describe('resolveStaySetupSteps', () => {
-  it('starts at register when tourism required and incomplete', () => {
+  it('starts at registration when tourism required and incomplete', () => {
     expect(
       resolveFirstIncompleteStaySetupStep(true, {
         tourismRequired: true,
         tourismComplete: false,
         contactComplete: false,
       })
-    ).toBe('register');
+    ).toBe('registration');
   });
 
-  it('skips to contact when tourism complete', () => {
+  it('stays on registration when tourism complete but contact incomplete', () => {
     expect(
       resolveFirstIncompleteStaySetupStep(true, {
         tourismRequired: true,
         tourismComplete: true,
         contactComplete: false,
       })
-    ).toBe('contact');
+    ).toBe('registration');
   });
 
-  it('lands on essentials when contact complete', () => {
+  it('lands on essentials when registration aggregate complete', () => {
     expect(
       resolveFirstIncompleteStaySetupStep(true, {
         tourismRequired: true,
@@ -38,47 +38,52 @@ describe('resolveStaySetupSteps', () => {
     ).toBe('essentials');
   });
 
-  it('goes register → contact → essentials → room', () => {
-    const beforeContact = {
+  it('goes registration → essentials → room', () => {
+    const beforeRegistrationComplete = {
       tourismRequired: true,
       tourismComplete: true,
       contactComplete: false,
     };
-    expect(resolveNextStaySetupStep('register', true, beforeContact)).toBe('contact');
-    expect(resolveNextStaySetupStep('contact', true, beforeContact)).toBe('essentials');
+    expect(resolveNextStaySetupStep('registration', true, beforeRegistrationComplete)).toBe(null);
     expect(
-      resolveNextStaySetupStep('contact', true, {
-        ...beforeContact,
-        contactComplete: true,
-      })
-    ).toBe('essentials');
-    expect(
-      resolveNextStaySetupStep('essentials', true, {
-        ...beforeContact,
-        contactComplete: true,
-      })
-    ).toBe('room');
-    expect(
-      resolveNextStaySetupStep('register', true, {
+      resolveNextStaySetupStep('registration', true, {
         tourismRequired: true,
         tourismComplete: true,
         contactComplete: true,
       })
     ).toBe('essentials');
+    expect(
+      resolveNextStaySetupStep('essentials', true, {
+        ...beforeRegistrationComplete,
+        contactComplete: true,
+      })
+    ).toBe('room');
+    expect(
+      resolveNextStaySetupStep('room', true, {
+        tourismRequired: true,
+        tourismComplete: true,
+        contactComplete: true,
+      })
+    ).toBe(null);
   });
 
-  it('keeps contact in step order after contact is complete', () => {
+  it('keeps three steps in order', () => {
     expect(
       resolveStaySetupStepOrder(true, {
         tourismRequired: true,
         tourismComplete: true,
         contactComplete: true,
       })
-    ).toEqual(['register', 'contact', 'essentials', 'room']);
+    ).toEqual(['registration', 'essentials', 'room']);
   });
 
   it('maps legacy settlement url to room', () => {
     expect(normalizeStaySetupUrlStep('settlement')).toBe('room');
+  });
+
+  it('maps legacy register and contact to registration', () => {
+    expect(normalizeStaySetupUrlStep('register')).toBe('registration');
+    expect(normalizeStaySetupUrlStep('contact')).toBe('registration');
   });
 
   it('resolves previous step in order', () => {
@@ -88,14 +93,13 @@ describe('resolveStaySetupSteps', () => {
       contactComplete: true,
     };
     expect(resolvePreviousStaySetupStep('room', true, completion)).toBe('essentials');
-    expect(resolvePreviousStaySetupStep('essentials', true, completion)).toBe('contact');
-    expect(resolvePreviousStaySetupStep('contact', true, completion)).toBe('register');
-    expect(resolvePreviousStaySetupStep('register', true, completion)).toBe(null);
+    expect(resolvePreviousStaySetupStep('essentials', true, completion)).toBe('registration');
+    expect(resolvePreviousStaySetupStep('registration', true, completion)).toBe(null);
   });
 
-  it('returns null for previous on first step without tourism', () => {
+  it('returns null for previous on first step', () => {
     expect(
-      resolvePreviousStaySetupStep('contact', false, {
+      resolvePreviousStaySetupStep('registration', false, {
         tourismRequired: false,
         tourismComplete: false,
         contactComplete: false,

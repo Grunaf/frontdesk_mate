@@ -1,4 +1,8 @@
-import type { StaySetupCompletion, StaySetupStep } from './resolveStaySetupSteps';
+import {
+  isStaySetupRegistrationComplete,
+  type StaySetupCompletion,
+  type StaySetupStep,
+} from './resolveStaySetupSteps';
 
 export type StaySetupStepSegmentState = 'completed' | 'current' | 'upcoming' | 'locked';
 
@@ -16,11 +20,7 @@ export function resolveStaySetupStepSegmentState(
     return 'locked';
   }
 
-  if (step === 'register' && completion.tourismRequired && completion.tourismComplete) {
-    return 'completed';
-  }
-
-  if (step === 'contact' && completion.contactComplete) {
+  if (step === 'registration' && isStaySetupRegistrationComplete(completion)) {
     return 'completed';
   }
 

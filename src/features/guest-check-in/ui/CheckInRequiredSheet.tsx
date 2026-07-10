@@ -13,6 +13,7 @@ import { useForeignGuestRegistration, useGuestSession } from './GuestSessionProv
 import { useTranslations } from '@/shared/i18n';
 import { getTenantPublicUrl } from '@/shared/config';
 import {
+  BOTTOM_SHEET_SIZES,
   BottomSheet,
   BottomSheetBody,
   BottomSheetContent,
@@ -63,7 +64,11 @@ export function CheckInRequiredSheet({
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} dismissible={dismissible}>
-      <BottomSheetContent showCloseButton={dismissible} showDragHandle={dismissible}>
+      <BottomSheetContent
+        size={BOTTOM_SHEET_SIZES.large}
+        showCloseButton={dismissible}
+        showDragHandle={dismissible}
+      >
         <BottomSheetHeader>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t('eyebrow')}</p>
           <BottomSheetTitle>{t('title')}</BottomSheetTitle>

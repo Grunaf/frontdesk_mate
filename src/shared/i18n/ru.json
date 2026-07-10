@@ -792,11 +792,18 @@
         "cta": "Зарегистрировать"
       },
       "tabs": {
+        "registration": "Туристическая регистрация",
         "register": "Туристическая регистрация",
         "contact": "Контакт",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
         "settlement": "Заселение"
+      },
+      "registration": {
+        "cta": "Перейти к регистрации",
+        "allCompleteCta": "Перейти к Wi‑Fi и правилам",
+        "completeHint": "Регистрация гостей и контактные данные заполнены.",
+        "incompleteHint": "Завершите туристическую регистрацию и контактные данные на странице регистрации."
       },
       "register": {
         "actionButton": "К заселению",

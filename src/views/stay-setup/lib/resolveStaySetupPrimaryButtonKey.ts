@@ -1,9 +1,12 @@
 import type { StaySetupStep } from './resolveStaySetupSteps';
-import { resolveNextStaySetupStep, type StaySetupCompletion } from './resolveStaySetupSteps';
+import {
+  isStaySetupRegistrationComplete,
+  resolveNextStaySetupStep,
+  type StaySetupCompletion,
+} from './resolveStaySetupSteps';
 
 const STEP_BUTTON_KEYS: Record<StaySetupStep, string> = {
-  register: 'register.actionButton',
-  contact: 'contact.actionButton',
+  registration: 'registration.cta',
   essentials: 'essentials.actionButton',
   room: 'settlement.actionButton',
 };
@@ -18,6 +21,13 @@ export function resolveStaySetupPrimaryButtonKey(
 ): string {
   if (!isRegistered) {
     return CHECK_IN_CTA_KEY;
+  }
+
+  if (activeStepId === 'registration') {
+    if (!isStaySetupRegistrationComplete(completion)) {
+      return 'registration.cta';
+    }
+    return 'essentials.actionButton';
   }
 
   return STEP_BUTTON_KEYS[activeStepId];

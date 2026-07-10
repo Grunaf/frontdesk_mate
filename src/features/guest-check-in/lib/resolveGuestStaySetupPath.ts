@@ -1,9 +1,11 @@
 import { SITE_CONFIG } from '@/shared/config';
 import type { StaySetupStep } from '@/views/stay-setup/lib/resolveStaySetupSteps';
 import {
+  isStaySetupRegistrationComplete,
   resolveFirstIncompleteStaySetupStep,
   type StaySetupCompletion,
 } from '@/views/stay-setup/lib/resolveStaySetupSteps';
+import { resolveGuestRegistrationPath } from './resolveGuestRegistrationPath';
 
 export function resolveGuestStaySetupPath(input: {
   locale: string;
@@ -14,6 +16,10 @@ export function resolveGuestStaySetupPath(input: {
   const step =
     input.step ??
     resolveFirstIncompleteStaySetupStep(input.tourismRequired, input.completion);
+
+  if (step === 'registration') {
+    return resolveGuestRegistrationPath({ locale: input.locale });
+  }
 
   const params = new URLSearchParams({ step });
   return `/${input.locale}${SITE_CONFIG.routes.app.staySetup.path}?${params.toString()}`;
@@ -27,19 +33,19 @@ export function resolveStaySetupDeepLinkStep(input: {
   contactComplete: boolean;
   preferSettlement?: boolean;
 }): StaySetupDeepLinkStep {
-  if (input.preferSettlement) {
-    if (input.tourismRequired && !input.tourismComplete) {
-      return 'register';
-    }
-    if (!input.contactComplete) {
-      return 'contact';
-    }
-    return input.preferSettlement ? 'room' : 'essentials';
-  }
-
-  return resolveFirstIncompleteStaySetupStep(input.tourismRequired, {
+  const completion: StaySetupCompletion = {
     tourismRequired: input.tourismRequired,
     tourismComplete: input.tourismComplete,
     contactComplete: input.contactComplete,
-  });
+  };
+
+  if (!isStaySetupRegistrationComplete(completion)) {
+    return 'registration';
+  }
+
+  if (input.preferSettlement) {
+    return 'room';
+  }
+
+  return resolveFirstIncompleteStaySetupStep(input.tourismRequired, completion);
 }

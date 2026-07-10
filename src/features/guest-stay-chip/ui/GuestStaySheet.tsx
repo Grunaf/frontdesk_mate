@@ -8,6 +8,7 @@ import { resolveReceptionContact } from '@/entities/tenant/lib/resolveReceptionC
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { formatBedLocationLine } from '@/features/find-your-bed/lib/formatBedLocation';
 import { useStaySetupBedMapStep } from '@/features/find-your-bed/ui/FindYourBedCard';
+import { resolveGuestRegistrationPath } from '@/features/guest-check-in/lib/resolveGuestRegistrationPath';
 import { resolveGuestStaySetupPath } from '@/features/guest-check-in/lib/resolveGuestStaySetupPath';
 import { listTourismGuestsForSessionAction } from '@/features/guest-tourism-registration';
 import { ReceptionContactActions, useReceptionContactLabels } from '@/features/reception-contact';
@@ -84,16 +85,7 @@ export function GuestStaySheet({
     },
   });
 
-  const registerPath = resolveGuestStaySetupPath({
-    locale: routeLocale,
-    step: 'register',
-    tourismRequired: tourismRegistrationRequired,
-    completion: {
-      tourismRequired: tourismRegistrationRequired,
-      tourismComplete: false,
-      contactComplete: false,
-    },
-  });
+  const registerPath = resolveGuestRegistrationPath({ locale: routeLocale });
 
   useEffect(() => {
     if (!open || !tourismRegistrationRequired || !slug) {
