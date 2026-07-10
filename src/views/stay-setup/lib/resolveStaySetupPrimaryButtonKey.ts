@@ -1,12 +1,11 @@
 import type { StaySetupStep } from './resolveStaySetupSteps';
 import {
   isStaySetupRegistrationComplete,
-  resolveNextStaySetupStep,
   type StaySetupCompletion,
 } from './resolveStaySetupSteps';
 
 const STEP_BUTTON_KEYS: Record<StaySetupStep, string> = {
-  registration: 'registration.cta',
+  registration: 'essentials.actionButton',
   essentials: 'essentials.actionButton',
   room: 'settlement.actionButton',
 };
@@ -16,28 +15,32 @@ const CHECK_IN_CTA_KEY = 'guestCheckIn.checkInToContinue';
 export function resolveStaySetupPrimaryButtonKey(
   activeStepId: StaySetupStep,
   isRegistered: boolean,
-  tourismRequired: boolean,
+  _tourismRequired: boolean,
   completion: StaySetupCompletion
 ): string {
   if (!isRegistered) {
     return CHECK_IN_CTA_KEY;
   }
 
-  if (activeStepId === 'registration') {
-    if (!isStaySetupRegistrationComplete(completion)) {
-      return 'registration.cta';
-    }
-    return 'essentials.actionButton';
+  if (activeStepId === 'registration' && !isStaySetupRegistrationComplete(completion)) {
+    return CHECK_IN_CTA_KEY;
   }
 
   return STEP_BUTTON_KEYS[activeStepId];
 }
 
-export function resolveStaySetupPrimaryAction(
+export function shouldShowStaySetupPrimaryButton(
   activeStepId: StaySetupStep,
-  tourismRequired: boolean,
+  isRegistered: boolean,
   completion: StaySetupCompletion
-): 'next' | 'finish' {
-  const next = resolveNextStaySetupStep(activeStepId, tourismRequired, completion);
-  return next === null ? 'finish' : 'next';
+): boolean {
+  if (!isRegistered) {
+    return true;
+  }
+
+  if (activeStepId === 'registration' && !isStaySetupRegistrationComplete(completion)) {
+    return false;
+  }
+
+  return true;
 }

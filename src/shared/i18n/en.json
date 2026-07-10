@@ -674,6 +674,7 @@
         "title": "Arrival Info",
         "visuals": "Visual landmarks:",
         "actionButton": "Settling In",
+        "goToConcierge": "Go to Concierge",
         "nextSlide": "Next",
         "sections": {
           "find": {

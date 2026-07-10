@@ -4,15 +4,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckInRequiredSheet,
-  resolveGuestRegistrationPath,
   useGuestSession,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
+import { isCheckInDayOrLater } from '@/features/stay-essentials/lib/resolveShowSettlementBanner';
 import { TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { ArrivalGuideStepsShell } from '@/views/arrival-journey';
+import { RegistrationStepBody, resolveOpenRegistrationAccordionItem } from '@/views/registration';
+import type { RegistrationAccordionItem } from '@/views/registration';
 import { SITE_CONFIG } from '@/shared/config';
-import { useLocale, useTranslations } from '@/shared/i18n';
+import { useTranslations } from '@/shared/i18n';
 import { Button, IconBackActionsRow } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
@@ -27,7 +29,10 @@ import {
   type StaySetupCompletion,
   type StaySetupStep,
 } from '../lib/resolveStaySetupSteps';
-import { resolveStaySetupPrimaryButtonKey } from '../lib/resolveStaySetupPrimaryButtonKey';
+import {
+  resolveStaySetupPrimaryButtonKey,
+  shouldShowStaySetupPrimaryButton,
+} from '../lib/resolveStaySetupPrimaryButtonKey';
 import { buildStaySetupStepSearchParams } from '../lib/buildStaySetupStepSearchParams';
 import { useStaySetupCompletionSync } from '../model/useStaySetupCompletionSync';
 import {
@@ -58,23 +63,6 @@ function isRoomOrEssentialsStep(step: StaySetupStep): boolean {
   return step === 'essentials' || step === 'room';
 }
 
-function cameFromRegistrationPage(): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('from') === 'registration') {
-    return true;
-  }
-
-  try {
-    return document.referrer.includes('/registration');
-  } catch {
-    return false;
-  }
-}
-
 function reconcileStepAfterCompletionSync(
   step: StaySetupStep,
   tourismRegistrationRequired: boolean,
@@ -93,10 +81,6 @@ function reconcileStepAfterCompletionSync(
     return 'registration';
   }
 
-  if (step === 'registration' && regComplete && cameFromRegistrationPage()) {
-    return 'essentials';
-  }
-
   if (isRoomOrEssentialsStep(step)) {
     if (!regComplete) {
       return 'registration';
@@ -109,17 +93,18 @@ function reconcileStepAfterCompletionSync(
 
 export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const t = useTranslations('pages.staySetup');
-  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const { settings, slug } = useTenant();
-  const { session } = useGuestSession();
+  const { session, checkInAt } = useGuestSession();
   const stayId = session?.stayId ?? null;
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const isRegistered = useIsGuestRegistered();
+  const checkInDayOrLater = checkInAt ? isCheckInDayOrLater(checkInAt) : false;
 
   const [tourismComplete, setTourismComplete] = useState(initial.tourismComplete);
   const [contactComplete, setContactComplete] = useState(initial.contactComplete);
+  const [stayContactWhatsapp, setStayContactWhatsapp] = useState(initial.stayContactWhatsapp);
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
   const [tourismGateSheetOpen, setTourismGateSheetOpen] = useState(false);
 
@@ -134,6 +119,10 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   const registrationComplete = isStaySetupRegistrationComplete(completion);
 
+  const [accordionValue, setAccordionValue] = useState<RegistrationAccordionItem>(() =>
+    resolveOpenRegistrationAccordionItem(completion)
+  );
+
   const defaultStep = resolveFirstIncompleteStaySetupStep(
     tourismRegistrationRequired,
     completion
@@ -143,7 +132,8 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   useEffect(() => {
     setTourismComplete(initial.tourismComplete);
     setContactComplete(initial.contactComplete);
-  }, [initial.tourismComplete, initial.contactComplete]);
+    setStayContactWhatsapp(initial.stayContactWhatsapp);
+  }, [initial.tourismComplete, initial.contactComplete, initial.stayContactWhatsapp]);
 
   useEffect(() => {
     if (isRegistered) {
@@ -243,9 +233,26 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const openCheckInSheet = () => setCheckInSheetOpen(true);
   const openTourismGateSheet = () => setTourismGateSheetOpen(true);
 
-  const goToRegistrationPage = useCallback(() => {
-    router.push(resolveGuestRegistrationPath({ locale }));
-  }, [locale, router]);
+  const focusRegistrationStep = useCallback(() => {
+    setCurrentStep('registration');
+  }, []);
+
+  const handleRegistrationTourismComplete = useCallback(() => {
+    setTourismComplete(true);
+    setAccordionValue('contact');
+  }, []);
+
+  const handleRegistrationContactComplete = useCallback(
+    (savedWhatsapp: string) => {
+      setStayContactWhatsapp(savedWhatsapp);
+      setContactComplete(true);
+
+      if (checkInDayOrLater) {
+        setCurrentStep('essentials');
+      }
+    },
+    [checkInDayOrLater]
+  );
 
   const navigateToStep = useCallback(
     (step: StaySetupStep) => {
@@ -259,7 +266,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
           openTourismGateSheet();
           return;
         }
-        goToRegistrationPage();
+        focusRegistrationStep();
         return;
       }
 
@@ -270,7 +277,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       registrationComplete,
       tourismRegistrationRequired,
       tourismComplete,
-      goToRegistrationPage,
+      focusRegistrationStep,
     ]
   );
 
@@ -280,25 +287,9 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         return;
       }
 
-      if (stepId === 'registration') {
-        if (!registrationComplete) {
-          goToRegistrationPage();
-          return;
-        }
-        setCurrentStep('registration');
-        return;
-      }
-
-      navigateToStep(stepId);
+      setCurrentStep(stepId);
     },
-    [
-      completion,
-      goToRegistrationPage,
-      isRegistered,
-      navigateToStep,
-      registrationComplete,
-      tourismRegistrationRequired,
-    ]
+    [completion, isRegistered, tourismRegistrationRequired]
   );
 
   const visibleSteps = resolveStaySetupStepOrder(tourismRegistrationRequired, completion);
@@ -307,43 +298,60 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     const items: {
       id: StaySetupStep;
       label: string;
-      showPrimary: boolean;
       render: () => React.ReactNode;
       onComplete: () => void;
     }[] = [
       {
         id: 'registration',
         label: t('tabs.registration'),
-        showPrimary: true,
         render: () => (
-          <div className="space-y-2 py-2">
-            {registrationComplete ? (
-              <p className="text-sm text-muted-foreground">{t('registration.completeHint')}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t('registration.incompleteHint')}</p>
-            )}
-          </div>
+          <RegistrationStepBody
+            tourismRequired={tourismRegistrationRequired}
+            tourismComplete={tourismComplete}
+            contactComplete={contactComplete}
+            registrationComplete={registrationComplete}
+            accordionValue={accordionValue}
+            onAccordionValueChange={setAccordionValue}
+            interactionEnabled={isRegistered}
+            tenantSlug={slug ?? ''}
+            stayContactWhatsapp={stayContactWhatsapp}
+            onTourismComplete={handleRegistrationTourismComplete}
+            onContactComplete={handleRegistrationContactComplete}
+            showCompleteHint
+          />
         ),
         onComplete: () => setCurrentStep('essentials'),
       },
       {
         id: 'essentials',
         label: t('tabs.essentials'),
-        showPrimary: true,
         render: () => <StaySetupEssentialsStep />,
         onComplete: () => setCurrentStep('room'),
       },
       {
         id: 'room',
         label: t('tabs.room'),
-        showPrimary: true,
         render: () => <StaySetupRoomStep />,
         onComplete: () => router.push(SITE_CONFIG.routes.app.concierge.path),
       },
     ];
 
     return items.filter((item) => visibleSteps.includes(item.id));
-  }, [t, registrationComplete, router, visibleSteps]);
+  }, [
+    t,
+    tourismRegistrationRequired,
+    tourismComplete,
+    contactComplete,
+    registrationComplete,
+    accordionValue,
+    isRegistered,
+    slug,
+    stayContactWhatsapp,
+    handleRegistrationTourismComplete,
+    handleRegistrationContactComplete,
+    router,
+    visibleSteps,
+  ]);
 
   const activeStep = stepsConfig.find((step) => step.id === currentStep) ?? stepsConfig[0];
 
@@ -363,11 +371,6 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       return;
     }
 
-    if (activeStep.id === 'registration' && !registrationComplete) {
-      goToRegistrationPage();
-      return;
-    }
-
     if (
       isRoomOrEssentialsStep(activeStep.id) &&
       tourismRegistrationRequired &&
@@ -378,7 +381,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     }
 
     if (isRoomOrEssentialsStep(activeStep.id) && !registrationComplete) {
-      goToRegistrationPage();
+      focusRegistrationStep();
       return;
     }
 
@@ -412,7 +415,9 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       )
     : 'settlement.actionButton';
 
-  const showPrimaryButton = activeStep?.showPrimary ?? false;
+  const showPrimaryButton = activeStep
+    ? shouldShowStaySetupPrimaryButton(activeStep.id, isRegistered, completion)
+    : false;
 
   const previousStep = activeStep
     ? resolvePreviousStaySetupStep(
@@ -465,7 +470,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       <TourismRegistrationRequiredSheet
         open={tourismGateSheetOpen}
         onOpenChange={setTourismGateSheetOpen}
-        onGoToRegistration={goToRegistrationPage}
+        onGoToRegistration={focusRegistrationStep}
       />
     </div>
   );

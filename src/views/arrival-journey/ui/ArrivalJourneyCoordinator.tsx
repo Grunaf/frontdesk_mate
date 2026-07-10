@@ -8,9 +8,12 @@ import { PreTripInfo } from '@/features/pre-trip';
 import {
   CheckInRequiredSheet,
   CrossHostelStrip,
+  useGuestSession,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
+import { isCheckInDayOrLater } from '@/features/stay-essentials/lib/resolveShowSettlementBanner';
 import { useModuleStatus, useTenant } from '@/entities/tenant';
+import { RegistrationStepBody, useRegistrationStepState } from '@/views/registration';
 import { ArrivalGuideStepsShell } from './ArrivalGuideStepsShell';
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
@@ -37,6 +40,12 @@ export interface StepItem {
 
 const REGISTRATION_LOCKED_STEPS: Step[] = ['arrival'];
 
+const EMPTY_REGISTRATION_INITIAL = {
+  tourismComplete: false,
+  contactComplete: false,
+  stayContactWhatsapp: null,
+};
+
 function isRegistrationLockedStep(step: Step, isRegistered: boolean): boolean {
   return !isRegistered && REGISTRATION_LOCKED_STEPS.includes(step);
 }
@@ -50,15 +59,34 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   const t = useTranslations('pages.arrivalJourney');
   const locale = useLocale();
   const router = useRouter();
-  const { settings } = useTenant();
+  const { slug } = useTenant();
   const arrivalRoutesStatus = useModuleStatus('arrivalRoutes');
   const routesAvailable = arrivalRoutesStatus !== 'hidden';
   const isRegistered = useIsGuestRegistered();
+  const { checkInAt } = useGuestSession();
+  const checkInDayOrLater = checkInAt ? isCheckInDayOrLater(checkInAt) : false;
   const { currentStep, setCurrentStep } = useCheckInState(isOnsite);
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
   const [arrivalHideMainPrimary, setArrivalHideMainPrimary] = useState(false);
 
+  const {
+    tourismRequired,
+    tourismComplete,
+    contactComplete,
+    stayContactWhatsapp,
+    registrationComplete,
+    accordionValue,
+    setAccordionValue,
+    handleTourismComplete,
+    handleContactComplete,
+  } = useRegistrationStepState({
+    initial: EMPTY_REGISTRATION_INITIAL,
+    isRegistered,
+    syncFromServer: true,
+  });
+
   const isArrival = currentStep === 'arrival';
+  const showArrivalRegistrationEmbed = isArrival && isRegistered && !registrationComplete;
 
   useEffect(() => {
     if (!isArrival) {
@@ -109,6 +137,18 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
     router.push(`/${locale}${SITE_CONFIG.routes.app.staySetup.path}`);
   }, [locale, router]);
 
+  const goToConcierge = useCallback(() => {
+    router.push(`/${locale}${SITE_CONFIG.routes.app.concierge.path}`);
+  }, [locale, router]);
+
+  const completeArrivalStep = useCallback(() => {
+    if (!checkInDayOrLater) {
+      goToConcierge();
+      return;
+    }
+    goToStaySetup();
+  }, [checkInDayOrLater, goToConcierge, goToStaySetup]);
+
   const navigateToStep = useCallback(
     (step: Step) => {
       if (isRegistrationLockedStep(step, isRegistered)) {
@@ -125,8 +165,10 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
       openCheckInSheet();
       return;
     }
-    goToStaySetup();
-  }, [isRegistered, goToStaySetup]);
+    completeArrivalStep();
+  }, [isRegistered, completeArrivalStep]);
+
+  const arrivalExitButtonKey = checkInDayOrLater ? 'arrival.actionButton' : 'goToConcierge';
 
   const stepsConfig: StepItem[] = useMemo(() => {
     const goToNextFrom = (fromStep: Step) => {
@@ -162,13 +204,13 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
         Component: function ArrivalGuidePlaceholder() {
           return null;
         },
-        onComplete: goToStaySetup,
-        buttonKey: 'arrival.actionButton',
+        onComplete: completeArrivalStep,
+        buttonKey: arrivalExitButtonKey,
       },
     ];
 
     return base;
-  }, [t, routesAvailable, navigateToStep, goToStaySetup]);
+  }, [t, routesAvailable, navigateToStep, completeArrivalStep, arrivalExitButtonKey]);
 
   const activeStep =
     stepsConfig.find((step) => step.id === currentStep) || stepsConfig[0];
@@ -215,7 +257,8 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   const primaryButtonKey = resolveArrivalJourneyPrimaryButtonKey(
     currentStep,
     isRegistered,
-    routesAvailable
+    routesAvailable,
+    checkInDayOrLater
   );
   const showPrimaryButton = !(activeStep.id === 'arrival' && arrivalHideMainPrimary);
 
@@ -269,14 +312,37 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
         )}
       >
         {isArrival ? (
-          <DoorAccessPanel
-            mediaTopOverlay={arrivalGuideChipsOverlay}
-            primaryAction={{
-              label: t('arrival.actionButton'),
-              onClick: handleArrivalPrimaryAction,
-            }}
-            onHideMainPrimaryChange={setArrivalHideMainPrimary}
-          />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1">
+              <DoorAccessPanel
+                mediaTopOverlay={arrivalGuideChipsOverlay}
+                primaryAction={{
+                  label: t(arrivalExitButtonKey),
+                  onClick: handleArrivalPrimaryAction,
+                }}
+                onHideMainPrimaryChange={setArrivalHideMainPrimary}
+              />
+            </div>
+            {showArrivalRegistrationEmbed ? (
+              <div className="max-h-[40vh] shrink-0 overflow-y-auto border-t border-border bg-background px-4 py-2">
+                <RegistrationStepBody
+                  tourismRequired={tourismRequired}
+                  tourismComplete={tourismComplete}
+                  contactComplete={contactComplete}
+                  registrationComplete={registrationComplete}
+                  accordionValue={accordionValue}
+                  onAccordionValueChange={setAccordionValue}
+                  interactionEnabled={isRegistered}
+                  tenantSlug={slug ?? ''}
+                  stayContactWhatsapp={stayContactWhatsapp}
+                  onTourismComplete={handleTourismComplete}
+                  onContactComplete={handleContactComplete}
+                  showCompleteHint={false}
+                  className="py-1"
+                />
+              </div>
+            ) : null}
+          </div>
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
             <ActiveComponent />

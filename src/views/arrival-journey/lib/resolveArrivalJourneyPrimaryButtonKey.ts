@@ -2,6 +2,7 @@ import type { Step } from '../model/useCheckInState';
 import { resolveNextArrivalJourneyStep } from './resolveNextArrivalJourneyStep';
 
 const CHECK_IN_CTA_KEY = 'directions.checkInToContinue';
+const CONCIERGE_CTA_KEY = 'goToConcierge';
 
 const STEP_BUTTON_KEYS: Record<Step, string> = {
   info: 'preTrip.actionButton',
@@ -12,7 +13,8 @@ const STEP_BUTTON_KEYS: Record<Step, string> = {
 export function resolveArrivalJourneyPrimaryButtonKey(
   activeStepId: Step,
   isRegistered: boolean,
-  routesAvailable: boolean
+  routesAvailable: boolean,
+  checkInDayOrLater: boolean
 ): string {
   const nextStep = resolveNextArrivalJourneyStep(activeStepId, routesAvailable);
 
@@ -22,6 +24,10 @@ export function resolveArrivalJourneyPrimaryButtonKey(
 
   if (activeStepId === 'info' && !routesAvailable && isRegistered) {
     return STEP_BUTTON_KEYS.arrival;
+  }
+
+  if (activeStepId === 'arrival' && !checkInDayOrLater) {
+    return CONCIERGE_CTA_KEY;
   }
 
   return STEP_BUTTON_KEYS[activeStepId];

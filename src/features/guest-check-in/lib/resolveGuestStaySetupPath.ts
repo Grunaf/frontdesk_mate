@@ -18,7 +18,8 @@ export function resolveGuestStaySetupPath(input: {
     resolveFirstIncompleteStaySetupStep(input.tourismRequired, input.completion);
 
   if (step === 'registration') {
-    return resolveGuestRegistrationPath({ locale: input.locale });
+    const params = new URLSearchParams({ step: 'registration' });
+    return `/${input.locale}${SITE_CONFIG.routes.app.staySetup.path}?${params.toString()}`;
   }
 
   const params = new URLSearchParams({ step });
@@ -48,4 +49,9 @@ export function resolveStaySetupDeepLinkStep(input: {
   }
 
   return resolveFirstIncompleteStaySetupStep(input.tourismRequired, completion);
+}
+
+/** Standalone registration page (concierge pre-check-in, bookmarks). */
+export function resolveGuestRegistrationDeepLinkPath(input: { locale: string }): string {
+  return resolveGuestRegistrationPath(input);
 }
