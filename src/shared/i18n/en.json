@@ -910,7 +910,7 @@
       "home": "Home",
       "concierge": "Concierge",
       "arrivalGuide": "Arrival Guide",
-      "staySetup": "Guest details",
+      "staySetup": "Settling in",
       "guide": "Local guide",
       "services": "Services",
       "faq": "FAQ",
@@ -1457,7 +1457,7 @@
       },
       "bridges": {
         "arrivalGuide": "Arrival guide",
-        "staySetup": "Guest details",
+        "staySetup": "Settling in",
         "wifi": "Wi‑Fi",
         "checkout": "Check-out",
         "nightAccess": "Night access",

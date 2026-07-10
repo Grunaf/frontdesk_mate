@@ -12,8 +12,7 @@ import {
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
 import { isCheckInDayOrLater } from '@/features/stay-essentials/lib/resolveShowSettlementBanner';
-import { useModuleStatus, useTenant } from '@/entities/tenant';
-import { RegistrationStepBody, useRegistrationStepState } from '@/views/registration';
+import { useModuleStatus } from '@/entities/tenant';
 import { ArrivalGuideStepsShell } from './ArrivalGuideStepsShell';
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
@@ -40,12 +39,6 @@ export interface StepItem {
 
 const REGISTRATION_LOCKED_STEPS: Step[] = ['arrival'];
 
-const EMPTY_REGISTRATION_INITIAL = {
-  tourismComplete: false,
-  contactComplete: false,
-  stayContactWhatsapp: null,
-};
-
 function isRegistrationLockedStep(step: Step, isRegistered: boolean): boolean {
   return !isRegistered && REGISTRATION_LOCKED_STEPS.includes(step);
 }
@@ -59,7 +52,6 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   const t = useTranslations('pages.arrivalJourney');
   const locale = useLocale();
   const router = useRouter();
-  const { slug } = useTenant();
   const arrivalRoutesStatus = useModuleStatus('arrivalRoutes');
   const routesAvailable = arrivalRoutesStatus !== 'hidden';
   const isRegistered = useIsGuestRegistered();
@@ -69,25 +61,7 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
   const [arrivalHideMainPrimary, setArrivalHideMainPrimary] = useState(false);
 
-  const {
-    tourismRequired,
-    tourismComplete,
-    contactComplete,
-    stayContactWhatsapp,
-    registrationComplete,
-    accordionValue,
-    setAccordionValue,
-    handleTourismComplete,
-    handleContactComplete,
-  } = useRegistrationStepState({
-    initial: EMPTY_REGISTRATION_INITIAL,
-    isRegistered,
-    syncFromServer: true,
-  });
-
   const isArrival = currentStep === 'arrival';
-  const showArrivalRegistrationEmbed = isArrival && isRegistered && !registrationComplete;
-
   useEffect(() => {
     if (!isArrival) {
       return;
@@ -168,7 +142,7 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
     completeArrivalStep();
   }, [isRegistered, completeArrivalStep]);
 
-  const arrivalExitButtonKey = checkInDayOrLater ? 'arrival.actionButton' : 'goToConcierge';
+  const arrivalExitButtonKey = checkInDayOrLater ? 'arrival.actionButton' : 'arrival.goToConcierge';
 
   const stepsConfig: StepItem[] = useMemo(() => {
     const goToNextFrom = (fromStep: Step) => {
@@ -312,37 +286,14 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
         )}
       >
         {isArrival ? (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1">
-              <DoorAccessPanel
-                mediaTopOverlay={arrivalGuideChipsOverlay}
-                primaryAction={{
-                  label: t(arrivalExitButtonKey),
-                  onClick: handleArrivalPrimaryAction,
-                }}
-                onHideMainPrimaryChange={setArrivalHideMainPrimary}
-              />
-            </div>
-            {showArrivalRegistrationEmbed ? (
-              <div className="max-h-[40vh] shrink-0 overflow-y-auto border-t border-border bg-background px-4 py-2">
-                <RegistrationStepBody
-                  tourismRequired={tourismRequired}
-                  tourismComplete={tourismComplete}
-                  contactComplete={contactComplete}
-                  registrationComplete={registrationComplete}
-                  accordionValue={accordionValue}
-                  onAccordionValueChange={setAccordionValue}
-                  interactionEnabled={isRegistered}
-                  tenantSlug={slug ?? ''}
-                  stayContactWhatsapp={stayContactWhatsapp}
-                  onTourismComplete={handleTourismComplete}
-                  onContactComplete={handleContactComplete}
-                  showCompleteHint={false}
-                  className="py-1"
-                />
-              </div>
-            ) : null}
-          </div>
+          <DoorAccessPanel
+            mediaTopOverlay={arrivalGuideChipsOverlay}
+            primaryAction={{
+              label: t(arrivalExitButtonKey),
+              onClick: handleArrivalPrimaryAction,
+            }}
+            onHideMainPrimaryChange={setArrivalHideMainPrimary}
+          />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
             <ActiveComponent />

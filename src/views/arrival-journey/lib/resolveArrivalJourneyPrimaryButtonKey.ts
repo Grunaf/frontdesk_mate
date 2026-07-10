@@ -2,7 +2,7 @@ import type { Step } from '../model/useCheckInState';
 import { resolveNextArrivalJourneyStep } from './resolveNextArrivalJourneyStep';
 
 const CHECK_IN_CTA_KEY = 'directions.checkInToContinue';
-const CONCIERGE_CTA_KEY = 'goToConcierge';
+const CONCIERGE_CTA_KEY = 'arrival.goToConcierge';
 
 const STEP_BUTTON_KEYS: Record<Step, string> = {
   info: 'preTrip.actionButton',

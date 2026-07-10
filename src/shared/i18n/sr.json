@@ -788,7 +788,7 @@
       "back": "Back",
       "backToConcierge": "Back to Concierge",
       "goToConcierge": "Go to Concierge",
-      "staySetup": "Podaci o gostu"
+      "staySetup": "Settling in"
     },
     "memories": {
       "title": "Share your memories",
@@ -1468,7 +1468,7 @@
         "nightAccess": "Night access",
         "reception": "About reception",
         "contact": "Get in touch",
-        "staySetup": "Podaci o gostu"
+        "staySetup": "Settling in"
       },
       "bridgeAriaLabelUnread": "{title} — not viewed",
       "bridgeAriaLabelRead": "{title} — viewed",

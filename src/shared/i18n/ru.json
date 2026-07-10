@@ -910,7 +910,7 @@
       "home": "Главная",
       "concierge": "Concierge",
       "arrivalGuide": "Инструкция по заселению",
-      "staySetup": "Данные гостей",
+      "staySetup": "Заселение",
       "guide": "Городской гид",
       "services": "Услуги",
       "faq": "FAQ",
@@ -1457,7 +1457,7 @@
       },
       "bridges": {
         "arrivalGuide": "Гид по заезду",
-        "staySetup": "Данные гостей",
+        "staySetup": "Заселение",
         "wifi": "Wi‑Fi",
         "checkout": "Выезд",
         "nightAccess": "Ночной доступ",

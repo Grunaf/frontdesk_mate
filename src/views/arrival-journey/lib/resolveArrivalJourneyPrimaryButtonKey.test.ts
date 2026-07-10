@@ -43,7 +43,7 @@ describe('resolveArrivalJourneyPrimaryButtonKey', () => {
 
   it('uses concierge CTA on arrival before check-in day', () => {
     expect(resolveArrivalJourneyPrimaryButtonKey('arrival', true, true, false)).toBe(
-      'goToConcierge'
+      'arrival.goToConcierge'
     );
   });
 });
