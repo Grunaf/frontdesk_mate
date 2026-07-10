@@ -10,7 +10,11 @@ import { GuestExtrasBlock } from '@/features/guest-services';
 import { HostelRules } from '@/features/hostel-rules';
 import { ConciergeReceptionStrip } from '@/features/reception-contact';
 import { conciergeContentStripOffsetClass } from '@/features/reception-contact/lib/conciergeStripLayout';
-import { StayEssentialsBridges, StayEssentialsPreCheckInBanner } from '@/features/stay-essentials';
+import {
+  StayEssentialsBridges,
+  StayEssentialsPreCheckInBanner,
+  StayEssentialsSettlementBanner,
+} from '@/features/stay-essentials';
 import { LocalGuide } from '@/features/welcome';
 import { useTranslations } from '@/shared/i18n';
 import { ConciergeModuleSection, FeatureGate } from '@/shared/ui';
@@ -57,6 +61,7 @@ export function ConciergeContent() {
         {/* Zone: arrival essentials */}
         <div className="space-y-2">
           <StayEssentialsPreCheckInBanner />
+          <StayEssentialsSettlementBanner />
           <StayEssentialsBridges />
         </div>
 

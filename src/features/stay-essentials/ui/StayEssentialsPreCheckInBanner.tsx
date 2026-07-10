@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useTenant } from '@/entities/tenant';
-import { resolveGuestRegistrationPath, useIsGuestRegistered } from '@/features/guest-check-in';
+import { resolveGuestRegistrationPath, useGuestSession, useIsGuestRegistered } from '@/features/guest-check-in';
 import { getStaySetupStatusAction } from '@/features/guest-stay-contact';
 import { useLocale, useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
 import { setInAppReturnTo } from '@/shared/lib';
-import { pressableTileActiveClass, StepRingProgress, useAppNavigation } from '@/shared/ui';
-import { cn } from '@/shared/lib/utils';
+import { useAppNavigation } from '@/shared/ui';
 import { resolvePreCheckInBannerProgress } from '../lib/resolvePreCheckInBannerProgress';
+import { resolveShowPreCheckInRegistrationBanner } from '../lib/resolveShowSettlementBanner';
+import { StayEssentialsConciergeBannerLayout } from './StayEssentialsConciergeBannerLayout';
 
 export function StayEssentialsPreCheckInBanner() {
   const tTabs = useTranslations('pages.staySetup.tabs');
@@ -18,6 +19,7 @@ export function StayEssentialsPreCheckInBanner() {
   const { push, pending } = useAppNavigation();
   const { slug } = useTenant();
   const isRegistered = useIsGuestRegistered();
+  const { checkInAt } = useGuestSession();
   const title = tTabs('registration');
   const [progress, setProgress] = useState<{
     totalSteps: number;
@@ -44,7 +46,14 @@ export function StayEssentialsPreCheckInBanner() {
         contactComplete,
       });
 
-      if (resolved.isComplete) {
+      const show = resolveShowPreCheckInRegistrationBanner({
+        isRegistered,
+        tenantSlug: slug,
+        checkInAt,
+        registrationComplete: resolved.isComplete,
+      });
+
+      if (!show) {
         setProgress(null);
         return;
       }
@@ -58,40 +67,24 @@ export function StayEssentialsPreCheckInBanner() {
     return () => {
       cancelled = true;
     };
-  }, [isRegistered, slug]);
+  }, [isRegistered, slug, checkInAt]);
 
   if (!progress) {
     return null;
   }
 
   return (
-    <button
-      type="button"
-      disabled={pending}
-      aria-busy={pending || undefined}
-      aria-label={title}
-      data-testid="stay-banner-registration"
+    <StayEssentialsConciergeBannerLayout
+      title={title}
+      description={tBanner('description')}
+      testId="stay-banner-registration"
+      totalSteps={progress.totalSteps}
+      completedSteps={progress.completedSteps}
+      pending={pending}
       onClick={() => {
         setInAppReturnTo(SITE_CONFIG.routes.app.concierge.path);
         push(resolveGuestRegistrationPath({ locale }));
       }}
-      className={cn(
-        'flex w-full items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-left transition-colors hover:bg-muted/60',
-        pressableTileActiveClass,
-        pending && 'pointer-events-none opacity-80'
-      )}
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium leading-snug text-foreground">{title}</span>
-        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
-          {tBanner('description')}
-        </span>
-      </span>
-      <StepRingProgress
-        totalSteps={progress.totalSteps}
-        completedSteps={progress.completedSteps}
-        aria-label={`${progress.completedSteps} of ${progress.totalSteps}`}
-      />
-    </button>
+    />
   );
 }

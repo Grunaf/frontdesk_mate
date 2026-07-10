@@ -1457,6 +1457,9 @@
       "preCheckInBanner": {
         "description": "Pre dolaska završite registraciju gostiju i ostavite broj telefona na koji vas možemo kontaktirati."
       },
+      "settlementBanner": {
+        "description": "Povežite se na Wi‑Fi, pročitajte kućni red i pronađite sobu na dan ili pre dana prijave."
+      },
       "bridges": {
         "arrivalGuide": "Arrival guide",
         "wifi": "Wi‑Fi",

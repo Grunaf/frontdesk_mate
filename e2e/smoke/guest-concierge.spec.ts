@@ -83,8 +83,10 @@ test.describe('guest concierge stay chip', () => {
   // Fresh e2e provisioned stays have incomplete contact (and tourism when enabled on E2E_TENANT_SLUG).
   test('pre-check-in registration banner navigates to registration', async ({ page }) => {
     const banner = page.getByTestId('stay-banner-registration');
+    const settlementBanner = page.getByTestId('stay-banner-settlement');
     await banner.scrollIntoViewIfNeeded();
     await expect(banner).toBeVisible({ timeout: config.navTimeoutMs });
+    await expect(settlementBanner).toHaveCount(0);
     await expect(page.getByTestId('stay-bridge-staySetup')).toHaveCount(0);
 
     await banner.click();

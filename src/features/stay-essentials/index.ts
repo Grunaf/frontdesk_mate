@@ -11,3 +11,4 @@ export { StayEssentialsArrivalTile } from './ui/StayEssentialsArrivalTile';
 export { StayEssentialsBridgeCard } from './ui/StayEssentialsBridgeCard';
 export { StayEssentialsBridges } from './ui/StayEssentialsBridges';
 export { StayEssentialsPreCheckInBanner } from './ui/StayEssentialsPreCheckInBanner';
+export { StayEssentialsSettlementBanner } from './ui/StayEssentialsSettlementBanner';

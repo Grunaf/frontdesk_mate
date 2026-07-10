@@ -1451,6 +1451,9 @@
       "preCheckInBanner": {
         "description": "Before check-in, complete guest registration and add a phone number we can reach you on."
       },
+      "settlementBanner": {
+        "description": "Connect to Wi‑Fi, read the house rules, and find your room on or before check-in day."
+      },
       "bridges": {
         "arrivalGuide": "Arrival guide",
         "staySetup": "Guest details",

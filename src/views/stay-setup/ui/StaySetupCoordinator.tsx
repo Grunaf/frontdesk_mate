@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckInRequiredSheet,
   resolveGuestRegistrationPath,
+  useGuestSession,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
 import { TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
@@ -29,6 +30,10 @@ import {
 import { resolveStaySetupPrimaryButtonKey } from '../lib/resolveStaySetupPrimaryButtonKey';
 import { buildStaySetupStepSearchParams } from '../lib/buildStaySetupStepSearchParams';
 import { useStaySetupCompletionSync } from '../model/useStaySetupCompletionSync';
+import {
+  markStaySettlementEssentialsDone,
+  markStaySettlementRoomDone,
+} from '@/features/stay-essentials/model/staySettlementBannerProgressStorage';
 import { StaySetupEssentialsStep } from './StaySetupEssentialsStep';
 import { StaySetupRoomStep } from './StaySetupRoomStep';
 import { StaySetupStepProgressBar } from './StaySetupStepProgressBar';
@@ -108,6 +113,8 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { settings, slug } = useTenant();
+  const { session } = useGuestSession();
+  const stayId = session?.stayId ?? null;
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const isRegistered = useIsGuestRegistered();
 
@@ -381,7 +388,14 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       completion
     );
 
+    if (activeStep.id === 'essentials' && nextStep === 'room' && slug && stayId) {
+      markStaySettlementEssentialsDone(slug, stayId);
+    }
+
     if (nextStep === null) {
+      if (activeStep.id === 'room' && slug && stayId) {
+        markStaySettlementRoomDone(slug, stayId);
+      }
       activeStep.onComplete();
       return;
     }
