@@ -1,33 +1,11 @@
 import type { TenantSettings } from '@/entities/tenant';
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
+import {
+  isStayCheckInCalendarDay,
+  isWithinStayArrivalCalendarWindow,
+} from '@/entities/guest-stay';
 
 export function isWithinArrivalWindow(checkInAt: string | null | undefined, now = new Date()): boolean {
-  if (!checkInAt?.trim()) {
-    return false;
-  }
-
-  const checkInDate = startOfLocalDay(new Date(checkInAt));
-  if (!Number.isFinite(checkInDate.getTime())) {
-    return false;
-  }
-
-  const today = startOfLocalDay(now);
-  const lastArrivalDay = new Date(checkInDate);
-  lastArrivalDay.setDate(lastArrivalDay.getDate() + 1);
-
-  return today >= checkInDate && today <= lastArrivalDay;
-}
-
-function isCheckInDay(checkInAt: string, now: Date): boolean {
-  const checkInDate = startOfLocalDay(new Date(checkInAt));
-  if (!Number.isFinite(checkInDate.getTime())) {
-    return false;
-  }
-
-  return startOfLocalDay(now).getTime() === checkInDate.getTime();
+  return isWithinStayArrivalCalendarWindow(checkInAt, now);
 }
 
 function parseHoursMinutes(time: string): number | null {
@@ -86,7 +64,7 @@ export function resolveShowNightAccessBridge(input: ResolveShowNightAccessBridge
 
   const nightContext =
     input.isNightMode ||
-    (isCheckInDay(input.checkInAt, now) && isAfterReceptionClose(input.settings.reception?.close, now));
+    (isStayCheckInCalendarDay(input.checkInAt, now) && isAfterReceptionClose(input.settings.reception?.close, now));
 
   if (!nightContext) {
     return false;

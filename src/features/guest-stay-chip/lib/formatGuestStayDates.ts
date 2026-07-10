@@ -1,22 +1,12 @@
-function formatStayDay(iso: string, locale: string): string | null {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'short',
-  }).format(date);
-}
+import { formatStayCalendarDayLabel } from '@/entities/guest-stay';
 
 export function formatGuestStayDateRange(
   checkInAt: string,
   checkOutAt: string,
   locale: string
 ): string | null {
-  const checkIn = formatStayDay(checkInAt, locale);
-  const checkOut = formatStayDay(checkOutAt, locale);
+  const checkIn = formatStayCalendarDayLabel(checkInAt, locale);
+  const checkOut = formatStayCalendarDayLabel(checkOutAt, locale);
 
   if (!checkIn || !checkOut) {
     return null;
@@ -26,5 +16,5 @@ export function formatGuestStayDateRange(
 }
 
 export function formatGuestStayCheckoutShort(checkOutAt: string, locale: string): string | null {
-  return formatStayDay(checkOutAt, locale);
+  return formatStayCalendarDayLabel(checkOutAt, locale);
 }

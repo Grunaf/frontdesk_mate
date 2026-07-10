@@ -2,20 +2,10 @@ import {
   isSettlementBannerClosed,
   type SettlementBannerProgressInput,
 } from './resolveSettlementBannerProgress';
-
-/** Calendar days use the browser local timezone (property IANA TZ not in settings v1). */
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
+import { isStayCheckInCalendarDayOrLater } from '@/entities/guest-stay';
 
 export function isCheckInDayOrLater(checkInAt: string, now = new Date()): boolean {
-  const checkInDate = startOfLocalDay(new Date(checkInAt));
-  if (!Number.isFinite(checkInDate.getTime())) {
-    return false;
-  }
-
-  const today = startOfLocalDay(now);
-  return today.getTime() >= checkInDate.getTime();
+  return isStayCheckInCalendarDayOrLater(checkInAt, now);
 }
 
 export type ResolveShowSettlementBannerInput = {
@@ -27,7 +17,7 @@ export type ResolveShowSettlementBannerInput = {
   now?: Date;
 };
 
-/** Check-in day+: settlement banner replaces pre-check-in registration banner. */
+/** Check-in calendar night+: settlement banner replaces pre-check-in registration banner. */
 export function resolveShowSettlementBanner(input: ResolveShowSettlementBannerInput): boolean {
   if (!input.isRegistered) {
     return false;
@@ -52,7 +42,7 @@ export type ResolveShowPreCheckInRegistrationBannerInput = {
   now?: Date;
 };
 
-/** Before check-in day only; on check-in day+ settlement banner takes priority. */
+/** Before check-in calendar night only; on check-in night+ settlement banner takes priority. */
 export function resolveShowPreCheckInRegistrationBanner(
   input: ResolveShowPreCheckInRegistrationBannerInput
 ): boolean {

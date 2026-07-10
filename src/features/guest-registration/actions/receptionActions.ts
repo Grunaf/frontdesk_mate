@@ -24,6 +24,7 @@ export type CreateGuestStayActionResult =
   | CreateGuestStayResult
   | { ok: false; error: 'unauthorized' | 'unknown' };
 
+/** Combines desk check-in date with tenant checkInTime. The Z suffix is storage-only (v1), not hostel IANA TZ. */
 function resolveCheckInIso(checkInDate: string, checkInTime?: string): string {
   const time = checkInTime?.trim() || '14:00';
   const [hours, minutes = '00'] = time.split(':');

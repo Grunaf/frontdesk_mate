@@ -1,3 +1,7 @@
+/**
+ * Preview of access timestamps for reception forms.
+ * checkInAt uses calendar date + checkInTime with a Z suffix — not the property timezone (v1).
+ */
 export function resolveGuestAccessPeriod(
   checkInDate: string,
   checkOutDate: string,
