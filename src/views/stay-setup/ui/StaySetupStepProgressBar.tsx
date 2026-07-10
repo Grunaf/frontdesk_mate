@@ -16,6 +16,7 @@ export interface StaySetupStepProgressBarProps {
   completion: StaySetupCompletion;
   ariaLabel: string;
   className?: string;
+  onStepSelect?: (stepId: StaySetupStep) => void;
 }
 
 export function StaySetupStepProgressBar({
@@ -24,6 +25,7 @@ export function StaySetupStepProgressBar({
   completion,
   ariaLabel,
   className,
+  onStepSelect,
 }: StaySetupStepProgressBarProps) {
   const currentIndex = Math.max(
     0,
@@ -32,14 +34,11 @@ export function StaySetupStepProgressBar({
 
   return (
     <div
-      role="progressbar"
+      role="group"
       aria-label={ariaLabel}
-      aria-valuemin={0}
-      aria-valuemax={Math.max(steps.length - 1, 0)}
-      aria-valuenow={currentIndex}
       className={cn('flex w-full items-center gap-1.5', className)}
     >
-      {steps.map((step) => {
+      {steps.map((step, index) => {
         const segmentState = resolveStaySetupStepSegmentState(
           step.id,
           value,
@@ -49,21 +48,39 @@ export function StaySetupStepProgressBar({
         const isActive = segmentState === 'current';
         const isCompleted = segmentState === 'completed';
         const isLocked = segmentState === 'locked';
+        const isInteractive = Boolean(onStepSelect) && !isLocked;
 
         return (
-          <div
+          <button
             key={step.id}
-            aria-hidden
+            type="button"
+            aria-label={step.label}
+            aria-current={isActive ? 'step' : undefined}
+            aria-disabled={isLocked || undefined}
+            disabled={!isInteractive}
+            onClick={() => {
+              if (!isInteractive) {
+                return;
+              }
+              onStepSelect?.(step.id);
+            }}
             className={cn(
               'h-2 min-w-0 flex-1 rounded-full transition-colors',
+              isInteractive && 'cursor-pointer',
+              !isInteractive && 'cursor-default',
               isActive && 'bg-primary/45 ring-2 ring-inset ring-primary',
               isCompleted && 'bg-primary/45 ring-0',
               segmentState === 'upcoming' && 'bg-muted-foreground/20',
               isLocked && 'bg-muted-foreground/15 opacity-60'
             )}
+            data-step-index={index}
+            data-segment-state={segmentState}
           />
         );
       })}
+      <span className="sr-only" aria-live="polite">
+        {currentIndex + 1} / {steps.length}
+      </span>
     </div>
   );
 }

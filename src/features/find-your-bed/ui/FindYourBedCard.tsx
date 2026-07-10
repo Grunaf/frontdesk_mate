@@ -12,10 +12,17 @@ import { useIsGuestRegistered } from '@/features/guest-check-in';
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { Button, Icon } from '@/shared/ui';
 import { ArrowRight } from 'lucide-react';
+import type { StaySetupCompletion } from '@/views/stay-setup/lib/resolveStaySetupSteps';
 import { FindYourBedSummary } from './FindYourBedSummary';
 
-/** Deep link step for bed map / settlement when stay-setup gates may apply. */
-export function useStaySetupBedMapStep(): 'registration' | 'essentials' | 'room' {
+type StaySetupBedMapStep = 'registration' | 'essentials' | 'room';
+
+type StaySetupBedMapState = {
+  step: StaySetupBedMapStep;
+  completion: StaySetupCompletion;
+};
+
+function useStaySetupBedMapState(): StaySetupBedMapState {
   const { settings, slug } = useTenant();
   const isRegistered = useIsGuestRegistered();
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
@@ -46,12 +53,31 @@ export function useStaySetupBedMapStep(): 'registration' | 'essentials' | 'room'
     };
   }, [isRegistered, slug]);
 
-  return resolveStaySetupDeepLinkStep({
+  const completion: StaySetupCompletion = {
     tourismRequired: tourismRegistrationRequired,
     tourismComplete: status?.tourismComplete ?? false,
     contactComplete: status?.contactComplete ?? false,
+  };
+
+  const step = resolveStaySetupDeepLinkStep({
+    tourismRequired: tourismRegistrationRequired,
+    tourismComplete: completion.tourismComplete,
+    contactComplete: completion.contactComplete,
     preferSettlement: true,
   });
+
+  return { step, completion };
+}
+
+/** Deep link step for bed map / settlement when stay-setup gates may apply. */
+export function useStaySetupBedMapStep(): StaySetupBedMapStep;
+export function useStaySetupBedMapStep(withState: true): StaySetupBedMapState;
+export function useStaySetupBedMapStep(withState?: true): StaySetupBedMapStep | StaySetupBedMapState {
+  const state = useStaySetupBedMapState();
+  if (withState === true) {
+    return state;
+  }
+  return state.step;
 }
 
 /** @deprecated Use useStaySetupBedMapStep */
@@ -64,7 +90,7 @@ export function FindYourBedCard() {
   const locale = useLocale();
   const { settings, guestBedId } = useTenant();
   const router = useRouter();
-  const staySetupStep = useStaySetupBedMapStep();
+  const { step: staySetupStep, completion: staySetupCompletion } = useStaySetupBedMapStep(true);
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const plan = resolveGuestStayPlan(settings, guestBedId);
 
@@ -83,11 +109,7 @@ export function FindYourBedCard() {
             locale,
             step: staySetupStep,
             tourismRequired: tourismRegistrationRequired,
-            completion: {
-              tourismRequired: tourismRegistrationRequired,
-              tourismComplete: false,
-              contactComplete: false,
-            },
+            completion: staySetupCompletion,
           })
         )
       }

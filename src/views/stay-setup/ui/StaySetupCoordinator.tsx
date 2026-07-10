@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckInRequiredSheet,
@@ -27,6 +27,8 @@ import {
   type StaySetupStep,
 } from '../lib/resolveStaySetupSteps';
 import { resolveStaySetupPrimaryButtonKey } from '../lib/resolveStaySetupPrimaryButtonKey';
+import { buildStaySetupStepSearchParams } from '../lib/buildStaySetupStepSearchParams';
+import { useStaySetupCompletionSync } from '../model/useStaySetupCompletionSync';
 import { StaySetupEssentialsStep } from './StaySetupEssentialsStep';
 import { StaySetupRoomStep } from './StaySetupRoomStep';
 import { StaySetupStepProgressBar } from './StaySetupStepProgressBar';
@@ -51,11 +53,61 @@ function isRoomOrEssentialsStep(step: StaySetupStep): boolean {
   return step === 'essentials' || step === 'room';
 }
 
+function cameFromRegistrationPage(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('from') === 'registration') {
+    return true;
+  }
+
+  try {
+    return document.referrer.includes('/registration');
+  } catch {
+    return false;
+  }
+}
+
+function reconcileStepAfterCompletionSync(
+  step: StaySetupStep,
+  tourismRegistrationRequired: boolean,
+  nextCompletion: StaySetupCompletion
+): StaySetupStep {
+  const params = new URLSearchParams(
+    typeof window !== 'undefined' ? window.location.search : ''
+  );
+  const urlStep = normalizeStaySetupUrlStep(params.get('step'));
+  const regComplete = isStaySetupRegistrationComplete(nextCompletion);
+
+  if (urlStep === 'essentials' || urlStep === 'room') {
+    if (regComplete) {
+      return urlStep;
+    }
+    return 'registration';
+  }
+
+  if (step === 'registration' && regComplete && cameFromRegistrationPage()) {
+    return 'essentials';
+  }
+
+  if (isRoomOrEssentialsStep(step)) {
+    if (!regComplete) {
+      return 'registration';
+    }
+    return step;
+  }
+
+  return resolveFirstIncompleteStaySetupStep(tourismRegistrationRequired, nextCompletion);
+}
+
 export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const t = useTranslations('pages.staySetup');
   const locale = useLocale();
   const router = useRouter();
-  const { settings } = useTenant();
+  const pathname = usePathname();
+  const { settings, slug } = useTenant();
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const isRegistered = useIsGuestRegistered();
 
@@ -94,6 +146,31 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
     setCheckInSheetOpen(true);
   }, [isRegistered]);
+
+  const handleCompletionSync = useCallback(
+    (status: { tourismComplete: boolean; contactComplete: boolean }) => {
+      setTourismComplete(status.tourismComplete);
+      setContactComplete(status.contactComplete);
+
+      const nextCompletion: StaySetupCompletion = {
+        tourismRequired: tourismRegistrationRequired,
+        tourismComplete: status.tourismComplete,
+        contactComplete: status.contactComplete,
+      };
+
+      setCurrentStep((step) =>
+        reconcileStepAfterCompletionSync(step, tourismRegistrationRequired, nextCompletion)
+      );
+    },
+    [tourismRegistrationRequired]
+  );
+
+  useStaySetupCompletionSync({
+    slug,
+    isRegistered,
+    staySetupPathSuffix: SITE_CONFIG.routes.app.staySetup.path,
+    onStatus: handleCompletionSync,
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -139,6 +216,23 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     completion,
   ]);
 
+  useEffect(() => {
+    if (!isRegistered) {
+      return;
+    }
+
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    const params = new URLSearchParams(search);
+    const urlStep = normalizeStaySetupUrlStep(params.get('step'));
+
+    if (urlStep === currentStep) {
+      return;
+    }
+
+    const nextSearch = buildStaySetupStepSearchParams(currentStep, search.replace(/^\?/, ''));
+    router.replace(`${pathname}?${nextSearch}`, { scroll: false });
+  }, [currentStep, isRegistered, pathname, router]);
+
   const openCheckInSheet = () => setCheckInSheetOpen(true);
   const openTourismGateSheet = () => setTourismGateSheetOpen(true);
 
@@ -170,6 +264,33 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       tourismRegistrationRequired,
       tourismComplete,
       goToRegistrationPage,
+    ]
+  );
+
+  const handleProgressStepSelect = useCallback(
+    (stepId: StaySetupStep) => {
+      if (isStaySetupStepLocked(stepId, isRegistered, tourismRegistrationRequired, completion)) {
+        return;
+      }
+
+      if (stepId === 'registration') {
+        if (!registrationComplete) {
+          goToRegistrationPage();
+          return;
+        }
+        setCurrentStep('registration');
+        return;
+      }
+
+      navigateToStep(stepId);
+    },
+    [
+      completion,
+      goToRegistrationPage,
+      isRegistered,
+      navigateToStep,
+      registrationComplete,
+      tourismRegistrationRequired,
     ]
   );
 
@@ -304,6 +425,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
           value={currentStep}
           completion={completion}
           ariaLabel="Stay setup steps"
+          onStepSelect={handleProgressStepSelect}
         />
       </ArrivalGuideStepsShell>
 
