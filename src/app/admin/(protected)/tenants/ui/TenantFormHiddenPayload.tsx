@@ -129,6 +129,11 @@ export function TenantFormHiddenPayload({
         name="arrivalRouteTipsByRouteJson"
         value={serializeArrivalRouteTipsByRouteJson(mergedSettings.arrivalRouteTipsByRoute)}
       />
+      <input
+        type="hidden"
+        name="hubTransferJson"
+        value={JSON.stringify(mergedSettings.hubTransfer ?? { enabledHubCategories: [] })}
+      />
       <input type="hidden" name="landingJson" value={serializeLandingJson(mergedSettings)} />
       <input type="hidden" name="hostelJson" value={serializeHostelJson(mergedSettings)} />
       <input type="hidden" name="checkInTime" value={mergedSettings.checkInTime ?? ''} />

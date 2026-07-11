@@ -10,6 +10,7 @@ export const ARRIVAL_JOURNEY_ADMIN_MODULE_IDS = [
   'find-building',
   'last-mile',
   'building-access',
+  'hub-transfer',
 ] as const;
 
 export type ArrivalJourneyAdminModuleId = (typeof ARRIVAL_JOURNEY_ADMIN_MODULE_IDS)[number];
@@ -36,6 +37,12 @@ export const ARRIVAL_JOURNEY_ADMIN_MODULES: ArrivalJourneyAdminModuleDefinition[
     label: 'Enter the building',
     description: 'Layout, day mode, doors, photos.',
   },
+  {
+    id: 'hub-transfer',
+    label: 'Hub transfer',
+    description:
+      'Guests can request availability via WhatsApp; you configure which arrival hubs offer transfer.',
+  },
 ];
 
 export function normalizeArrivalJourneyAdminModuleId(
@@ -51,6 +58,10 @@ export function normalizeArrivalJourneyAdminModuleId(
 
 export function getArrivalJourneyAdminModuleLabel(moduleId: ArrivalJourneyAdminModuleId): string {
   return ARRIVAL_JOURNEY_ADMIN_MODULES.find((entry) => entry.id === moduleId)?.label ?? moduleId;
+}
+
+function countEnabledHubTransferCategories(settings: TenantReadinessInput['settings']): number {
+  return settings?.hubTransfer?.enabledHubCategories?.length ?? 0;
 }
 
 export function getArrivalJourneyAdminModuleHint(
@@ -78,6 +89,13 @@ export function getArrivalJourneyAdminModuleHint(
       return hasDoorAccessConfigured(settings)
         ? 'Door access configured'
         : 'Add access points with codes or paths';
+    case 'hub-transfer': {
+      const count = countEnabledHubTransferCategories(settings);
+      if (count === 0) {
+        return 'None selected';
+      }
+      return count === 1 ? '1 hub enabled' : `${count} hubs enabled`;
+    }
     default:
       return undefined;
   }
@@ -102,6 +120,8 @@ export function getArrivalJourneyAdminModuleStatus(
     }
     case 'building-access':
       return hasDoorAccessConfigured(settings) ? 'ready' : 'preview';
+    case 'hub-transfer':
+      return countEnabledHubTransferCategories(settings) >= 1 ? 'ready' : 'preview';
     default:
       return 'n/a';
   }

@@ -48,6 +48,7 @@ export interface TenantFormDraft {
   booking?: TenantBookingSettings;
   arrivalAccess?: ArrivalAccessConfig;
   receptionBooking?: TenantSettings['receptionBooking'];
+  hubTransfer?: TenantSettings['hubTransfer'];
 }
 
 interface UpdateDraftOptions {
@@ -163,6 +164,7 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
         }
       : {}),
     ...(draft.receptionBooking !== undefined ? { receptionBooking: draft.receptionBooking } : {}),
+    ...(draft.hubTransfer !== undefined ? { hubTransfer: draft.hubTransfer } : {}),
   };
 
   if (draft.houseRules !== undefined) {
@@ -219,6 +221,7 @@ export function applyDraftPatch(
     booking,
     arrivalAccess,
     guestStay,
+    hubTransfer,
     ...rest
   } = patch;
 
@@ -247,6 +250,9 @@ export function applyDraftPatch(
   }
   if (guestStay !== undefined) {
     next.guestStay = mergeDraftSlice(current.guestStay, guestStay);
+  }
+  if (hubTransfer !== undefined) {
+    next.hubTransfer = mergeDraftSlice(current.hubTransfer, hubTransfer);
   }
 
   return next;

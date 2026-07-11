@@ -14,8 +14,9 @@ import {
 } from '../lib/arrivalJourneyAdminSubsections';
 import { AdminField } from '../ui/AdminField';
 import { AdminSettingsDrillDown } from '../ui/AdminSettingsDrillDown';
-import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
+import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { ArrivalTransportFields } from './ArrivalTransportFields';
+import { HubTransferFields } from './HubTransferFields';
 
 export type ArrivalJourneyScope = 'full' | 'launch-core';
 
@@ -90,6 +91,11 @@ export function ArrivalJourneyFields({
   onModuleChange,
 }: ArrivalJourneyFieldsProps) {
   const isLaunch = scope === 'launch-core';
+  const { draft } = useTenantFormDraft();
+  const mergedSettings = useMemo(
+    () => mergeDraftSettings(settings ?? {}, draft),
+    [draft, settings]
+  );
 
   const modules = useMemo(
     () =>
@@ -97,18 +103,26 @@ export function ArrivalJourneyFields({
         id: definition.id,
         label: definition.label,
         description: definition.description,
-        hint: getArrivalJourneyAdminModuleHint(definition.id, readinessInput),
-        status: getArrivalJourneyAdminModuleStatus(definition.id, readinessInput),
+        hint: getArrivalJourneyAdminModuleHint(definition.id, {
+          ...readinessInput,
+          settings: mergedSettings,
+        }),
+        status: getArrivalJourneyAdminModuleStatus(definition.id, {
+          ...readinessInput,
+          settings: mergedSettings,
+        }),
         render: () => {
           switch (definition.id) {
             case 'find-building':
-              return <FindBuildingFields settings={settings} readinessInput={readinessInput} />;
+              return (
+                <FindBuildingFields settings={mergedSettings} readinessInput={readinessInput} />
+              );
             case 'last-mile':
               return (
                 <div className="space-y-4">
                   <ArrivalTransportFields
                     tenantSlug={tenantSlug}
-                    settings={settings}
+                    settings={mergedSettings}
                     cityPackId={cityPackId}
                     cityPackContent={cityPackContent}
                     cityPackLabel={cityPackLabel}
@@ -119,13 +133,21 @@ export function ArrivalJourneyFields({
                 </div>
               );
             case 'building-access':
-              return <ArrivalAccessFields tenantSlug={tenantSlug} settings={settings} />;
+              return <ArrivalAccessFields tenantSlug={tenantSlug} settings={mergedSettings} />;
+            case 'hub-transfer':
+              return (
+                <HubTransferFields
+                  settings={mergedSettings}
+                  cityPackId={cityPackId}
+                  cityPackContent={cityPackContent}
+                />
+              );
             default:
               return null;
           }
         },
       })),
-    [cityPackContent, cityPackId, readinessInput, settings, tenantSlug]
+    [cityPackContent, cityPackId, cityPackLabel, mergedSettings, readinessInput, tenantSlug]
   );
 
   if (isLaunch) {
@@ -133,7 +155,7 @@ export function ArrivalJourneyFields({
       <div className="space-y-8">
         <div className="space-y-4">
           <SectionHeading>Find the building</SectionHeading>
-          <FindBuildingFields settings={settings} readinessInput={readinessInput} />
+          <FindBuildingFields settings={mergedSettings} readinessInput={readinessInput} />
         </div>
         <p className="rounded-lg border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
           Per-route walk overrides are in the full <strong>Arrival journey</strong> section (Advanced
@@ -141,7 +163,7 @@ export function ArrivalJourneyFields({
         </p>
         <div className="space-y-4 border-t pt-8">
           <SectionHeading>Enter the building</SectionHeading>
-          <ArrivalAccessFields tenantSlug={tenantSlug} settings={settings} />
+          <ArrivalAccessFields tenantSlug={tenantSlug} settings={mergedSettings} />
         </div>
       </div>
     );
