@@ -27,6 +27,7 @@ const TOP_LEVEL_AUDIT_KEYS: (keyof TenantSettings)[] = [
   'activeRulesKeys',
   'houseRules',
   'guestExtras',
+  'hubTransfer',
   'hostelPlaces',
   'cityPackNeedNowPlaceIds',
   'faqPackId',

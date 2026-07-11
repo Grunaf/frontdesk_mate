@@ -17,6 +17,7 @@ import { isBookingProvider } from '@/entities/tenant';
 import { normalizeGuestStayForSave } from '@/entities/tenant/lib/resolveBedDisplay';
 import { finalizeGuestStayForSave } from '@/entities/tenant/lib/normalizeGuestStaySettings';
 import { normalizeReceptionBookingForSave } from '@/entities/tenant/lib/normalizeReceptionBookingSettings';
+import { normalizeHubTransferForSave } from '@/entities/tenant/lib/normalizeHubTransferSettings';
 import {
   parseArrivalGetOffAtByRouteJson,
   parseArrivalLocalByRouteJson,
@@ -156,6 +157,24 @@ function parseHostelPlaces(formData: FormData): TenantSettings['hostelPlaces'] {
       }));
   } catch {
     return undefined;
+  }
+}
+
+function parseHubTransfer(formData: FormData): TenantSettings['hubTransfer'] {
+  if (!formData.has('hubTransferJson')) {
+    return undefined;
+  }
+
+  const raw = String(formData.get('hubTransferJson') || '').trim();
+  if (!raw) {
+    return normalizeHubTransferForSave({ enabledHubCategories: [] });
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { enabledHubCategories?: unknown };
+    return normalizeHubTransferForSave(parsed);
+  } catch {
+    return normalizeHubTransferForSave({ enabledHubCategories: [] });
   }
 }
 
@@ -381,6 +400,7 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
     },
     houseRules,
     guestExtras,
+    hubTransfer: parseHubTransfer(formData),
     hostelPlaces: parseHostelPlaces(formData),
     cityPackNeedNowPlaceIds: parseCityPackNeedNowPlaceIds(formData),
     wifi: {

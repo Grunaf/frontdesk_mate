@@ -1,4 +1,4 @@
-import type { CityPackId } from '@/entities/hostel';
+import type { CityPackId, RouteCategory } from '@/entities/hostel';
 import type { LocalizedField, LocalizedText } from '@/entities/city-pack/model/types';
 import type { ArrivalAccessConfig } from './accessPoints';
 import type { TenantBookingSettings } from './booking';
@@ -33,6 +33,10 @@ import type { GuestExtraConfig } from '@/entities/guest-extra';
 
 /** Guest path when city hub is tenant_local (hostel owns hub→door). */
 export type TenantLocalArrivalMode = 'walk' | 'transit_lite';
+
+export type TenantHubTransferSettings = {
+  enabledHubCategories: RouteCategory[];
+};
 
 export interface TenantLocalArrivalPath {
   mode: TenantLocalArrivalMode;
@@ -126,6 +130,8 @@ export interface TenantSettings {
   houseRules?: HouseRule[];
   /** Concierge Extras bento catalog (ops + partner offers). */
   guestExtras?: GuestExtraConfig[];
+  /** Guest hub transfer requests — which route categories reception accepts. */
+  hubTransfer?: TenantHubTransferSettings;
   /** Spots within walking distance — shown above city pack guide. */
   hostelPlaces?: HostelPlace[];
   /**
