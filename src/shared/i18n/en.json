@@ -1589,6 +1589,35 @@
       "receptionStripHint": "Questions about your stay, laundry, or checkout",
       "whatsappMessage": "Hi, I have a question about my stay at {hostelName}"
     },
+    "hubTransfer": {
+      "cardTitle": "Transfer",
+      "cardDescription": "Ask reception to arrange a ride to or from the hub.",
+      "sheetTitle": "Request a transfer",
+      "disclaimer": "Transfer is not guaranteed. First check availability with us.",
+      "directionLabel": "Direction",
+      "toHostel": "To {hubName}",
+      "fromHostel": "From {hubName}",
+      "dateLabel": "Date",
+      "timeLabel": "Time",
+      "useCheckInDate": "Use check-in date",
+      "useCheckOutDate": "Use check-out date",
+      "checkInFirstTooltip": "Check in first",
+      "submitButton": "Check availability on WhatsApp",
+      "submitting": "Saving…",
+      "whatsappMessage": "Hi {hostelName}! I'd like to arrange a transfer ({direction}, {hubName}) on {date} at {time}. Guest: {guestName}. Ref #{stayRef}.",
+      "errors": {
+        "dateRequired": "Choose a date.",
+        "timeRequired": "Choose a time.",
+        "unauthorized": "Sign in again to request a transfer.",
+        "tooManyOpen": "You already have open transfer requests. Message reception if urgent.",
+        "invalidDate": "Enter a valid date.",
+        "invalidTime": "Enter a valid time.",
+        "invalidRequest": "This request could not be sent. Try again.",
+        "noWhatsapp": "WhatsApp is not available for reception right now.",
+        "dbUnavailable": "Could not save right now. Try again or message reception.",
+        "generic": "Something went wrong. Try again."
+      }
+    },
     "guestIssue": {
       "cardTitle": "Notice a fault in the hostel?",
       "cardDescription": "Shower, door, bed, Wi‑Fi… Reception sees it on their screen.",

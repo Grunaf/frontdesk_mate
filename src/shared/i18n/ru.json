@@ -1595,6 +1595,35 @@
       "receptionStripHint": "Вопросы о проживании, прачке или выезде",
       "whatsappMessage": "Здравствуйте, вопрос по проживанию в {hostelName}"
     },
+    "hubTransfer": {
+      "cardTitle": "Трансфер",
+      "cardDescription": "Попросите ресепшен организовать поездку от/до хаба.",
+      "sheetTitle": "Запрос трансфера",
+      "disclaimer": "Трансфер не гарантирован. Сначала уточните доступность у нас.",
+      "directionLabel": "Направление",
+      "toHostel": "В {hubName}",
+      "fromHostel": "Из {hubName}",
+      "dateLabel": "Дата",
+      "timeLabel": "Время",
+      "useCheckInDate": "Дата check-in",
+      "useCheckOutDate": "Дата check-out",
+      "checkInFirstTooltip": "Сначала войдите (check-in)",
+      "submitButton": "Уточнить в WhatsApp",
+      "submitting": "Сохранение…",
+      "whatsappMessage": "Здравствуйте, {hostelName}! Хочу заказать трансфер ({direction}, {hubName}) на {date} в {time}. Гость: {guestName}. Ref #{stayRef}.",
+      "errors": {
+        "dateRequired": "Укажите дату.",
+        "timeRequired": "Укажите время.",
+        "unauthorized": "Войдите снова, чтобы отправить запрос.",
+        "tooManyOpen": "У вас уже есть открытые запросы на трансфер. Напишите на ресепшен, если срочно.",
+        "invalidDate": "Укажите корректную дату.",
+        "invalidTime": "Укажите корректное время.",
+        "invalidRequest": "Не удалось отправить запрос. Попробуйте снова.",
+        "noWhatsapp": "WhatsApp ресепшена сейчас недоступен.",
+        "dbUnavailable": "Не удалось сохранить. Попробуйте снова или напишите на ресепшен.",
+        "generic": "Что-то пошло не так. Попробуйте снова."
+      }
+    },
     "guestIssue": {
       "cardTitle": "Заметили поломку в хостеле?",
       "cardDescription": "Душ, дверь, кровать, Wi‑Fi… Ресепшен увидит на экране.",

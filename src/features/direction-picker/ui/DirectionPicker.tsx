@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from '@/shared/i18n';
 import { useTenant } from '@/entities/tenant';
 import type { AppLocale } from '@/entities/city-pack/model/types';
+import { resolveHubTransferEnabled } from '@/entities/guest-hub-transfer';
 import { getRouteFeedbackLink } from '../lib/getRouteFeedbackLink';
 import { resolveRouteCardSummary, resolveRouteCardTitle } from '../lib/resolveRouteCardCopy';
 import { resolveRouteHint } from '../lib/resolveRouteCopy';
@@ -22,8 +23,18 @@ import { PublicRouteDetailsSheet } from './PublicRouteDetailsSheet';
 import { PublicRouteSummaryCard } from './PublicRouteSummaryCard';
 import { TaxiBackupCard } from './TaxiBackupCard';
 import { TaxiBackupSheet } from './TaxiBackupSheet';
+import {
+  HubTransferCard,
+  HubTransferRequestSheet,
+  HubTransferSurfaceContext,
+  type HubTransferSurface,
+} from '@/features/hub-transfer';
 
-export function DirectionPicker() {
+export function DirectionPicker({
+  transferSurface = HubTransferSurfaceContext.arrival,
+}: {
+  transferSurface?: HubTransferSurface;
+}) {
   const { hostel, routes: arrivalRoutes, routeCategories, contentKeys, cityPack, settings } =
     useTenant();
   const routes = useTranslations();
@@ -34,11 +45,13 @@ export function DirectionPicker() {
   const [primaryDetailsOpen, setPrimaryDetailsOpen] = useState(false);
   const [alternativeDetailsOpen, setAlternativeDetailsOpen] = useState(false);
   const [taxiSheetOpen, setTaxiSheetOpen] = useState(false);
+  const [transferSheetOpen, setTransferSheetOpen] = useState(false);
 
   useEffect(() => {
     setPrimaryDetailsOpen(false);
     setAlternativeDetailsOpen(false);
     setTaxiSheetOpen(false);
+    setTransferSheetOpen(false);
   }, [activeRouteId]);
 
   useEffect(() => {
@@ -92,6 +105,13 @@ export function DirectionPicker() {
   const tabGridClass = routeCategories.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
   const hubCount = routeCategories.length;
   const singleHub = hubCount === 1 ? routeCategories[0] : undefined;
+
+  const transferEnabled = resolveHubTransferEnabled(settings, activeCategory);
+  const receptionWhatsappReady =
+    hostel.reception.whatsappEnabled && Boolean(hostel.reception.whatsapp.raw);
+  const showTransferCard = transferEnabled && receptionWhatsappReady;
+  const activeHubCategory = routeCategories.find((cat) => cat.id === activeCategory);
+  const hubLabel = activeHubCategory ? routes(activeHubCategory.labelKey) : primaryTitle;
 
   return (
     <div className="space-y-4">
@@ -171,6 +191,10 @@ export function DirectionPicker() {
           }
         />
 
+        {showTransferCard ? (
+          <HubTransferCard onTransferClick={() => setTransferSheetOpen(true)} />
+        ) : null}
+
         <Separator />
 
         <TaxiBackupCard route={currentRoute} onTaxiClick={() => setTaxiSheetOpen(true)} />
@@ -206,6 +230,16 @@ export function DirectionPicker() {
         )}
 
         <TaxiBackupSheet open={taxiSheetOpen} onOpenChange={setTaxiSheetOpen} route={currentRoute} />
+
+        {showTransferCard ? (
+          <HubTransferRequestSheet
+            open={transferSheetOpen}
+            onOpenChange={setTransferSheetOpen}
+            hubCategory={activeCategory}
+            hubLabel={hubLabel}
+            transferSurface={transferSurface}
+          />
+        ) : null}
       </div>
     </div>
   );
