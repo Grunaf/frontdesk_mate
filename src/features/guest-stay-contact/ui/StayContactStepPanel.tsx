@@ -3,99 +3,135 @@
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useTranslations } from '@/shared/i18n';
-import { Alert, AlertDescription, Button, IconBackActionsRow, Input, Label } from '@/shared/ui';
+import { cn } from '@/shared/lib/utils';
+import { Alert, AlertDescription, Button, IconBackActionsRow } from '@/shared/ui';
 import { validateTourismWhatsapp } from '@/features/guest-tourism-registration';
 import { saveStayContactAction } from '../actions/saveStayContactAction';
+import { GuestPhoneNumberField } from './GuestPhoneNumberField';
+
+export type StayContactNavigationMode = 'standalone' | 'wizard';
 
 type StayContactStepPanelProps = {
   tenantSlug: string;
   initialContactWhatsapp?: string | null;
+  contactComplete?: boolean;
   onComplete: (savedWhatsapp: string) => void;
+  onDraftChange?: (draft: string) => void;
   interactionEnabled?: boolean;
   onBack?: () => void;
+  navigationMode?: StayContactNavigationMode;
+  showIntroHeading?: boolean;
 };
 
 export function StayContactStepPanel({
   tenantSlug,
   initialContactWhatsapp,
+  contactComplete = false,
   onComplete,
+  onDraftChange,
   interactionEnabled = true,
   onBack,
+  navigationMode = 'standalone',
+  showIntroHeading = true,
 }: StayContactStepPanelProps) {
   const t = useTranslations('pages.staySetup.contact');
   const [contactWhatsapp, setContactWhatsapp] = useState(initialContactWhatsapp ?? '');
   const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, startSaveTransition] = useTransition();
+  const isLocked = contactComplete && Boolean(initialContactWhatsapp?.trim());
 
   useEffect(() => {
-    setContactWhatsapp(initialContactWhatsapp ?? '');
-  }, [initialContactWhatsapp]);
+    if (!isLocked) {
+      setContactWhatsapp(initialContactWhatsapp ?? '');
+    }
+  }, [initialContactWhatsapp, isLocked]);
+
+  const persistContact = useCallback(
+    (raw: string): Promise<boolean> => {
+      if (!interactionEnabled || isLocked) {
+        return Promise.resolve(false);
+      }
+
+      setSaveError(null);
+      setWhatsappError(null);
+
+      const validation = validateTourismWhatsapp(raw);
+      if (!validation.ok) {
+        setWhatsappError(t('errors.invalidWhatsapp'));
+        return Promise.resolve(false);
+      }
+
+      return new Promise((resolve) => {
+        startSaveTransition(async () => {
+          const result = await saveStayContactAction(tenantSlug, raw);
+          if (!result.ok) {
+            if (result.error === 'invalid_whatsapp') {
+              setWhatsappError(t('errors.invalidWhatsapp'));
+            } else {
+              setSaveError(t('errors.generic'));
+            }
+            resolve(false);
+            return;
+          }
+
+          onComplete(validation.e164);
+          resolve(true);
+        });
+      });
+    },
+    [interactionEnabled, isLocked, onComplete, t, tenantSlug]
+  );
 
   const handleSave = useCallback(() => {
-    if (!interactionEnabled) {
+    void persistContact(contactWhatsapp);
+  }, [contactWhatsapp, persistContact]);
+
+  const handleWizardBlurSave = useCallback(() => {
+    if (navigationMode !== 'wizard' || isLocked || contactComplete) {
       return;
     }
-
-    setSaveError(null);
-    setWhatsappError(null);
 
     const validation = validateTourismWhatsapp(contactWhatsapp);
     if (!validation.ok) {
-      setWhatsappError(t('errors.invalidWhatsapp'));
       return;
     }
 
-    startSaveTransition(async () => {
-      const result = await saveStayContactAction(tenantSlug, contactWhatsapp);
-      if (!result.ok) {
-        if (result.error === 'invalid_whatsapp') {
-          setWhatsappError(t('errors.invalidWhatsapp'));
-          return;
-        }
-        setSaveError(t('errors.generic'));
-        return;
-      }
+    void persistContact(contactWhatsapp);
+  }, [contactComplete, contactWhatsapp, isLocked, navigationMode, persistContact]);
 
-      onComplete(validation.e164);
-    });
-  }, [contactWhatsapp, interactionEnabled, onComplete, t, tenantSlug]);
+  const showFooter = navigationMode === 'standalone' && !isLocked;
+  const panelTopPadding = showIntroHeading ? 'pt-2' : 'pt-0';
 
   return (
-    <div className="flex min-h-full flex-col pt-2">
+    <div className={cn('flex min-h-full flex-col', panelTopPadding)} onBlur={handleWizardBlurSave}>
       <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">{t('title')}</h2>
+        {showIntroHeading ? (
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-foreground">{t('title')}</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t('description')}</p>
+          </div>
+        ) : (
           <p className="text-sm leading-relaxed text-muted-foreground">{t('description')}</p>
-        </div>
+        )}
 
-        <div className="space-y-2">
-          <Label htmlFor="stay-contact-whatsapp">{t('whatsappLabel')}</Label>
-          <Input
-            id="stay-contact-whatsapp"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            value={contactWhatsapp}
-            onChange={(e) => {
-              setContactWhatsapp(e.target.value);
-              setWhatsappError(null);
-            }}
-            onBlur={() => {
-              if (!contactWhatsapp.trim()) {
-                return;
-              }
-              const result = validateTourismWhatsapp(contactWhatsapp);
-              if (!result.ok) {
-                setWhatsappError(t('errors.invalidWhatsapp'));
-              }
-            }}
-            disabled={!interactionEnabled || isSaving}
-            aria-invalid={Boolean(whatsappError)}
-          />
-          {whatsappError ? <p className="text-xs text-destructive">{whatsappError}</p> : null}
-          <p className="text-xs text-muted-foreground">{t('hint')}</p>
-        </div>
+        <GuestPhoneNumberField
+          id="stay-contact-whatsapp"
+          countrySelectId="stay-contact-country"
+          value={contactWhatsapp}
+          onChange={(next) => {
+            setContactWhatsapp(next);
+            onDraftChange?.(next);
+            setWhatsappError(null);
+          }}
+          disabled={!interactionEnabled || isSaving}
+          locked={isLocked}
+          invalid={Boolean(whatsappError)}
+          label={t('whatsappLabel')}
+          savedBadge={isLocked ? t('savedBadge') : undefined}
+        />
+        {whatsappError ? <p className="text-xs text-destructive">{whatsappError}</p> : null}
+        {!isLocked ? <p className="text-xs text-muted-foreground">{t('hint')}</p> : null}
 
         {saveError ? (
           <Alert variant="destructive">
@@ -104,18 +140,20 @@ export function StayContactStepPanel({
         ) : null}
       </div>
 
-      <IconBackActionsRow className="mt-auto pt-6" onBack={onBack}>
-        <Button size="lg" disabled={!interactionEnabled || isSaving} onClick={handleSave}>
-          {isSaving ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-              {t('saving')}
-            </>
-          ) : (
-            t('continue')
-          )}
-        </Button>
-      </IconBackActionsRow>
+      {showFooter ? (
+        <IconBackActionsRow className="mt-auto pt-6" onBack={onBack}>
+          <Button size="lg" disabled={!interactionEnabled || isSaving} onClick={handleSave}>
+            {isSaving ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+                {t('saving')}
+              </>
+            ) : (
+              t('continue')
+            )}
+          </Button>
+        </IconBackActionsRow>
+      ) : null}
     </div>
   );
 }

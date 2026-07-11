@@ -28,7 +28,7 @@ export function resolveSettlementBannerProgress(input: {
   const isComplete = isSettlementBannerClosed(input);
 
   if (input.registrationComplete) {
-    let completedSteps = 0;
+    let completedSteps = 1;
     if (input.essentialsDone) {
       completedSteps += 1;
     }
@@ -37,7 +37,7 @@ export function resolveSettlementBannerProgress(input: {
     }
 
     return {
-      totalSteps: 2,
+      totalSteps: 3,
       completedSteps,
       isComplete,
     };

@@ -58,7 +58,7 @@ export function HostelRules({ settings, variant = 'full' }: HostelRulesProps) {
           if (!hasRuleDetail(rule)) {
             return (
               <Badge key={rule.id} variant="outline" className="gap-1.5 px-3 py-1.5">
-                <Icon icon={rule.icon} className="h-3 w-3 text-muted-foreground" />
+                <Icon icon={rule.icon} className="size-[calc(0.75rem*1.15*1.15)] text-muted-foreground" />
                 {rule.summary}
               </Badge>
             );
@@ -75,7 +75,7 @@ export function HostelRules({ settings, variant = 'full' }: HostelRulesProps) {
               onClick={() => openRule(rule)}
               aria-label={rulesComponent('openDetail', { rule: rule.summary })}
             >
-              <Icon icon={rule.icon} className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <Icon icon={rule.icon} className="size-[calc(0.75rem*1.15*1.15)] shrink-0 text-muted-foreground" />
               {rule.summary}
             </button>
           );

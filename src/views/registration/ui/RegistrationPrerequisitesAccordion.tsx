@@ -16,6 +16,8 @@ import {
   shouldShowRegistrationRegisterAccordionItem,
 } from '../lib/resolveRegistrationAccordionItem';
 
+import type { RegistrationSurface } from '../lib/registrationSurface';
+
 type RegistrationPrerequisitesAccordionProps = {
   tourismRequired: boolean;
   tourismComplete: boolean;
@@ -27,6 +29,9 @@ type RegistrationPrerequisitesAccordionProps = {
   stayContactWhatsapp: string | null;
   onTourismComplete: () => void;
   onContactComplete: (savedWhatsapp: string) => void;
+  onContactDraftChange?: (draft: string) => void;
+  registrationSurface?: RegistrationSurface;
+  showIntroHeading?: boolean;
 };
 
 export function RegistrationPrerequisitesAccordion({
@@ -40,7 +45,11 @@ export function RegistrationPrerequisitesAccordion({
   stayContactWhatsapp,
   onTourismComplete,
   onContactComplete,
+  onContactDraftChange,
+  registrationSurface = 'standalone',
+  showIntroHeading = true,
 }: RegistrationPrerequisitesAccordionProps) {
+  const navigationMode = registrationSurface;
   const t = useTranslations('pages.staySetup.tabs');
 
   const showRegister = shouldShowRegistrationRegisterAccordionItem(tourismRequired);
@@ -64,33 +73,47 @@ export function RegistrationPrerequisitesAccordion({
       className="border-none"
     >
       {showRegister ? (
-        <AccordionItem value="register" className="border-b border-border/60">
+        <AccordionItem
+          value="register"
+          className="border-b border-border/60 bg-transparent data-open:bg-transparent"
+        >
           <AccordionTrigger
-            className={cn('py-3 text-sm font-medium', tourismComplete && 'text-muted-foreground')}
+            size="section"
+            className={cn('min-h-12 items-center py-3', tourismComplete && 'text-foreground/80')}
           >
             {t('register')}
           </AccordionTrigger>
-          <AccordionContent className="pb-4">
+          <AccordionContent className="pb-0">
             <TourismGuestsRegistrationPanel
               interactionEnabled={interactionEnabled}
+              navigationMode={navigationMode}
+              showIntroHeading={showIntroHeading}
               onComplete={onTourismComplete}
             />
           </AccordionContent>
         </AccordionItem>
       ) : null}
 
-      <AccordionItem value="contact" className="border-b border-border/60">
+      <AccordionItem
+        value="contact"
+        className="border-b border-border/60 bg-transparent data-open:bg-transparent"
+      >
         <AccordionTrigger
           disabled={contactLocked}
-          className={cn('py-3 text-sm font-medium', contactComplete && 'text-muted-foreground')}
+          size="section"
+          className={cn('min-h-12 items-center py-3', contactComplete && 'text-foreground/80')}
         >
           {t('contact')}
         </AccordionTrigger>
-        <AccordionContent className="pb-4">
+        <AccordionContent className="pb-0">
           <StayContactStepPanel
             tenantSlug={tenantSlug}
             initialContactWhatsapp={stayContactWhatsapp}
+            contactComplete={contactComplete}
             interactionEnabled={interactionEnabled}
+            navigationMode={navigationMode}
+            showIntroHeading={showIntroHeading}
+            onDraftChange={onContactDraftChange}
             onComplete={onContactComplete}
             onBack={
               showRegister

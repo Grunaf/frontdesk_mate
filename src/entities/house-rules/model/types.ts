@@ -17,7 +17,9 @@ export type RuleIconId =
   | 'shirt'
   | 'volume'
   | 'clock'
-  | 'ban';
+  | 'ban'
+  | 'tag'
+  | 'bottleWine';
 
 export interface HouseRuleBase {
   id: string;

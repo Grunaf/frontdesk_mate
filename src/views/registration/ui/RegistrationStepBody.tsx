@@ -3,7 +3,10 @@
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 import type { RegistrationAccordionItem } from '../lib/resolveRegistrationAccordionItem';
+import type { RegistrationSurface } from '../lib/registrationSurface';
 import { RegistrationPrerequisitesAccordion } from './RegistrationPrerequisitesAccordion';
+
+export type { RegistrationSurface } from '../lib/registrationSurface';
 
 export type RegistrationStepBodyProps = {
   tourismRequired: boolean;
@@ -17,8 +20,10 @@ export type RegistrationStepBodyProps = {
   stayContactWhatsapp: string | null;
   onTourismComplete: () => void;
   onContactComplete: (savedWhatsapp: string) => void;
+  onContactDraftChange?: (draft: string) => void;
   className?: string;
   showCompleteHint?: boolean;
+  registrationSurface?: RegistrationSurface;
 };
 
 export function RegistrationStepBody({
@@ -33,16 +38,15 @@ export function RegistrationStepBody({
   stayContactWhatsapp,
   onTourismComplete,
   onContactComplete,
+  onContactDraftChange,
   className,
   showCompleteHint = true,
+  registrationSurface = 'standalone',
 }: RegistrationStepBodyProps) {
   const t = useTranslations('pages.staySetup');
+  const showIntroHeading = registrationSurface === 'standalone';
 
-  if (registrationComplete) {
-    if (!showCompleteHint) {
-      return null;
-    }
-
+  if (registrationComplete && showCompleteHint) {
     return (
       <p className={cn('text-sm text-muted-foreground', className)}>{t('registration.completeHint')}</p>
     );
@@ -61,6 +65,9 @@ export function RegistrationStepBody({
         stayContactWhatsapp={stayContactWhatsapp}
         onTourismComplete={onTourismComplete}
         onContactComplete={onContactComplete}
+        onContactDraftChange={onContactDraftChange}
+        registrationSurface={registrationSurface}
+        showIntroHeading={showIntroHeading}
       />
     </div>
   );

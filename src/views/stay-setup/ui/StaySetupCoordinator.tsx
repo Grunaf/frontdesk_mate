@@ -1,28 +1,26 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckInRequiredSheet,
   useGuestSession,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
+import { ensureStayContactSaved } from '@/features/guest-stay-contact/lib/ensureStayContactSaved';
 import { isCheckInDayOrLater } from '@/features/stay-essentials/lib/resolveShowSettlementBanner';
 import { TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { ArrivalGuideStepsShell } from '@/views/arrival-journey';
-import { RegistrationStepBody, resolveOpenRegistrationAccordionItem } from '@/views/registration';
-import type { RegistrationAccordionItem } from '@/views/registration';
+import { RegistrationStepBody, useRegistrationStepState } from '@/views/registration';
 import { SITE_CONFIG } from '@/shared/config';
 import { useTranslations } from '@/shared/i18n';
 import { Button, IconBackActionsRow } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
-  isStaySetupRegistrationComplete,
   isStaySetupStepLocked,
-  isValidStaySetupUrlStep,
   normalizeStaySetupUrlStep,
-  resolveFirstIncompleteStaySetupStep,
+  resolveStaySetupCoordinatorStep,
   resolveNextStaySetupStep,
   resolvePreviousStaySetupStep,
   resolveStaySetupStepOrder,
@@ -32,15 +30,24 @@ import {
 import {
   resolveStaySetupPrimaryButtonKey,
   shouldShowStaySetupPrimaryButton,
+  isStaySetupEssentialsPrimaryDisabled,
 } from '../lib/resolveStaySetupPrimaryButtonKey';
+import {
+  isStaySetupUrlSyncedWithStep,
+  mergeRegistrationStatusMonotonic,
+  reconcileStepAfterCompletionSync,
+  resolveStaySetupStepFromUrl,
+} from '../lib/reconcileStaySetupStep';
 import { buildStaySetupStepSearchParams } from '../lib/buildStaySetupStepSearchParams';
 import { useStaySetupCompletionSync } from '../model/useStaySetupCompletionSync';
 import {
   markStaySettlementEssentialsDone,
   markStaySettlementRoomDone,
+  readStaySettlementBannerProgress,
 } from '@/features/stay-essentials/model/staySettlementBannerProgressStorage';
 import { StaySetupEssentialsStep } from './StaySetupEssentialsStep';
 import { StaySetupRoomStep } from './StaySetupRoomStep';
+import { StaySetupSettlementDayGateSheet } from './StaySetupSettlementDayGateSheet';
 import { StaySetupStepProgressBar } from './StaySetupStepProgressBar';
 
 export interface StaySetupInitialState {
@@ -63,38 +70,12 @@ function isRoomOrEssentialsStep(step: StaySetupStep): boolean {
   return step === 'essentials' || step === 'room';
 }
 
-function reconcileStepAfterCompletionSync(
-  step: StaySetupStep,
-  tourismRegistrationRequired: boolean,
-  nextCompletion: StaySetupCompletion
-): StaySetupStep {
-  const params = new URLSearchParams(
-    typeof window !== 'undefined' ? window.location.search : ''
-  );
-  const urlStep = normalizeStaySetupUrlStep(params.get('step'));
-  const regComplete = isStaySetupRegistrationComplete(nextCompletion);
-
-  if (urlStep === 'essentials' || urlStep === 'room') {
-    if (regComplete) {
-      return urlStep;
-    }
-    return 'registration';
-  }
-
-  if (isRoomOrEssentialsStep(step)) {
-    if (!regComplete) {
-      return 'registration';
-    }
-    return step;
-  }
-
-  return resolveFirstIncompleteStaySetupStep(tourismRegistrationRequired, nextCompletion);
-}
-
 export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const t = useTranslations('pages.staySetup');
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const stepFromUrl = normalizeStaySetupUrlStep(searchParams.get('step'));
   const { settings, slug } = useTenant();
   const { session, checkInAt } = useGuestSession();
   const stayId = session?.stayId ?? null;
@@ -102,38 +83,50 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const isRegistered = useIsGuestRegistered();
   const checkInDayOrLater = checkInAt ? isCheckInDayOrLater(checkInAt) : false;
 
-  const [tourismComplete, setTourismComplete] = useState(initial.tourismComplete);
-  const [contactComplete, setContactComplete] = useState(initial.contactComplete);
-  const [stayContactWhatsapp, setStayContactWhatsapp] = useState(initial.stayContactWhatsapp);
+  const {
+    tourismComplete,
+    contactComplete,
+    stayContactWhatsapp,
+    completion,
+    registrationComplete,
+    accordionValue,
+    setAccordionValue,
+    handleTourismComplete,
+    handleContactComplete,
+    applyRegistrationStatus,
+    contactDraftWhatsapp,
+    setContactDraftWhatsapp,
+  } = useRegistrationStepState({ initial, isRegistered });
+
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
   const [tourismGateSheetOpen, setTourismGateSheetOpen] = useState(false);
-
-  const completion: StaySetupCompletion = useMemo(
-    () => ({
-      tourismRequired: tourismRegistrationRequired,
-      tourismComplete,
-      contactComplete,
-    }),
-    [tourismRegistrationRequired, tourismComplete, contactComplete]
-  );
-
-  const registrationComplete = isStaySetupRegistrationComplete(completion);
-
-  const [accordionValue, setAccordionValue] = useState<RegistrationAccordionItem>(() =>
-    resolveOpenRegistrationAccordionItem(completion)
-  );
-
-  const defaultStep = resolveFirstIncompleteStaySetupStep(
-    tourismRegistrationRequired,
-    completion
-  );
-  const [currentStep, setCurrentStep] = useState<StaySetupStep>(defaultStep);
+  const [settlementDayGateSheetOpen, setSettlementDayGateSheetOpen] = useState(false);
+  const [essentialsHasHouseRules, setEssentialsHasHouseRules] = useState(false);
+  const [essentialsRulesAcknowledged, setEssentialsRulesAcknowledged] = useState(false);
+  const [essentialsStepPreviouslyCompleted, setEssentialsStepPreviouslyCompleted] = useState(false);
+  const [contactSaveError, setContactSaveError] = useState(false);
+  const userStepIntentRef = useRef<StaySetupStep | null>(null);
 
   useEffect(() => {
-    setTourismComplete(initial.tourismComplete);
-    setContactComplete(initial.contactComplete);
-    setStayContactWhatsapp(initial.stayContactWhatsapp);
-  }, [initial.tourismComplete, initial.contactComplete, initial.stayContactWhatsapp]);
+    if (!slug || !stayId) {
+      return;
+    }
+
+    const { essentialsDone } = readStaySettlementBannerProgress(slug, stayId);
+    if (!essentialsDone) {
+      return;
+    }
+
+    setEssentialsRulesAcknowledged(true);
+    setEssentialsStepPreviouslyCompleted(true);
+  }, [slug, stayId]);
+
+  const defaultStep = resolveStaySetupCoordinatorStep(
+    tourismRegistrationRequired,
+    completion,
+    checkInDayOrLater
+  );
+  const [currentStep, setCurrentStep] = useState<StaySetupStep>(defaultStep);
 
   useEffect(() => {
     if (isRegistered) {
@@ -146,20 +139,34 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   const handleCompletionSync = useCallback(
     (status: { tourismComplete: boolean; contactComplete: boolean }) => {
-      setTourismComplete(status.tourismComplete);
-      setContactComplete(status.contactComplete);
+      const merged = mergeRegistrationStatusMonotonic(
+        { tourismComplete, contactComplete },
+        status
+      );
+      applyRegistrationStatus(merged);
 
       const nextCompletion: StaySetupCompletion = {
         tourismRequired: tourismRegistrationRequired,
-        tourismComplete: status.tourismComplete,
-        contactComplete: status.contactComplete,
+        tourismComplete: merged.tourismComplete,
+        contactComplete: merged.contactComplete,
       };
 
       setCurrentStep((step) =>
-        reconcileStepAfterCompletionSync(step, tourismRegistrationRequired, nextCompletion)
+        reconcileStepAfterCompletionSync(
+          step,
+          tourismRegistrationRequired,
+          nextCompletion,
+          checkInDayOrLater
+        )
       );
     },
-    [tourismRegistrationRequired]
+    [
+      applyRegistrationStatus,
+      tourismRegistrationRequired,
+      checkInDayOrLater,
+      tourismComplete,
+      contactComplete,
+    ]
   );
 
   useStaySetupCompletionSync({
@@ -170,48 +177,48 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   });
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const step = normalizeStaySetupUrlStep(params.get('step'));
-
-    if (!isRegistered) {
-      if (step === 'room' || step === 'essentials') {
-        setCurrentStep(step);
-        return;
-      }
-      if (step === 'registration' || !step) {
-        setCurrentStep(
-          step ?? resolveFirstIncompleteStaySetupStep(tourismRegistrationRequired, completion)
-        );
-      }
+    if (userStepIntentRef.current !== null) {
       return;
     }
 
-    if (!step) {
-      setCurrentStep(resolveFirstIncompleteStaySetupStep(tourismRegistrationRequired, completion));
+    const next = resolveStaySetupStepFromUrl({
+      urlStep: stepFromUrl,
+      isRegistered,
+      tourismRegistrationRequired,
+      completion,
+      checkInDayOrLater,
+      registrationComplete,
+      contactComplete,
+      currentStep,
+      userIntentStep: null,
+    });
+
+    if (next === null || next === currentStep) {
       return;
     }
 
-    if (step === 'room' || step === 'essentials') {
-      if (!registrationComplete) {
-        setCurrentStep('registration');
-        return;
-      }
-      setCurrentStep(step);
-      return;
-    }
-
-    if (!isValidStaySetupUrlStep(params.get('step'), tourismRegistrationRequired, contactComplete)) {
-      return;
-    }
-
-    setCurrentStep(step);
+    setCurrentStep(next);
   }, [
+    stepFromUrl,
     isRegistered,
     tourismRegistrationRequired,
+    checkInDayOrLater,
     registrationComplete,
     contactComplete,
     completion,
+    currentStep,
   ]);
+
+  useEffect(() => {
+    const intent = userStepIntentRef.current;
+    if (intent === null) {
+      return;
+    }
+
+    if (isStaySetupUrlSyncedWithStep(stepFromUrl, intent)) {
+      userStepIntentRef.current = null;
+    }
+  }, [currentStep, stepFromUrl]);
 
   useEffect(() => {
     if (!isRegistered) {
@@ -234,28 +241,48 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const openTourismGateSheet = () => setTourismGateSheetOpen(true);
 
   const focusRegistrationStep = useCallback(() => {
+    userStepIntentRef.current = 'registration';
     setCurrentStep('registration');
   }, []);
 
-  const handleRegistrationTourismComplete = useCallback(() => {
-    setTourismComplete(true);
-    setAccordionValue('contact');
-  }, []);
+  const openSettlementDayGateSheet = () => setSettlementDayGateSheetOpen(true);
 
-  const handleRegistrationContactComplete = useCallback(
-    (savedWhatsapp: string) => {
-      setStayContactWhatsapp(savedWhatsapp);
-      setContactComplete(true);
+  const ensureContactBeforeAdvance = useCallback(async (): Promise<boolean> => {
+    if (!slug) {
+      return false;
+    }
 
-      if (checkInDayOrLater) {
-        setCurrentStep('essentials');
-      }
-    },
-    [checkInDayOrLater]
-  );
+    const result = await ensureStayContactSaved({
+      tenantSlug: slug,
+      contactComplete,
+      savedE164: stayContactWhatsapp,
+      draftValue: contactDraftWhatsapp,
+    });
+
+    if (!result.ok) {
+      setContactSaveError(true);
+      setAccordionValue('contact');
+      return false;
+    }
+
+    if (!result.skipped) {
+      handleContactComplete(result.e164);
+    }
+
+    setContactSaveError(false);
+    return true;
+  }, [
+    slug,
+    contactComplete,
+    stayContactWhatsapp,
+    contactDraftWhatsapp,
+    handleContactComplete,
+    setAccordionValue,
+  ]);
 
   const navigateToStep = useCallback(
     (step: StaySetupStep) => {
+      userStepIntentRef.current = step;
       if (!isRegistered) {
         setCurrentStep(step);
         return;
@@ -270,6 +297,11 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         return;
       }
 
+      if (isRoomOrEssentialsStep(step) && isRegistered && !checkInDayOrLater) {
+        openSettlementDayGateSheet();
+        return;
+      }
+
       setCurrentStep(step);
     },
     [
@@ -277,19 +309,9 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       registrationComplete,
       tourismRegistrationRequired,
       tourismComplete,
+      checkInDayOrLater,
       focusRegistrationStep,
     ]
-  );
-
-  const handleProgressStepSelect = useCallback(
-    (stepId: StaySetupStep) => {
-      if (isStaySetupStepLocked(stepId, isRegistered, tourismRegistrationRequired, completion)) {
-        return;
-      }
-
-      setCurrentStep(stepId);
-    },
-    [completion, isRegistered, tourismRegistrationRequired]
   );
 
   const visibleSteps = resolveStaySetupStepOrder(tourismRegistrationRequired, completion);
@@ -315,18 +337,33 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
             interactionEnabled={isRegistered}
             tenantSlug={slug ?? ''}
             stayContactWhatsapp={stayContactWhatsapp}
-            onTourismComplete={handleRegistrationTourismComplete}
-            onContactComplete={handleRegistrationContactComplete}
-            showCompleteHint
+            onTourismComplete={handleTourismComplete}
+            onContactComplete={handleContactComplete}
+            onContactDraftChange={setContactDraftWhatsapp}
+            showCompleteHint={false}
+            registrationSurface="wizard"
           />
         ),
-        onComplete: () => setCurrentStep('essentials'),
+        onComplete: () => {
+          userStepIntentRef.current = 'essentials';
+          setCurrentStep('essentials');
+        },
       },
       {
         id: 'essentials',
         label: t('tabs.essentials'),
-        render: () => <StaySetupEssentialsStep />,
-        onComplete: () => setCurrentStep('room'),
+        render: () => (
+          <StaySetupEssentialsStep
+            rulesAcknowledged={essentialsRulesAcknowledged}
+            onRulesAcknowledgedChange={setEssentialsRulesAcknowledged}
+            onHasHouseRulesChange={setEssentialsHasHouseRules}
+            rulesAckLocked={essentialsStepPreviouslyCompleted}
+          />
+        ),
+        onComplete: () => {
+          userStepIntentRef.current = 'room';
+          setCurrentStep('room');
+        },
       },
       {
         id: 'room',
@@ -347,8 +384,12 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     isRegistered,
     slug,
     stayContactWhatsapp,
-    handleRegistrationTourismComplete,
-    handleRegistrationContactComplete,
+    handleTourismComplete,
+    handleContactComplete,
+    setContactDraftWhatsapp,
+    essentialsRulesAcknowledged,
+    essentialsHasHouseRules,
+    essentialsStepPreviouslyCompleted,
     router,
     visibleSteps,
   ]);
@@ -358,7 +399,13 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const progressSteps = stepsConfig.map((step) => ({
     id: step.id,
     label: step.label,
-    locked: isStaySetupStepLocked(step.id, isRegistered, tourismRegistrationRequired, completion),
+    locked: isStaySetupStepLocked(
+      step.id,
+      isRegistered,
+      tourismRegistrationRequired,
+      completion,
+      checkInDayOrLater
+    ),
   }));
 
   const handlePrimaryAction = () => {
@@ -368,6 +415,15 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
     if (isRegistrationLockedStep(activeStep.id, isRegistered)) {
       openCheckInSheet();
+      return;
+    }
+
+    if (
+      activeStep.id === 'registration' &&
+      registrationComplete &&
+      !checkInDayOrLater
+    ) {
+      openSettlementDayGateSheet();
       return;
     }
 
@@ -385,26 +441,53 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       return;
     }
 
-    const nextStep = resolveNextStaySetupStep(
-      activeStep.id,
-      tourismRegistrationRequired,
-      completion
-    );
-
-    if (activeStep.id === 'essentials' && nextStep === 'room' && slug && stayId) {
-      markStaySettlementEssentialsDone(slug, stayId);
-    }
-
-    if (nextStep === null) {
-      if (activeStep.id === 'room' && slug && stayId) {
-        markStaySettlementRoomDone(slug, stayId);
+    const runAdvance = async () => {
+      if (
+        activeStep.id === 'registration' &&
+        registrationComplete &&
+        checkInDayOrLater
+      ) {
+        const saved = await ensureContactBeforeAdvance();
+        if (!saved) {
+          return;
+        }
+        userStepIntentRef.current = 'essentials';
+        setCurrentStep('essentials');
+        return;
       }
-      activeStep.onComplete();
-      return;
-    }
 
-    navigateToStep(nextStep);
+      const nextStep = resolveNextStaySetupStep(
+        activeStep.id,
+        tourismRegistrationRequired,
+        completion
+      );
+
+      if (activeStep.id === 'essentials' && nextStep === 'room' && slug && stayId) {
+        markStaySettlementEssentialsDone(slug, stayId);
+        setEssentialsStepPreviouslyCompleted(true);
+      }
+
+      if (nextStep === null) {
+        if (activeStep.id === 'room' && slug && stayId) {
+          markStaySettlementRoomDone(slug, stayId);
+        }
+        activeStep.onComplete();
+        return;
+      }
+
+      navigateToStep(nextStep);
+    };
+
+    void runAdvance();
   };
+
+  const primaryDisabled =
+    activeStep &&
+    isStaySetupEssentialsPrimaryDisabled(
+      activeStep.id,
+      essentialsHasHouseRules,
+      essentialsRulesAcknowledged
+    );
 
   const primaryButtonKey = activeStep
     ? resolveStaySetupPrimaryButtonKey(
@@ -444,7 +527,6 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
           value={currentStep}
           completion={completion}
           ariaLabel="Stay setup steps"
-          onStepSelect={handleProgressStepSelect}
         />
       </ArrivalGuideStepsShell>
 
@@ -452,10 +534,13 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         <div className="min-h-0 flex-1 overflow-y-auto">{activeStep?.render()}</div>
         {showPrimaryButton ? (
           <IconBackActionsRow className="mt-3" onBack={showBackButton ? handleBackAction : undefined}>
-            <Button size="lg" onClick={handlePrimaryAction}>
+            <Button size="lg" disabled={primaryDisabled} onClick={handlePrimaryAction}>
               {t(primaryButtonKey)}
             </Button>
           </IconBackActionsRow>
+        ) : null}
+        {contactSaveError ? (
+          <p className="mt-2 text-xs text-destructive">{t('contact.errors.invalidWhatsapp')}</p>
         ) : null}
       </main>
 
@@ -471,6 +556,10 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         open={tourismGateSheetOpen}
         onOpenChange={setTourismGateSheetOpen}
         onGoToRegistration={focusRegistrationStep}
+      />
+      <StaySetupSettlementDayGateSheet
+        open={settlementDayGateSheetOpen}
+        onOpenChange={setSettlementDayGateSheetOpen}
       />
     </div>
   );

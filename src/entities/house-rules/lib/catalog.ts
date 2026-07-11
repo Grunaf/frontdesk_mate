@@ -1,5 +1,6 @@
 import {
   Ban,
+  BottleWine,
   Bubbles,
   Clock,
   Cigarette,
@@ -7,6 +8,7 @@ import {
   Moon,
   ShieldCheck,
   Shirt,
+  Tag,
   Volume2,
   type LucideIcon,
 } from 'lucide-react';
@@ -39,6 +41,8 @@ export const RULE_ICON_MAP: Record<RuleIconId, LucideIcon> = {
   volume: Volume2,
   clock: Clock,
   ban: Ban,
+  tag: Tag,
+  bottleWine: BottleWine,
 };
 
 export const CUSTOM_RULE_ICON_OPTIONS: RuleIconId[] = [
@@ -80,7 +84,7 @@ export const HOUSE_RULE_TEMPLATES: RuleTemplateDefinition[] = [
     kind: 'simple',
     label: 'Outside alcohol policy',
     description: 'Guests may not bring outside drinks.',
-    icon: 'glass',
+    icon: 'bottleWine',
     render: () => ({
       summary: 'No outside drinks',
       detail: 'Alcohol consumption is allowed, but bringing your own drinks from outside is prohibited. You can purchase drinks at our hostel bar.',
@@ -105,7 +109,7 @@ export const HOUSE_RULE_TEMPLATES: RuleTemplateDefinition[] = [
     label: 'Label your food',
     description:
       'Label all food you store (fridge, freezer, pantry/shelves). Unlabeled or expired items may be thrown away or marked free.',
-    icon: 'clock',
+    icon: 'tag',
     render: () => ({
       summary: 'Label your food',
       detail:

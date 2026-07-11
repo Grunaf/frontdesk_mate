@@ -2,10 +2,26 @@
 
 import * as React from "react"
 import { Accordion as AccordionPrimitive } from "radix-ui"
+import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/shared/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons"
+
+const accordionTriggerVariants = cva(
+  "group/accordion-trigger relative flex flex-1 items-start justify-between gap-6 border border-transparent text-left transition-all outline-none hover:underline disabled:pointer-events-none disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4 **:data-[slot=accordion-trigger-icon]:text-muted-foreground",
+  {
+    variants: {
+      size: {
+        default: "p-2 text-xs/relaxed font-medium",
+        section: "px-2 py-2 text-base font-semibold text-foreground hover:no-underline",
+      },
+    },
+    defaultVariants: {
+      size: "default",
+    },
+  }
+)
 
 function Accordion({
   className,
@@ -38,17 +54,16 @@ function AccordionItem({
 
 function AccordionTrigger({
   className,
+  size,
   children,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
+}: React.ComponentProps<typeof AccordionPrimitive.Trigger> &
+  VariantProps<typeof accordionTriggerVariants>) {
   return (
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
-        className={cn(
-          "group/accordion-trigger relative flex flex-1 items-start justify-between gap-6 border border-transparent p-2 text-left text-xs/relaxed font-medium transition-all outline-none hover:underline disabled:pointer-events-none disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4 **:data-[slot=accordion-trigger-icon]:text-muted-foreground",
-          className
-        )}
+        className={cn(accordionTriggerVariants({ size }), className)}
         {...props}
       >
         {children}
@@ -72,19 +87,71 @@ function AccordionContent({
     const innerEl = innerRef.current
     if (!contentEl || !innerEl) return
 
-    const syncHeight = () => {
-      if (contentEl.getAttribute("data-state") !== "open") return
-      const height = `${innerEl.scrollHeight}px`
-      contentEl.style.setProperty("--radix-accordion-content-height", height)
-      contentEl.style.height = height
+    const clearClosedHeight = () => {
+      contentEl.style.removeProperty("height")
     }
 
-    syncHeight()
+    const applyOpenHeight = (): boolean => {
+      if (contentEl.getAttribute("data-state") !== "open") {
+        return true
+      }
 
-    const observer = new ResizeObserver(syncHeight)
+      const measured = innerEl.scrollHeight
+      if (measured <= 0) {
+        return false
+      }
+
+      const height = `${measured}px`
+      contentEl.style.setProperty("--radix-accordion-content-height", height)
+      contentEl.style.height = height
+      return true
+    }
+
+    const remeasureOpenHeight = () => {
+      if (contentEl.getAttribute("data-state") !== "open") {
+        return
+      }
+
+      if (applyOpenHeight()) {
+        requestAnimationFrame(() => {
+          applyOpenHeight()
+        })
+        return
+      }
+
+      let attempts = 0
+      const retry = () => {
+        if (contentEl.getAttribute("data-state") !== "open") {
+          return
+        }
+        if (applyOpenHeight() || attempts >= 8) {
+          return
+        }
+        attempts += 1
+        requestAnimationFrame(retry)
+      }
+      requestAnimationFrame(retry)
+    }
+
+    const syncHeightFromState = () => {
+      if (contentEl.getAttribute("data-state") !== "open") {
+        clearClosedHeight()
+        return
+      }
+      applyOpenHeight()
+      remeasureOpenHeight()
+    }
+
+    syncHeightFromState()
+
+    const observer = new ResizeObserver(() => {
+      if (contentEl.getAttribute("data-state") === "open") {
+        applyOpenHeight()
+      }
+    })
     observer.observe(innerEl)
 
-    const stateObserver = new MutationObserver(syncHeight)
+    const stateObserver = new MutationObserver(syncHeightFromState)
     stateObserver.observe(contentEl, { attributes: true, attributeFilter: ["data-state"] })
 
     return () => {

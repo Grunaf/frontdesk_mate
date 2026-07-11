@@ -87,11 +87,25 @@ export function resolveFirstIncompleteStaySetupStep(
   return 'essentials';
 }
 
+/** Wizard step when registration is done but check-in day has not started yet. */
+export function resolveStaySetupCoordinatorStep(
+  tourismRequired: boolean,
+  completion: StaySetupCompletion,
+  checkInDayOrLater: boolean
+): StaySetupStep {
+  if (isStaySetupRegistrationComplete(completion) && !checkInDayOrLater) {
+    return 'registration';
+  }
+
+  return resolveFirstIncompleteStaySetupStep(tourismRequired, completion);
+}
+
 export function isStaySetupStepLocked(
   step: StaySetupStep,
   isRegistered: boolean,
   _tourismRequired: boolean,
-  completion: StaySetupCompletion
+  completion: StaySetupCompletion,
+  checkInDayOrLater: boolean
 ): boolean {
   if (!isRegistered) {
     return false;
@@ -102,6 +116,9 @@ export function isStaySetupStepLocked(
   }
 
   if (step === 'essentials' || step === 'room') {
+    if (!checkInDayOrLater) {
+      return true;
+    }
     return !isStaySetupRegistrationComplete(completion);
   }
 

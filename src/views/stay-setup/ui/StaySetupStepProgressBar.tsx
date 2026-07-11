@@ -16,7 +16,6 @@ export interface StaySetupStepProgressBarProps {
   completion: StaySetupCompletion;
   ariaLabel: string;
   className?: string;
-  onStepSelect?: (stepId: StaySetupStep) => void;
 }
 
 export function StaySetupStepProgressBar({
@@ -25,7 +24,6 @@ export function StaySetupStepProgressBar({
   completion,
   ariaLabel,
   className,
-  onStepSelect,
 }: StaySetupStepProgressBarProps) {
   const currentIndex = Math.max(
     0,
@@ -48,26 +46,15 @@ export function StaySetupStepProgressBar({
         const isActive = segmentState === 'current';
         const isCompleted = segmentState === 'completed';
         const isLocked = segmentState === 'locked';
-        const isInteractive = Boolean(onStepSelect) && !isLocked;
 
         return (
-          <button
+          <div
             key={step.id}
-            type="button"
+            role="presentation"
             aria-label={step.label}
             aria-current={isActive ? 'step' : undefined}
-            aria-disabled={isLocked || undefined}
-            disabled={!isInteractive}
-            onClick={() => {
-              if (!isInteractive) {
-                return;
-              }
-              onStepSelect?.(step.id);
-            }}
             className={cn(
               'h-2 min-w-0 flex-1 rounded-full transition-colors',
-              isInteractive && 'cursor-pointer',
-              !isInteractive && 'cursor-default',
               isActive && 'bg-primary/45 ring-2 ring-inset ring-primary',
               isCompleted && 'bg-primary/45 ring-0',
               segmentState === 'upcoming' && 'bg-muted-foreground/20',

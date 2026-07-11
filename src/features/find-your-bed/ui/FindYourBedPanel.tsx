@@ -46,22 +46,6 @@ export function FindYourBedPanel({ compact = false }: FindYourBedPanelProps) {
         <FindYourBedSummary plan={plan} variant="breadcrumb" />
       </div>
 
-      {hasMap ? (
-        <div>
-          <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-            {t('insideRoom')}
-          </p>
-          <RoomLayout
-            beds={plan.layoutBeds}
-            roomBounds={plan.roomBounds}
-            guestStay={settings.guestStay}
-            highlightedBedId={plan.bedId}
-            entranceSide={plan.room?.entranceSide}
-            isNightMode={isNight}
-          />
-        </div>
-      ) : null}
-
       {hasDirections ? (
         <div className="rounded-xl border bg-muted/20">
           <button
@@ -86,6 +70,22 @@ export function FindYourBedPanel({ compact = false }: FindYourBedPanelProps) {
               {photoSteps.length > 0 ? <StayStepsCarousel steps={photoSteps} /> : null}
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {hasMap ? (
+        <div>
+          <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+            {t('insideRoom')}
+          </p>
+          <RoomLayout
+            beds={plan.layoutBeds}
+            roomBounds={plan.roomBounds}
+            guestStay={settings.guestStay}
+            highlightedBedId={plan.bedId}
+            entranceSide={plan.room?.entranceSide}
+            isNightMode={isNight}
+          />
         </div>
       ) : null}
     </section>

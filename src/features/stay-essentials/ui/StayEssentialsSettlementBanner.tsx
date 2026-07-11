@@ -60,8 +60,8 @@ export function StayEssentialsSettlementBanner() {
           }).isComplete;
           const settlementProgress = readStaySettlementBannerProgress(slug, stayId);
           const settlementStep = registrationComplete
-            ? resolveFirstIncompleteSettlementStep(settlementProgress) ?? undefined
-            : undefined;
+            ? resolveFirstIncompleteSettlementStep(settlementProgress) ?? 'essentials'
+            : 'registration';
 
           setInAppReturnTo(SITE_CONFIG.routes.app.concierge.path);
           push(

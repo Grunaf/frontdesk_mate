@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   normalizeStaySetupUrlStep,
   resolveFirstIncompleteStaySetupStep,
+  resolveStaySetupCoordinatorStep,
   resolveNextStaySetupStep,
   resolvePreviousStaySetupStep,
   resolveStaySetupStepOrder,
@@ -105,5 +106,15 @@ describe('resolveStaySetupSteps', () => {
         contactComplete: false,
       })
     ).toBe(null);
+  });
+
+  it('keeps registration before check-in day when registration is complete', () => {
+    const completion = {
+      tourismRequired: true,
+      tourismComplete: true,
+      contactComplete: true,
+    };
+    expect(resolveStaySetupCoordinatorStep(true, completion, false)).toBe('registration');
+    expect(resolveStaySetupCoordinatorStep(true, completion, true)).toBe('essentials');
   });
 });

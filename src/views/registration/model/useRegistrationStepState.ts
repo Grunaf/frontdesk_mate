@@ -26,6 +26,7 @@ export function useRegistrationStepState({
   const [tourismComplete, setTourismComplete] = useState(initial.tourismComplete);
   const [contactComplete, setContactComplete] = useState(initial.contactComplete);
   const [stayContactWhatsapp, setStayContactWhatsapp] = useState(initial.stayContactWhatsapp);
+  const [contactDraftWhatsapp, setContactDraftWhatsapp] = useState(initial.stayContactWhatsapp ?? '');
   const [accordionValue, setAccordionValue] = useState<RegistrationAccordionItem>(() =>
     resolveOpenRegistrationAccordionItem({
       tourismRequired,
@@ -38,6 +39,7 @@ export function useRegistrationStepState({
     setTourismComplete(initial.tourismComplete);
     setContactComplete(initial.contactComplete);
     setStayContactWhatsapp(initial.stayContactWhatsapp);
+    setContactDraftWhatsapp(initial.stayContactWhatsapp ?? '');
   }, [initial.tourismComplete, initial.contactComplete, initial.stayContactWhatsapp]);
 
   useEffect(() => {
@@ -78,8 +80,17 @@ export function useRegistrationStepState({
 
   const handleContactComplete = useCallback((savedWhatsapp: string) => {
     setStayContactWhatsapp(savedWhatsapp);
+    setContactDraftWhatsapp(savedWhatsapp);
     setContactComplete(true);
   }, []);
+
+  const applyRegistrationStatus = useCallback(
+    (status: { tourismComplete: boolean; contactComplete: boolean }) => {
+      setTourismComplete(status.tourismComplete);
+      setContactComplete(status.contactComplete);
+    },
+    []
+  );
 
   return {
     tenantSlug,
@@ -87,11 +98,14 @@ export function useRegistrationStepState({
     tourismComplete,
     contactComplete,
     stayContactWhatsapp,
+    contactDraftWhatsapp,
+    setContactDraftWhatsapp,
     completion,
     registrationComplete,
     accordionValue,
     setAccordionValue,
     handleTourismComplete,
     handleContactComplete,
+    applyRegistrationStatus,
   };
 }

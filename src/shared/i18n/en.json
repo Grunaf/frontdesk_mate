@@ -792,6 +792,12 @@
         "step3": "Return here to view settlement",
         "cta": "Register now"
       },
+      "settlementDayGate": {
+        "title": "Settling in opens on check-in day",
+        "description": "Wi‑Fi, house rules, and your room details unlock from {time} on your check-in day.",
+        "body": "You can complete guest registration here now. The rest of settling in will be available once check-in starts.",
+        "dismiss": "Got it"
+      },
       "tabs": {
         "registration": "Guest registration",
         "register": "Guest registration",
@@ -803,6 +809,7 @@
       "registration": {
         "cta": "Continue to registration",
         "allCompleteCta": "Continue to Wi‑Fi & rules",
+        "continueSettlingIn": "Continue settling in",
         "completeHint": "Guest registration and contact details are complete.",
         "incompleteHint": "Complete guest registration and contact details on the registration page."
       },
@@ -870,9 +877,13 @@
       },
       "contact": {
         "title": "Contact for this stay",
-        "description": "Reception may need to reach you about your registration, room, or stay. Use a number you check on WhatsApp or phone.",
-        "whatsappLabel": "WhatsApp or mobile number",
-        "hint": "Include country code. One number for the whole booking.",
+        "description": "Reception may need to reach you about your registration, room, or stay. Use the WhatsApp number you check regularly.",
+        "countryLabel": "Country code",
+        "numberLabel": "Mobile number",
+        "whatsappLabel": "WhatsApp number",
+        "hint": "One WhatsApp number for the whole booking.",
+        "savedBadge": "Saved",
+        "save": "Save contact",
         "continue": "Continue to Wi‑Fi & rules",
         "saving": "Saving…",
         "actionButton": "Continue to Wi‑Fi & rules",
@@ -882,7 +893,9 @@
         }
       },
       "essentials": {
-        "actionButton": "Continue to your room"
+        "actionButton": "Continue settling in",
+        "actionButtonRoom": "Continue to your room",
+        "rulesAckLabel": "I have read the house rules"
       },
       "room": {
         "title": "Find your bed",

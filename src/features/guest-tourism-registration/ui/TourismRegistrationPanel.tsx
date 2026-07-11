@@ -27,11 +27,15 @@ type TourismGuestsRegistrationPanelProps = {
   onComplete: () => void;
   /** When false, show preview UI without fetching or submitting (stay-setup before check-in). */
   interactionEnabled?: boolean;
+  navigationMode?: 'standalone' | 'wizard';
+  showIntroHeading?: boolean;
 };
 
 export function TourismGuestsRegistrationPanel({
   onComplete,
   interactionEnabled = true,
+  navigationMode = 'standalone',
+  showIntroHeading = true,
 }: TourismGuestsRegistrationPanelProps) {
   const t = useTranslations('pages.staySetup.register');
   const { slug: tenantSlug, settings } = useTenant();
@@ -51,6 +55,7 @@ export function TourismGuestsRegistrationPanel({
   const [isCompleting, startCompleteTransition] = useTransition();
 
   const reservationName = session?.guestName?.trim() ?? '';
+  const panelTopPadding = showIntroHeading ? 'pt-5' : 'pt-0';
 
   const refreshGuests = useCallback(async () => {
     const result = await listTourismGuestsForSessionAction(tenantSlug);
@@ -158,7 +163,7 @@ export function TourismGuestsRegistrationPanel({
 
   if (interactionEnabled && loadError) {
     return (
-      <div className="pt-5">
+      <div className={panelTopPadding}>
         <Alert variant="destructive">
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
@@ -168,14 +173,20 @@ export function TourismGuestsRegistrationPanel({
 
   if (registrationComplete) {
     return (
-      <div className="flex min-h-full flex-col pt-5">
+      <div className={cn('flex min-h-full flex-col', panelTopPadding)}>
         <div className="space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold text-foreground">{t('complete.summaryTitle')}</h2>
+          {showIntroHeading ? (
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold text-foreground">{t('complete.summaryTitle')}</h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {t('intro.description', countryVars)}
+              </p>
+            </div>
+          ) : (
             <p className="text-sm leading-relaxed text-muted-foreground">
               {t('intro.description', countryVars)}
             </p>
-          </div>
+          )}
 
           {reservationName ? (
             <div className="space-y-1">
@@ -190,32 +201,50 @@ export function TourismGuestsRegistrationPanel({
           </div>
         </div>
 
-        <IconBackActionsRow className="mt-auto pt-6">
-          <Button size="lg" onClick={onComplete}>
-            {t('complete.continue')}
-          </Button>
-        </IconBackActionsRow>
+        {navigationMode === 'standalone' ? (
+          <IconBackActionsRow className="mt-auto pt-6">
+            <Button size="lg" onClick={onComplete}>
+              {t('complete.continue')}
+            </Button>
+          </IconBackActionsRow>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-full flex-col pt-5">
+    <div className={cn('flex min-h-full flex-col', panelTopPadding)}>
       <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">{t('intro.title', countryVars)}</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {t('intro.description', countryVars)}
-          </p>
-          <Button
-            type="button"
-            variant="link"
-            className="h-auto p-0 text-sm font-normal"
-            onClick={() => setPrivacySheetOpen(true)}
-          >
-            {t('privacy.linkLabel')}
-          </Button>
-        </div>
+        {showIntroHeading ? (
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-foreground">{t('intro.title', countryVars)}</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t('intro.description', countryVars)}
+            </p>
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 text-sm font-normal"
+              onClick={() => setPrivacySheetOpen(true)}
+            >
+              {t('privacy.linkLabel')}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t('intro.description', countryVars)}
+            </p>
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 text-sm font-normal"
+              onClick={() => setPrivacySheetOpen(true)}
+            >
+              {t('privacy.linkLabel')}
+            </Button>
+          </div>
+        )}
 
         <TourismRegistrationPrivacySheet open={privacySheetOpen} onOpenChange={setPrivacySheetOpen} />
 

@@ -27,15 +27,18 @@ export function useStaySetupCompletionSync({
 
   const pathname = usePathname();
   const isOnStaySetup = pathname.includes(staySetupPathSuffix);
+  const fetchGenerationRef = useRef(0);
 
   const fetchStatus = useCallback(() => {
     if (!isRegistered || !slug || !isOnStaySetup) {
       return;
     }
 
-    let cancelled = false;
+    const generation = fetchGenerationRef.current + 1;
+    fetchGenerationRef.current = generation;
+
     void getStaySetupStatusAction(slug).then((result) => {
-      if (cancelled || !result.ok) {
+      if (fetchGenerationRef.current !== generation || !result.ok) {
         return;
       }
       onStatusRef.current({
@@ -43,14 +46,10 @@ export function useStaySetupCompletionSync({
         contactComplete: result.status.contactComplete,
       });
     });
-
-    return () => {
-      cancelled = true;
-    };
   }, [isRegistered, isOnStaySetup, slug]);
 
   useEffect(() => {
-    return fetchStatus();
+    fetchStatus();
   }, [fetchStatus, pathname]);
 
   useEffect(() => {

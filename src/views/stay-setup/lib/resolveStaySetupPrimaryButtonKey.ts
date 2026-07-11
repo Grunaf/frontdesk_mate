@@ -4,12 +4,6 @@ import {
   type StaySetupCompletion,
 } from './resolveStaySetupSteps';
 
-const STEP_BUTTON_KEYS: Record<StaySetupStep, string> = {
-  registration: 'essentials.actionButton',
-  essentials: 'essentials.actionButton',
-  room: 'settlement.actionButton',
-};
-
 const CHECK_IN_CTA_KEY = 'guestCheckIn.checkInToContinue';
 
 export function resolveStaySetupPrimaryButtonKey(
@@ -26,7 +20,15 @@ export function resolveStaySetupPrimaryButtonKey(
     return CHECK_IN_CTA_KEY;
   }
 
-  return STEP_BUTTON_KEYS[activeStepId];
+  if (activeStepId === 'registration') {
+    return 'registration.continueSettlingIn';
+  }
+
+  if (activeStepId === 'essentials') {
+    return 'essentials.actionButtonRoom';
+  }
+
+  return 'settlement.actionButton';
 }
 
 export function shouldShowStaySetupPrimaryButton(
@@ -43,4 +45,16 @@ export function shouldShowStaySetupPrimaryButton(
   }
 
   return true;
+}
+
+export function isStaySetupEssentialsPrimaryDisabled(
+  activeStepId: StaySetupStep,
+  hasHouseRules: boolean,
+  rulesAcknowledged: boolean
+): boolean {
+  if (activeStepId !== 'essentials' || !hasHouseRules) {
+    return false;
+  }
+
+  return !rulesAcknowledged;
 }

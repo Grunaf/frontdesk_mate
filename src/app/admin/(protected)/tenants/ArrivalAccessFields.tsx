@@ -1,13 +1,19 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import type { AccessPoint, ArrivalLayoutKind, TenantSettings } from '@/entities/tenant';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { AccessPoint, ArrivalLayoutKind, StayFloor, TenantSettings } from '@/entities/tenant';
 import type { ArrivalAccessConfig } from '@/entities/tenant/model/accessPoints';
 import { isArrivalAccessMissing } from '@/entities/tenant/lib/resolveTenantReadiness';
 import { normalizeAccessPoints } from '@/entities/tenant/lib/normalizeAccessPoints';
+import { cn } from '@/shared/lib/utils';
+import { Badge } from '@/shared/ui';
+import {
+  ensureAccessPointIds,
+  mergeAccessPointDisplayFloors,
+} from './lib/ensureAccessPointIds';
 import { AdminImageField } from './ui/AdminImageField';
 import { AdminLabelHelp } from './ui/AdminLabelHelp';
-import { useTenantFormDraft } from './ui/TenantFormDraftContext';
+import { mergeDraftSettings, useTenantFormDraft } from './ui/TenantFormDraftContext';
 
 interface ArrivalAccessFieldsProps {
   tenantSlug: string;
@@ -70,19 +76,55 @@ function emptyPoint(index: number, layoutKind: ArrivalLayoutKind): AccessPoint {
   };
 }
 
+function sanitizeAccessPointForDraft(point: AccessPoint): AccessPoint {
+  const code = point.code?.trim();
+  const forFloors = point.forFloors?.map((floor) => floor.trim()).filter(Boolean);
+  return {
+    ...point,
+    code: code || undefined,
+    forFloors: forFloors?.length ? forFloors : undefined,
+    alsoForFloors: undefined,
+  };
+}
+
+function applyAccessPointFloors(point: AccessPoint, floorIds: string[]): AccessPoint {
+  const unique = [...new Set(floorIds.map((id) => id.trim()).filter(Boolean))];
+  if (unique.length === 0) {
+    return { ...point, forFloors: undefined, alsoForFloors: undefined };
+  }
+  return { ...point, forFloors: unique, alsoForFloors: undefined };
+}
+
 function AccessPointRow({
   point,
   index,
+  layoutKind,
   tenantSlug,
+  floorOptions,
   onChange,
   onRemove,
 }: {
   point: AccessPoint;
   index: number;
+  layoutKind: ArrivalLayoutKind;
   tenantSlug: string;
+  floorOptions: StayFloor[];
   onChange: (next: AccessPoint) => void;
   onRemove: () => void;
 }) {
+  const isOutside = (point.kind ?? 'zone') === 'outside';
+  const [nightCodeOn, setNightCodeOn] = useState(() => Boolean(point.code?.trim()));
+
+  useEffect(() => {
+    if (point.code?.trim()) {
+      setNightCodeOn(true);
+    }
+  }, [point.code]);
+
+  const selectedFloorIds = mergeAccessPointDisplayFloors(point);
+  const floorsDisabled = floorOptions.length === 0;
+  const availableFloors = floorOptions.filter((floor) => !selectedFloorIds.includes(floor.id));
+
   return (
     <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
       <div className="flex items-center justify-between gap-2">
@@ -98,28 +140,45 @@ function AccessPointRow({
         </button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">ID</span>
-          <input
-            value={point.id}
-            onChange={(event) => onChange({ ...point, id: event.target.value })}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-medium">
+            {isOutside ? 'Building / outside entrance' : 'Floor / zone door'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {isOutside
+              ? 'Shared entrance before hostel zones (stairwell, street door).'
+              : 'Door to a floor or zone inside the building.'}
+          </p>
+          {layoutKind === 'direct_to_floor' && isOutside ? (
+            <p className="text-xs text-muted-foreground">
+              Usually all points are zone doors for this layout.
+            </p>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isOutside}
+          aria-label={
+            isOutside
+              ? 'Building or outside entrance (on). Switch off for floor or zone door.'
+              : 'Floor or zone door (off). Switch on for building or outside entrance.'
+          }
+          onClick={() => onChange({ ...point, kind: isOutside ? 'zone' : 'outside' })}
+          className={cn(
+            'relative mt-0.5 inline-flex h-5 w-9 shrink-0 rounded-full border border-transparent transition-colors',
+            isOutside ? 'bg-primary' : 'bg-muted'
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none inline-block h-4 w-4 translate-y-0.5 rounded-full bg-background shadow transition-transform',
+              isOutside ? 'translate-x-4' : 'translate-x-0.5'
+            )}
           />
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Kind</span>
-          <select
-            value={point.kind ?? 'zone'}
-            onChange={(event) =>
-              onChange({ ...point, kind: event.target.value as AccessPoint['kind'] })
-            }
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          >
-            <option value="outside">Outside / building entrance</option>
-            <option value="zone">Hostel zone / floor door</option>
-          </select>
-        </label>
+        </button>
       </div>
 
       <label className="block space-y-1.5">
@@ -139,55 +198,118 @@ function AccessPointRow({
         placeholder="/images/floor-1-door.jpg"
         previewAlt={point.label ?? `Access point ${index + 1}`}
       />
-      <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Night code</span>
-        <span className="block text-xs text-muted-foreground">
-          Leave empty if no lock yet or staff opens manually.
-        </span>
-        <input
-          value={point.code ?? ''}
-          onChange={(event) => onChange({ ...point, code: event.target.value })}
-          placeholder="1234#"
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        />
-      </label>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">For floors</span>
-          <span className="block text-xs text-muted-foreground">Comma-separated. Empty = all guests.</span>
-          <input
-            value={point.forFloors?.join(', ') ?? ''}
-            onChange={(event) =>
-              onChange({
-                ...point,
-                forFloors: event.target.value
-                  .split(',')
-                  .map((value) => value.trim())
-                  .filter(Boolean),
-              })
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-medium">Night code</p>
+          <p className="text-xs text-muted-foreground">
+            Leave off if no lock yet or staff opens manually.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={nightCodeOn}
+          aria-label={
+            nightCodeOn
+              ? 'Night code enabled. Switch off to remove code from this door.'
+              : 'Night code disabled. Switch on to add a code for this door.'
+          }
+          onClick={() => {
+            if (nightCodeOn) {
+              setNightCodeOn(false);
+              onChange({ ...point, code: undefined });
+              return;
             }
-            placeholder="1"
+            setNightCodeOn(true);
+          }}
+          className={cn(
+            'relative mt-0.5 inline-flex h-5 w-9 shrink-0 rounded-full border border-transparent transition-colors',
+            nightCodeOn ? 'bg-primary' : 'bg-muted'
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none inline-block h-4 w-4 translate-y-0.5 rounded-full bg-background shadow transition-transform',
+              nightCodeOn ? 'translate-x-4' : 'translate-x-0.5'
+            )}
+          />
+        </button>
+      </div>
+      {nightCodeOn ? (
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium">Code</span>
+          <input
+            value={point.code ?? ''}
+            onChange={(event) => {
+              const value = event.target.value;
+              onChange({ ...point, code: value.trim() ? value : undefined });
+            }}
+            placeholder="1234#"
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
           />
         </label>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Also for floors</span>
-          <span className="block text-xs text-muted-foreground">Cross-access, e.g. kitchen on floor 1 for floor 2.</span>
-          <input
-            value={point.alsoForFloors?.join(', ') ?? ''}
-            onChange={(event) =>
-              onChange({
-                ...point,
-                alsoForFloors: event.target.value
-                  .split(',')
-                  .map((value) => value.trim())
-                  .filter(Boolean),
-              })
-            }
-            placeholder="2"
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          />
-        </label>
+      ) : null}
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium">Applies to floors</p>
+          <p className="text-xs text-muted-foreground">
+            Empty = all guests see this step. Pick floors to limit who sees this door.
+          </p>
+        </div>
+        {floorsDisabled ? (
+          <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Add floors in Guest stay first.
+          </p>
+        ) : null}
+        {selectedFloorIds.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {selectedFloorIds.map((floorId) => {
+              const floor = floorOptions.find((item) => item.id === floorId);
+              const label = floor?.label?.trim() || floorId;
+              return (
+                <Badge key={floorId} variant="outline" className="gap-1.5 px-3 py-1.5 text-sm">
+                  {label}
+                  <button
+                    type="button"
+                    disabled={floorsDisabled}
+                    aria-label={`Remove floor ${label}`}
+                    onClick={() =>
+                      onChange(
+                        applyAccessPointFloors(
+                          point,
+                          selectedFloorIds.filter((id) => id !== floorId)
+                        )
+                      )
+                    }
+                    className="min-h-5 min-w-5 rounded-sm text-sm leading-none text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              );
+            })}
+          </div>
+        ) : null}
+        {!floorsDisabled && availableFloors.length > 0 ? (
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">Available floors</p>
+            <div className="flex flex-wrap gap-2">
+              {availableFloors.map((floor) => (
+                <button
+                  key={floor.id}
+                  type="button"
+                  onClick={() =>
+                    onChange(applyAccessPointFloors(point, [...selectedFloorIds, floor.id]))
+                  }
+                  className="rounded-md border bg-background px-3 py-1.5 text-sm hover:bg-muted"
+                >
+                  {floor.label?.trim() || floor.id}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -200,18 +322,31 @@ interface ArrivalAccessFormState {
   points: AccessPoint[];
 }
 
-function toArrivalAccessDraft(state: ArrivalAccessFormState): ArrivalAccessConfig {
+function toArrivalAccessDraft(
+  state: ArrivalAccessFormState,
+  stablePointIds: ReadonlySet<string>
+): ArrivalAccessConfig {
   return {
     layoutKind: state.layoutKind,
     dayMode: state.dayMode || undefined,
     landmark: state.landmark || undefined,
-    accessPoints: state.points,
+    accessPoints: ensureAccessPointIds(state.points, state.layoutKind, stablePointIds).map(
+      sanitizeAccessPointForDraft
+    ),
   };
 }
 
 export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessFieldsProps) {
-  const { updateDraft } = useTenantFormDraft();
+  const { draft, updateDraft } = useTenantFormDraft();
+  const floorOptions = useMemo(() => {
+    const merged = mergeDraftSettings(settings ?? {}, draft);
+    return merged.guestStay?.floors?.filter((floor) => floor.id?.trim()) ?? [];
+  }, [settings, draft]);
   const initialPoints = useMemo(() => normalizeAccessPoints(settings ?? {}), [settings]);
+  const stablePointIds = useMemo(
+    () => new Set(initialPoints.map((point) => point.id)),
+    [initialPoints]
+  );
   const showAccessGap = isArrivalAccessMissing(settings ?? {});
   const initialLayoutKind =
     settings?.arrivalAccess?.layoutKind ??
@@ -241,13 +376,19 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
 
   const commitArrivalAccess = useCallback(
     (next: ArrivalAccessFormState) => {
-      setLayoutKind(next.layoutKind);
-      setDayMode(next.dayMode);
-      setLandmark(next.landmark);
-      setPoints(next.points);
-      updateDraft({ arrivalAccess: toArrivalAccessDraft(next) });
+      const ensuredPoints = ensureAccessPointIds(
+        next.points,
+        next.layoutKind,
+        stablePointIds
+      );
+      const ensured: ArrivalAccessFormState = { ...next, points: ensuredPoints };
+      setLayoutKind(ensured.layoutKind);
+      setDayMode(ensured.dayMode);
+      setLandmark(ensured.landmark);
+      setPoints(ensured.points);
+      updateDraft({ arrivalAccess: toArrivalAccessDraft(ensured, stablePointIds) });
     },
-    [updateDraft]
+    [stablePointIds, updateDraft]
   );
 
   const applyArrivalAccess = useCallback(
@@ -294,7 +435,7 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
         </select>
         {layoutChangeNote ? (
           <span className="block text-xs text-muted-foreground">
-            Existing access points unchanged; review IDs/kinds if needed.
+            Existing access points unchanged; review access point types and order.
           </span>
         ) : null}
       </label>
@@ -363,7 +504,9 @@ export function ArrivalAccessFields({ tenantSlug, settings }: ArrivalAccessField
             key={`point-${index}`}
             point={point}
             index={index}
+            layoutKind={layoutKind}
             tenantSlug={tenantSlug}
+            floorOptions={floorOptions}
             onChange={(next) =>
               applyArrivalAccess((current) => ({
                 ...current,

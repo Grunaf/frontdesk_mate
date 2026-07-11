@@ -15,6 +15,7 @@ import { SITE_CONFIG } from '@/shared/config';
 import { useLocale, useTranslations } from '@/shared/i18n';
 import { Button, IconBackActionsRow } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
+import { ensureStayContactSaved } from '@/features/guest-stay-contact/lib/ensureStayContactSaved';
 import { resolveRegistrationStandalonePrimary } from '../lib/resolveRegistrationFooterAction';
 import { useRegistrationStepState } from '../model/useRegistrationStepState';
 import { RegistrationStepBody } from './RegistrationStepBody';
@@ -46,6 +47,8 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     setAccordionValue,
     handleTourismComplete,
     handleContactComplete,
+    contactDraftWhatsapp,
+    setContactDraftWhatsapp,
   } = useRegistrationStepState({ initial, isRegistered });
 
   useEffect(() => {
@@ -122,7 +125,22 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
       return;
     }
     if (footerPrimary.kind === 'continueEssentials') {
-      continueToStaySetup();
+      void (async () => {
+        const result = await ensureStayContactSaved({
+          tenantSlug,
+          contactComplete,
+          savedE164: stayContactWhatsapp,
+          draftValue: contactDraftWhatsapp,
+        });
+        if (!result.ok) {
+          setAccordionValue('contact');
+          return;
+        }
+        if (!result.skipped) {
+          handleContactComplete(result.e164);
+        }
+        continueToStaySetup();
+      })();
     }
   };
 
@@ -157,6 +175,8 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
             stayContactWhatsapp={stayContactWhatsapp}
             onTourismComplete={handleTourismComplete}
             onContactComplete={onContactComplete}
+            onContactDraftChange={setContactDraftWhatsapp}
+            registrationSurface="standalone"
           />
         </div>
         <IconBackActionsRow className="mt-3" onBack={goBack}>
