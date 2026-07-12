@@ -44,6 +44,7 @@ function resolveSlotFromStatus(input: {
   slug: string | null | undefined;
   stayId: string | null | undefined;
   checkInAt: string | null | undefined;
+  propertyTimeZone?: string | null;
   registrationStatus: StayEssentialsConciergeRegistrationStatus;
 }): StayEssentialsConciergeBannerSlot {
   const { tourismRequired, tourismComplete, contactComplete } = input.registrationStatus;
@@ -57,6 +58,7 @@ function resolveSlotFromStatus(input: {
     isRegistered: input.isRegistered,
     tenantSlug: input.slug,
     checkInAt: input.checkInAt,
+    propertyTimeZone: input.propertyTimeZone,
     registrationComplete: registrationProgress.isComplete,
   });
 
@@ -82,6 +84,7 @@ function resolveSlotFromStatus(input: {
     tenantSlug: input.slug,
     stayId,
     checkInAt: input.checkInAt,
+    propertyTimeZone: input.propertyTimeZone,
     settlementProgress,
   });
 
@@ -108,7 +111,7 @@ function resolveSlotFromStatus(input: {
 
 export function useStayEssentialsConciergeBannerSlot(): StayEssentialsConciergeBannerSlot {
   const pathname = usePathname();
-  const { slug } = useTenant();
+  const { slug, hostel } = useTenant();
   const isRegistered = useIsGuestRegistered();
   const { session, checkInAt } = useGuestSession();
   const stayId = session?.stayId ?? null;
@@ -150,6 +153,7 @@ export function useStayEssentialsConciergeBannerSlot(): StayEssentialsConciergeB
           slug,
           stayId,
           checkInAt,
+          propertyTimeZone: hostel.propertyTimeZone,
           registrationStatus,
         })
       );
@@ -158,7 +162,7 @@ export function useStayEssentialsConciergeBannerSlot(): StayEssentialsConciergeB
     return () => {
       cancelled = true;
     };
-  }, [shouldFetch, isRegistered, slug, stayId, checkInAt, pathname]);
+  }, [shouldFetch, isRegistered, slug, stayId, checkInAt, pathname, hostel.propertyTimeZone]);
 
   return slot;
 }

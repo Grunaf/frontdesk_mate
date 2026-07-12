@@ -5,6 +5,7 @@ import {
   isStayCheckInCalendarDayOrLater,
   isWithinStayArrivalCalendarWindow,
   stayCalendarDay,
+  todayPropertyStayCalendarDay,
   todayStayCalendarDay,
 } from './stayCalendarDay';
 
@@ -23,6 +24,24 @@ describe('stayCalendarDay', () => {
   });
 });
 
+
+describe('todayPropertyStayCalendarDay', () => {
+  it('uses property-local midnight boundary', () => {
+    const now = new Date('2026-07-09T22:30:00.000Z');
+    expect(todayStayCalendarDay(now)).toBe('2026-07-09');
+    expect(todayPropertyStayCalendarDay(now, 'Europe/Belgrade')).toBe('2026-07-10');
+  });
+});
+
+describe('isStayCheckInCalendarDayOrLater with property timezone', () => {
+  const checkInAt = '2026-07-10T14:00:00.000Z';
+
+  it('is true on check-in night in Belgrade before UTC midnight', () => {
+    const now = new Date('2026-07-09T22:30:00.000Z');
+    expect(isStayCheckInCalendarDayOrLater(checkInAt, now)).toBe(false);
+    expect(isStayCheckInCalendarDayOrLater(checkInAt, now, 'Europe/Belgrade')).toBe(true);
+  });
+});
 
 describe('isStayCheckInCalendarDayOrLater', () => {
   const checkInAt = '2026-07-10T22:22:00.000Z';

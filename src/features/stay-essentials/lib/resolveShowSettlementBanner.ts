@@ -4,8 +4,12 @@ import {
 } from './resolveSettlementBannerProgress';
 import { isStayCheckInCalendarDayOrLater } from '@/entities/guest-stay';
 
-export function isCheckInDayOrLater(checkInAt: string, now = new Date()): boolean {
-  return isStayCheckInCalendarDayOrLater(checkInAt, now);
+export function isCheckInDayOrLater(
+  checkInAt: string,
+  now = new Date(),
+  propertyTimeZone?: string | null
+): boolean {
+  return isStayCheckInCalendarDayOrLater(checkInAt, now, propertyTimeZone);
 }
 
 export type ResolveShowSettlementBannerInput = {
@@ -13,11 +17,12 @@ export type ResolveShowSettlementBannerInput = {
   tenantSlug: string | null | undefined;
   stayId: string | null | undefined;
   checkInAt: string | null | undefined;
+  propertyTimeZone?: string | null;
   settlementProgress: SettlementBannerProgressInput;
   now?: Date;
 };
 
-/** Check-in calendar night+: settlement banner replaces pre-check-in registration banner. */
+/** Check-in calendar night+ (property-local): settlement banner replaces pre-check-in registration banner. */
 export function resolveShowSettlementBanner(input: ResolveShowSettlementBannerInput): boolean {
   if (!input.isRegistered) {
     return false;
@@ -27,7 +32,11 @@ export function resolveShowSettlementBanner(input: ResolveShowSettlementBannerIn
     return false;
   }
 
-  if (!input.checkInAt?.trim() || !isCheckInDayOrLater(input.checkInAt, input.now)) {
+  const now = input.now ?? new Date();
+  if (
+    !input.checkInAt?.trim() ||
+    !isCheckInDayOrLater(input.checkInAt, now, input.propertyTimeZone)
+  ) {
     return false;
   }
 
@@ -38,6 +47,7 @@ export type ResolveShowPreCheckInRegistrationBannerInput = {
   isRegistered: boolean;
   tenantSlug: string | null | undefined;
   checkInAt: string | null | undefined;
+  propertyTimeZone?: string | null;
   registrationComplete: boolean;
   now?: Date;
 };
@@ -54,7 +64,11 @@ export function resolveShowPreCheckInRegistrationBanner(
     return false;
   }
 
-  if (input.checkInAt?.trim() && isCheckInDayOrLater(input.checkInAt, input.now)) {
+  const now = input.now ?? new Date();
+  if (
+    input.checkInAt?.trim() &&
+    isCheckInDayOrLater(input.checkInAt, now, input.propertyTimeZone)
+  ) {
     return false;
   }
 

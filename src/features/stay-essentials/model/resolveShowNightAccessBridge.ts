@@ -2,10 +2,15 @@ import type { TenantSettings } from '@/entities/tenant';
 import {
   isStayCheckInCalendarDay,
   isWithinStayArrivalCalendarWindow,
+  propertyLocalMinutesSinceMidnight,
 } from '@/entities/guest-stay';
 
-export function isWithinArrivalWindow(checkInAt: string | null | undefined, now = new Date()): boolean {
-  return isWithinStayArrivalCalendarWindow(checkInAt, now);
+export function isWithinArrivalWindow(
+  checkInAt: string | null | undefined,
+  now = new Date(),
+  propertyTimeZone?: string | null
+): boolean {
+  return isWithinStayArrivalCalendarWindow(checkInAt, now, propertyTimeZone);
 }
 
 function parseHoursMinutes(time: string): number | null {
@@ -17,13 +22,17 @@ function parseHoursMinutes(time: string): number | null {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function isAfterReceptionClose(receptionClose: string | undefined, now: Date): boolean {
+function isAfterReceptionClose(
+  receptionClose: string | undefined,
+  now: Date,
+  propertyTimeZone?: string | null
+): boolean {
   const closeMinutes = receptionClose ? parseHoursMinutes(receptionClose) : null;
   if (closeMinutes === null) {
     return false;
   }
 
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = propertyLocalMinutesSinceMidnight(now, propertyTimeZone);
   return nowMinutes > closeMinutes;
 }
 
@@ -45,6 +54,7 @@ export interface ResolveShowNightAccessBridgeInput {
 
 export function resolveShowNightAccessBridge(input: ResolveShowNightAccessBridgeInput): boolean {
   const now = input.now ?? new Date();
+  const propertyTimeZone = input.settings.propertyTimeZone;
 
   if (!input.isRegistered) {
     return false;
@@ -58,13 +68,14 @@ export function resolveShowNightAccessBridge(input: ResolveShowNightAccessBridge
     return false;
   }
 
-  if (!input.checkInAt || !isWithinArrivalWindow(input.checkInAt, now)) {
+  if (!input.checkInAt || !isWithinArrivalWindow(input.checkInAt, now, propertyTimeZone)) {
     return false;
   }
 
   const nightContext =
     input.isNightMode ||
-    (isStayCheckInCalendarDay(input.checkInAt, now) && isAfterReceptionClose(input.settings.reception?.close, now));
+    (isStayCheckInCalendarDay(input.checkInAt, now, propertyTimeZone) &&
+      isAfterReceptionClose(input.settings.reception?.close, now, propertyTimeZone));
 
   if (!nightContext) {
     return false;

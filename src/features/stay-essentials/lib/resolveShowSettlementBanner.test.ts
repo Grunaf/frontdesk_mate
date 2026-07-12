@@ -52,4 +52,18 @@ describe('resolveShowSettlementBanner', () => {
       })
     ).toBe(true);
   });
+
+  it('uses property timezone for check-in calendar night', () => {
+    expect(
+      resolveShowSettlementBanner({
+        isRegistered: true,
+        tenantSlug: 'demo',
+        stayId: 'stay-1',
+        checkInAt: '2026-07-10T14:00:00.000Z',
+        propertyTimeZone: 'Europe/Belgrade',
+        settlementProgress: { essentialsDone: false, roomDone: false },
+        now: new Date('2026-07-09T22:30:00.000Z'),
+      })
+    ).toBe(true);
+  });
 });

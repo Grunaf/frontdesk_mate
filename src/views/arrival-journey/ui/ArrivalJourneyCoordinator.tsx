@@ -12,7 +12,7 @@ import {
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
 import { isCheckInDayOrLater } from '@/features/stay-essentials/lib/resolveShowSettlementBanner';
-import { useModuleStatus } from '@/entities/tenant';
+import { useModuleStatus, useTenant } from '@/entities/tenant';
 import { ArrivalGuideStepsShell } from './ArrivalGuideStepsShell';
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
@@ -56,7 +56,10 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   const routesAvailable = arrivalRoutesStatus !== 'hidden';
   const isRegistered = useIsGuestRegistered();
   const { checkInAt } = useGuestSession();
-  const checkInDayOrLater = checkInAt ? isCheckInDayOrLater(checkInAt) : false;
+  const { hostel } = useTenant();
+  const checkInDayOrLater = checkInAt
+    ? isCheckInDayOrLater(checkInAt, new Date(), hostel.propertyTimeZone)
+    : false;
   const { currentStep, setCurrentStep } = useCheckInState(isOnsite);
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
   const [arrivalHideMainPrimary, setArrivalHideMainPrimary] = useState(false);

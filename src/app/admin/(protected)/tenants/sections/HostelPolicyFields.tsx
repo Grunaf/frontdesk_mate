@@ -52,7 +52,7 @@ export function HostelPolicyFields({
         label="Operational day starts at"
         value={settings?.operationalDayStartTime ?? ''}
         onChange={(value) => updateDraft({ operationalDayStartTime: value })}
-        hint="Used with property date (UTC v1)."
+        hint="Used with property calendar date in property timezone when set."
       />
     </div>
   );

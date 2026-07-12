@@ -9,6 +9,7 @@ import {
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
 import { isCheckInDayOrLater } from '@/features/stay-essentials/lib/resolveShowSettlementBanner';
+import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { ArrivalGuideStepsShell } from '@/views/arrival-journey';
 import type { StaySetupInitialState } from '@/views/stay-setup';
 import { SITE_CONFIG } from '@/shared/config';
@@ -31,9 +32,12 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
   const router = useRouter();
   const isRegistered = useIsGuestRegistered();
   const { checkInAt } = useGuestSession();
+  const { hostel } = useTenant();
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
 
-  const checkInDayOrLater = checkInAt ? isCheckInDayOrLater(checkInAt) : false;
+  const checkInDayOrLater = checkInAt
+    ? isCheckInDayOrLater(checkInAt, new Date(), hostel.propertyTimeZone)
+    : false;
 
   const {
     tenantSlug,

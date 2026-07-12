@@ -21,6 +21,8 @@ export {
   isWithinStayArrivalCalendarWindow,
   stayCalendarDay,
   todayStayCalendarDay,
+  todayPropertyStayCalendarDay,
+  propertyLocalMinutesSinceMidnight,
 } from './lib/stayCalendarDay';
 export { findStayByReference, normalizeStayReferenceQuery } from './lib/findStayByReference';
 export type { GuestSessionPayload, GuestStayRecord, GuestStayRecordWithLink, ResolvedGuestSession } from './model/types';
