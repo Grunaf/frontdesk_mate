@@ -24,5 +24,10 @@ export {
   todayPropertyStayCalendarDay,
   propertyLocalMinutesSinceMidnight,
 } from './lib/stayCalendarDay';
-export { findStayByReference, normalizeStayReferenceQuery } from './lib/findStayByReference';
+export {
+  resolveReservationStayPeriod,
+  stayRecordCheckInDate,
+  stayRecordCheckOutDate,
+} from './lib/resolveReservationStayPeriod';
+export type { ReservationStayPeriod } from './lib/resolveReservationStayPeriod';
 export type { GuestSessionPayload, GuestStayRecord, GuestStayRecordWithLink, ResolvedGuestSession } from './model/types';

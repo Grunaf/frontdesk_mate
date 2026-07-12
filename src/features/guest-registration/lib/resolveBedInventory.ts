@@ -2,6 +2,7 @@ import { resolveBedUnitType } from '@/entities/room/model/bed-type';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
   guestAccessCoversNight,
+  guestAccessCheckInPolicyFromSettings,
   resolveNightCellStatus,
   type BedNightCellStatus,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
@@ -93,7 +94,8 @@ function resolveStaysForBedOnNight(
   bedId: string,
   activeStays: GuestStayRecordWithLink[],
   nightDate: string,
-  now: Date
+  now: Date,
+  policy: ReturnType<typeof guestAccessCheckInPolicyFromSettings>
 ): {
   current?: GuestStayRecordWithLink;
   next?: GuestStayRecordWithLink;
@@ -101,7 +103,11 @@ function resolveStaysForBedOnNight(
 } {
   const bedStays = activeStays
     .filter((stay) => stay.bed_id === bedId)
-    .sort((a, b) => new Date(a.check_in_at).getTime() - new Date(b.check_in_at).getTime());
+    .sort((a, b) =>
+      (a.check_in_date || a.check_in_at.slice(0, 10)).localeCompare(
+        b.check_in_date || b.check_in_at.slice(0, 10)
+      )
+    );
 
   const current = bedStays.find((stay) => guestAccessCoversNight(stay, nightDate));
   const next = current
@@ -112,7 +118,7 @@ function resolveStaysForBedOnNight(
       );
 
   const nightCellStatus = current
-    ? (resolveNightCellStatus(current, nightDate, now) ?? 'occupied')
+    ? (resolveNightCellStatus(current, nightDate, now, policy) ?? 'occupied')
     : undefined;
 
   return { current, next, nightCellStatus };
@@ -125,11 +131,13 @@ function buildEntry(
   nightDate: string,
   now: Date
 ): BedInventoryEntry {
+  const policy = guestAccessCheckInPolicyFromSettings(settings);
   const { current, next, nightCellStatus } = resolveStaysForBedOnNight(
     bedId,
     activeStays,
     nightDate,
-    now
+    now,
+    policy
   );
   return {
     bedId,

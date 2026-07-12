@@ -3,6 +3,7 @@ import { getTenantRecord, resolveTenantSlug } from '@/entities/tenant/server';
 import { isReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
 import { listActiveGuestStays } from '@/entities/guest-stay/server';
 import { listGuestIssues } from '@/entities/guest-issue/server';
+import { listGuestHubTransfers } from '@/entities/guest-hub-transfer/server';
 import { ReceptionCheckInPanel } from '@/features/guest-registration';
 import { ReceptionUnknownHostelContent } from '@/views/reception/ui/ReceptionUnknownHostelContent';
 
@@ -31,6 +32,7 @@ export default async function ReceptionDeskPage() {
 
   const stays = await listActiveGuestStays(tenantSlug);
   const openIssues = await listGuestIssues(tenantSlug, 'open');
+  const openTransfers = await listGuestHubTransfers(tenantSlug, 'open');
 
   return (
     <ReceptionCheckInPanel
@@ -39,6 +41,7 @@ export default async function ReceptionDeskPage() {
       settings={tenant.settings}
       initialStays={stays}
       initialOpenIssues={openIssues}
+      initialOpenTransfers={openTransfers}
     />
   );
 }

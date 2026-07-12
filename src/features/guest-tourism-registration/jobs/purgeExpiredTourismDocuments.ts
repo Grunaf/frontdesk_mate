@@ -4,9 +4,9 @@ import 'server-only';
  * Tourism document retention (GDPR storage limitation — Chat A).
  *
  * Policy: delete `guest-documents` objects and `guest_stay_tourism_guests` rows when
- * `guest_stays.check_out_at` is at least N days in the past (default 90). Clears
+ * `guest_reservations.check_out_at` is at least N days in the past (default 90). Clears
  * `tourism_contact_whatsapp`; keeps `tourism_registration_completed_at` and
- * `tourism_exported_at` on the stay for reception audit.
+ * `tourism_exported_at` on the reservation for reception audit.
  *
  * ## Ops / cron
  *

@@ -28,7 +28,7 @@ const VIEW_ITEMS = [
 
 function formatDayHeader(nightDate: string): string {
   const date = new Date(`${nightDate}T00:00:00.000Z`);
-  return date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+  return date.toLocaleDateString('en', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 function useIsMobileCalendar(): boolean {

@@ -2,12 +2,14 @@
 
 import { type FormEvent, useState } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
 import { findStayByReference } from '@/entities/guest-stay/lib/findStayByReference';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
 import type { TenantSettings } from '@/entities/tenant';
 import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
 import { formatReservationBookingBalanceListHint } from '@/entities/guest-stay/lib/formatReservationBookingBalance';
 import {
+  guestAccessCheckInPolicyFromSettings,
   guestAccessStatusLabel,
   resolveGuestAccessStatus,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
@@ -62,10 +64,10 @@ function StayRow({
   onOpenStayDetail: (stayId: string) => void;
   tenantSettings?: TenantSettings;
 }) {
-  const status = resolveGuestAccessStatus(stay);
+  const status = resolveGuestAccessStatus(stay, new Date(), guestAccessCheckInPolicyFromSettings(tenantSettings));
   const stayRef = formatStayReference(stay.id);
-  const checkInDay = stay.check_in_at.slice(0, 10);
-  const checkOutDay = stay.check_out_at.slice(0, 10);
+  const checkInDay = stayRecordCheckInDate(stay);
+  const checkOutDay = stayRecordCheckOutDate(stay);
   const guestLabel = stay.guest_name?.trim();
   const bedLabel = resolveBedLabel(stay.bed_id);
   const bookingLine = formatReceptionBookingSourceSummary(
@@ -128,8 +130,9 @@ export function IssuedAccessList({
 }: IssuedAccessListProps) {
   const [refQuery, setRefQuery] = useState('');
   const [refError, setRefError] = useState<string | null>(null);
-  const filteredStays = filterIssuedAccess(stays, filter);
-  const grouped = groupIssuedAccess(filteredStays);
+  const checkInPolicy = guestAccessCheckInPolicyFromSettings(tenantSettings);
+  const filteredStays = filterIssuedAccess(stays, filter, new Date(), checkInPolicy);
+  const grouped = groupIssuedAccess(filteredStays, new Date(), checkInPolicy);
   const hasAny = SECTIONS.some(({ key }) => grouped[key].length > 0);
   const defaultSections = SECTIONS.filter(
     ({ key, defaultOpen }) => defaultOpen && grouped[key].length > 0

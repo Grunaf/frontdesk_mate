@@ -45,6 +45,8 @@ interface GuestStaySheetProps {
   plan: GuestStayPlan;
   checkInAt: string;
   checkOutAt: string;
+  checkInDate: string;
+  checkOutDate: string;
 }
 
 export function GuestStaySheet({
@@ -55,6 +57,8 @@ export function GuestStaySheet({
   plan,
   checkInAt,
   checkOutAt,
+  checkInDate,
+  checkOutDate,
 }: GuestStaySheetProps) {
   const { name, hostel, slug, settings } = useTenant();
   const locale = useLocale();
@@ -69,7 +73,10 @@ export function GuestStaySheet({
   const [tourismSummary, setTourismSummary] = useState<GuestStayTourismSummaryState | null>(null);
   const [tourismSummaryLoaded, setTourismSummaryLoaded] = useState(false);
 
-  const dateRange = formatGuestStayDateRange(checkInAt, checkOutAt, locale);
+  const dateRange = formatGuestStayDateRange(checkInAt, checkOutAt, locale, {
+    checkInDate,
+    checkOutDate,
+  });
   const stayRef = formatStayReference(stayId);
   const trimmedGuestName = guestName?.trim() || null;
   const staySetupBedMap = useStaySetupBedMapStep(true);
@@ -93,6 +100,7 @@ export function GuestStaySheet({
 
   const checkInStarted = isStayCheckInStarted({
     checkInAt,
+    checkInDate,
     propertyTimeZone: hostel.propertyTimeZone,
     checkInTimeFallback: hostel.checkInTime,
   });

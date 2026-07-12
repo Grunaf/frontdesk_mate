@@ -53,6 +53,8 @@ export function GuestStayChip() {
         plan={plan}
         checkInAt={checkInAt}
         checkOutAt={checkOutAt}
+        checkInDate={session.checkInDate}
+        checkOutDate={session.checkOutDate}
       />
     </>
   );

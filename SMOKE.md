@@ -4,7 +4,7 @@
 
 Daily job: `purgeExpiredTourismDocuments()` in
 `src/features/guest-tourism-registration/jobs/purgeExpiredTourismDocuments.ts`.
-Policy: **90 days** after `guest_stays.check_out_at` (Chat A). Requires `SUPABASE_SECRET_KEY`.
+Policy: **90 days** after `guest_reservations.check_out_at` (Chat A). Requires `SUPABASE_SECRET_KEY`.
 
 - Staging dry-run: `TOURISM_DOCUMENT_PURGE_DRY_RUN=1` (logs only, no storage/DB deletes).
 - Optional: `TOURISM_DOCUMENT_RETENTION_DAYS`, `TOURISM_DOCUMENT_PURGE_BATCH_LIMIT` (default 50).

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import { makeGuestStayRecordFixture } from '@/entities/guest-stay/testing/makeGuestStayRecordFixture';
 import type { TenantSettings } from '@/entities/tenant';
 import {
   getWeekRangeStart,
@@ -16,24 +17,11 @@ const settings: TenantSettings = {
 };
 
 function makeStay(overrides: Partial<GuestStayRecordWithLink> = {}): GuestStayRecordWithLink {
-  return {
-    id: 'stay-1',
-    tenant_id: 'tenant-1',
-    tenant_slug: 'demo',
-    bed_id: 'bed-1',
-    guest_name: 'Alex',
-    check_in_at: '2026-06-22T14:00:00.000Z',
-    check_out_at: '2026-06-25T23:59:59.999Z',
+  return makeGuestStayRecordFixture({
     activated_at: '2026-06-22T15:00:00.000Z',
-    desk_checked_in_at: null,
-    key_issued_at: null,
-    passport_checked_at: null,
-    tax_collected_at: null,
-    revoked_at: null,
-    created_at: '2026-06-22T10:00:00.000Z',
     magicLinkUrl: null,
     ...overrides,
-  };
+  });
 }
 
 describe('resolveBedDayCalendar', () => {

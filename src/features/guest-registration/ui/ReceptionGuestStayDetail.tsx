@@ -12,8 +12,10 @@ import {
   setTourismExportedAction,
 } from '@/features/guest-tourism-registration';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
+import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
 import { formatReservationBookingBalanceSummary } from '@/entities/guest-stay/lib/formatReservationBookingBalance';
 import {
+  guestAccessCheckInPolicyFromSettings,
   guestAccessStatusLabel,
   resolveGuestAccessStatus,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
@@ -357,11 +359,18 @@ export interface ReceptionGuestStayDetailProps {
   tenantSettings?: TenantSettings;
 }
 
-function canMarkDeskArrived(stay: GuestStayRecordWithLink): boolean {
+function canMarkDeskArrived(
+  stay: GuestStayRecordWithLink,
+  tenantSettings?: TenantSettings
+): boolean {
   if (stay.revoked_at || stay.desk_checked_in_at) {
     return false;
   }
-  const status = resolveGuestAccessStatus(stay);
+  const status = resolveGuestAccessStatus(
+    stay,
+    new Date(),
+    guestAccessCheckInPolicyFromSettings(tenantSettings)
+  );
   return status !== 'ended';
 }
 
@@ -374,6 +383,7 @@ function ReceptionGuestStayDetailActions({
   onRevoke,
   onMarkArrived,
   markArrivedError,
+  tenantSettings,
 }: Pick<
   ReceptionGuestStayDetailProps,
   | 'stay'
@@ -384,9 +394,10 @@ function ReceptionGuestStayDetailActions({
   | 'onRevoke'
   | 'onMarkArrived'
   | 'markArrivedError'
+  | 'tenantSettings'
 >) {
   const [keyIssued, setKeyIssued] = useState(false);
-  const showMarkArrived = canMarkDeskArrived(stay);
+  const showMarkArrived = canMarkDeskArrived(stay, tenantSettings);
 
   return (
     <div className="flex flex-col gap-3">
@@ -483,10 +494,14 @@ export function ReceptionGuestStayDetail({
   markArrivedError,
   tenantSettings,
 }: ReceptionGuestStayDetailProps) {
-  const status = resolveGuestAccessStatus(stay);
+  const status = resolveGuestAccessStatus(
+    stay,
+    new Date(),
+    guestAccessCheckInPolicyFromSettings(tenantSettings)
+  );
   const stayRef = formatStayReference(stay.id);
-  const checkInDay = stay.check_in_at.slice(0, 10);
-  const checkOutDay = stay.check_out_at.slice(0, 10);
+  const checkInDay = stayRecordCheckInDate(stay);
+  const checkOutDay = stayRecordCheckOutDate(stay);
   const guestLabel = stay.guest_name?.trim() || 'Guest';
   const bedLabel = resolveBedLabel(stay.bed_id);
   const bookingSourceLine = formatReceptionBookingSourceSummary(
@@ -567,6 +582,7 @@ export function ReceptionGuestStayDetail({
       onRevoke={onRevoke}
       onMarkArrived={onMarkArrived}
       markArrivedError={markArrivedError}
+      tenantSettings={tenantSettings}
     />
   );
 

@@ -1,8 +1,9 @@
 import { formatPropertyLocalCheckInIso } from '@/entities/guest-stay';
 
 /**
- * Preview of access timestamps for reception forms.
- * checkInAt is a UTC instant for property-local check-in date + time.
+ * Preview of stay period for reception forms.
+ * checkInAt is a derived UTC instant (stay check-in date + tenant checkInTime in property TZ).
+ * Calendar nights use the YYYY-MM-DD prefix only.
  */
 export function resolveGuestAccessPeriod(
   checkInDate: string,
@@ -10,6 +11,7 @@ export function resolveGuestAccessPeriod(
   checkInTime = '14:00',
   propertyTimeZone?: string | null
 ): { checkInAt: string; checkOutAt: string } {
+  const time = (checkInTime ?? '14:00').trim() || '14:00';
   const [hours, minutes = '00'] = time.split(':');
   const checkInAt =
     formatPropertyLocalCheckInIso(checkInDate.trim(), time, propertyTimeZone) ??

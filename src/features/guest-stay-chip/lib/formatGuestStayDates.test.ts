@@ -14,8 +14,20 @@ describe('formatGuestStayDates', () => {
     );
   });
 
+  it('prefers explicit calendar dates over ISO prefix', () => {
+    expect(
+      formatGuestStayDateRange('2026-07-20T23:00:00.000Z', '2026-07-22T23:59:59.999Z', 'en', {
+        checkInDate: '2026-07-21',
+        checkOutDate: '2026-07-22',
+      })
+    ).toBe('Jul 21 – Jul 22');
+  });
+
   it('formats checkout short label from calendar prefix', () => {
     expect(formatGuestStayCheckoutShort('2026-06-25T10:00:00.000Z', 'en')).toBe('Jun 25');
     expect(formatGuestStayCheckoutShort('2026-07-11T23:59:59.999Z', 'en')).toBe('Jul 11');
+    expect(formatGuestStayCheckoutShort('2026-07-20T23:00:00.000Z', 'en', '2026-07-21')).toBe(
+      'Jul 21'
+    );
   });
 });

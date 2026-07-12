@@ -9,7 +9,7 @@ import {
 import type { GuestStayRecord } from '../model/types';
 
 export const GUEST_RESERVATION_COLUMNS =
-  'id, tenant_id, guest_id, guest_name, bed_id, check_in_at, check_out_at, status, desk_checked_in_at, key_issued_at, passport_checked_at, tax_collected_at, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, stay_contact_whatsapp, booking_platform_id, booking_external_id, booking_amount_due_minor, booking_amount_currency, booking_paid_at, created_at, updated_at';
+  'id, tenant_id, guest_id, guest_name, bed_id, check_in_at, check_out_at, check_in_date, check_out_date, status, desk_checked_in_at, key_issued_at, passport_checked_at, tax_collected_at, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, stay_contact_whatsapp, booking_platform_id, booking_external_id, booking_amount_due_minor, booking_amount_currency, booking_paid_at, created_at, updated_at';
 
 export const GUEST_ACCESS_GRANT_COLUMNS =
   'id, tenant_id, reservation_id, access_token_hash, access_token_encrypted, pin_hash, activated_at, revoked_at, created_at, updated_at';
@@ -36,6 +36,12 @@ export function mapReservationGrantToStayRecord(
     guest_name: reservation.guest_name ? String(reservation.guest_name) : null,
     check_in_at: String(reservation.check_in_at),
     check_out_at: String(reservation.check_out_at),
+    check_in_date: reservation.check_in_date
+      ? String(reservation.check_in_date).slice(0, 10)
+      : String(reservation.check_in_at).slice(0, 10),
+    check_out_date: reservation.check_out_date
+      ? String(reservation.check_out_date).slice(0, 10)
+      : String(reservation.check_out_at).slice(0, 10),
     activated_at: grant.activated_at ? String(grant.activated_at) : null,
     desk_checked_in_at: reservation.desk_checked_in_at
       ? String(reservation.desk_checked_in_at)

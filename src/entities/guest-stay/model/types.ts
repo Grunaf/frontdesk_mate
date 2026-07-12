@@ -6,6 +6,10 @@ export interface GuestStayRecord {
   guest_name: string | null;
   check_in_at: string;
   check_out_at: string;
+  /** Calendar stay night (source of truth for bed nights). */
+  check_in_date: string;
+  /** Last stay night exclusive end day for bed-night overlap. */
+  check_out_date: string;
   activated_at: string | null;
   desk_checked_in_at: string | null;
   key_issued_at: string | null;
@@ -38,6 +42,9 @@ export interface GuestSessionPayload {
 export interface ResolvedGuestSession extends GuestSessionPayload {
   checkInAt: string;
   checkOutAt: string;
+  /** Calendar stay night — source of truth for guest/reception labels. */
+  checkInDate: string;
+  checkOutDate: string;
   guestName: string | null;
 }
 
@@ -45,8 +52,10 @@ export type CreateGuestStayInput = {
   tenantSlug: string;
   bedId: string;
   guestName?: string;
-  checkInAt: string;
-  checkOutAt: string;
+  /** Calendar stay night from reception form — source of truth. */
+  checkInDate: string;
+  /** Checkout calendar day (exclusive end for bed-night overlap). */
+  checkOutDate: string;
   bookingPlatformId?: string;
   bookingExternalId?: string;
   bookingAmountDue?: string | number;
@@ -75,8 +84,10 @@ export type UpdateGuestReservationInput = {
   stayId: string;
   bedId: string;
   guestName?: string;
-  checkInAt: string;
-  checkOutAt: string;
+  /** Calendar stay night from reception form — source of truth. */
+  checkInDate: string;
+  /** Checkout calendar day (exclusive end for bed-night overlap). */
+  checkOutDate: string;
   bookingPlatformId?: string;
   bookingExternalId?: string;
   bookingAmountDue?: string | number;

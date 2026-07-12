@@ -14,7 +14,7 @@
 ### Policy (из Chat A)
 
 - Зафиксировать триггер, например:
-  - `guest_stays.check_out_at` + N days, **или**
+  - `guest_reservations.check_out_at` + N days, **или**
   - `tourism_exported_at` + M days, **или**
   - max(check_out, exported) + N days.
 - Что удаляем:

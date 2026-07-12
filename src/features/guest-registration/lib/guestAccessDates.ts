@@ -2,7 +2,9 @@ import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
   isGuestAccessInWindow,
   resolveGuestAccessStatus,
+  type GuestAccessCheckInPolicy,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
+import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
 
 export type GuestAccessFormMode = 'walk-in' | 'custom';
 export type IssuedAccessFilter = 'all' | 'today' | 'this_week';
@@ -63,7 +65,11 @@ export function formatAccessNightsLabel(nights: number): string {
 }
 
 export function formatDisplayDate(isoDate: string): string {
-  return parseUtcDate(isoDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return parseUtcDate(isoDate).toLocaleDateString('en', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 /** Reception desk arrival timestamp (full ISO, local time + date). */
@@ -100,20 +106,21 @@ export function formatAccessPeriodSummary(
 }
 
 function sortByCheckIn(stays: GuestStayRecordWithLink[]): GuestStayRecordWithLink[] {
-  return [...stays].sort(
-    (a, b) => new Date(a.check_in_at).getTime() - new Date(b.check_in_at).getTime()
+  return [...stays].sort((a, b) =>
+    stayRecordCheckInDate(a).localeCompare(stayRecordCheckInDate(b))
   );
 }
 
 export function classifyIssuedAccessSection(
   stay: GuestStayRecordWithLink,
-  now: Date = new Date()
+  now: Date = new Date(),
+  policy?: GuestAccessCheckInPolicy | null
 ): IssuedAccessSection | null {
-  const status = resolveGuestAccessStatus(stay, now);
+  const status = resolveGuestAccessStatus(stay, now, policy);
   if (status === 'ended' || status === 'revoked') return null;
 
   const today = todayUtcDate(now);
-  const checkInDay = stay.check_in_at.slice(0, 10);
+  const checkInDay = stayRecordCheckInDate(stay);
 
   if (status === 'in_app') return 'in_app';
   if (status === 'scheduled' && checkInDay === today) return 'arriving_today';
@@ -125,7 +132,8 @@ export function classifyIssuedAccessSection(
 
 export function groupIssuedAccess(
   stays: GuestStayRecordWithLink[],
-  now: Date = new Date()
+  now: Date = new Date(),
+  policy?: GuestAccessCheckInPolicy | null
 ): GroupedIssuedAccess {
   const grouped: GroupedIssuedAccess = {
     inApp: [],
@@ -135,7 +143,7 @@ export function groupIssuedAccess(
   };
 
   for (const stay of stays) {
-    const section = classifyIssuedAccessSection(stay, now);
+    const section = classifyIssuedAccessSection(stay, now, policy);
     if (section === 'in_app') grouped.inApp.push(stay);
     else if (section === 'arriving_today') grouped.arrivingToday.push(stay);
     else if (section === 'scheduled') grouped.scheduled.push(stay);
@@ -164,19 +172,20 @@ function getWeekBoundsUtc(now: Date): { weekStart: string; weekEnd: string } {
 export function matchesIssuedAccessFilter(
   stay: GuestStayRecordWithLink,
   filter: IssuedAccessFilter,
-  now: Date = new Date()
+  now: Date = new Date(),
+  policy?: GuestAccessCheckInPolicy | null
 ): boolean {
   if (filter === 'all') return true;
 
-  const status = resolveGuestAccessStatus(stay, now);
+  const status = resolveGuestAccessStatus(stay, now, policy);
   if (status === 'ended' || status === 'revoked') return false;
 
   const today = todayUtcDate(now);
-  const from = stay.check_in_at.slice(0, 10);
-  const until = stay.check_out_at.slice(0, 10);
+  const from = stayRecordCheckInDate(stay);
+  const until = stayRecordCheckOutDate(stay);
 
   if (filter === 'today') {
-    return isGuestAccessInWindow(stay, now) || from === today;
+    return isGuestAccessInWindow(stay, now, policy) || from === today;
   }
 
   const { weekStart, weekEnd } = getWeekBoundsUtc(now);
@@ -186,7 +195,8 @@ export function matchesIssuedAccessFilter(
 export function filterIssuedAccess(
   stays: GuestStayRecordWithLink[],
   filter: IssuedAccessFilter,
-  now: Date = new Date()
+  now: Date = new Date(),
+  policy?: GuestAccessCheckInPolicy | null
 ): GuestStayRecordWithLink[] {
-  return stays.filter((stay) => matchesIssuedAccessFilter(stay, filter, now));
+  return stays.filter((stay) => matchesIssuedAccessFilter(stay, filter, now, policy));
 }

@@ -53,9 +53,32 @@ describe('isStayCheckInStarted', () => {
       isStayCheckInStarted({
         checkInAt,
         propertyTimeZone: 'Europe/Belgrade',
+        checkInTimeFallback: '14:00',
         now: guestInNewYorkBeforeHostelCheckIn,
       })
     ).toBe(false);
+  });
+
+  it('ignores legacy ISO time suffix and uses tenant checkInTime', () => {
+    const checkInAtLegacy = '2026-07-12T22:22:00.000Z';
+
+    expect(
+      isStayCheckInStarted({
+        checkInAt: checkInAtLegacy,
+        propertyTimeZone: 'Europe/Belgrade',
+        checkInTimeFallback: '14:00',
+        now: new Date('2026-07-12T11:59:00.000Z'),
+      })
+    ).toBe(false);
+
+    expect(
+      isStayCheckInStarted({
+        checkInAt: checkInAtLegacy,
+        propertyTimeZone: 'Europe/Belgrade',
+        checkInTimeFallback: '14:00',
+        now: new Date('2026-07-12T12:00:00.000Z'),
+      })
+    ).toBe(true);
   });
 });
 
@@ -68,11 +91,12 @@ describe('formatPropertyLocalCheckInIso', () => {
 });
 
 describe('resolveStayCheckInInstantMs', () => {
-  it('reads calendar day and time from stored check-in timestamp', () => {
+  it('uses calendar day prefix + policy time, not ISO suffix', () => {
     expect(
       resolveStayCheckInInstantMs({
-        checkInAt: '2026-07-12T14:00:00.000Z',
+        checkInAt: '2026-07-12T22:22:00.000Z',
         propertyTimeZone: 'UTC',
+        checkInTimeFallback: '14:00',
       })
     ).toBe(Date.parse('2026-07-12T14:00:00.000Z'));
   });

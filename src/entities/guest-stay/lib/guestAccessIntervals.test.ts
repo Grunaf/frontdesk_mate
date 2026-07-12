@@ -69,6 +69,32 @@ describe('isGuestAccessInWindow', () => {
       )
     ).toBe(false);
   });
+
+  it('ignores legacy ISO time suffix and uses policy check-in time', () => {
+    expect(
+      isGuestAccessInWindow(
+        {
+          check_in_at: '2026-07-12T22:22:00.000Z',
+          check_out_at: '2026-07-14T23:59:59.999Z',
+          revoked_at: null,
+        },
+        new Date('2026-07-12T12:00:00.000Z'),
+        { checkInTime: '14:00', propertyTimeZone: 'Europe/Belgrade' }
+      )
+    ).toBe(true);
+
+    expect(
+      isGuestAccessInWindow(
+        {
+          check_in_at: '2026-07-12T22:22:00.000Z',
+          check_out_at: '2026-07-14T23:59:59.999Z',
+          revoked_at: null,
+        },
+        new Date('2026-07-12T11:59:00.000Z'),
+        { checkInTime: '14:00', propertyTimeZone: 'Europe/Belgrade' }
+      )
+    ).toBe(false);
+  });
 });
 
 describe('resolveGuestAccessStatus', () => {

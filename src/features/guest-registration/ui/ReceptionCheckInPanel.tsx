@@ -87,8 +87,8 @@ function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>):
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
 }
 
-function toDateInput(iso: string): string {
-  return iso.slice(0, 10);
+function toDateInput(isoOrDate: string): string {
+  return isoOrDate.slice(0, 10);
 }
 
 export function ReceptionCheckInPanel({
@@ -324,8 +324,8 @@ export function ReceptionCheckInPanel({
       stayId: stay.id,
       guestName: stay.guest_name ?? '',
       bedId: stay.bed_id,
-      checkInDate: toDateInput(stay.check_in_at),
-      checkOutDate: toDateInput(stay.check_out_at),
+      checkInDate: toDateInput(stay.check_in_date || stay.check_in_at),
+      checkOutDate: toDateInput(stay.check_out_date || stay.check_out_at),
       bookingPlatformId: platformId,
       bookingExternalId: externalId,
       bookingAmountDue: balanceDue,
@@ -336,8 +336,8 @@ export function ReceptionCheckInPanel({
     setBookingPlatformId(platformId);
     setBookingExternalId(externalId);
     setBookingAmountDue(balanceDue);
-    setCheckInDate(toDateInput(stay.check_in_at));
-    setCheckOutDate(toDateInput(stay.check_out_at));
+    setCheckInDate(toDateInput(stay.check_in_date || stay.check_in_at));
+    setCheckOutDate(toDateInput(stay.check_out_date || stay.check_out_at));
     setBedId(stay.bed_id);
     setError(null);
   };

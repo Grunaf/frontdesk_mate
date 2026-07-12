@@ -192,7 +192,10 @@ export function DirectionPicker({
         />
 
         {showTransferCard ? (
-          <HubTransferCard onTransferClick={() => setTransferSheetOpen(true)} />
+          <>
+            <Separator />
+            <HubTransferCard onTransferClick={() => setTransferSheetOpen(true)} />
+          </>
         ) : null}
 
         <Separator />

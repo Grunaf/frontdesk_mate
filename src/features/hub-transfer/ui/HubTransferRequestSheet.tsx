@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import type { HubTransferCategory, HubTransferDirection } from '@/entities/guest-hub-transfer';
-import { formatStayReference, stayCalendarDay } from '@/entities/guest-stay';
+import { formatStayCalendarDayLabel, formatStayReference, stayCalendarDay } from '@/entities/guest-stay';
 import { useTenant } from '@/entities/tenant';
 import { CheckInRequiredSheet, useGuestSession, useIsGuestRegistered } from '@/features/guest-check-in';
-import { useTranslations } from '@/shared/i18n';
+import { useLocale, useTranslations } from '@/shared/i18n';
 import { createWhatsappLink } from '@/shared/lib';
 import {
   BottomSheet,
@@ -47,6 +47,7 @@ export function HubTransferRequestSheet({
   const { session, checkInAt, checkOutAt } = useGuestSession();
   const isRegistered = useIsGuestRegistered();
   const t = useTranslations('components.hubTransfer');
+  const locale = useLocale();
 
   const surfaceContext = useMemo(
     () => resolveHubTransferContext(transferSurface),
@@ -128,6 +129,23 @@ export function HubTransferRequestSheet({
     dateHintKind === 'check_in' ? stayCalendarDay(checkInAt) : stayCalendarDay(checkOutAt)
   );
 
+  const stayHintIso = dateHintKind === 'check_in' ? checkInAt : checkOutAt;
+  const stayHintFormatted = useMemo(() => {
+    if (!session || !stayHintIso) {
+      return null;
+    }
+    return formatStayCalendarDayLabel(stayHintIso, locale);
+  }, [locale, session, stayHintIso]);
+
+  const stayHintText = useMemo(() => {
+    if (!stayHintFormatted) {
+      return null;
+    }
+    return dateHintKind === 'check_in'
+      ? t('stayDateHint', { date: stayHintFormatted })
+      : t('stayCheckoutHint', { date: stayHintFormatted });
+  }, [dateHintKind, stayHintFormatted, t]);
+
   const handleSubmit = () => {
     if (!session?.stayId) {
       setCheckInSheetOpen(true);
@@ -198,7 +216,7 @@ export function HubTransferRequestSheet({
   return (
     <>
       <BottomSheet open={open} onOpenChange={handleOpenChange}>
-        <BottomSheetContent size={BOTTOM_SHEET_SIZES.medium} className="flex flex-col px-0 pb-0">
+        <BottomSheetContent size={BOTTOM_SHEET_SIZES.large} className="flex flex-col px-0 pb-0">
           <BottomSheetHeader className="space-y-3 px-6 pb-3">
             <div className="flex items-start gap-4 pr-8">
               <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
@@ -226,48 +244,56 @@ export function HubTransferRequestSheet({
             </div>
 
             <div className="space-y-2">
-              <label
-                htmlFor="hub-transfer-date"
-                className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
-              >
-                {t('dateLabel')}
-              </label>
-              <Input
-                id="hub-transfer-date"
-                type="date"
-                value={requestedDate}
-                onChange={(event) => setRequestedDate(event.target.value)}
-              />
-              <span
-                className="inline-block"
-                title={!session ? t('checkInFirstTooltip') : undefined}
-              >
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-9"
-                  disabled={!session || !canUseStayDateHint}
-                  onClick={applyStayDateHint}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="hub-transfer-date"
+                    className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                  >
+                    {t('dateLabel')}
+                  </label>
+                  <Input
+                    id="hub-transfer-date"
+                    type="date"
+                    value={requestedDate}
+                    onChange={(event) => setRequestedDate(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="hub-transfer-time"
+                    className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                  >
+                    {t('timeLabel')}
+                  </label>
+                  <Input
+                    id="hub-transfer-time"
+                    type="time"
+                    value={requestedTime}
+                    onChange={(event) => setRequestedTime(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="inline-block"
+                  title={!session ? t('checkInFirstTooltip') : undefined}
                 >
-                  {dateHintKind === 'check_in' ? t('useCheckInDate') : t('useCheckOutDate')}
-                </Button>
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="hub-transfer-time"
-                className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
-              >
-                {t('timeLabel')}
-              </label>
-              <Input
-                id="hub-transfer-time"
-                type="time"
-                value={requestedTime}
-                onChange={(event) => setRequestedTime(event.target.value)}
-              />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9"
+                    disabled={!session || !canUseStayDateHint}
+                    onClick={applyStayDateHint}
+                  >
+                    {dateHintKind === 'check_in' ? t('useCheckInDate') : t('useCheckOutDate')}
+                  </Button>
+                </span>
+                {stayHintText ? (
+                  <p className="text-sm text-muted-foreground">{stayHintText}</p>
+                ) : null}
+              </div>
             </div>
 
             {error ? <p className="text-sm text-destructive">{error}</p> : null}

@@ -27,33 +27,11 @@ export function normalizePropertyTimeZone(timeZone?: string | null): string {
   return DEFAULT_PROPERTY_TIME_ZONE;
 }
 
-export function parseStayCheckInTimeFromIso(checkInAt: string): string | null {
-  const trimmed = checkInAt.trim();
-  if (trimmed.length < 16) {
-    return null;
-  }
-
-  const hours = trimmed.slice(11, 13);
-  const minutes = trimmed.slice(14, 16);
-  if (!/^\d{2}$/.test(hours) || !/^\d{2}$/.test(minutes)) {
-    return null;
-  }
-
-  return `${hours}:${minutes}`;
-}
-
-export function resolveStayCheckInTimeLabel(
-  checkInAt: string | null | undefined,
-  checkInTimeFallback?: string | null
-): string {
-  const fromIso = checkInAt?.trim() ? parseStayCheckInTimeFromIso(checkInAt) : null;
-  if (fromIso) {
-    return fromIso;
-  }
-
-  const fallback = checkInTimeFallback?.trim();
-  if (fallback && TIME_HH_MM_RE.test(fallback)) {
-    return fallback;
+/** Hostel check-in wall time from tenant policy only — never from check_in_at ISO suffix. */
+export function resolveStayCheckInTimeLabel(checkInTime?: string | null): string {
+  const trimmed = checkInTime?.trim();
+  if (trimmed && TIME_HH_MM_RE.test(trimmed)) {
+    return trimmed;
   }
 
   return '14:00';
@@ -185,19 +163,24 @@ export function formatPropertyLocalCheckInIso(
 }
 
 export type ResolveStayCheckInInstantInput = {
-  checkInAt: string | null | undefined;
+  checkInAt?: string | null | undefined;
+  /** Prefer calendar stay night when present (Phase B date columns). */
+  checkInDate?: string | null | undefined;
   propertyTimeZone?: string | null;
   checkInTimeFallback?: string | null;
 };
 
-/** Check-in moment from stay calendar day + wall time in property TZ (ignores legacy Z semantics). */
+/**
+ * Check-in moment from stay calendar day + tenant checkInTime in property TZ.
+ * Prefers checkInDate; falls back to YYYY-MM-DD prefix of checkInAt. Ignores ISO time suffix.
+ */
 export function resolveStayCheckInInstantMs(input: ResolveStayCheckInInstantInput): number | null {
-  const calendarDay = stayCalendarDay(input.checkInAt);
+  const calendarDay = stayCalendarDay(input.checkInDate) ?? stayCalendarDay(input.checkInAt);
   if (!calendarDay) {
     return null;
   }
 
-  const timeLabel = resolveStayCheckInTimeLabel(input.checkInAt, input.checkInTimeFallback);
+  const timeLabel = resolveStayCheckInTimeLabel(input.checkInTimeFallback);
   return propertyLocalDateTimeToUtcMs(
     calendarDay,
     timeLabel,

@@ -1,5 +1,6 @@
 'use client';
 
+import { formatStayCalendarDayLabel, stayRecordCheckInDate } from '@/entities/guest-stay';
 import type { BedInventoryRoomGroup } from '../lib/resolveBedInventory';
 import type { BedNightCellStatus } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { cn } from '@/shared/lib/utils';
@@ -10,8 +11,12 @@ interface BedInventoryGridProps {
   compact?: boolean;
 }
 
-function formatAccessFrom(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+function formatStayNightFrom(stay: {
+  check_in_at: string;
+  check_in_date?: string | null;
+}): string {
+  const day = stayRecordCheckInDate(stay);
+  return formatStayCalendarDayLabel(day, 'en') ?? day;
 }
 
 function occupiedStatusLabel(nightCellStatus?: BedNightCellStatus): string {
@@ -58,7 +63,7 @@ export function BedInventoryGrid({
                       <p className="text-xs text-muted-foreground">Free</p>
                       {entry.nextAccess ? (
                         <p className="text-xs text-muted-foreground">
-                          Access from {formatAccessFrom(entry.nextAccess.check_in_at)}
+                          Stay from {formatStayNightFrom(entry.nextAccess)}
                         </p>
                       ) : null}
                     </div>
@@ -106,7 +111,7 @@ export function BedInventoryGrid({
                     key={entry.bedId}
                     title={
                       entry.nextAccess
-                        ? `Access from ${formatAccessFrom(entry.nextAccess.check_in_at)}`
+                        ? `Stay from ${formatStayNightFrom(entry.nextAccess)}`
                         : entry.bedId
                     }
                     className="inline-flex h-8 items-center rounded-full border bg-muted/10 px-2.5 text-xs text-muted-foreground"
@@ -119,7 +124,7 @@ export function BedInventoryGrid({
               const guestLabel = entry.stay?.guest_name || entry.displayLabel;
               const title =
                 entry.nightCellStatus === 'scheduled' && entry.stay
-                  ? `${guestLabel} · check-in ${formatAccessFrom(entry.stay.check_in_at)}`
+                  ? `${guestLabel} · check-in ${formatStayNightFrom(entry.stay)}`
                   : guestLabel;
 
               return (

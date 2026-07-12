@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import { stayRecordCheckInDate } from '@/entities/guest-stay';
 import { formatDisplayDate } from '../lib/guestAccessDates';
 import type { ReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
 import { BedInventoryGrid } from './BedInventoryGrid';
@@ -39,7 +40,7 @@ function HubArrivalList({
   return (
     <ul className="space-y-1.5">
       {stays.map((stay) => {
-        const checkInDay = stay.check_in_at.slice(0, 10);
+        const checkInDay = stayRecordCheckInDate(stay);
         const guestLabel = stay.guest_name?.trim() || 'Guest';
         const bedLabel = resolveBedLabel(stay.bed_id);
 

@@ -18,7 +18,7 @@ export function resolveHubTransferContext(surface: HubTransferSurface): Resolved
   switch (surface) {
     case HubTransferSurfaceContext.arrival:
       return {
-        defaultDirection: 'to_hostel',
+        defaultDirection: 'from_hostel',
         dateHintKindByDirection: {
           to_hostel: 'check_in',
           from_hostel: 'check_out',

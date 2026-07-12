@@ -13,6 +13,11 @@ import { resolveGuestPinActivationError } from '../lib/resolveGuestPinActivation
 import { buildGuestMagicLinkUrl } from '../lib/buildMagicLinkUrl';
 import { buildGuestSessionPayload, readGuestSessionFromCookies } from '../lib/guestSession';
 import { guestAccessBedNightsOverlap } from '../lib/guestAccessIntervals';
+import {
+  resolveReservationStayPeriod,
+  stayRecordCheckInDate,
+  stayRecordCheckOutDate,
+} from '../lib/resolveReservationStayPeriod';
 import { bedExistsInGuestStay } from '../lib/validateBedForTenant';
 import { validateReservationBookingSource } from '../lib/validateReservationBookingSource';
 import { resolveReservationBookingBalance } from '../lib/validateReservationBookingBalance';
@@ -53,8 +58,8 @@ function isAccessOverlapDbError(error: { code?: string } | null | undefined): bo
 async function findOverlappingReservationOnBed(
   tenantId: string,
   bedId: string,
-  checkInAt: string,
-  checkOutAt: string,
+  checkInDate: string,
+  checkOutDate: string,
   excludeReservationId?: string
 ): Promise<boolean> {
   const admin = getSupabaseAdmin();
@@ -62,7 +67,7 @@ async function findOverlappingReservationOnBed(
 
   const { data, error } = await admin
     .from('guest_reservations')
-    .select('id, check_in_at, check_out_at')
+    .select('id, check_in_at, check_out_at, check_in_date, check_out_date')
     .eq('tenant_id', tenantId)
     .eq('bed_id', bedId)
     .eq('status', 'planned');
@@ -76,12 +81,13 @@ async function findOverlappingReservationOnBed(
     if (excludeReservationId && String(row.id) === excludeReservationId) {
       return false;
     }
-    return guestAccessBedNightsOverlap(
-      String(row.check_in_at),
-      String(row.check_out_at),
-      checkInAt,
-      checkOutAt
-    );
+    const rowIn = row.check_in_date
+      ? String(row.check_in_date).slice(0, 10)
+      : String(row.check_in_at).slice(0, 10);
+    const rowOut = row.check_out_date
+      ? String(row.check_out_date).slice(0, 10)
+      : String(row.check_out_at).slice(0, 10);
+    return guestAccessBedNightsOverlap(rowIn, rowOut, checkInDate, checkOutDate);
   });
 }
 
@@ -251,16 +257,24 @@ export async function createGuestStay(
     return { ok: false, error: 'bed_not_found' };
   }
 
-  const checkInAt = new Date(input.checkInAt);
-  const checkOutAt = new Date(input.checkOutAt);
-  if (!validateReservationDates(checkInAt, checkOutAt)) {
+  const period = resolveReservationStayPeriod({
+    checkInDate: input.checkInDate,
+    checkOutDate: input.checkOutDate,
+    checkInTime: tenant.settings.checkInTime,
+    propertyTimeZone: tenant.settings.propertyTimeZone,
+  });
+  if (!period) {
     return { ok: false, error: 'bed_not_found' };
   }
 
-  const checkInIso = checkInAt.toISOString();
-  const checkOutIso = checkOutAt.toISOString();
-
-  if (await findOverlappingReservationOnBed(tenant.id, bedId, checkInIso, checkOutIso)) {
+  if (
+    await findOverlappingReservationOnBed(
+      tenant.id,
+      bedId,
+      period.checkInDate,
+      period.checkOutDate
+    )
+  ) {
     return { ok: false, error: 'access_overlap' };
   }
 
@@ -285,8 +299,10 @@ export async function createGuestStay(
       tenant_id: tenant.id,
       guest_name: input.guestName?.trim() || null,
       bed_id: bedId,
-      check_in_at: checkInIso,
-      check_out_at: checkOutIso,
+      check_in_date: period.checkInDate,
+      check_out_date: period.checkOutDate,
+      check_in_at: period.checkInAt,
+      check_out_at: period.checkOutAt,
       booking_platform_id: bookingFields.platformId,
       booking_external_id: bookingFields.externalId,
       booking_amount_due_minor: balanceFields.amountMinor,
@@ -350,14 +366,15 @@ export async function updateGuestReservation(
     return { ok: false, error: 'bed_not_found' };
   }
 
-  const checkInAt = new Date(input.checkInAt);
-  const checkOutAt = new Date(input.checkOutAt);
-  if (!validateReservationDates(checkInAt, checkOutAt)) {
+  const period = resolveReservationStayPeriod({
+    checkInDate: input.checkInDate,
+    checkOutDate: input.checkOutDate,
+    checkInTime: tenant.settings.checkInTime,
+    propertyTimeZone: tenant.settings.propertyTimeZone,
+  });
+  if (!period) {
     return { ok: false, error: 'bed_not_found' };
   }
-
-  const checkInIso = checkInAt.toISOString();
-  const checkOutIso = checkOutAt.toISOString();
 
   const { data: existing, error: loadError } = await admin
     .from('guest_reservations')
@@ -385,8 +402,8 @@ export async function updateGuestReservation(
     await findOverlappingReservationOnBed(
       tenant.id,
       bedId,
-      checkInIso,
-      checkOutIso,
+      period.checkInDate,
+      period.checkOutDate,
       input.stayId
     )
   ) {
@@ -421,8 +438,10 @@ export async function updateGuestReservation(
     .update({
       bed_id: bedId,
       guest_name: input.guestName?.trim() || null,
-      check_in_at: checkInIso,
-      check_out_at: checkOutIso,
+      check_in_date: period.checkInDate,
+      check_out_date: period.checkOutDate,
+      check_in_at: period.checkInAt,
+      check_out_at: period.checkOutAt,
       booking_platform_id: bookingFields.platformId,
       booking_external_id: bookingFields.externalId,
       booking_amount_due_minor: balanceFields.amountMinor,
@@ -808,6 +827,8 @@ export async function resolveGuestSessionFromCookies(
     exp: raw.exp,
     checkInAt: stay.check_in_at,
     checkOutAt: stay.check_out_at,
+    checkInDate: stayRecordCheckInDate(stay),
+    checkOutDate: stayRecordCheckOutDate(stay),
     guestName: stay.guest_name,
   };
 }

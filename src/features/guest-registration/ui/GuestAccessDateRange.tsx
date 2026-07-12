@@ -57,7 +57,7 @@ export function GuestAccessDateRange({
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <div className="space-y-1.5">
-          <Label htmlFor="check-in-date">Valid from</Label>
+          <Label htmlFor="check-in-date">Check-in date</Label>
           <Input
             id="check-in-date"
             type="date"
@@ -67,7 +67,7 @@ export function GuestAccessDateRange({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="check-out-date">Valid until</Label>
+          <Label htmlFor="check-out-date">Check-out date</Label>
           <Input
             id="check-out-date"
             type="date"
@@ -94,10 +94,11 @@ export function GuestAccessDateRange({
       </div>
 
       {!rangeValid ? (
-        <p className="text-xs text-destructive">Valid until must be on or after valid from.</p>
+        <p className="text-xs text-destructive">Check-out must be on or after check-in.</p>
       ) : compact ? null : (
         <p className="text-xs text-muted-foreground">
-          Valid until is the guest&apos;s last night — app access works through checkout day.
+          Stay nights: check-out is the guest&apos;s last night. App access follows hostel check-in
+          time on the check-in date.
         </p>
       )}
     </div>

@@ -1,6 +1,7 @@
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
   guestAccessCoversNight,
+  guestAccessCheckInPolicyFromSettings,
   resolveNightCellStatus,
   type BedNightCellStatus,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
@@ -107,7 +108,8 @@ function buildRow(
         return { nightDate, status: 'free' as const };
       }
 
-      const status = resolveNightCellStatus(stay, nightDate, now) ?? 'occupied';
+      const policy = guestAccessCheckInPolicyFromSettings(settings);
+      const status = resolveNightCellStatus(stay, nightDate, now, policy) ?? 'occupied';
       return { nightDate, status, stay };
     }),
   };
@@ -145,14 +147,16 @@ export function resolveBedDayCalendar(
 }
 
 export function formatCalendarRangeLabel(rangeStart: string, rangeEnd: string): string {
-  const start = parseUtcDate(rangeStart).toLocaleDateString(undefined, {
+  const start = parseUtcDate(rangeStart).toLocaleDateString('en', {
     month: 'short',
     day: 'numeric',
+    timeZone: 'UTC',
   });
-  const end = parseUtcDate(rangeEnd).toLocaleDateString(undefined, {
+  const end = parseUtcDate(rangeEnd).toLocaleDateString('en', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'UTC',
   });
   return `${start} – ${end}`;
 }

@@ -1,5 +1,9 @@
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
-import { resolveGuestAccessStatus } from '@/entities/guest-stay/lib/guestAccessIntervals';
+import {
+  guestAccessCheckInPolicyFromSettings,
+  resolveGuestAccessStatus,
+  type GuestAccessCheckInPolicy,
+} from '@/entities/guest-stay/lib/guestAccessIntervals';
 import type { TenantSettings } from '@/entities/tenant';
 import {
   flattenBedInventory,
@@ -38,16 +42,20 @@ export function hasGuestArrivedAtReception(
   return Boolean(stay.desk_checked_in_at);
 }
 
-function isAwaitingArrival(stay: GuestStayRecordWithLink, now: Date): boolean {
+function isAwaitingArrival(
+  stay: GuestStayRecordWithLink,
+  now: Date,
+  policy?: GuestAccessCheckInPolicy | null
+): boolean {
   if (stay.revoked_at || hasGuestArrivedAtReception(stay)) {
     return false;
   }
-  const status = resolveGuestAccessStatus(stay, now);
+  const status = resolveGuestAccessStatus(stay, now, policy);
   return status !== 'ended' && status !== 'revoked';
 }
 
 function checkInDateSlice(stay: GuestStayRecordWithLink): string {
-  return stay.check_in_at.slice(0, 10);
+  return stay.check_in_date?.slice(0, 10) || stay.check_in_at.slice(0, 10);
 }
 
 export type ReceptionHubStayBucket = 'expectedToday' | 'stillExpected' | 'noShow' | null;
@@ -58,9 +66,10 @@ export function classifyReceptionHubStay(
     operationalDate: string;
     now: Date;
     operationalDayStartTime: string;
+    policy?: GuestAccessCheckInPolicy | null;
   }
 ): ReceptionHubStayBucket {
-  if (!isAwaitingArrival(stay, input.now)) {
+  if (!isAwaitingArrival(stay, input.now, input.policy)) {
     return null;
   }
 
@@ -110,6 +119,7 @@ export function resolveReceptionHubSnapshot(
   const freeBedEntries = allEntries.filter((entry) => entry.status === 'free');
   const freeIds = new Set(freeBedEntries.map((entry) => entry.bedId));
   const freeBedRoomGroups = buildFreeBedRoomGroups(inventory.roomGroups, freeIds);
+  const policy = guestAccessCheckInPolicyFromSettings(settings);
 
   const expectedToday: GuestStayRecordWithLink[] = [];
   const stillExpected: GuestStayRecordWithLink[] = [];
@@ -120,6 +130,7 @@ export function resolveReceptionHubSnapshot(
       operationalDate,
       now,
       operationalDayStartTime,
+      policy,
     });
     if (bucket === 'expectedToday') expectedToday.push(stay);
     else if (bucket === 'stillExpected') stillExpected.push(stay);

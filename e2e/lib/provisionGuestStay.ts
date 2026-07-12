@@ -213,6 +213,8 @@ export async function provisionGuestStayForSmoke(input: {
       tenant_id: tenant.id,
       bed_id: bedId,
       guest_name: E2E_SMOKE_GUEST_NAME,
+      check_in_date: checkInDate,
+      check_out_date: checkOutDate,
       check_in_at: checkInAt,
       check_out_at: checkOutAt,
       status: 'planned',
