@@ -8,17 +8,21 @@ import { cn } from '@/shared/lib/utils';
 import { Button, Icon, Skeleton } from '@/shared/ui';
 import { ChevronRight } from 'lucide-react';
 
+export type GuestStayBedLocationLockReason = 'before_check_in' | 'tourism';
+
 interface GuestStayBedLocationCardProps {
   plan: GuestStayPlan;
   navigatePath?: string;
-  locked?: boolean;
+  lockReason?: GuestStayBedLocationLockReason | null;
+  checkInTimeLabel?: string;
   navigateLoading?: boolean;
 }
 
 export function GuestStayBedLocationCard({
   plan,
   navigatePath,
-  locked = false,
+  lockReason = null,
+  checkInTimeLabel = '14:00',
   navigateLoading = false,
 }: GuestStayBedLocationCardProps) {
   const tChip = useTranslations('components.guestStayChip');
@@ -28,7 +32,8 @@ export function GuestStayBedLocationCard({
     return null;
   }
 
-  const showLockedCopy = locked && !navigateLoading;
+  const locked = Boolean(lockReason) && !navigateLoading;
+  const showNavigate = Boolean(navigatePath) && !navigateLoading;
 
   return (
     <div
@@ -48,7 +53,11 @@ export function GuestStayBedLocationCard({
               <Skeleton className="h-4 w-full max-w-[10rem]" />
               <Skeleton className="h-3 w-4/5 max-w-[8rem]" />
             </div>
-          ) : showLockedCopy ? (
+          ) : lockReason === 'before_check_in' ? (
+            <p className="text-sm leading-snug text-muted-foreground">
+              {tChip('bedLockedUntilCheckIn', { time: checkInTimeLabel })}
+            </p>
+          ) : lockReason === 'tourism' ? (
             <p className="text-sm leading-snug text-muted-foreground">{tChip('bedLockedUntilTourism')}</p>
           ) : (
             <FindYourBedSummary plan={plan} variant="breadcrumb" omitFloor />
@@ -56,13 +65,13 @@ export function GuestStayBedLocationCard({
         </div>
         {navigateLoading ? (
           <Skeleton className="size-8 shrink-0 rounded-md" aria-hidden />
-        ) : (
+        ) : showNavigate ? (
           <Button variant="ghost" size="icon" className="size-8 shrink-0" asChild>
-            <Link href={navigatePath ?? '#'} aria-label={tChip('showRoomMapLink')}>
+            <Link href={navigatePath!} aria-label={tChip('showRoomMapLink')}>
               <Icon icon={ChevronRight} className="h-4 w-4" />
             </Link>
           </Button>
-        )}
+        ) : null}
       </div>
     </div>
   );

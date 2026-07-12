@@ -40,6 +40,7 @@ export interface TenantFormDraft {
   arrivalRouteTipsByRoute?: Partial<Record<RouteId, LocalizedText[]>>;
   checkInTime?: string;
   checkOutTime?: string;
+  propertyTimeZone?: string;
   selfCheckInTimeAfter?: string;
   operationalDayStartTime?: string;
   wifi?: TenantSettings['wifi'];
@@ -117,6 +118,9 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       : {}),
     ...(draft.checkInTime !== undefined ? { checkInTime: draft.checkInTime || undefined } : {}),
     ...(draft.checkOutTime !== undefined ? { checkOutTime: draft.checkOutTime || undefined } : {}),
+    ...(draft.propertyTimeZone !== undefined
+      ? { propertyTimeZone: draft.propertyTimeZone?.trim() || undefined }
+      : {}),
     ...(draft.selfCheckInTimeAfter !== undefined
       ? { selfCheckInTimeAfter: draft.selfCheckInTimeAfter || undefined }
       : {}),

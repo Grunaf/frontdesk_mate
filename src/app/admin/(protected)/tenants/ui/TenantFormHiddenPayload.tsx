@@ -138,6 +138,7 @@ export function TenantFormHiddenPayload({
       <input type="hidden" name="hostelJson" value={serializeHostelJson(mergedSettings)} />
       <input type="hidden" name="checkInTime" value={mergedSettings.checkInTime ?? ''} />
       <input type="hidden" name="checkOutTime" value={mergedSettings.checkOutTime ?? ''} />
+      <input type="hidden" name="propertyTimeZone" value={mergedSettings.propertyTimeZone ?? ''} />
       <input type="hidden" name="selfCheckInTimeAfter" value={mergedSettings.selfCheckInTimeAfter ?? ''} />
       <input
         type="hidden"

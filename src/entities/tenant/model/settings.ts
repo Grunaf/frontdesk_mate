@@ -60,6 +60,8 @@ export interface TenantSettings {
   booking?: TenantBookingSettings;
   checkInTime?: string;
   checkOutTime?: string;
+  /** IANA timezone for property-local check-in/out wall times (e.g. Europe/Belgrade). */
+  propertyTimeZone?: string;
   /**
    * Wall-clock start of the reception operational day (`HH:mm`, default `06:00` at use sites).
    * Used with property calendar dates in UTC v1 — not full IANA timezone yet.

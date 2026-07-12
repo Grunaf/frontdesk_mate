@@ -2,7 +2,7 @@
 
 import type { TenantSettings } from '@/entities/tenant';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
-import { AdminFieldRow } from '../ui/AdminField';
+import { AdminField, AdminFieldRow } from '../ui/AdminField';
 import { AdminTimeField } from '../ui/AdminTimeField';
 import { AdminCurrencyFields } from '../ui/AdminCurrencyFields';
 import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
@@ -40,6 +40,14 @@ export function HostelPolicyFields({
           onChange={(value) => updateDraft({ checkOutTime: value })}
         />
       </AdminFieldRow>
+      <AdminField
+        label="Property timezone"
+        value={settings?.propertyTimeZone ?? ''}
+        onChange={(value) => updateDraft({ propertyTimeZone: value })}
+        placeholder="Europe/Belgrade"
+        hint="IANA timezone for check-in times and guest access gates. Falls back to UTC until set."
+        missing={isTenantFieldMissing('propertyTimeZone', readinessInput)}
+      />
       <AdminTimeField
         label="Operational day starts at"
         value={settings?.operationalDayStartTime ?? ''}

@@ -1571,6 +1571,7 @@
       "copyLineRef": "Ref: #{stayRef}",
       "copyLineName": "Name: {guestName}",
       "showRoomMapLink": "Show room map & directions",
+      "bedLockedUntilCheckIn": "Your bed and directions unlock from {time} on your check-in day.",
       "bedLockedUntilTourism": "Complete tourist registration to see your bed assignment.",
       "tourismSummaryHeading": "Tourist registration",
       "tourismStatusNotStarted": "Not started",

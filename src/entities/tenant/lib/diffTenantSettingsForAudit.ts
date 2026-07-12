@@ -9,6 +9,7 @@ const TOP_LEVEL_AUDIT_KEYS: (keyof TenantSettings)[] = [
   'booking',
   'checkInTime',
   'checkOutTime',
+  'propertyTimeZone',
   'operationalDayStartTime',
   'cityTax',
   'selfCheckInTimeAfter',

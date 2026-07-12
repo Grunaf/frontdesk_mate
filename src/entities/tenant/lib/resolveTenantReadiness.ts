@@ -50,6 +50,7 @@ export type TenantCriticalField =
   | 'slug'
   | 'name'
   | 'checkInTime'
+  | 'propertyTimeZone'
   | 'heroBgUrl'
   | 'wifiName'
   | 'wifiPassword'
@@ -398,6 +399,8 @@ export function isTenantFieldMissing(field: TenantCriticalField, input: TenantRe
       return !name;
     case 'checkInTime':
       return !settings.checkInTime?.trim();
+    case 'propertyTimeZone':
+      return !settings.propertyTimeZone?.trim();
     case 'heroBgUrl':
       return !settings.heroBgUrl?.trim() && !hasLandingContent(settings);
     case 'wifiName':

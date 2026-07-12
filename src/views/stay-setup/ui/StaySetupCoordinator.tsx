@@ -8,13 +8,13 @@ import {
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
 import { ensureStayContactSaved } from '@/features/guest-stay-contact/lib/ensureStayContactSaved';
-import { isCheckInDayOrLater } from '@/features/stay-essentials/lib/resolveShowSettlementBanner';
-import { TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
+import { isStayCheckInStarted } from '@/entities/guest-stay';
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { ArrivalGuideStepsShell } from '@/views/arrival-journey';
 import { RegistrationStepBody, useRegistrationStepState } from '@/views/registration';
 import { SITE_CONFIG } from '@/shared/config';
 import { useTranslations } from '@/shared/i18n';
+import { TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
 import { Button, IconBackActionsRow } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
@@ -76,12 +76,18 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const stepFromUrl = normalizeStaySetupUrlStep(searchParams.get('step'));
-  const { settings, slug } = useTenant();
+  const { settings, slug, hostel } = useTenant();
   const { session, checkInAt } = useGuestSession();
   const stayId = session?.stayId ?? null;
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const isRegistered = useIsGuestRegistered();
-  const checkInDayOrLater = checkInAt ? isCheckInDayOrLater(checkInAt) : false;
+  const checkInStarted = checkInAt
+    ? isStayCheckInStarted({
+        checkInAt,
+        propertyTimeZone: hostel.propertyTimeZone,
+        checkInTimeFallback: hostel.checkInTime,
+      })
+    : false;
 
   const {
     tourismComplete,
@@ -124,7 +130,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const defaultStep = resolveStaySetupCoordinatorStep(
     tourismRegistrationRequired,
     completion,
-    checkInDayOrLater
+    checkInStarted
   );
   const [currentStep, setCurrentStep] = useState<StaySetupStep>(defaultStep);
 
@@ -156,14 +162,14 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
           step,
           tourismRegistrationRequired,
           nextCompletion,
-          checkInDayOrLater
+          checkInStarted
         )
       );
     },
     [
       applyRegistrationStatus,
       tourismRegistrationRequired,
-      checkInDayOrLater,
+      checkInStarted,
       tourismComplete,
       contactComplete,
     ]
@@ -186,7 +192,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       isRegistered,
       tourismRegistrationRequired,
       completion,
-      checkInDayOrLater,
+      checkInStarted,
       registrationComplete,
       contactComplete,
       currentStep,
@@ -202,7 +208,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     stepFromUrl,
     isRegistered,
     tourismRegistrationRequired,
-    checkInDayOrLater,
+    checkInStarted,
     registrationComplete,
     contactComplete,
     completion,
@@ -297,7 +303,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         return;
       }
 
-      if (isRoomOrEssentialsStep(step) && isRegistered && !checkInDayOrLater) {
+      if (isRoomOrEssentialsStep(step) && isRegistered && !checkInStarted) {
         openSettlementDayGateSheet();
         return;
       }
@@ -309,7 +315,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       registrationComplete,
       tourismRegistrationRequired,
       tourismComplete,
-      checkInDayOrLater,
+      checkInStarted,
       focusRegistrationStep,
     ]
   );
@@ -404,7 +410,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       isRegistered,
       tourismRegistrationRequired,
       completion,
-      checkInDayOrLater
+      checkInStarted
     ),
   }));
 
@@ -421,7 +427,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     if (
       activeStep.id === 'registration' &&
       registrationComplete &&
-      !checkInDayOrLater
+      !checkInStarted
     ) {
       openSettlementDayGateSheet();
       return;
@@ -445,7 +451,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       if (
         activeStep.id === 'registration' &&
         registrationComplete &&
-        checkInDayOrLater
+        checkInStarted
       ) {
         const saved = await ensureContactBeforeAdvance();
         if (!saved) {

@@ -29,7 +29,7 @@ import {
   resolveGuestStayBedLabel,
 } from '../lib/buildExtendStayWhatsappMessage';
 import { formatGuestStayDateRange } from '../lib/formatGuestStayDates';
-import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
+import { formatStayReference, isStayCheckInStarted } from '@/entities/guest-stay';
 import { GuestStayBedLocationCard } from './GuestStayBedLocationCard';
 import { GuestStayReceptionCard } from './GuestStayReceptionCard';
 import {
@@ -91,6 +91,22 @@ export function GuestStaySheet({
   const bedLocationLocked =
     !registrationStatusLoading && tourismRegistrationRequired && !tourismCompleteForStay;
 
+  const checkInStarted = isStayCheckInStarted({
+    checkInAt,
+    propertyTimeZone: hostel.propertyTimeZone,
+    checkInTimeFallback: hostel.checkInTime,
+  });
+  const checkInTimeLabel = hostel.checkInTime?.trim() || '14:00';
+
+  const bedLocationLockReason =
+    registrationStatusLoading || checkInStarted
+      ? bedLocationLocked
+        ? ('tourism' as const)
+        : null
+      : ('before_check_in' as const);
+
+  const hideBedFromGuest = !checkInStarted || bedLocationLocked;
+
   const settlementPath = resolveGuestStaySetupPath({
     locale: routeLocale,
     step: staySetupBedMap.step,
@@ -102,9 +118,11 @@ export function GuestStaySheet({
 
   const bedNavigatePath = registrationStatusLoading
     ? undefined
-    : bedLocationLocked
-      ? registerPath
-      : settlementPath;
+    : bedLocationLockReason === 'before_check_in'
+      ? undefined
+      : bedLocationLockReason === 'tourism'
+        ? registerPath
+        : settlementPath;
 
   useEffect(() => {
     if (!open || !tourismRegistrationRequired || !slug) {
@@ -166,13 +184,13 @@ export function GuestStaySheet({
 
     return buildReceptionCopyText({
       hostelName: name,
-      bedLine: bedLocationLocked ? '—' : bedLine || '—',
+      bedLine: hideBedFromGuest ? '—' : bedLine || '—',
       dateRange,
       stayRef,
       guestName: trimmedGuestName,
       compose: (key, values) => t(key, values),
     });
-  }, [bedLine, bedLocationLocked, dateRange, name, stayRef, t, trimmedGuestName]);
+  }, [bedLine, hideBedFromGuest, dateRange, name, stayRef, t, trimmedGuestName]);
 
   const extendContact = useMemo(() => {
     const bedLabel = resolveGuestStayBedLabel(plan, (key, values) =>
@@ -242,7 +260,8 @@ export function GuestStaySheet({
 
           <GuestStayBedLocationCard
             plan={plan}
-            locked={bedLocationLocked}
+            lockReason={bedLocationLockReason}
+            checkInTimeLabel={checkInTimeLabel}
             navigatePath={bedNavigatePath}
             navigateLoading={registrationStatusLoading}
           />

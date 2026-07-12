@@ -23,6 +23,7 @@ describe('stayCalendarDay', () => {
   });
 });
 
+
 describe('isStayCheckInCalendarDayOrLater', () => {
   const checkInAt = '2026-07-10T22:22:00.000Z';
 

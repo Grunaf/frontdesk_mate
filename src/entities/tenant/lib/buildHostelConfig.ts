@@ -46,6 +46,7 @@ export function buildHostelConfig(settings: TenantSettings): HostelConfig {
   return {
     checkInTime: settings.checkInTime,
     checkOutTime: settings.checkOutTime,
+    propertyTimeZone: settings.propertyTimeZone,
     cityTax: resolveCityTaxDisplay(settings) || settings.cityTax,
     selfCheckInTimeAfter: settings.selfCheckInTimeAfter,
     laundryCost: settings.laundryCost,

@@ -28,6 +28,7 @@ import {
 } from '@/app/admin/(protected)/tenants/lib/parseArrivalTransportSettings';
 import { normalizePhoneDisplayPreset } from '@/shared/lib/phone-display-presets';
 import { resolveStoredPhoneMask } from '@/shared/lib/phoneDisplay';
+import { isValidPropertyTimeZone } from '@/entities/guest-stay';
 import { normalizeTimeValue } from '@/shared/lib/time';
 import type { TenantHostelSettings } from '@/entities/tenant/model/hostelSettings';
 
@@ -379,6 +380,10 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
           },
     checkInTime: normalizeTimeValue(String(formData.get('checkInTime') || '')),
     checkOutTime: normalizeTimeValue(String(formData.get('checkOutTime') || '')),
+    propertyTimeZone: (() => {
+      const raw = String(formData.get('propertyTimeZone') || '').trim();
+      return raw && isValidPropertyTimeZone(raw) ? raw : undefined;
+    })(),
     selfCheckInTimeAfter: normalizeTimeValue(String(formData.get('selfCheckInTimeAfter') || '')),
     operationalDayStartTime: normalizeTimeValue(
       String(formData.get('operationalDayStartTime') || '')

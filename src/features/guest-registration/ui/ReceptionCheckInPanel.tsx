@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { GuestIssueRecord } from '@/entities/guest-issue';
+import type { GuestHubTransferRecord } from '@/entities/guest-hub-transfer';
 import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
@@ -53,6 +54,7 @@ import { RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL } from './receptionIssueAccess
 import { ReceptionHubView } from './ReceptionHubView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
+import { ReceptionTransfersTab } from './ReceptionTransfersTab';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
@@ -64,6 +66,7 @@ interface ReceptionCheckInPanelProps {
   settings?: TenantSettings;
   initialStays: GuestStayRecordWithLink[];
   initialOpenIssues: GuestIssueRecord[];
+  initialOpenTransfers: GuestHubTransferRecord[];
 }
 
 interface EditReservationDraft {
@@ -78,7 +81,7 @@ interface EditReservationDraft {
   intent: 'changeDates' | 'moveBed';
 }
 
-type DeskTab = 'desk' | 'plan' | 'access' | 'issues';
+type DeskTab = 'desk' | 'plan' | 'access' | 'issues' | 'transfers';
 
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
@@ -94,6 +97,7 @@ export function ReceptionCheckInPanel({
   settings,
   initialStays,
   initialOpenIssues,
+  initialOpenTransfers,
 }: ReceptionCheckInPanelProps) {
   const bedOptions = useMemo(() => listGuestStayBedIds(settings ?? {}), [settings]);
   const tenantSettings = settings ?? {};
@@ -105,12 +109,14 @@ export function ReceptionCheckInPanel({
   const tenantCurrency = useMemo(() => resolveTenantCurrency(tenantSettings), [tenantSettings]);
   const bookingBalanceCurrencySymbol = getCurrencyDefinition(tenantCurrency.primary).symbol;
   const checkInTime = settings?.checkInTime ?? '14:00';
+  const propertyTimeZone = settings?.propertyTimeZone;
   const walkInDefaults = defaultWalkInDates();
 
   const [stays, setStays] = useState(initialStays);
   const [issueOverlayOpen, setIssueOverlayOpen] = useState(false);
   const [deskTab, setDeskTab] = useState<DeskTab>('desk');
   const [openIssueCount, setOpenIssueCount] = useState(initialOpenIssues.length);
+  const [openTransferCount, setOpenTransferCount] = useState(initialOpenTransfers.length);
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
   const [bookingPlatformId, setBookingPlatformId] = useState('');
@@ -137,8 +143,8 @@ export function ReceptionCheckInPanel({
   const rangeValid = isValidAccessRange(checkInDate, checkOutDate);
 
   const accessPeriod = useMemo(
-    () => resolveGuestAccessPeriod(checkInDate, checkOutDate, checkInTime),
-    [checkInDate, checkOutDate, checkInTime]
+    () => resolveGuestAccessPeriod(checkInDate, checkOutDate, checkInTime, propertyTimeZone),
+    [checkInDate, checkOutDate, checkInTime, propertyTimeZone]
   );
 
   const hubSnapshot = useMemo(
@@ -697,6 +703,9 @@ export function ReceptionCheckInPanel({
               <TabsTrigger value="issues">
                 Issues{openIssueCount > 0 ? ` (${openIssueCount})` : ''}
               </TabsTrigger>
+              <TabsTrigger value="transfers">
+                Transfers{openTransferCount > 0 ? ` (${openTransferCount})` : ''}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="desk">
@@ -737,6 +746,17 @@ export function ReceptionCheckInPanel({
                 onFocusStay={openStayDetail}
                 isActive={deskTab === 'issues'}
                 onOpenCountChange={setOpenIssueCount}
+              />
+            </TabsContent>
+
+            <TabsContent value="transfers">
+              <ReceptionTransfersTab
+                tenantSlug={tenantSlug}
+                initialTransfers={initialOpenTransfers}
+                resolveBedLabel={resolveBedLabel}
+                onFocusStay={openStayDetail}
+                isActive={deskTab === 'transfers'}
+                onOpenCountChange={setOpenTransferCount}
               />
             </TabsContent>
           </Tabs>

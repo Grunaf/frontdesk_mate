@@ -7,7 +7,7 @@ import {
 } from '../../src/entities/guest-stay/lib/accessToken';
 import { guestAccessBedNightsOverlap } from '../../src/entities/guest-stay/lib/guestAccessIntervals';
 import { generateGuestPin, hashGuestPin } from '../../src/entities/guest-stay/lib/guestPin';
-import { listGuestStayBedIds } from '../../src/entities/guest-stay/lib/validateBedForTenant';
+import { formatPropertyLocalCheckInIso } from '../../src/entities/guest-stay';
 import type { SmokeSessionRuntime } from './smokeRuntime';
 
 export const E2E_SMOKE_GUEST_NAME = '__e2e_smoke__';
@@ -38,10 +38,17 @@ function addUtcDays(isoDate: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function resolveCheckInIso(checkInDate: string, checkInTime?: string): string {
+function resolveCheckInIso(
+  checkInDate: string,
+  checkInTime?: string,
+  propertyTimeZone?: string | null
+): string {
   const time = checkInTime?.trim() || '14:00';
   const [hours, minutes = '00'] = time.split(':');
-  return `${checkInDate.trim()}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00.000Z`;
+  return (
+    formatPropertyLocalCheckInIso(checkInDate.trim(), time, propertyTimeZone) ??
+    `${checkInDate.trim()}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00.000Z`
+  );
 }
 
 async function loadTenant(slug: string): Promise<TenantRow | null> {
@@ -174,7 +181,11 @@ export async function provisionGuestStayForSmoke(input: {
   const checkInDate = new Date().toISOString().slice(0, 10);
   const nights = input.nights ?? 7;
   const checkOutDate = addUtcDays(checkInDate, nights);
-  const checkInAt = resolveCheckInIso(checkInDate, tenant.settings.checkInTime);
+  const checkInAt = resolveCheckInIso(
+    checkInDate,
+    tenant.settings.checkInTime,
+    tenant.settings.propertyTimeZone
+  );
   const checkOutAt = `${checkOutDate}T23:59:59.999Z`;
 
   await revokeSmokeStays(tenant.id);

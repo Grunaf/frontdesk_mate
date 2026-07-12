@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { assertReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
+import { formatPropertyLocalCheckInIso } from '@/entities/guest-stay';
 import { getTenantRecord } from '@/entities/tenant/server';
 import {
   createGuestStay,
@@ -24,11 +25,17 @@ export type CreateGuestStayActionResult =
   | CreateGuestStayResult
   | { ok: false; error: 'unauthorized' | 'unknown' };
 
-/** Combines desk check-in date with tenant checkInTime. The Z suffix is storage-only (v1), not hostel IANA TZ. */
-function resolveCheckInIso(checkInDate: string, checkInTime?: string): string {
+/** Property-local check-in date + time → UTC instant stored on guest_stay.check_in_at. */
+function resolveCheckInIso(
+  checkInDate: string,
+  checkInTime?: string,
+  propertyTimeZone?: string | null
+): string {
   const time = checkInTime?.trim() || '14:00';
-  const [hours, minutes = '00'] = time.split(':');
-  return `${checkInDate.trim()}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00.000Z`;
+  return (
+    formatPropertyLocalCheckInIso(checkInDate.trim(), time, propertyTimeZone) ??
+    `${checkInDate.trim()}T${time.split(':')[0]?.padStart(2, '0') ?? '14'}:${time.split(':')[1]?.padStart(2, '0') ?? '00'}:00.000Z`
+  );
 }
 
 export async function createGuestStayAction(input: {
@@ -50,7 +57,11 @@ export async function createGuestStayAction(input: {
 
   try {
     const tenant = await getTenantRecord(input.tenantSlug);
-    const checkInAt = resolveCheckInIso(input.checkInDate, tenant?.settings.checkInTime);
+    const checkInAt = resolveCheckInIso(
+      input.checkInDate,
+      tenant?.settings.checkInTime,
+      tenant?.settings.propertyTimeZone
+    );
 
     const result = await createGuestStay(
       {
@@ -164,7 +175,11 @@ export async function updateGuestReservationAction(input: {
 
   try {
     const tenant = await getTenantRecord(input.tenantSlug);
-    const checkInAt = resolveCheckInIso(input.checkInDate, tenant?.settings.checkInTime);
+    const checkInAt = resolveCheckInIso(
+      input.checkInDate,
+      tenant?.settings.checkInTime,
+      tenant?.settings.propertyTimeZone
+    );
 
     const result = await updateGuestReservation({
       tenantSlug: input.tenantSlug,

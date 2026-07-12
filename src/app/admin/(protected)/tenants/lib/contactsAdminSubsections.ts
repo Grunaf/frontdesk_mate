@@ -96,7 +96,10 @@ export function getContactsAdminModuleHint(
       return parts.length > 0 ? parts.join(' · ') : 'Add reception phone';
     }
     case 'stay-policy':
-      return settings.checkInTime?.trim() ? 'Check-in time set' : 'Set check-in from';
+      if (!settings.checkInTime?.trim()) {
+        return 'Set check-in from';
+      }
+      return settings.propertyTimeZone?.trim() ? 'Check-in time set' : 'Set property timezone';
     default:
       return undefined;
   }
@@ -118,7 +121,10 @@ export function getContactsAdminModuleStatus(
     case 'phones-email':
       return settings.contacts?.phoneRaw?.trim() ? 'ready' : 'preview';
     case 'stay-policy':
-      return isTenantFieldMissing('checkInTime', readinessInput) ? 'preview' : 'ready';
+      return isTenantFieldMissing('checkInTime', readinessInput) ||
+        isTenantFieldMissing('propertyTimeZone', readinessInput)
+        ? 'preview'
+        : 'ready';
     default:
       return 'n/a';
   }

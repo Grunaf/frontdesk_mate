@@ -4,8 +4,8 @@ const CALENDAR_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
  * Calendar stay night (check-in / check-out label), aligned with reception desk and bed-night overlap.
  * Uses the YYYY-MM-DD prefix of the stored timestamp — not the guest browser's local instant.
  *
- * The time portion of check_in_at (from tenant checkInTime + "Z" suffix) is for access instants only;
- * it is not the hostel's IANA timezone (property TZ is not in settings v1).
+ * The time portion of check_in_at pairs with tenant checkInTime and propertyTimeZone for guest access gates;
+ * calendar night labels still use the YYYY-MM-DD prefix (reception desk v1).
  */
 export function stayCalendarDay(isoTimestamp: string | null | undefined): string | null {
   const trimmed = isoTimestamp?.trim();

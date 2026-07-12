@@ -61,6 +61,9 @@ export function mergeTenantSettingsWithPrevious(
   if (!formData.has('operationalDayStartTime')) {
     merged.operationalDayStartTime = previous.operationalDayStartTime;
   }
+  if (!formData.has('propertyTimeZone')) {
+    merged.propertyTimeZone = previous.propertyTimeZone;
+  }
 
   if (!formData.has('wifiName')) {
     merged.wifi = previous.wifi;

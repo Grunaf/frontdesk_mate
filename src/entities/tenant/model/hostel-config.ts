@@ -10,6 +10,7 @@ export interface HostelContactLink {
 export interface HostelConfig {
   checkInTime?: string;
   checkOutTime?: string;
+  propertyTimeZone?: string;
   cityTax?: string;
   selfCheckInTimeAfter?: string;
   laundryCost?: string;
