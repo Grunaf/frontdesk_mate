@@ -7,7 +7,10 @@ import {
 } from '../../src/entities/guest-stay/lib/accessToken';
 import { guestAccessBedNightsOverlap } from '../../src/entities/guest-stay/lib/guestAccessIntervals';
 import { generateGuestPin, hashGuestPin } from '../../src/entities/guest-stay/lib/guestPin';
-import { formatPropertyLocalCheckInIso } from '../../src/entities/guest-stay';
+import {
+  formatPropertyLocalCheckInIso,
+  listGuestStayBedIds,
+} from '../../src/entities/guest-stay';
 import type { SmokeSessionRuntime } from './smokeRuntime';
 
 export const E2E_SMOKE_GUEST_NAME = '__e2e_smoke__';

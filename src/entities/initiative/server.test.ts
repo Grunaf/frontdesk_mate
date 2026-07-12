@@ -50,11 +50,11 @@ describe('initiative server', () => {
   });
 
   it('resets stale after review and gets stale again on new change', async () => {
-    const trackedPath = `tmp/non-existent-${Date.now()}`;
+    const trackedFile = await createTrackedFile('freshness.ts');
     const created = await createInitiative({
       title: `qa-freshness-${Date.now()}`,
       summary: 'validate stale transitions',
-      trackedPaths: [trackedPath],
+      trackedPaths: [trackedFile],
       status: 'in_progress',
       priority: 'P1',
     });
@@ -63,14 +63,12 @@ describe('initiative server', () => {
     const reviewed = await markInitiativeReviewed(created.item.id);
     expect(reviewed.isStale).toBe(false);
 
-    // Simulate new tracked-path changes after review by shifting review timestamp backward.
-    const reviewInPast = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
-    const updatedAfterChange = await updateInitiative(created.item.id, {
-      lastReviewedAt: reviewInPast,
-      trackedPaths: ['src/entities/initiative/model/stale.ts'],
-    });
-    expect(updatedAfterChange.item.isStale).toBe(true);
-    expect(updatedAfterChange.item.staleReason.some((reason) => reason.includes('Tracked paths changed'))).toBe(
+    // Simulate code churn after review via file mtime (stale uses mtime > lastReviewedAt).
+    const afterReview = new Date(Date.now() + 60_000);
+    await utimes(trackedFile, afterReview, afterReview);
+    const updatedAfterChange = await getInitiative(created.item.id);
+    expect(updatedAfterChange?.isStale).toBe(true);
+    expect(updatedAfterChange?.staleReason.some((reason) => reason.includes('Tracked paths changed'))).toBe(
       true
     );
   });

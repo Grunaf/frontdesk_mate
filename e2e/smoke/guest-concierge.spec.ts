@@ -51,7 +51,9 @@ test.describe('guest concierge stay chip', () => {
     await expect(strip).toBeVisible();
     const wifiBridge = page.getByTestId('stay-bridge-wifi');
     await wifiBridge.scrollIntoViewIfNeeded();
+    await expect(wifiBridge).toBeEnabled();
     await wifiBridge.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.getByText(/Network|Сеть/i)).toBeVisible();
     await expect(strip).toBeHidden();
   });
@@ -80,25 +82,22 @@ test.describe('guest concierge stay chip', () => {
     ).toBeVisible();
   });
 
-  // Fresh e2e provisioned stays have incomplete contact (and tourism when enabled on E2E_TENANT_SLUG).
-  test('pre-check-in registration banner navigates to registration', async ({ page }) => {
-    const banner = page.getByTestId('stay-banner-registration');
-    const settlementBanner = page.getByTestId('stay-banner-settlement');
+  // Default provision uses check-in = today → settlement banner (not pre-check-in registration).
+  // Incomplete contact/tourism still routes settlement CTA into stay-setup registration step.
+  test('check-in day settlement banner opens stay-setup registration', async ({ page }) => {
+    const banner = page.getByTestId('stay-banner-settlement');
+    const registrationBanner = page.getByTestId('stay-banner-registration');
     await banner.scrollIntoViewIfNeeded();
     await expect(banner).toBeVisible({ timeout: config.navTimeoutMs });
-    await expect(settlementBanner).toHaveCount(0);
+    await expect(registrationBanner).toHaveCount(0);
     await expect(page.getByTestId('stay-bridge-staySetup')).toHaveCount(0);
 
     await banner.click();
-    await expect(page).toHaveURL(/\/registration(?:\?|$)/, {
+    await expect(page).toHaveURL(/\/stay-setup\?.*step=registration/, {
       timeout: config.navTimeoutMs,
     });
-    await expect(
-      page.getByRole('heading', {
-        level: 1,
-        name: /Guest registration|Tourist registration|Туристическая регистрация|Регистрация гост/i,
-      })
-    ).toBeVisible();
+    await expect(page.getByLabel('Stay setup steps')).toBeVisible();
+    await expect(page.getByText(/Guest registration|Туристическая регистрация|Регистрация гост/i).first()).toBeVisible();
   });
 
   test('hides stay chip on arrival guide', async ({ page }) => {

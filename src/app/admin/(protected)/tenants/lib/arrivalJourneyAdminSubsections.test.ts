@@ -11,13 +11,15 @@ describe('arrivalJourneyAdminSubsections', () => {
   it('normalizes known module ids and rejects unknown', () => {
     expect(normalizeArrivalJourneyAdminModuleId('find-building')).toBe('find-building');
     expect(normalizeArrivalJourneyAdminModuleId('last-mile')).toBe('last-mile');
+    expect(normalizeArrivalJourneyAdminModuleId('building-access')).toBe('building-access');
+    expect(normalizeArrivalJourneyAdminModuleId('hub-transfer')).toBe('hub-transfer');
     expect(normalizeArrivalJourneyAdminModuleId('reception-desk')).toBeNull();
     expect(normalizeArrivalJourneyAdminModuleId('foo')).toBeNull();
     expect(normalizeArrivalJourneyAdminModuleId(null)).toBeNull();
   });
 
   it('covers all module definitions', () => {
-    expect(ARRIVAL_JOURNEY_ADMIN_MODULE_IDS).toHaveLength(3);
+    expect(ARRIVAL_JOURNEY_ADMIN_MODULE_IDS).toHaveLength(4);
   });
 
   it('flags find-building preview when address missing', () => {

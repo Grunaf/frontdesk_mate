@@ -3,7 +3,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { ConciergeBell, LogOut, MessageCircle, Moon, Wifi } from 'lucide-react';
 import { useTranslations } from '@/shared/i18n';
-import { useActionFeedback, Icon, PressableTileButton } from '@/shared/ui';
+import { Icon, PressableTileButton } from '@/shared/ui';
 import { resolveStayEssentialBridgeTint } from '../lib/resolveStayEssentialBridgeTint';
 import type { StayEssentialBridgeId } from '../model/types';
 import { stayEssentialsTileClassName } from './stayEssentialsTileClassName';
@@ -24,7 +24,6 @@ interface StayEssentialsBridgeCardProps {
 
 export function StayEssentialsBridgeCard({ bridgeId, isRead, onOpen }: StayEssentialsBridgeCardProps) {
   const t = useTranslations('components.stayEssentials');
-  const { pending, run } = useActionFeedback();
   const accentColor = resolveStayEssentialBridgeTint(bridgeId);
   const { className, style } = stayEssentialsTileClassName({ isRead, accentColor });
   const title = t(`bridges.${bridgeId}`);
@@ -34,8 +33,7 @@ export function StayEssentialsBridgeCard({ bridgeId, isRead, onOpen }: StayEssen
 
   return (
     <PressableTileButton
-      pending={pending}
-      onClick={() => run(onOpen)}
+      onClick={onOpen}
       className={className}
       style={style}
       aria-label={ariaLabel}
