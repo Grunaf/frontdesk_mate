@@ -7,7 +7,12 @@ import {
 
 function createHostel(overrides: Partial<HostelConfig> = {}): HostelConfig {
   return {
-    booking: { mode: 'disabled' },
+    booking: {
+      provider: 'none',
+      enabled: false,
+      propertyUrl: null,
+      paramKeys: { checkIn: 'checkin', checkOut: 'checkout', guests: 'guests', roomType: 'room' },
+    },
     reception: {
       time: {},
       whatsapp: { href: '' },

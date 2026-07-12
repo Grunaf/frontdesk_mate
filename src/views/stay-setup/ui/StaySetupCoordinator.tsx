@@ -192,7 +192,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       isRegistered,
       tourismRegistrationRequired,
       completion,
-      checkInStarted,
+      checkInDayOrLater: checkInStarted,
       registrationComplete,
       contactComplete,
       currentStep,
