@@ -37,11 +37,6 @@ export interface InitiativeListInput {
   offset?: number;
 }
 
-export interface InitiativeListOutput {
-  items: Initiative[];
-  total: number;
-}
-
 export interface CreateInitiativeInput {
   title: string;
   status?: InitiativeStatus;
@@ -84,6 +79,11 @@ export interface InitiativeStaleSnapshot {
 }
 
 export interface InitiativeListItem extends Initiative, InitiativeStaleSnapshot {}
+
+export interface InitiativeListOutput {
+  items: InitiativeListItem[];
+  total: number;
+}
 
 export type InitiativeErrorCode =
   | 'validation_error'
