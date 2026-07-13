@@ -1,10 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getTenantRecord, resolveTenantSlug } from '@/entities/tenant/server';
 import { isReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
-import { listActiveGuestStays } from '@/entities/guest-stay/server';
-import { listGuestIssues } from '@/entities/guest-issue/server';
-import { listGuestHubTransfers } from '@/entities/guest-hub-transfer/server';
 import { ReceptionCheckInPanel } from '@/features/guest-registration';
+import { buildReceptionOperationalContext } from '@/features/reception-sync/server';
 import { ReceptionUnknownHostelContent } from '@/views/reception/ui/ReceptionUnknownHostelContent';
 
 export default async function ReceptionDeskPage() {
@@ -30,18 +28,14 @@ export default async function ReceptionDeskPage() {
     return <ReceptionUnknownHostelContent />;
   }
 
-  const stays = await listActiveGuestStays(tenantSlug);
-  const openIssues = await listGuestIssues(tenantSlug, 'open');
-  const openTransfers = await listGuestHubTransfers(tenantSlug, 'open');
+  const initialContext = await buildReceptionOperationalContext(tenantSlug);
 
   return (
     <ReceptionCheckInPanel
       tenantSlug={tenantSlug}
       tenantName={tenant.name}
       settings={tenant.settings}
-      initialStays={stays}
-      initialOpenIssues={openIssues}
-      initialOpenTransfers={openTransfers}
+      initialContext={initialContext}
     />
   );
 }

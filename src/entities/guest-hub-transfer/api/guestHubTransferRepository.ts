@@ -133,7 +133,16 @@ export async function createGuestHubTransfer(
     return { ok: false, error: 'db_unavailable' };
   }
 
-  return { ok: true, transfer: mapRow(data as Record<string, unknown>) };
+  const transfer = mapRow(data as Record<string, unknown>);
+
+  void import('@/entities/reception-push/lib/receptionPushNotifications').then(({ notifyReceptionHubTransfer }) =>
+    notifyReceptionHubTransfer({
+      tenantSlug: input.tenantSlug,
+      transfer,
+    })
+  );
+
+  return { ok: true, transfer };
 }
 
 export async function listGuestHubTransfers(

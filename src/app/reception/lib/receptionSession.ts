@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { cookies } from 'next/headers';
+import type { NextRequest } from 'next/server';
 
 const COOKIE_NAME = 'fdm_reception_session';
 const SESSION_MAX_AGE_SEC = 60 * 60 * 12;
@@ -72,6 +73,10 @@ export async function assertReceptionAuthenticated(expectedTenantSlug: string): 
 export async function readReceptionSessionFromCookies(): Promise<ReceptionSessionPayload | null> {
   const cookieStore = await cookies();
   return parseSignedValue(cookieStore.get(COOKIE_NAME)?.value);
+}
+
+export function readReceptionSessionFromRequest(request: NextRequest): ReceptionSessionPayload | null {
+  return parseSignedValue(request.cookies.get(COOKIE_NAME)?.value);
 }
 
 export function getReceptionSessionCookieOptions(): {

@@ -104,7 +104,17 @@ export async function createGuestIssue(input: CreateGuestIssueInput): Promise<Cr
     return { ok: false, error: 'db_unavailable' };
   }
 
-  return { ok: true, issue: mapRow(data as Record<string, unknown>) };
+  const issue = mapRow(data as Record<string, unknown>);
+
+  void import('@/entities/reception-push/lib/receptionPushNotifications').then(({ notifyReceptionGuestIssue }) =>
+    notifyReceptionGuestIssue({
+      tenantSlug: input.tenantSlug,
+      category: input.category,
+      guestName: issue.guest_name,
+    })
+  );
+
+  return { ok: true, issue };
 }
 
 export async function listGuestIssues(

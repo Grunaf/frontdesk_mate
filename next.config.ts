@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
     '*.reception.localhost',
     '*.localhost',
   ],
+  async headers() {
+    return [
+      {
+        source: '/reception-sw.js',
+        headers: [{ key: 'Service-Worker-Allowed', value: '/' }],
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

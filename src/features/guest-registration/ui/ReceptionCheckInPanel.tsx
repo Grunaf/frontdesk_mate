@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
-import type { GuestIssueRecord } from '@/entities/guest-issue';
-import type { GuestHubTransferRecord } from '@/entities/guest-hub-transfer';
 import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
@@ -59,14 +58,14 @@ import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from '@/shared/ui';
+import { ReceptionPushOptIn } from '@/features/reception-pwa';
+import type { ReceptionOperationalContext } from '@/features/reception-sync';
 
 interface ReceptionCheckInPanelProps {
   tenantSlug: string;
   tenantName: string;
   settings?: TenantSettings;
-  initialStays: GuestStayRecordWithLink[];
-  initialOpenIssues: GuestIssueRecord[];
-  initialOpenTransfers: GuestHubTransferRecord[];
+  initialContext: ReceptionOperationalContext;
 }
 
 interface EditReservationDraft {
@@ -95,9 +94,7 @@ export function ReceptionCheckInPanel({
   tenantSlug,
   tenantName,
   settings,
-  initialStays,
-  initialOpenIssues,
-  initialOpenTransfers,
+  initialContext,
 }: ReceptionCheckInPanelProps) {
   const bedOptions = useMemo(() => listGuestStayBedIds(settings ?? {}), [settings]);
   const tenantSettings = settings ?? {};
@@ -112,11 +109,28 @@ export function ReceptionCheckInPanel({
   const propertyTimeZone = settings?.propertyTimeZone;
   const walkInDefaults = defaultWalkInDates();
 
-  const [stays, setStays] = useState(initialStays);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (
+      tab === 'desk' ||
+      tab === 'plan' ||
+      tab === 'access' ||
+      tab === 'issues' ||
+      tab === 'transfers'
+    ) {
+      setDeskTab(tab);
+    }
+  }, [searchParams]);
+
+  const [generatedAt, setGeneratedAt] = useState(initialContext.generatedAt);
+  const [operational, setOperational] = useState(initialContext.operational);
+  const [stays, setStays] = useState(initialContext.stays);
   const [issueOverlayOpen, setIssueOverlayOpen] = useState(false);
   const [deskTab, setDeskTab] = useState<DeskTab>('desk');
-  const [openIssueCount, setOpenIssueCount] = useState(initialOpenIssues.length);
-  const [openTransferCount, setOpenTransferCount] = useState(initialOpenTransfers.length);
+  const [openIssueCount, setOpenIssueCount] = useState(initialContext.openIssues.length);
+  const [openTransferCount, setOpenTransferCount] = useState(initialContext.openTransfers.length);
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
   const [bookingPlatformId, setBookingPlatformId] = useState('');
@@ -581,6 +595,8 @@ export function ReceptionCheckInPanel({
         </div>
       </header>
 
+      <ReceptionPushOptIn tenantSlug={tenantSlug} />
+
       <ReceptionIssueAccessFab
         visible={!(issueOverlayOpen || editDraft !== null)}
         onPress={() => setIssueOverlayOpen(true)}
@@ -742,7 +758,7 @@ export function ReceptionCheckInPanel({
             <TabsContent value="issues">
               <IssuesList
                 tenantSlug={tenantSlug}
-                initialIssues={initialOpenIssues}
+                initialIssues={initialContext.openIssues}
                 onFocusStay={openStayDetail}
                 isActive={deskTab === 'issues'}
                 onOpenCountChange={setOpenIssueCount}
@@ -752,7 +768,7 @@ export function ReceptionCheckInPanel({
             <TabsContent value="transfers">
               <ReceptionTransfersTab
                 tenantSlug={tenantSlug}
-                initialTransfers={initialOpenTransfers}
+                initialTransfers={initialContext.openTransfers}
                 resolveBedLabel={resolveBedLabel}
                 onFocusStay={openStayDetail}
                 isActive={deskTab === 'transfers'}
