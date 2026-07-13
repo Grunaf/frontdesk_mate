@@ -4,6 +4,7 @@ export { insertReceptionAuditEvent } from './server/insertReceptionAuditEvent';
 export {
   listReceptionAuditEvents,
   type ListReceptionAuditEventsOptions,
+  type ReceptionAuditEventListRow,
 } from './server/listReceptionAuditEvents';
 export type {
   InsertReceptionAuditEventInput,

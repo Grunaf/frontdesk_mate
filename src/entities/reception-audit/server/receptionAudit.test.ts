@@ -80,7 +80,7 @@ describe('listReceptionAuditEvents', () => {
   });
 
   it('maps rows and returns newest-first list', async () => {
-    const limit = vi.fn().mockResolvedValue({
+    const eventsLimit = vi.fn().mockResolvedValue({
       data: [
         {
           id: 'evt-1',
@@ -103,24 +103,39 @@ describe('listReceptionAuditEvents', () => {
       ],
       error: null,
     });
-    const order = vi.fn(() => ({ limit }));
-    const eq = vi.fn(() => ({ order }));
-    const select = vi.fn(() => ({ eq }));
+    const eventsOrder = vi.fn(() => ({ limit: eventsLimit }));
+    const eventsEq = vi.fn(() => ({ order: eventsOrder }));
+    const eventsSelect = vi.fn(() => ({ eq: eventsEq }));
+
+    const actorsIn = vi.fn().mockResolvedValue({
+      data: [{ id: 'user-1', login: 'anna', display_name: 'Anna Desk' }],
+      error: null,
+    });
+    const actorsSelect = vi.fn(() => ({ in: actorsIn }));
+
     vi.mocked(getSupabaseAdmin).mockReturnValue({
-      from: vi.fn(() => ({ select })),
+      from: vi.fn((table: string) => {
+        if (table === 'reception_users') {
+          return { select: actorsSelect };
+        }
+        return { select: eventsSelect };
+      }),
     } as never);
 
     const result = await listReceptionAuditEvents('tenant-1', { limit: 10 });
 
-    expect(eq).toHaveBeenCalledWith('tenant_id', 'tenant-1');
-    expect(order).toHaveBeenCalledWith('created_at', { ascending: false });
-    expect(limit).toHaveBeenCalledWith(10);
+    expect(eventsEq).toHaveBeenCalledWith('tenant_id', 'tenant-1');
+    expect(eventsOrder).toHaveBeenCalledWith('created_at', { ascending: false });
+    expect(eventsLimit).toHaveBeenCalledWith(10);
+    expect(actorsIn).toHaveBeenCalledWith('id', ['user-1']);
     expect(result.error).toBeNull();
     expect(result.events).toEqual([
       {
         id: 'evt-1',
         createdAt: '2026-07-13T10:00:00.000Z',
         actorReceptionUserId: 'user-1',
+        actorLogin: 'anna',
+        actorDisplayName: 'Anna Desk',
         eventType: 'guest_stay_created',
         subjectType: 'guest_stay',
         subjectId: 'stay-1',

@@ -16,6 +16,11 @@ export type ListReceptionAuditEventsOptions = {
   limit?: number;
 };
 
+export type ReceptionAuditEventListRow = ReceptionAuditEventRow & {
+  actorLogin: string | null;
+  actorDisplayName: string | null;
+};
+
 type DbRow = {
   id: string;
   created_at: string;
@@ -24,6 +29,12 @@ type DbRow = {
   subject_type: string | null;
   subject_id: string | null;
   flags: ReceptionAuditEventFlags | null;
+};
+
+type ActorDbRow = {
+  id: string;
+  login: string;
+  display_name: string;
 };
 
 function resolveLimit(limit: number | undefined): number {
@@ -54,11 +65,39 @@ function mapRow(row: DbRow): ReceptionAuditEventRow | null {
   };
 }
 
+async function loadActorLookup(
+  admin: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
+  actorIds: string[]
+): Promise<Map<string, { login: string; displayName: string }>> {
+  const uniqueIds = [...new Set(actorIds.filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await admin
+    .from('reception_users')
+    .select('id, login, display_name')
+    .in('id', uniqueIds);
+
+  if (error || !data) {
+    return new Map();
+  }
+
+  const lookup = new Map<string, { login: string; displayName: string }>();
+  for (const row of data as ActorDbRow[]) {
+    lookup.set(row.id, {
+      login: String(row.login),
+      displayName: String(row.display_name),
+    });
+  }
+  return lookup;
+}
+
 export async function listReceptionAuditEvents(
   tenantId: string,
   options: ListReceptionAuditEventsOptions = {}
 ): Promise<{
-  events: ReceptionAuditEventRow[];
+  events: ReceptionAuditEventListRow[];
   error: string | null;
 }> {
   const admin = getSupabaseAdmin();
@@ -79,9 +118,27 @@ export async function listReceptionAuditEvents(
     return { events: [], error: error.message };
   }
 
-  const events = ((data ?? []) as DbRow[])
+  const baseEvents = ((data ?? []) as DbRow[])
     .map(mapRow)
     .filter((row): row is ReceptionAuditEventRow => row != null);
+
+  const actorLookup = await loadActorLookup(
+    admin,
+    baseEvents
+      .map((event) => event.actorReceptionUserId)
+      .filter((id): id is string => id != null)
+  );
+
+  const events: ReceptionAuditEventListRow[] = baseEvents.map((event) => {
+    const actor = event.actorReceptionUserId
+      ? actorLookup.get(event.actorReceptionUserId)
+      : undefined;
+    return {
+      ...event,
+      actorLogin: actor?.login ?? null,
+      actorDisplayName: actor?.displayName ?? null,
+    };
+  });
 
   return { events, error: null };
 }
