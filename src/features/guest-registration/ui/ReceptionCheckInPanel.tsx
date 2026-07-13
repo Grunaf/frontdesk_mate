@@ -62,6 +62,8 @@ import type { ReceptionOperationalContext } from '@/features/reception-sync';
 import {
   useReceptionOperationalRollover,
   useReceptionOperationalSync,
+  useReceptionOperationalPolling,
+  subscribeReceptionRefresh,
 } from '@/features/reception-sync';
 
 interface ReceptionCheckInPanelProps {
@@ -130,6 +132,14 @@ export function ReceptionCheckInPanel({
   const { context, refresh } = useReceptionOperationalSync(initialContext, tenantSlug);
   const { stays, openIssues, openTransfers, operational } = context;
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
+
+  useEffect(() => {
+    return subscribeReceptionRefresh(() => {
+      void refresh();
+    });
+  }, [refresh]);
+
+  useReceptionOperationalPolling(refresh);
 
   const { rolloverEpoch } = useReceptionOperationalRollover(operational.endsAt, refresh, {
     onRollover: () => setOperationalDayUpdatedNotice(true),

@@ -10,7 +10,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  const fallback = { title: 'Reception', body: 'New update', url: '/', tag: 'reception' };
+  const fallback = { title: 'Reception', body: 'New update', url: '/', tag: 'reception', refresh: 'context' };
   let payload = fallback;
 
   if (event.data) {
@@ -21,6 +21,7 @@ self.addEventListener('push', (event) => {
         body: typeof parsed.body === 'string' ? parsed.body : fallback.body,
         url: typeof parsed.url === 'string' ? parsed.url : fallback.url,
         tag: typeof parsed.tag === 'string' ? parsed.tag : fallback.tag,
+        refresh: parsed.refresh === 'context' || parsed.refresh == null ? 'context' : parsed.refresh,
       };
     } catch {
       payload = { ...fallback, body: event.data.text() || fallback.body };
@@ -28,13 +29,21 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: '/icons/reception-192.png',
-      badge: '/icons/reception-192.png',
-      tag: payload.tag,
-      data: { url: payload.url },
-    })
+    (async () => {
+      await self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: '/icons/reception-192.png',
+        badge: '/icons/reception-192.png',
+        tag: payload.tag,
+        data: { url: payload.url },
+      });
+
+      const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const refresh = payload.refresh ?? 'context';
+      for (const client of windowClients) {
+        client.postMessage({ type: 'reception:refresh', refresh });
+      }
+    })()
   );
 });
 

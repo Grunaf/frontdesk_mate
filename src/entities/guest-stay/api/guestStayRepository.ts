@@ -345,6 +345,20 @@ export async function createGuestStay(
   }
 
   const magicLinkUrl = buildGuestMagicLinkUrl(tenant.slug, locale, grantResult.accessToken);
+
+  const stayKind = bookingFields.platformId ? 'reservation' : 'walk-in';
+  void import('@/entities/reception-push/lib/receptionPushMessages').then(({ buildGuestStayPushPayload }) =>
+    import('@/entities/reception-push/server').then(({ notifyReceptionDesk }) =>
+      notifyReceptionDesk({
+        tenantSlug: tenant.slug,
+        payload: buildGuestStayPushPayload({
+          guestName: input.guestName?.trim() || stay.guest_name,
+          kind: stayKind,
+        }),
+      })
+    )
+  );
+
   return { ok: true, stay, accessToken: grantResult.accessToken, magicLinkUrl, guestPin: grantResult.guestPin };
 }
 

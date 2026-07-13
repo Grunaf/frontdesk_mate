@@ -22,6 +22,22 @@ export function buildGuestIssuePushPayload(input: {
     body: `${categoryLabel} — ${guest}`,
     url: '/?tab=issues',
     tag: 'reception-guest-issue',
+    refresh: 'context',
+  };
+}
+
+export function buildGuestStayPushPayload(input: {
+  guestName: string | null;
+  kind: 'reservation' | 'walk-in';
+}): ReceptionPushPayload {
+  const guest = input.guestName?.trim() || 'Guest';
+  const title = input.kind === 'walk-in' ? 'Walk-in' : 'New reservation';
+  return {
+    title,
+    body: guest,
+    url: '/?tab=desk',
+    tag: 'reception-stay',
+    refresh: 'context',
   };
 }
 
@@ -33,5 +49,6 @@ export function buildGuestHubTransferPushPayload(transfer: GuestHubTransferRecor
     body: `${guest} · ${transfer.direction} · ${when}`,
     url: '/?tab=transfers',
     tag: 'reception-hub-transfer',
+    refresh: 'context',
   };
 }

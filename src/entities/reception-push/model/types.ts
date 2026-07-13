@@ -14,6 +14,8 @@ export interface ReceptionPushPayload {
   body: string;
   url: string;
   tag: string;
+  /** When set (default `context`), open clients should pull full ROC. */
+  refresh?: 'context';
 }
 
 export interface ReceptionPushSubscriptionRecord {
