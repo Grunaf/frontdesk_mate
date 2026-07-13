@@ -5,12 +5,32 @@ import {
   type PinRateLimitScope,
 } from './config';
 
-function failKey(scope: PinRateLimitScope, tenantSlug: string, clientIp: string): string {
-  return `fdm:pin-fail:${scope}:${tenantSlug}:${clientIp}`;
+function normalizeRateLimitSubject(subject: string | undefined): string | undefined {
+  const trimmed = subject?.trim();
+  if (!trimmed) return undefined;
+  return trimmed.toLowerCase();
 }
 
-function blockKey(scope: PinRateLimitScope, tenantSlug: string, clientIp: string): string {
-  return `fdm:pin-block:${scope}:${tenantSlug}:${clientIp}`;
+function rateLimitIdentity(clientIp: string, subject?: string): string {
+  return normalizeRateLimitSubject(subject) ?? clientIp;
+}
+
+function failKey(
+  scope: PinRateLimitScope,
+  tenantSlug: string,
+  clientIp: string,
+  subject?: string
+): string {
+  return `fdm:pin-fail:${scope}:${tenantSlug}:${rateLimitIdentity(clientIp, subject)}`;
+}
+
+function blockKey(
+  scope: PinRateLimitScope,
+  tenantSlug: string,
+  clientIp: string,
+  subject?: string
+): string {
+  return `fdm:pin-block:${scope}:${tenantSlug}:${rateLimitIdentity(clientIp, subject)}`;
 }
 
 type MemoryEntry = {
@@ -111,8 +131,15 @@ export async function isPinAttemptRateLimited(input: {
   scope: PinRateLimitScope;
   tenantSlug: string;
   clientIp: string;
+  /** Staff login: rate limit per tenant + login instead of client IP. */
+  rateLimitSubject?: string;
 }): Promise<boolean> {
-  const blockStoreKey = blockKey(input.scope, input.tenantSlug, input.clientIp);
+  const blockStoreKey = blockKey(
+    input.scope,
+    input.tenantSlug,
+    input.clientIp,
+    input.rateLimitSubject
+  );
 
   if (isUpstashConfigured()) {
     const blocked = await isBlockedUpstash(blockStoreKey);
@@ -126,9 +153,20 @@ export async function recordPinAttemptFailure(input: {
   scope: PinRateLimitScope;
   tenantSlug: string;
   clientIp: string;
+  rateLimitSubject?: string;
 }): Promise<void> {
-  const failStoreKey = failKey(input.scope, input.tenantSlug, input.clientIp);
-  const blockStoreKey = blockKey(input.scope, input.tenantSlug, input.clientIp);
+  const failStoreKey = failKey(
+    input.scope,
+    input.tenantSlug,
+    input.clientIp,
+    input.rateLimitSubject
+  );
+  const blockStoreKey = blockKey(
+    input.scope,
+    input.tenantSlug,
+    input.clientIp,
+    input.rateLimitSubject
+  );
 
   if (isUpstashConfigured()) {
     await recordFailureUpstash(

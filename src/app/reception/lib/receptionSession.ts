@@ -11,6 +11,7 @@ export const RECEPTION_SESSION_MAX_AGE_SEC = SESSION_MAX_AGE_SEC;
 export interface ReceptionSessionPayload {
   tenantSlug: string;
   exp: number;
+  receptionUserId?: string;
 }
 
 function readReceptionSessionSecret(): string | undefined {
@@ -21,13 +22,20 @@ function readReceptionSessionSecret(): string | undefined {
   );
 }
 
+function sessionBody(payload: ReceptionSessionPayload): string {
+  if (payload.receptionUserId) {
+    return `${payload.tenantSlug}.${payload.exp}.${payload.receptionUserId}`;
+  }
+  return `${payload.tenantSlug}.${payload.exp}`;
+}
+
 function signPayload(payload: ReceptionSessionPayload): string {
   const secret = readReceptionSessionSecret();
   if (!secret) {
     throw new Error('RECEPTION_SESSION_SECRET or ADMIN_SECRET is not configured');
   }
 
-  const body = `${payload.tenantSlug}.${payload.exp}`;
+  const body = sessionBody(payload);
   const signature = createHmac('sha256', secret).update(body).digest('hex');
   return `${body}.${signature}`;
 }
@@ -37,15 +45,26 @@ function parseSignedValue(token: string | undefined): ReceptionSessionPayload | 
   if (!secret || !token) return null;
 
   const parts = token.split('.');
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3 && parts.length !== 4) return null;
 
-  const [tenantSlug, expRaw, signature] = parts;
-  if (!tenantSlug || !expRaw || !signature) return null;
-
-  const exp = Number(expRaw);
+  const exp = Number(parts[1]);
   if (!Number.isFinite(exp) || Date.now() > exp) return null;
 
-  const body = `${tenantSlug}.${exp}`;
+  const tenantSlug = parts[0];
+  const signature = parts[parts.length - 1];
+  if (!tenantSlug || !signature) return null;
+
+  let receptionUserId: string | undefined;
+  let body: string;
+
+  if (parts.length === 3) {
+    body = `${tenantSlug}.${exp}`;
+  } else {
+    receptionUserId = parts[2];
+    if (!receptionUserId) return null;
+    body = `${tenantSlug}.${exp}.${receptionUserId}`;
+  }
+
   const expected = createHmac('sha256', secret).update(body).digest('hex');
 
   try {
@@ -56,7 +75,7 @@ function parseSignedValue(token: string | undefined): ReceptionSessionPayload | 
     return null;
   }
 
-  return { tenantSlug, exp };
+  return receptionUserId ? { tenantSlug, exp, receptionUserId } : { tenantSlug, exp };
 }
 
 export async function isReceptionAuthenticated(expectedTenantSlug: string): Promise<boolean> {
@@ -95,15 +114,29 @@ export function getReceptionSessionCookieOptions(): {
   };
 }
 
-export function buildReceptionSessionCookieValue(tenantSlug: string): string {
+export function buildReceptionSessionCookieValue(
+  tenantSlug: string,
+  receptionUserId?: string
+): string {
   const exp = Date.now() + SESSION_MAX_AGE_SEC * 1000;
-  return signPayload({ tenantSlug, exp });
+  const payload: ReceptionSessionPayload = { tenantSlug, exp };
+  if (receptionUserId) {
+    payload.receptionUserId = receptionUserId;
+  }
+  return signPayload(payload);
 }
 
-export async function setReceptionSession(tenantSlug: string): Promise<void> {
+export async function setReceptionSession(
+  tenantSlug: string,
+  receptionUserId?: string
+): Promise<void> {
   const cookieStore = await cookies();
 
-  cookieStore.set(COOKIE_NAME, buildReceptionSessionCookieValue(tenantSlug), getReceptionSessionCookieOptions());
+  cookieStore.set(
+    COOKIE_NAME,
+    buildReceptionSessionCookieValue(tenantSlug, receptionUserId),
+    getReceptionSessionCookieOptions()
+  );
 }
 
 export async function clearReceptionSession(): Promise<void> {

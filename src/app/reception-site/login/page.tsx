@@ -35,13 +35,15 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
 
   const pinConfigured = isDeskPinConfigured(tenant.settings.reception?.deskPinHash);
   const secretConfigured = isReceptionSessionSecretConfigured();
-  const formDisabled = !secretConfigured || !pinConfigured;
+  const formDisabled = !secretConfigured;
 
   return (
     <div className="mx-auto max-w-sm space-y-6 pt-8">
       <div className="space-y-1 text-center">
         <h2 className="text-xl font-semibold">{tenant.name}</h2>
-        <p className="text-sm text-muted-foreground">Enter your reception desk PIN.</p>
+        <p className="text-sm text-muted-foreground">
+          Sign in with your staff login and PIN. Leave login blank to use the shared desk PIN.
+        </p>
       </div>
 
       {!secretConfigured && (
@@ -53,13 +55,26 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
 
       {!pinConfigured && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Reception desk PIN is not configured yet. Set it in SaaS admin → Contacts & reception.
+          Shared desk PIN is not configured. Staff can still sign in with a personal login if one was
+          set up in SaaS admin.
+        </p>
+      )}
+
+      {error === 'invalid_credentials' && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          Wrong login or PIN. Try again.
+        </p>
+      )}
+
+      {error === 'user_disabled' && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          This staff account is disabled. Contact your manager.
         </p>
       )}
 
       {error === 'invalid_pin' && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-          Wrong PIN. Try again.
+          Wrong desk PIN. Try again.
         </p>
       )}
 
@@ -71,7 +86,8 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
 
       {error === 'pin_not_configured' && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-          Desk PIN is not set for this hostel.
+          Desk PIN is not set for this hostel. Enter a staff login or ask an admin to configure the
+          desk PIN.
         </p>
       )}
 
@@ -87,12 +103,23 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
         className="space-y-4 rounded-xl border bg-background p-6"
       >
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Desk PIN</span>
+          <span className="text-sm font-medium">Login</span>
+          <input
+            name="login"
+            type="text"
+            autoComplete="username"
+            disabled={formDisabled}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Optional for desk PIN"
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium">PIN</span>
           <input
             name="pin"
             type="password"
             inputMode="numeric"
-            autoComplete="one-time-code"
+            autoComplete="current-password"
             required
             disabled={formDisabled}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
