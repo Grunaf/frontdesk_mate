@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cache } from 'react';
 import { headers } from 'next/headers';
 import { supabase } from '@/shared/lib/db';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
@@ -218,7 +219,9 @@ async function enrichTenantConfig(config: TenantConfig): Promise<TenantConfig> {
   });
 }
 
-export async function getTenantRecord(slug: string): Promise<TenantRecord | null> {
+export const getTenantRecord = cache(async function getTenantRecord(
+  slug: string
+): Promise<TenantRecord | null> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
     return null;
   }
@@ -237,7 +240,7 @@ export async function getTenantRecord(slug: string): Promise<TenantRecord | null
   }
 
   return (data as TenantRecord | null) ?? null;
-}
+});
 
 export async function getTenantConfig(slug?: string): Promise<TenantConfig | null> {
   const resolvedSlug = slug ?? (await resolveTenantSlug());
