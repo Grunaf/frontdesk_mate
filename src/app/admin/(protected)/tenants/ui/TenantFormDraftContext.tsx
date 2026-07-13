@@ -45,7 +45,7 @@ export interface TenantFormDraft {
   operationalDayStartTime?: string;
   wifi?: TenantSettings['wifi'];
   contacts?: TenantSettings['contacts'];
-  reception?: Omit<NonNullable<TenantSettings['reception']>, 'deskPinHash'>;
+  reception?: TenantSettings['reception'];
   booking?: TenantBookingSettings;
   arrivalAccess?: ArrivalAccessConfig;
   receptionBooking?: TenantSettings['receptionBooking'];

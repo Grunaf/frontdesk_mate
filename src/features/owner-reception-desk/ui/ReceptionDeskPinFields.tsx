@@ -2,108 +2,56 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { isDeskPinConfigured } from '@/app/reception/lib/deskPin';
-import { AdminField, adminFieldWidthClass } from '@/app/admin/(protected)/tenants/ui/AdminField';
 import { getTenantPublicUrl } from '@/shared/config';
-import { cn } from '@/shared/lib/utils';
-import { ReceptionStaffManagement } from '@/features/reception-staff-management';
 
-export type ReceptionDeskPinSurface = 'platform' | 'owner';
+export type ReceptionDeskAccessSurface = 'platform' | 'owner';
 
-interface ReceptionDeskPinFieldsProps {
-  surface?: ReceptionDeskPinSurface;
+interface ReceptionDeskAccessFieldsProps {
+  surface?: ReceptionDeskAccessSurface;
   tenantSlug: string;
   locale?: string;
-  deskPinHash?: string;
   disabled?: boolean;
 }
 
-function PinStatusBadge({ configured, labels }: { configured: boolean; labels: { set: string; notSet: string } }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium',
-        configured
-          ? 'bg-green-100 text-green-900 dark:bg-green-950/50 dark:text-green-200'
-          : 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
-      )}
-    >
-      {configured ? labels.set : labels.notSet}
-    </span>
-  );
-}
+/** @deprecated Use ReceptionDeskAccessFields */
+export type ReceptionDeskPinSurface = ReceptionDeskAccessSurface;
 
-export function ReceptionDeskPinFields({
+export function ReceptionDeskAccessFields({
   surface = 'platform',
   tenantSlug,
   locale = 'en',
-  deskPinHash,
-  disabled = false,
-}: ReceptionDeskPinFieldsProps) {
+}: ReceptionDeskAccessFieldsProps) {
   const t = useTranslations('pages.owner.receptionDesk');
-  const configured = isDeskPinConfigured(deskPinHash);
-  const receptionLoginUrl = getTenantPublicUrl(tenantSlug, 'reception', locale, '/login');
 
-  if (surface === 'owner') {
-    return (
-      <div className="space-y-3 rounded-lg border bg-muted/10 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-medium">{t('title')}</p>
-          <PinStatusBadge
-            configured={configured}
-            labels={{ set: t('statusSet'), notSet: t('statusNotSet') }}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">{t('description')}</p>
-        <div className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">{t('loginUrlLabel')}</span>
-          <p className="text-sm">
-            <a
-              href={receptionLoginUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {receptionLoginUrl}
-            </a>
-          </p>
-        </div>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">{t('pinLabel')}</span>
-          <span className="block text-xs text-muted-foreground">{t('pinHint')}</span>
-          <input
-            name="receptionDeskPin"
-            type="password"
-            autoComplete="new-password"
-            disabled={disabled}
-            placeholder={configured ? t('pinPlaceholderUnchanged') : t('pinPlaceholderNew')}
-            className={cn(
-              'rounded-md border bg-background px-3 py-2 text-sm',
-              adminFieldWidthClass('sm')
-            )}
-          />
-        </label>
-        <ReceptionStaffManagement
-          surface="owner"
-          tenantSlug={tenantSlug}
-          locale={locale}
-          disabled={disabled}
-        />
-      </div>
-    );
+  if (surface !== 'owner') {
+    return null;
   }
 
+  const receptionLoginUrl = getTenantPublicUrl(tenantSlug, 'reception', locale, '/login');
+
   return (
-    <AdminField
-      label="Reception desk PIN"
-      name="receptionDeskPin"
-      type="password"
-      placeholder={configured ? '•••••• (unchanged)' : 'Set PIN for reception desk'}
-      hint={`Used at ${tenantSlug}.reception.domain. At least 6 characters when changing. Leave blank to keep the current PIN.`}
-      width="sm"
-    />
+    <div className="space-y-3 rounded-lg border bg-muted/10 px-4 py-3">
+      <p className="text-sm font-medium">{t('title')}</p>
+      <p className="text-xs text-muted-foreground">{t('description')}</p>
+      <div className="space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">{t('loginUrlLabel')}</span>
+        <p className="text-sm">
+          <a
+            href={receptionLoginUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {receptionLoginUrl}
+          </a>
+        </p>
+      </div>
+    </div>
   );
 }
+
+/** @deprecated Prefer ReceptionDeskAccessFields */
+export const ReceptionDeskPinFields = ReceptionDeskAccessFields;
 
 export function OwnerLaunchReceptionPinHint({ locale }: { locale: string }) {
   const t = useTranslations('pages.owner.receptionDesk');

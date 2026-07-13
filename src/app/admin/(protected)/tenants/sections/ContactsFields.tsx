@@ -63,9 +63,7 @@ function useContactsDraft() {
     updateDraft({ contacts: patch });
   };
 
-  const patchReception = (
-    patch: Partial<Omit<NonNullable<TenantSettings['reception']>, 'deskPinHash'>>
-  ) => {
+  const patchReception = (patch: Partial<NonNullable<TenantSettings['reception']>>) => {
     updateDraft({ reception: patch });
   };
 
@@ -101,20 +99,18 @@ function ReceptionPhoneField({
 
 function ReceptionDeskModule({
   settings,
-  showReceptionDeskPinFields,
+  showReceptionAccessFields,
   showReceptionToggles,
   surface,
-  deskPinTenantSlug,
+  receptionTenantSlug,
   locale,
-  readOnly,
 }: {
   settings?: TenantSettings;
-  showReceptionDeskPinFields: boolean;
+  showReceptionAccessFields: boolean;
   showReceptionToggles: boolean;
   surface: 'platform' | 'owner';
-  deskPinTenantSlug: string;
+  receptionTenantSlug: string;
   locale: string;
-  readOnly: boolean;
 }) {
   const { patchReception } = useContactsDraft();
 
@@ -139,24 +135,12 @@ function ReceptionDeskModule({
         placeholder="Replies on WhatsApp during reception hours."
         width="lg"
       />
-      {showReceptionDeskPinFields ? (
-        <>
-          <ReceptionDeskPinFields
-            surface={surface}
-            tenantSlug={deskPinTenantSlug}
-            locale={locale}
-            deskPinHash={settings?.reception?.deskPinHash}
-            disabled={readOnly}
-          />
-          {surface === 'platform' ? (
-            <ReceptionStaffManagement
-              surface="platform"
-              tenantSlug={deskPinTenantSlug}
-              locale={locale}
-              disabled={readOnly}
-            />
-          ) : null}
-        </>
+      {showReceptionAccessFields ? (
+        <ReceptionDeskPinFields
+          surface={surface}
+          tenantSlug={receptionTenantSlug}
+          locale={locale}
+        />
       ) : null}
       {showReceptionToggles ? (
         <>
@@ -333,8 +317,8 @@ export function ContactsFields({
   const { patchContacts } = useContactsDraft();
   const showReceptionToggles = shouldShowReceptionWhatsappToggles(settings ?? {});
 
-  const deskPinTenantSlug = (tenantSlug ?? readinessInput.slug)?.trim() ?? '';
-  const showReceptionDeskPinFields = surface === 'platform' || Boolean(deskPinTenantSlug);
+  const receptionTenantSlug = (tenantSlug ?? readinessInput.slug)?.trim() ?? '';
+  const showReceptionAccessFields = surface === 'owner' && Boolean(receptionTenantSlug);
   const mergedSettings = settings ?? readinessInput.settings ?? {};
 
   const modules = useMemo(
@@ -351,14 +335,22 @@ export function ContactsFields({
               return (
                 <ReceptionDeskModule
                   settings={settings}
-                  showReceptionDeskPinFields={showReceptionDeskPinFields}
+                  showReceptionAccessFields={showReceptionAccessFields}
                   showReceptionToggles={showReceptionToggles}
                   surface={surface}
-                  deskPinTenantSlug={deskPinTenantSlug}
+                  receptionTenantSlug={receptionTenantSlug}
                   locale={locale}
-                  readOnly={readOnly}
                 />
               );
+            case 'reception-staff':
+              return receptionTenantSlug ? (
+                <ReceptionStaffManagement
+                  surface={surface}
+                  tenantSlug={receptionTenantSlug}
+                  locale={locale}
+                  disabled={readOnly}
+                />
+              ) : null;
             case 'guest-access-message':
               return <GuestAccessMessageModule settings={settings} />;
             case 'phones-email':
@@ -378,13 +370,13 @@ export function ContactsFields({
         },
       })),
     [
-      deskPinTenantSlug,
+      receptionTenantSlug,
       locale,
       mergedSettings,
       readOnly,
       readinessInput,
       settings,
-      showReceptionDeskPinFields,
+      showReceptionAccessFields,
       showReceptionToggles,
       surface,
     ]

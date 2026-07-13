@@ -8,7 +8,6 @@ export type TenantAuditEventType =
   | 'reception_staff_pin_changed';
 
 export type TenantAuditEventFlags = {
-  deskPinChanged?: boolean;
   nameChanged?: boolean;
   returnTo?: string;
   cityPackId?: string;

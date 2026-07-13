@@ -16,14 +16,12 @@ function requestWithSessionCookie(value: string): NextRequest {
 }
 
 describe('receptionSession cookie', () => {
-  it('parses legacy desk session without receptionUserId', () => {
+  it('rejects legacy 3-part desk session cookies', () => {
     process.env.RECEPTION_SESSION_SECRET = 'test-secret';
-    const token = buildReceptionSessionCookieValue('vega');
-    const session = readReceptionSessionFromRequest(requestWithSessionCookie(token));
+    const legacyToken = 'vega.9999999999999.deadbeef';
+    const session = readReceptionSessionFromRequest(requestWithSessionCookie(legacyToken));
 
-    expect(session).toMatchObject({ tenantSlug: 'vega' });
-    expect(session?.receptionUserId).toBeUndefined();
-    expect(session?.exp).toBeGreaterThan(Date.now());
+    expect(session).toBeNull();
   });
 
   it('round-trips staff session with receptionUserId', () => {

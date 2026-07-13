@@ -1314,21 +1314,15 @@
         }
       },
       "receptionDesk": {
-        "title": "Reception desk PIN",
-        "description": "Staff use this PIN to sign in at your reception desk site — not for guests.",
+        "title": "Reception desk access",
+        "description": "Staff sign in with personal login and PIN at your reception desk site — not for guests.",
         "loginUrlLabel": "Reception login",
-        "statusSet": "PIN set",
-        "statusNotSet": "PIN not set",
-        "pinLabel": "PIN",
-        "pinHint": "At least 6 characters. Leave empty to keep the current PIN.",
-        "pinPlaceholderUnchanged": "•••••• (unchanged)",
-        "pinPlaceholderNew": "Set a PIN for staff",
-        "setupHint": "Reception desk login uses a separate staff PIN.",
-        "setupLink": "Set PIN in Settings →"
+        "setupHint": "Create staff accounts so reception can sign in.",
+        "setupLink": "Manage staff in Settings →"
       },
       "receptionStaff": {
         "title": "Учётки reception",
-        "description": "Каждый сотрудник входит своим логином и PIN на reception — отдельно от общего desk PIN выше.",
+        "description": "Каждый сотрудник входит своим логином и PIN на reception.",
         "loginUrlLabel": "Вход на reception",
         "loginLabel": "Логин",
         "loginHint": "Строчные буквы, цифры, точки, подчёркивания или дефисы.",
@@ -1348,7 +1342,7 @@
         "statusDisabled": "Отключён",
         "activeSummary": "Активных: {count} · макс. {max}",
         "activeLimitReached": "Достигнут лимит — не более {max} активных учёток.",
-        "empty": "Пока нет учёток. Добавьте ниже.",
+        "empty": "Пока нет учёток. Создайте первую.",
         "loading": "Загрузка…",
         "created": "Учётка добавлена.",
         "errors": {

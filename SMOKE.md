@@ -24,13 +24,13 @@ npm run smoke
 
 ## CI (optional)
 
-1. Add repository **secrets**: `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `E2E_ADMIN_PASSWORD`, `E2E_TENANT_SLUG`, `E2E_CITY_PACK_ID` (same as tenant's city pack in admin, e.g. `kotor`); optional `E2E_GUEST_PIN` (fallback if provision fails), `E2E_RECEPTION_DESK_PIN` for reception desk smoke
+1. Add repository **secrets**: `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `E2E_ADMIN_PASSWORD`, `E2E_TENANT_SLUG`, `E2E_CITY_PACK_ID` (same as tenant's city pack in admin, e.g. `kotor`); optional `E2E_GUEST_PIN` (fallback if provision fails), `E2E_RECEPTION_LOGIN` + `E2E_RECEPTION_PIN` for reception desk smoke
 2. Add repository **variable**: `ENABLE_SMOKE_CI` = `true`
 3. Push a PR — smoke job uses the Playwright Docker image (browsers preinstalled, no download step)
 
 ## Manual pass (after `npm run smoke` is green)
 
-Automated smoke covers admin login, city packs, guest PIN, arrival routes, Local Guide essentials, guest concierge (stay chip, ref, strip), guest issue report, guest services (laundry card), and reception desk + ref search (when `E2E_RECEPTION_DESK_PIN` is set).
+Automated smoke covers admin login, city packs, guest PIN, arrival routes, Local Guide essentials, guest concierge (stay chip, ref, strip), guest issue report, guest services (laundry card), and reception desk + ref search (when `E2E_RECEPTION_LOGIN` + `E2E_RECEPTION_PIN` are set).
 
 **Guest flow (full manual pass):** [docs/qa/guest-flow-pass.md](docs/qa/guest-flow-pass.md) — check-in, intent, `entry=` links, locked sheet, Preparation, Settlement copy, optional reception (~30–40 min, 375px).
 
@@ -38,7 +38,7 @@ These items still need a quick human pass:
 
 - [ ] **Concierge hub** — `/` shows compact services, local guide, and FAQ blocks (no full explore tabs, full FAQ list, or full extras grid); drill-down `/guide`, `/services`, `/faq` opens full views; back returns to `/`; `FeatureGate` hides modules when disabled in tenant settings
 - [ ] **Stay essentials bridges** (registered guest on `/`) — horizontal bridge cards: title only, icon bottom-left, pastel tint per bridge; **border** = read state (primary unread / muted read); tap opens sheet; Wi‑Fi copy; check-out / reception / night access sheets when tenant data allows; night bridge hidden after key issued, dismiss, or outside arrival window; read state persists per stay after reload; reception strip hidden while any sheet is open; **banners**: before check-in night → `stay-banner-registration` (tap → `/registration`); on check-in night+ → `stay-banner-settlement` (tap → stay-setup; incomplete registration uses `?step=registration`); no stay-setup bridge tile
-- [ ] **Guest flow** — [guest-flow-pass.md](docs/qa/guest-flow-pass.md) (P0 A–E; stay chip S1–S7; reception R1–R6 if desk PIN set)
+- [ ] **Guest flow** — [guest-flow-pass.md](docs/qa/guest-flow-pass.md) (P0 A–E; stay chip S1–S7; reception R1–R6 if staff login set)
 - [ ] **Mobile width** — reception desk: issue form without scrolling, Plan calendar, Access ··· menu on touch
 - [ ] **RU locale** — switch to `/ru/welcome`, key labels not broken
 - [ ] **Images** — door/facade/hero load (no broken placeholders)

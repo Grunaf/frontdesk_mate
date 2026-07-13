@@ -13,7 +13,9 @@ export interface E2eConfig {
   adminPassword: string;
   guestPin: string;
   guestMagicLink?: string;
-  receptionDeskPin?: string;
+  /** Staff reception login + PIN for smoke. */
+  receptionLogin?: string;
+  receptionPin?: string;
   navTimeoutMs: number;
   /** When true, runs optional tourism deep-link smoke (tenant must have tourism registration enabled). */
   tourismSmoke: boolean;
@@ -153,7 +155,8 @@ export function loadE2eConfig(options: LoadE2eConfigOptions = {}): E2eConfig {
     adminPassword: requireEnv('E2E_ADMIN_PASSWORD', fileEnv),
     guestPin,
     guestMagicLink: optionalEnv('E2E_GUEST_MAGIC_LINK', fileEnv),
-    receptionDeskPin: optionalEnv('E2E_RECEPTION_DESK_PIN', fileEnv),
+    receptionLogin: optionalEnv('E2E_RECEPTION_LOGIN', fileEnv),
+    receptionPin: optionalEnv('E2E_RECEPTION_PIN', fileEnv),
     navTimeoutMs: Number(readEnv('E2E_NAV_TIMEOUT', fileEnv) ?? '15000'),
     tourismSmoke: readTourismSmokeFlag(fileEnv),
   };

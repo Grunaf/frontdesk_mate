@@ -61,7 +61,7 @@
     "area": "Reception",
     "status": "implemented",
     "smokeSpec": "",
-    "notes": "No smoke yet — needs E2E_RECEPTION_DESK_PIN"
+    "notes": "No smoke yet — needs E2E_RECEPTION_LOGIN + E2E_RECEPTION_PIN"
   },
   {
     "id": "guest-magic-link",

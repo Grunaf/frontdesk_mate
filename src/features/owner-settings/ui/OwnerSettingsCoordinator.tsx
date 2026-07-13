@@ -43,10 +43,7 @@ import { TenantFormHiddenPayload } from '@/app/admin/(protected)/tenants/ui/Tena
 import { TenantReadinessChecklist } from '@/app/admin/(protected)/tenants/ui/TenantReadinessChecklist';
 import { TenantSettingsNav } from '@/app/admin/(protected)/tenants/ui/TenantSettingsNav';
 import { TenantUnsavedSectionDialog } from '@/app/admin/(protected)/tenants/ui/TenantUnsavedSectionDialog';
-import {
-  clearReceptionDeskPinInputs,
-  tenantFormHasUnsavedChanges,
-} from '@/app/admin/(protected)/tenants/lib/tenantFormHasUnsavedChanges';
+import { tenantFormHasUnsavedChanges } from '@/app/admin/(protected)/tenants/lib/tenantFormHasUnsavedChanges';
 import { saveOwnerTenantSettingsAction } from '@/features/owner-setup/api/saveOwnerTenantSettingsAction';
 import { validateOwnerTenantFormBeforeSave } from '@/features/owner-setup/lib/validateOwnerTenantFormBeforeSave';
 import { useOwnerShell } from '@/features/owner-shell';
@@ -137,8 +134,6 @@ function OwnerSettingsCoordinatorInner({
     name: initial.name,
     cityPackId: initial.cityPackId,
   });
-
-  const [receptionDeskPinInput, setReceptionDeskPinInput] = useState('');
 
   const [pendingSectionNav, setPendingSectionNav] = useState<{
     sectionId: AdminSectionId;
@@ -316,9 +311,8 @@ function OwnerSettingsCoordinatorInner({
         identity,
         subscription,
         draft,
-        receptionDeskPinInput,
       }),
-    [formBaseline, identity, subscription, draft, receptionDeskPinInput]
+    [formBaseline, identity, subscription, draft]
   );
 
   const resetFormToBaseline = useCallback(() => {
@@ -328,8 +322,6 @@ function OwnerSettingsCoordinatorInner({
       name: formBaseline.name,
       cityPackId: formBaseline.cityPackId,
     });
-    setReceptionDeskPinInput('');
-    clearReceptionDeskPinInputs(formRef.current);
     resetDirty();
   }, [clearDraft, formBaseline, resetDirty]);
 
@@ -476,8 +468,6 @@ function OwnerSettingsCoordinatorInner({
 
     saveToastHandledRef.current = true;
     clearDraft();
-    setReceptionDeskPinInput('');
-    clearReceptionDeskPinInputs(formRef.current);
     resetDirty();
     router.replace(pathname);
 
@@ -527,10 +517,8 @@ function OwnerSettingsCoordinatorInner({
         return;
       }
 
-      const formData = new FormData(event.currentTarget);
       const block = validateOwnerTenantFormBeforeSave({
         mergedSettings,
-        receptionDeskPin: String(formData.get('receptionDeskPin') || ''),
       });
 
       if (!block) {
@@ -540,10 +528,6 @@ function OwnerSettingsCoordinatorInner({
       event.preventDefault();
       setToast({ variant: 'warning', message: block.message });
 
-      if (block.code === 'reception_desk_pin') {
-        navigateToSection(adminSectionIdForSaveBlock(block.code), undefined, 'reception-desk');
-        return;
-      }
       if (block.code === 'guest_extra_price') {
         navigateToSection(adminSectionIdForSaveBlock(block.code));
       }
@@ -586,13 +570,6 @@ function OwnerSettingsCoordinatorInner({
     }
   }, [activeSectionId, setArrivalJourneyModule, setContactsModule, setGuestAppModule]);
 
-  const handleReceptionDeskPinInput = useCallback((event: React.FormEvent<HTMLFormElement>) => {
-    const target = event.target;
-    if (target instanceof HTMLInputElement && target.name === 'receptionDeskPin') {
-      setReceptionDeskPinInput(target.value);
-    }
-  }, []);
-
   return (
     <>
       <TenantUnsavedSectionDialog
@@ -608,7 +585,6 @@ function OwnerSettingsCoordinatorInner({
       className="relative space-y-6 pb-24"
       noValidate
       onSubmit={handleFormSubmit}
-      onInput={canEditSettings ? handleReceptionDeskPinInput : undefined}
     >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="returnTo" value="settings" />

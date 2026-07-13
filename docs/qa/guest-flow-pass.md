@@ -12,7 +12,7 @@
 |------|--------|
 | Dev server | `npm run dev` (restart after pulling `main`) |
 | Smoke | `npm run smoke` — provisions guest PIN if `E2E_GUEST_PIN` empty |
-| Credentials | `e2e/env.local` — `E2E_TENANT_SLUG`, `E2E_ADMIN_PASSWORD`; optional `E2E_RECEPTION_DESK_PIN` for reception rows |
+| Credentials | `e2e/env.local` — `E2E_TENANT_SLUG`, `E2E_ADMIN_PASSWORD`; optional `E2E_RECEPTION_LOGIN` + `E2E_RECEPTION_PIN` for reception rows |
 | Guest PIN | Value from smoke output or `E2E_GUEST_PIN` in `e2e/env.local` |
 | Incognito | Use for rows marked **no session**; normal window for post check-in |
 | Viewport | **375px** width |
@@ -62,7 +62,7 @@ http://{slug}.app.localhost:3000/en/check-in?t=TOKEN&mode=onsite     # legacy �
 | Guest PIN → welcome route | `e2e/smoke/guest-journey.spec.ts` | Intent screen handled in helper if shown |
 | Guest concierge stay chip + strip | `e2e/smoke/guest-concierge.spec.ts` | My stay sheet, ref, strip hide on sheet |
 | Guest issue report | `e2e/smoke/guest-issue.spec.ts` | Card, privacy notice, send, My stay link, desk Issues |
-| Reception desk | `e2e/smoke/reception-desk.spec.ts` | **Skipped** unless `E2E_RECEPTION_DESK_PIN` is set; includes ref search + Issues tab |
+| Reception desk | `e2e/smoke/reception-desk.spec.ts` | **Skipped** unless `E2E_RECEPTION_LOGIN` + `E2E_RECEPTION_PIN` are set; includes ref search + Issues tab |
 
 Everything below is **manual**.
 
@@ -138,11 +138,11 @@ Use a **fresh incognito** per row so intent is not reused from sessionStorage.
 
 ## 4. P1 — reception desk (optional)
 
-Requires reception PIN in tenant settings and `E2E_RECEPTION_DESK_PIN` in `e2e/env.local` (or known desk PIN).
+Requires reception staff credentials and `E2E_RECEPTION_LOGIN` + `E2E_RECEPTION_PIN` in `e2e/env.local`.
 
 | # | Steps | Expected | Pass | Fail | Notes |
 |---|-------|----------|------|------|-------|
-| R1 | Open `/reception` → sign in with desk PIN | Issue access form visible | ☐ | ☐ | |
+| R1 | Open reception → sign in with staff login + PIN | Issue access form visible | ☐ | ☐ | |
 | R2 | Issue access for tonight | PIN shown **once**; QR + guest link + **Copy send link** | ☐ | ☐ | |
 | R3 | Reload reception → Access list | PIN not shown again; QR/link still available | ☐ | ☐ | |
 | R4 | **Copy send link** → open in incognito | `entry=remote` in URL; lands on `step=route` after auth | ☐ | ☐ | |
@@ -176,7 +176,7 @@ After check-in on Concierge.
 | I1 | Concierge → **Report issue** card | Sheet opens; **privacy notice** visible; bed + Ref preview (no name emphasis) | ☐ | ☐ | |
 | I2 | Choose category + optional note → **Send report** | Success screen with Ref; optional WA link | ☐ | ☐ | |
 | I3 | My stay sheet → **Report issue** link | Same form as I1 | ☐ | ☐ | |
-| I4 | Reception desk → **Issues** tab | New report with category, bed, ref; guest name secondary | ☐ | ☐ | Needs `E2E_RECEPTION_DESK_PIN` |
+| I4 | Reception desk → **Issues** tab | New report with category, bed, ref; guest name secondary | ☐ | ☐ | Needs `E2E_RECEPTION_LOGIN` + `E2E_RECEPTION_PIN` |
 | I5 | **Mark done** on desk | Row leaves Open filter | ☐ | ☐ | |
 | I6 | Arrival guide Settlement / Access tabs | **No** Report card or link | ☐ | ☐ | |
 

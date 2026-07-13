@@ -4,4 +4,4 @@ export type ReceptionOperationalContext = ReceptionOperationalContextBase & {
   actorDisplayName?: string;
 };
 
-export const LEGACY_RECEPTION_ACTOR_LABEL = 'Desk PIN';
+export const FALLBACK_RECEPTION_ACTOR_LABEL = 'Staff';

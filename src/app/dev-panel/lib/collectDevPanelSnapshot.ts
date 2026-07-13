@@ -136,7 +136,7 @@ export async function collectDevPanelSnapshot(): Promise<DevPanelSnapshot> {
   });
   checks.push({
     id: 'reception-session-secret',
-    label: 'Reception session + desk PIN hashing',
+    label: 'Reception session + staff PIN hashing',
     ok: isReceptionSessionSecretEffective(),
     detail: !isReceptionSessionSecretEffective()
       ? 'Set RECEPTION_SESSION_SECRET or ADMIN_SECRET'

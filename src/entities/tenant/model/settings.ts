@@ -82,8 +82,6 @@ export interface TenantSettings {
     canHelpWithTaxi?: boolean;
     /** Optional per-tenant hint under the reception link */
     availabilityHint?: string;
-    /** Hashed PIN for reception desk login ({slug}.reception.domain) */
-    deskPinHash?: string;
     /** Message template for Booking / chat (placeholders: {sendLink}, {pin}, {pinOrHelp}, …) */
     guestAccessMessageTemplate?: string;
     /** Substituted for {pinOrHelp} when PIN is not available at copy time */

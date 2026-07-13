@@ -59,10 +59,7 @@ import {
   getAdminSectionGuestProgress,
 } from './lib/resolveAdminSectionProgress';
 import { validateTenantFormBeforeSave } from './lib/validateTenantFormBeforeSave';
-import {
-  clearReceptionDeskPinInputs,
-  tenantFormHasUnsavedChanges,
-} from './lib/tenantFormHasUnsavedChanges';
+import { tenantFormHasUnsavedChanges } from './lib/tenantFormHasUnsavedChanges';
 import { resolveSubscriptionLifecycleStatus } from './sections/SubscriptionFields';
 import { AdminSectionStatusBadge } from './ui/AdminField';
 import { AdminToast } from './ui/AdminToast';
@@ -172,8 +169,6 @@ function TenantFormAccordionInner({
     name: initial.name,
     cityPackId: initial.cityPackId,
   });
-
-  const [receptionDeskPinInput, setReceptionDeskPinInput] = useState('');
 
   const [pendingSectionNav, setPendingSectionNav] = useState<{
     sectionId: AdminSectionId;
@@ -336,9 +331,8 @@ function TenantFormAccordionInner({
         identity,
         subscription,
         draft,
-        receptionDeskPinInput,
       }),
-    [formBaseline, identity, subscription, draft, receptionDeskPinInput]
+    [formBaseline, identity, subscription, draft]
   );
 
   const resetFormToBaseline = useCallback(() => {
@@ -352,8 +346,6 @@ function TenantFormAccordionInner({
       subscriptionStartsAt: formBaseline.subscriptionStartsAt,
       subscriptionEndsAt: formBaseline.subscriptionEndsAt,
     });
-    setReceptionDeskPinInput('');
-    clearReceptionDeskPinInputs(formRef.current);
     resetDirty();
   }, [clearDraft, formBaseline, resetDirty]);
 
@@ -539,8 +531,6 @@ function TenantFormAccordionInner({
 
     saveToastHandledRef.current = true;
     clearDraft();
-    setReceptionDeskPinInput('');
-    clearReceptionDeskPinInputs(formRef.current);
     resetDirty();
     router.replace(pathname);
 
@@ -634,12 +624,10 @@ function TenantFormAccordionInner({
 
   const handleFormSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
-      const formData = new FormData(event.currentTarget);
       const block = validateTenantFormBeforeSave({
         subscriptionStartsAt: subscription.subscriptionStartsAt,
         subscriptionEndsAt: subscription.subscriptionEndsAt,
         mergedSettings,
-        receptionDeskPin: String(formData.get('receptionDeskPin') || ''),
       });
 
       if (!block) {
@@ -655,11 +643,6 @@ function TenantFormAccordionInner({
         } else {
           navigateToSection(adminSectionIdForSaveBlock(block.code));
         }
-        return;
-      }
-
-      if (block.code === 'reception_desk_pin') {
-        navigateToSection(adminSectionIdForSaveBlock(block.code), undefined, 'reception-desk');
         return;
       }
 
@@ -712,13 +695,6 @@ function TenantFormAccordionInner({
     }
   }, [activeSectionId, setArrivalJourneyModule, setContactsModule, setGuestAppModule]);
 
-  const handleReceptionDeskPinInput = useCallback((event: React.FormEvent<HTMLFormElement>) => {
-    const target = event.target;
-    if (target instanceof HTMLInputElement && target.name === 'receptionDeskPin') {
-      setReceptionDeskPinInput(target.value);
-    }
-  }, []);
-
   return (
     <>
       <TenantUnsavedSectionDialog
@@ -739,7 +715,6 @@ function TenantFormAccordionInner({
         className="relative"
         noValidate
         onSubmit={handleFormSubmit}
-        onInput={handleReceptionDeskPinInput}
       >
         <input type="hidden" name="originalSlug" value={originalSlug} />
         <input type="hidden" name="slug" value={identity.slug} />

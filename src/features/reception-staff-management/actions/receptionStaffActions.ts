@@ -21,7 +21,6 @@ import type { TenantAuditEventType } from '@/entities/tenant-audit';
 
 import {
   isActiveReceptionStaffLimitReached,
-  MAX_ACTIVE_RECEPTION_STAFF,
   validateReceptionStaffCreateDraft,
   validateReceptionStaffPinDraft,
 } from '../lib/validateReceptionStaffForm';
@@ -281,5 +280,3 @@ export async function disableReceptionUserAction(formData: FormData): Promise<Re
   revalidateReceptionStaffPaths(actor.slug, surface, actor.locale);
   return { ok: true, user: toPublicUser(result.user) };
 }
-
-export { MAX_ACTIVE_RECEPTION_STAFF };

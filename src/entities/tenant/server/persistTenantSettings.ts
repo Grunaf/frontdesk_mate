@@ -1,6 +1,5 @@
 import 'server-only';
 
-import { hashDeskPin, isNewDeskPinValid, DESK_PIN_MIN_LENGTH } from '@/app/reception/lib/deskPin';
 import { mergeTenantSettingsWithPrevious } from '@/app/admin/(protected)/tenants/lib/mergeTenantSettingsWithPrevious';
 import { isCityPackId, type CityPackId } from '@/entities/hostel';
 import { upsertTenant } from '../api/getTenantConfig';
@@ -34,53 +33,18 @@ export type PersistTenantSettingsResult =
   | { ok: true; slug: string }
   | { ok: false; code: 'validation' | 'forbidden' | 'db'; message: string };
 
-type MergeReceptionDeskPinResult =
-  | { ok: false; code: 'validation'; message: string }
-  | { ok: true; settings: TenantSettings };
-
-function mergeReceptionDeskPinFromForm(
-  settings: TenantSettings,
-  formData: FormData,
-  slug: string,
-  previousHash: string | undefined
-): MergeReceptionDeskPinResult {
-  const deskPin = String(formData.get('receptionDeskPin') || '').trim();
-
-  if (deskPin && !isNewDeskPinValid(deskPin)) {
-    return {
-      ok: false,
-      code: 'validation',
-      message: `Reception desk PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`,
-    };
-  }
-
-  if (deskPin) {
-    return {
-      ok: true,
-      settings: {
-        ...settings,
-        reception: {
-          ...settings.reception,
-          deskPinHash: hashDeskPin(slug, deskPin),
-        },
-      },
-    };
-  }
-
-  if (previousHash) {
-    return {
-      ok: true,
-      settings: {
-        ...settings,
-        reception: {
-          ...settings.reception,
-          deskPinHash: previousHash,
-        },
-      },
-    };
-  }
-
-  return { ok: true, settings };
+/** Drop legacy shared desk PIN hash from JSON settings on every save. */
+function stripLegacyDeskPinHash(settings: TenantSettings): TenantSettings {
+  if (!settings.reception) return settings;
+  const reception = settings.reception as TenantSettings['reception'] & {
+    deskPinHash?: string;
+  };
+  if (!('deskPinHash' in reception)) return settings;
+  const { deskPinHash: _ignored, ...rest } = reception;
+  return {
+    ...settings,
+    reception: Object.keys(rest).length > 0 ? rest : undefined,
+  };
 }
 
 export async function persistTenantSettings(
@@ -149,35 +113,15 @@ export async function persistTenantSettings(
         return { ok: false, code: 'validation', message: placeValidation.message };
       }
     }
-
-    const pinResult = mergeReceptionDeskPinFromForm(
-      settings,
-      input.formData,
-      slug,
-      previous.settings.reception?.deskPinHash
-    );
-    if (!pinResult.ok) {
-      return pinResult;
-    }
-    settings = pinResult.settings;
   } else {
     slug = input.slug.trim();
     originalSlug = input.originalSlug?.trim() || null;
     cityPackId = input.cityPackId;
     subscriptionStartsAt = input.subscriptionStartsAt.trim();
     subscriptionEndsAt = input.subscriptionEndsAt.trim();
-
-    const pinResult = mergeReceptionDeskPinFromForm(
-      settings,
-      input.formData,
-      slug,
-      input.previous?.settings.reception?.deskPinHash
-    );
-    if (!pinResult.ok) {
-      return pinResult;
-    }
-    settings = pinResult.settings;
   }
+
+  settings = stripLegacyDeskPinHash(settings);
 
   const result = await upsertTenant({
     slug,
@@ -195,15 +139,12 @@ export async function persistTenantSettings(
 
   if (input.actor.kind === 'owner' && input.previous) {
     const previous = input.previous;
-    const { changedKeys, deskPinChanged } = diffTenantSettingsForAudit(
-      previous.settings,
-      settings
-    );
+    const { changedKeys } = diffTenantSettingsForAudit(previous.settings, settings);
     const nameChanged = previous.name !== name;
     const returnToRaw = String(input.formData.get('returnTo') || '').trim();
     const returnTo = returnToRaw || undefined;
 
-    if (changedKeys.length > 0 || nameChanged || deskPinChanged) {
+    if (changedKeys.length > 0 || nameChanged) {
       await insertTenantAuditEvent({
         tenantId: previous.id,
         actorKind: 'owner',
@@ -211,7 +152,6 @@ export async function persistTenantSettings(
         eventType: 'settings_updated',
         changedKeys,
         flags: {
-          ...(deskPinChanged ? { deskPinChanged: true } : {}),
           ...(nameChanged ? { nameChanged: true } : {}),
           ...(returnTo ? { returnTo } : {}),
         },
@@ -219,14 +159,11 @@ export async function persistTenantSettings(
     }
   } else if (input.actor.kind === 'platform' && input.previous) {
     const previous = input.previous;
-    const { changedKeys, deskPinChanged } = diffTenantSettingsForAudit(
-      previous.settings,
-      settings
-    );
+    const { changedKeys } = diffTenantSettingsForAudit(previous.settings, settings);
     const nameChanged = previous.name !== name;
     const cityPackChanged = previous.city_pack_id !== cityPackId;
 
-    if (changedKeys.length > 0 || nameChanged || deskPinChanged || cityPackChanged) {
+    if (changedKeys.length > 0 || nameChanged || cityPackChanged) {
       await insertTenantAuditEvent({
         tenantId: previous.id,
         actorKind: 'platform',
@@ -234,7 +171,6 @@ export async function persistTenantSettings(
         eventType: 'settings_updated',
         changedKeys,
         flags: {
-          ...(deskPinChanged ? { deskPinChanged: true } : {}),
           ...(nameChanged ? { nameChanged: true } : {}),
           ...(cityPackChanged ? { cityPackId } : {}),
         },

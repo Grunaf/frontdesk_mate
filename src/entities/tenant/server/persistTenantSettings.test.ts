@@ -11,8 +11,6 @@ vi.mock('@/entities/city-pack/server', () => ({
   getCityPackForAdmin: (...args: unknown[]) => getCityPackForAdminMock(...args),
 }));
 
-import { hashDeskPin } from '@/app/reception/lib/deskPin';
-
 import type { TenantRecord } from '../model/settings';
 
 import { persistTenantSettings } from './persistTenantSettings';
@@ -25,7 +23,10 @@ function makePrevious(overrides: Partial<TenantRecord> = {}): TenantRecord {
     city_pack_id: 'kotor',
     settings: {
       wifi: { name: 'Old', password: 'old' },
-      reception: { deskPinHash: 'stored-hash' },
+      reception: {
+        open: '08:00',
+        ...( { deskPinHash: 'stored-hash' } as Record<string, string> ),
+      },
     },
     is_active: true,
     subscription_starts_at: '2026-01-01T00:00:00.000Z',
@@ -40,7 +41,6 @@ describe('persistTenantSettings owner branch', () => {
     upsertTenantMock.mockResolvedValue({ ok: true });
     getCityPackForAdminMock.mockReset();
     getCityPackForAdminMock.mockResolvedValue({ pack: null, error: null });
-    process.env.RECEPTION_SESSION_SECRET = 'test-secret';
   });
 
   it('ignores tampered slug, pack, and subscription from input', async () => {
@@ -72,7 +72,7 @@ describe('persistTenantSettings owner branch', () => {
         subscriptionEndsAt: '2026-12-31',
         settings: expect.objectContaining({
           wifi: { name: 'NewWifi', password: 'secret' },
-          reception: expect.objectContaining({ deskPinHash: 'stored-hash' }),
+          reception: expect.not.objectContaining({ deskPinHash: expect.anything() }),
         }),
       })
     );
@@ -134,37 +134,10 @@ describe('persistTenantSettings owner branch', () => {
     expect(upsertTenantMock).not.toHaveBeenCalled();
   });
 
-  it('updates deskPinHash when owner submits a new PIN', async () => {
+  it('strips legacy deskPinHash on save and ignores receptionDeskPin form field', async () => {
     const previous = makePrevious();
     const formData = new FormData();
     formData.set('receptionDeskPin', '654321');
-
-    const result = await persistTenantSettings({
-      actor: { kind: 'owner', tenantId: 'tenant-uuid', userId: 'user-1' },
-      slug: 'kotor',
-      originalSlug: 'kotor',
-      name: 'Kotor Hostel',
-      cityPackId: 'kotor',
-      subscriptionStartsAt: '',
-      subscriptionEndsAt: '',
-      formData,
-      previous,
-    });
-
-    expect(result).toEqual({ ok: true, slug: 'kotor' });
-    const expectedHash = hashDeskPin('kotor', '654321');
-    expect(upsertTenantMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        settings: expect.objectContaining({
-          reception: expect.objectContaining({ deskPinHash: expectedHash }),
-        }),
-      })
-    );
-  });
-
-  it('keeps deskPinHash when owner saves with empty PIN field', async () => {
-    const previous = makePrevious();
-    const formData = new FormData();
     formData.set('wifiName', 'NewWifi');
 
     const result = await persistTenantSettings({
@@ -180,36 +153,9 @@ describe('persistTenantSettings owner branch', () => {
     });
 
     expect(result).toEqual({ ok: true, slug: 'kotor' });
-    expect(upsertTenantMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        settings: expect.objectContaining({
-          reception: expect.objectContaining({ deskPinHash: 'stored-hash' }),
-        }),
-      })
-    );
-  });
-
-  it('rejects owner PIN shorter than minimum length', async () => {
-    const formData = new FormData();
-    formData.set('receptionDeskPin', '12345');
-
-    const result = await persistTenantSettings({
-      actor: { kind: 'owner', tenantId: 'tenant-uuid', userId: 'user-1' },
-      slug: 'kotor',
-      originalSlug: 'kotor',
-      name: 'Kotor Hostel',
-      cityPackId: 'kotor',
-      subscriptionStartsAt: '',
-      subscriptionEndsAt: '',
-      formData,
-      previous: makePrevious(),
-    });
-
-    expect(result).toEqual({
-      ok: false,
-      code: 'validation',
-      message: expect.stringContaining('6'),
-    });
-    expect(upsertTenantMock).not.toHaveBeenCalled();
+    const settings = upsertTenantMock.mock.calls[0]?.[0]?.settings as {
+      reception?: Record<string, unknown>;
+    };
+    expect(settings.reception?.deskPinHash).toBeUndefined();
   });
 });

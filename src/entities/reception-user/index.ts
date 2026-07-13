@@ -1,6 +1,6 @@
 export { isReceptionLoginValid, normalizeReceptionLogin } from './lib/normalizeReceptionLogin';
 export {
-  DESK_PIN_MIN_LENGTH,
+  RECEPTION_USER_PIN_MIN_LENGTH,
   isReceptionUserPinValid,
 } from './lib/receptionUserPin';
 export type {

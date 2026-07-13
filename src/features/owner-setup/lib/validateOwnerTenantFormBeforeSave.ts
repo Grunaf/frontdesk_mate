@@ -3,11 +3,9 @@ import { validateTenantSettingsBeforeSave } from '@/entities/tenant/lib/validate
 
 export function validateOwnerTenantFormBeforeSave(input: {
   mergedSettings: TenantSettings;
-  receptionDeskPin?: string;
 }) {
   return validateTenantSettingsBeforeSave({
     actor: 'owner',
     mergedSettings: input.mergedSettings,
-    receptionDeskPin: input.receptionDeskPin,
   });
 }

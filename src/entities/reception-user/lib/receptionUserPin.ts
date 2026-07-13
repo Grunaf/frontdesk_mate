@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
-import { DESK_PIN_MIN_LENGTH } from '@/app/reception/lib/deskPin';
+export const RECEPTION_USER_PIN_MIN_LENGTH = 6;
 
 function readReceptionUserPinSecret(): string | undefined {
   return (
@@ -11,7 +11,7 @@ function readReceptionUserPinSecret(): string | undefined {
 }
 
 export function isReceptionUserPinValid(pin: string): boolean {
-  return pin.trim().length >= DESK_PIN_MIN_LENGTH;
+  return pin.trim().length >= RECEPTION_USER_PIN_MIN_LENGTH;
 }
 
 export function hashReceptionUserPin(tenantSlug: string, userId: string, pin: string): string {
@@ -42,5 +42,3 @@ export function verifyReceptionUserPin(
     return false;
   }
 }
-
-export { DESK_PIN_MIN_LENGTH };

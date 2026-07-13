@@ -59,17 +59,12 @@ export function TenantOwnerActivityPanel({ events, error }: TenantOwnerActivityP
                   </td>
                   <td className="py-2">
                     <div className="flex flex-wrap gap-1">
-                      {event.flags.deskPinChanged ? (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-900">
-                          deskPinChanged
-                        </span>
-                      ) : null}
                       {event.flags.nameChanged ? (
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-900">
                           nameChanged
                         </span>
                       ) : null}
-                      {!event.flags.deskPinChanged && !event.flags.nameChanged ? (
+                      {!event.flags.nameChanged ? (
                         <span className="text-xs text-muted-foreground">—</span>
                       ) : null}
                     </div>

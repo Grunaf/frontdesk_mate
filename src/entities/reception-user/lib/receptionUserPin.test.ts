@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isReceptionLoginValid, normalizeReceptionLogin } from './normalizeReceptionLogin';
 import {
-  DESK_PIN_MIN_LENGTH,
+  RECEPTION_USER_PIN_MIN_LENGTH,
   hashReceptionUserPin,
   isReceptionUserPinValid,
   verifyReceptionUserPin,
@@ -36,7 +36,7 @@ describe('receptionUserPin', () => {
   });
 
   it('requires min PIN length', () => {
-    expect(DESK_PIN_MIN_LENGTH).toBe(6);
+    expect(RECEPTION_USER_PIN_MIN_LENGTH).toBe(6);
     expect(isReceptionUserPinValid('12345')).toBe(false);
     expect(isReceptionUserPinValid('123456')).toBe(true);
     expect(isReceptionUserPinValid(' 123456 ')).toBe(true);

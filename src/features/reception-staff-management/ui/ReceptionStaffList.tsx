@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import { adminFieldWidthClass } from '@/app/admin/(protected)/tenants/ui/AdminField';
 import { AdminToast } from '@/app/admin/(protected)/tenants/ui/AdminToast';
-import { DESK_PIN_MIN_LENGTH } from '@/entities/reception-user';
+import { RECEPTION_USER_PIN_MIN_LENGTH } from '@/entities/reception-user';
 import { getTenantPublicUrl } from '@/shared/config';
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
@@ -16,6 +16,7 @@ import {
 } from '../actions/receptionStaffActions';
 import {
   countActiveReceptionStaff,
+  isActiveReceptionStaffLimitReached,
   MAX_ACTIVE_RECEPTION_STAFF,
   validateReceptionStaffPinDraft,
 } from '../lib/validateReceptionStaffForm';
@@ -44,7 +45,7 @@ function platformMutateErrorMessage(error: ReceptionStaffMutateError): string {
     case 'user_not_found':
       return 'Staff account not found.';
     case 'invalid_pin':
-      return `PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`;
+      return `PIN must be at least ${RECEPTION_USER_PIN_MIN_LENGTH} characters.`;
     case 'validation':
       return 'Check the fields and try again.';
     case 'unauthorized':
@@ -94,10 +95,10 @@ function PinChangeRow({
         surface === 'owner'
           ? code === 'required'
             ? t('errors.pinRequired')
-            : t('errors.pinTooShort', { min: DESK_PIN_MIN_LENGTH })
+            : t('errors.pinTooShort', { min: RECEPTION_USER_PIN_MIN_LENGTH })
           : code === 'required'
             ? 'PIN is required'
-            : `At least ${DESK_PIN_MIN_LENGTH} characters`
+            : `At least ${RECEPTION_USER_PIN_MIN_LENGTH} characters`
       );
       return;
     }
@@ -300,6 +301,7 @@ export function ReceptionStaffManagement({
   const [users, setUsers] = useState<ReceptionStaffUser[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: 'success' | 'warning' } | null>(
     null
   );
@@ -330,6 +332,9 @@ export function ReceptionStaffManagement({
     }
 
     setUsers(sortUsers(result.users));
+    if (result.users.length === 0) {
+      setAddOpen(true);
+    }
   }, [surface, tenantSlug, t]);
 
   useEffect(() => {
@@ -342,6 +347,7 @@ export function ReceptionStaffManagement({
 
   const appendUser = (user: ReceptionStaffUser) => {
     setUsers((current) => sortUsers([...current, user]));
+    setAddOpen(false);
     showToast(surface === 'owner' ? t('created') : 'Staff account added.', 'success');
   };
 
@@ -350,25 +356,29 @@ export function ReceptionStaffManagement({
   }
 
   const activeCount = countActiveReceptionStaff(users);
+  const limitReached = isActiveReceptionStaffLimitReached(users);
+  const showAddForm = addOpen && !limitReached;
   const receptionLoginUrl = getTenantPublicUrl(tenantSlug, 'reception', locale, '/login');
 
   const title = surface === 'owner' ? t('title') : 'Reception staff accounts';
   const description =
     surface === 'owner'
       ? t('description')
-      : 'Individual logins for the reception desk app. Legacy shared desk PIN above remains available during migration.';
+      : 'Individual logins for the reception desk app.';
   const activeSummary =
     surface === 'owner'
       ? t('activeSummary', { count: activeCount, max: MAX_ACTIVE_RECEPTION_STAFF })
       : `${activeCount} active · max ${MAX_ACTIVE_RECEPTION_STAFF}`;
   const loginUrlLabel = surface === 'owner' ? t('loginUrlLabel') : 'Reception login URL';
   const emptyLabel =
-    surface === 'owner' ? t('empty') : 'No staff accounts yet. Add one below.';
-
-  const shellClass =
+    surface === 'owner' ? t('empty') : 'No staff accounts yet. Create the first account.';
+  const addLabel = surface === 'owner' ? t('addUser') : 'Add staff account';
+  const limitLabel =
     surface === 'owner'
-      ? 'space-y-4 rounded-lg border bg-muted/10 px-4 py-3'
-      : 'space-y-4 rounded-lg border bg-muted/10 px-4 py-3';
+      ? t('activeLimitReached', { max: MAX_ACTIVE_RECEPTION_STAFF })
+      : `Maximum of ${MAX_ACTIVE_RECEPTION_STAFF} active staff accounts reached.`;
+
+  const shellClass = 'space-y-4 rounded-lg border bg-muted/10 px-4 py-3';
 
   return (
     <div className={shellClass}>
@@ -419,15 +429,31 @@ export function ReceptionStaffManagement({
             </ul>
           )}
 
-          <ReceptionStaffForm
-            surface={surface}
-            tenantSlug={tenantSlug}
-            locale={locale}
-            users={users}
-            disabled={disabled}
-            onUserCreated={appendUser}
-            onError={showToast}
-          />
+          {limitReached ? (
+            <p className="text-xs text-amber-800 dark:text-amber-200">{limitLabel}</p>
+          ) : null}
+
+          {showAddForm ? (
+            <ReceptionStaffForm
+              surface={surface}
+              tenantSlug={tenantSlug}
+              locale={locale}
+              users={users}
+              disabled={disabled}
+              onUserCreated={appendUser}
+              onCancel={() => setAddOpen(false)}
+              onError={showToast}
+            />
+          ) : (
+            <button
+              type="button"
+              disabled={disabled || limitReached}
+              onClick={() => setAddOpen(true)}
+              className="inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {addLabel}
+            </button>
+          )}
         </>
       )}
 

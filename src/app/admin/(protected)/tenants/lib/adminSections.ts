@@ -57,15 +57,12 @@ export function adminTenantSettingsDefaultPath(slug: string): string {
 export type AdminSettingsSaveBlockCode =
   | 'subscription_dates'
   | 'guest_extra_price'
-  | 'reception_desk_pin'
   | 'reception_booking_platforms';
 
 export function adminSectionIdForSaveBlock(code: AdminSettingsSaveBlockCode): AdminSectionId {
   switch (code) {
     case 'subscription_dates':
       return 'subscription';
-    case 'reception_desk_pin':
-      return 'contacts';
     case 'reception_booking_platforms':
       return 'contacts';
     case 'guest_extra_price':

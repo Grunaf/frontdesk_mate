@@ -9,7 +9,6 @@ describe('diffTenantSettingsForAudit', () => {
 
     expect(diffTenantSettingsForAudit(previous, next)).toEqual({
       changedKeys: ['wifi'],
-      deskPinChanged: false,
     });
   });
 
@@ -19,50 +18,33 @@ describe('diffTenantSettingsForAudit', () => {
 
     const diff = diffTenantSettingsForAudit(previous, next);
     expect(diff.changedKeys).toEqual(['wifi']);
-    expect(diff.deskPinChanged).toBe(false);
     expect(JSON.stringify(diff)).not.toContain('old');
     expect(JSON.stringify(diff)).not.toContain('new');
   });
 
-  it('sets deskPinChanged when only desk PIN hash changes', () => {
+  it('ignores legacy deskPinHash-only changes in reception', () => {
     const previous: TenantSettings = {
-      reception: { open: '08:00', deskPinHash: 'hash-a' },
+      reception: { open: '08:00', deskPinHash: 'hash-a' } as TenantSettings['reception'],
     };
     const next: TenantSettings = {
-      reception: { open: '08:00', deskPinHash: 'hash-b' },
+      reception: { open: '08:00', deskPinHash: 'hash-b' } as TenantSettings['reception'],
     };
 
     expect(diffTenantSettingsForAudit(previous, next)).toEqual({
       changedKeys: [],
-      deskPinChanged: true,
     });
   });
 
   it('includes reception when non-PIN reception fields change', () => {
     const previous: TenantSettings = {
-      reception: { open: '08:00', deskPinHash: 'same' },
+      reception: { open: '08:00' },
     };
     const next: TenantSettings = {
-      reception: { open: '09:00', deskPinHash: 'same' },
+      reception: { open: '09:00' },
     };
 
     expect(diffTenantSettingsForAudit(previous, next)).toEqual({
       changedKeys: ['reception'],
-      deskPinChanged: false,
-    });
-  });
-
-  it('includes reception and deskPinChanged when both change', () => {
-    const previous: TenantSettings = {
-      reception: { open: '08:00', deskPinHash: 'hash-a' },
-    };
-    const next: TenantSettings = {
-      reception: { open: '09:00', deskPinHash: 'hash-b' },
-    };
-
-    expect(diffTenantSettingsForAudit(previous, next)).toEqual({
-      changedKeys: ['reception'],
-      deskPinChanged: true,
     });
   });
 
@@ -74,7 +56,6 @@ describe('diffTenantSettingsForAudit', () => {
 
     expect(diffTenantSettingsForAudit(settings, { ...settings })).toEqual({
       changedKeys: [],
-      deskPinChanged: false,
     });
   });
 });

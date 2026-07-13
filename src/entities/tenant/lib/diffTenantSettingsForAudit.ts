@@ -2,7 +2,6 @@ import type { TenantSettings } from '../model/settings';
 
 export type TenantSettingsAuditDiff = {
   changedKeys: string[];
-  deskPinChanged: boolean;
 };
 
 const TOP_LEVEL_AUDIT_KEYS: (keyof TenantSettings)[] = [
@@ -57,7 +56,7 @@ function redactSliceForCompare(key: keyof TenantSettings, value: unknown): unkno
   }
 
   if (key === 'reception' && value && typeof value === 'object') {
-    const { deskPinHash: _hash, ...rest } = value as NonNullable<TenantSettings['reception']>;
+    const { deskPinHash: _hash, ...rest } = value as Record<string, unknown>;
     return rest;
   }
 
@@ -80,10 +79,6 @@ export function diffTenantSettingsForAudit(
 ): TenantSettingsAuditDiff {
   const prev = previous ?? {};
   const nxt = next ?? {};
-
-  const prevHash = prev.reception?.deskPinHash ?? '';
-  const nextHash = nxt.reception?.deskPinHash ?? '';
-  const deskPinChanged = prevHash !== nextHash;
 
   const changedKeys: string[] = [];
 
@@ -123,5 +118,5 @@ export function diffTenantSettingsForAudit(
 
   changedKeys.sort();
 
-  return { changedKeys, deskPinChanged };
+  return { changedKeys };
 }

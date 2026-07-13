@@ -59,7 +59,7 @@ import { RevokeAccessDialog } from './RevokeAccessDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
-import { LEGACY_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
+import { FALLBACK_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
 import {
   useReceptionOperationalRollover,
   useReceptionOperationalSync,
@@ -133,7 +133,7 @@ export function ReceptionCheckInPanel({
   const { context, refresh } = useReceptionOperationalSync(initialContext, tenantSlug);
   const deskContext = context as ReceptionOperationalContext;
   const { stays, openIssues, openTransfers, operational } = deskContext;
-  const signedInAsLabel = deskContext.actorDisplayName ?? LEGACY_RECEPTION_ACTOR_LABEL;
+  const signedInAsLabel = deskContext.actorDisplayName ?? FALLBACK_RECEPTION_ACTOR_LABEL;
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
 
   useEffect(() => {

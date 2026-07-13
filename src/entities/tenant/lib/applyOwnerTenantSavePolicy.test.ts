@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyOwnerTenantSavePolicy } from './applyOwnerTenantSavePolicy';
 
 describe('applyOwnerTenantSavePolicy', () => {
-  it('keeps deskPinHash from previous when form merge tries to change it', () => {
+  it('strips legacy deskPinHash from merged reception', () => {
     const previous = {
       reception: { open: '08:00', deskPinHash: 'hash-from-db' },
       wifi: { name: 'OldWifi', password: 'old' },
@@ -13,25 +13,31 @@ describe('applyOwnerTenantSavePolicy', () => {
     };
 
     expect(applyOwnerTenantSavePolicy(merged, previous)).toEqual({
-      reception: { open: '09:00', deskPinHash: 'hash-from-db' },
+      reception: { open: '09:00' },
       wifi: { name: 'NewWifi', password: 'new' },
     });
   });
 
-  it('does not inject deskPinHash when previous had none', () => {
-    const previous = { reception: { open: '08:00' } };
+  it('does not keep deskPinHash when previous had one', () => {
+    const previous = { reception: { open: '08:00', deskPinHash: 'stored' } };
     const merged = {
-      reception: { open: '09:00', deskPinHash: 'injected' },
+      reception: { open: '09:00' },
     };
 
     expect(applyOwnerTenantSavePolicy(merged, previous)).toEqual({
-      reception: { open: '09:00', deskPinHash: undefined },
+      reception: { open: '09:00' },
     });
   });
 
-  it('returns merged unchanged when previous is undefined', () => {
-    const merged = { wifi: { name: 'Guest' } };
-    expect(applyOwnerTenantSavePolicy(merged, undefined)).toEqual(merged);
+  it('returns merged with deskPinHash stripped when previous is undefined', () => {
+    const merged = {
+      wifi: { name: 'Guest' },
+      reception: { open: '08:00', deskPinHash: 'legacy' },
+    };
+    expect(applyOwnerTenantSavePolicy(merged, undefined)).toEqual({
+      wifi: { name: 'Guest' },
+      reception: { open: '08:00' },
+    });
   });
 
   it('allows owner overlays hostelPlaces and cityPackNeedNowPlaceIds through policy', () => {

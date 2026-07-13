@@ -262,10 +262,8 @@ function OwnerSetupWizardCoordinatorInner({
         return;
       }
 
-      const formData = new FormData(event.currentTarget);
       const block = validateOwnerTenantFormBeforeSave({
         mergedSettings,
-        receptionDeskPin: String(formData.get('receptionDeskPin') || ''),
       });
 
       if (!block) {
@@ -274,11 +272,6 @@ function OwnerSetupWizardCoordinatorInner({
 
       event.preventDefault();
       setToast({ variant: 'warning', message: block.message });
-
-      if (block.code === 'reception_desk_pin') {
-        setLaunchStep('contacts-landing');
-        return;
-      }
 
       setLaunchStep('rules-wifi');
     },

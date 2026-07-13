@@ -9,17 +9,29 @@ import type { TenantSettings } from '../model/settings';
  */
 export const OWNER_TENANT_SETTINGS_DENYLIST: (keyof TenantSettings)[] = [];
 
+function stripLegacyDeskPinHash(
+  reception: TenantSettings['reception']
+): TenantSettings['reception'] {
+  if (!reception) return reception;
+  const { deskPinHash: _ignored, ...rest } = reception as TenantSettings['reception'] & {
+    deskPinHash?: string;
+  };
+  return Object.keys(rest).length > 0 ? rest : undefined;
+}
+
 /**
  * After merge, restore owner-forbidden fields from the previous snapshot.
- * Strips tampered `deskPinHash` from merged reception; `persistTenantSettings`
- * applies a new hash only when the owner submits `receptionDeskPin`.
+ * Strips legacy `deskPinHash` from reception (staff accounts replaced shared desk PIN).
  */
 export function applyOwnerTenantSavePolicy(
   merged: TenantSettings,
   previous: TenantSettings | undefined
 ): TenantSettings {
   if (!previous) {
-    return merged;
+    return {
+      ...merged,
+      reception: stripLegacyDeskPinHash(merged.reception),
+    };
   }
 
   let result: TenantSettings = { ...merged };
@@ -31,11 +43,7 @@ export function applyOwnerTenantSavePolicy(
   }
 
   if (merged.reception || previous.reception) {
-    const { deskPinHash: _ignored, ...mergedReceptionRest } = merged.reception ?? {};
-    result.reception = {
-      ...mergedReceptionRest,
-      deskPinHash: previous.reception?.deskPinHash,
-    };
+    result.reception = stripLegacyDeskPinHash(merged.reception);
   }
 
   return result;

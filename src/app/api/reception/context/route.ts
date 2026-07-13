@@ -5,25 +5,21 @@ import {
 } from '@/app/reception/lib/receptionSession';
 import { resolveReceptionTenantSlug } from '@/app/reception/lib/resolveReceptionTenantSlug';
 import { listReceptionUsersByTenant } from '@/entities/reception-user/server';
-import { LEGACY_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
+import { FALLBACK_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
 import { buildReceptionOperationalContext } from '@/features/reception-sync/server';
 
 export async function getReceptionActorLabel(
   tenantSlug: string,
   session: ReceptionSessionPayload
 ): Promise<string> {
-  if (!session.receptionUserId) {
-    return LEGACY_RECEPTION_ACTOR_LABEL;
-  }
-
   const users = await listReceptionUsersByTenant(tenantSlug);
   const match = users.find((user) => user.id === session.receptionUserId);
   if (!match || match.disabled_at) {
-    return LEGACY_RECEPTION_ACTOR_LABEL;
+    return FALLBACK_RECEPTION_ACTOR_LABEL;
   }
 
   const displayName = match.display_name.trim();
-  return displayName || LEGACY_RECEPTION_ACTOR_LABEL;
+  return displayName || match.login || FALLBACK_RECEPTION_ACTOR_LABEL;
 }
 
 function resolveAuthorizedTenantSlug(request: NextRequest): string | null {
@@ -49,9 +45,12 @@ export async function GET(request: NextRequest) {
   }
 
   const session = readReceptionSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  }
+
   const context = await buildReceptionOperationalContext(tenantSlug);
-  const actorDisplayName =
-    session !== null ? await getReceptionActorLabel(tenantSlug, session) : LEGACY_RECEPTION_ACTOR_LABEL;
+  const actorDisplayName = await getReceptionActorLabel(tenantSlug, session);
 
   return NextResponse.json({ ...context, actorDisplayName }, {
     headers: {

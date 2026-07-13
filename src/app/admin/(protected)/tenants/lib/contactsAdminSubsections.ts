@@ -11,6 +11,7 @@ export const CONTACTS_ADMIN_MODULE_QUERY = SETTINGS_MODULE_QUERY;
 
 export const CONTACTS_ADMIN_MODULE_IDS = [
   'reception-desk',
+  'reception-staff',
   'guest-access-message',
   'phones-email',
   'stay-policy',
@@ -28,7 +29,12 @@ export const CONTACTS_ADMIN_MODULES: ContactsAdminModuleDefinition[] = [
   {
     id: 'reception-desk',
     label: 'Reception desk',
-    description: 'Hours, availability hint, desk PIN, and WhatsApp options.',
+    description: 'Hours, availability hint, desk login URL, and WhatsApp options.',
+  },
+  {
+    id: 'reception-staff',
+    label: 'Reception staff accounts',
+    description: 'Personal logins and PINs for the reception desk app.',
   },
   {
     id: 'guest-access-message',
@@ -75,6 +81,8 @@ export function getContactsAdminModuleHint(
       }
       return open || close ? 'Set both open and close times' : 'Reception hours not set';
     }
+    case 'reception-staff':
+      return 'Manage staff logins';
     case 'guest-access-message':
       return settings.reception?.guestAccessMessageTemplate?.trim()
         ? 'Custom template'
@@ -116,6 +124,8 @@ export function getContactsAdminModuleStatus(
       return settings.reception?.open?.trim() && settings.reception?.close?.trim()
         ? 'ready'
         : 'preview';
+    case 'reception-staff':
+      return 'ready';
     case 'guest-access-message':
       return 'ready';
     case 'phones-email':

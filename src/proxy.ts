@@ -56,6 +56,14 @@ function resolveInternalFolder(site: ReturnType<typeof resolveTenantSlugFromHost
   return internalFolders.landing;
 }
 
+/** Absolute-path `new URL(path, base)` drops search/hash — keep them for login errors etc. */
+function rewriteUrl(pathname: string, request: NextRequest): URL {
+  const url = new URL(pathname, request.url);
+  url.search = request.nextUrl.search;
+  url.hash = request.nextUrl.hash;
+  return url;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -103,7 +111,7 @@ export async function proxy(request: NextRequest) {
     const pathnameWithLocale = request.nextUrl.pathname;
     const targetPath = `/${ownerFolder}${pathnameWithLocale}`;
 
-    const rewriteResponse = NextResponse.rewrite(new URL(targetPath, request.url));
+    const rewriteResponse = NextResponse.rewrite(rewriteUrl(targetPath, request));
     applyRefreshedAuthCookies(authResponse, rewriteResponse);
     return rewriteResponse;
   }
@@ -122,9 +130,12 @@ export async function proxy(request: NextRequest) {
     }
 
     const targetPath = `/${internalFolders.reception}${pathname === '/' ? '' : pathname}`;
-    return NextResponse.rewrite(new URL(targetPath || `/${internalFolders.reception}`, request.url), {
-      headers: rewriteHeaders,
-    });
+    return NextResponse.rewrite(
+      rewriteUrl(targetPath || `/${internalFolders.reception}`, request),
+      {
+        headers: rewriteHeaders,
+      }
+    );
   }
 
   const response = handleI18nRouting(request);
@@ -154,7 +165,7 @@ export async function proxy(request: NextRequest) {
       ? `/${internalFolders.platform}/${localeRootMatch[1]}`
       : `/${internalFolders.platform}${pathnameWithLocale}`;
 
-    return NextResponse.rewrite(new URL(targetPath, request.url), {
+    return NextResponse.rewrite(rewriteUrl(targetPath, request), {
       headers: rewriteHeaders,
     });
   }
@@ -166,7 +177,7 @@ export async function proxy(request: NextRequest) {
     rewriteHeaders.set('x-tenant-slug', hostResolution.tenantSlug);
   }
 
-  return NextResponse.rewrite(new URL(targetPath, request.url), {
+  return NextResponse.rewrite(rewriteUrl(targetPath, request), {
     headers: rewriteHeaders,
   });
 }

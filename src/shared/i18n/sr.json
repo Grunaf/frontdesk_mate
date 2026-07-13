@@ -1173,21 +1173,15 @@
         }
       },
       "receptionDesk": {
-        "title": "PIN za recepciju",
-        "description": "Osoblje koristi ovaj PIN za prijavu na sajt recepcije — ne za goste.",
+        "title": "Pristup recepciji",
+        "description": "Osoblje se prijavljuje ličnim loginom i PIN-om na sajt recepcije — ne za goste.",
         "loginUrlLabel": "Prijava na recepciju",
-        "statusSet": "PIN postavljen",
-        "statusNotSet": "PIN nije postavljen",
-        "pinLabel": "PIN",
-        "pinHint": "Najmanje 6 karaktera. Ostavite prazno da zadržite trenutni PIN.",
-        "pinPlaceholderUnchanged": "•••••• (nepromenjeno)",
-        "pinPlaceholderNew": "Postavite PIN za osoblje",
-        "setupHint": "Prijava na recepciju koristi poseban PIN za osoblje.",
-        "setupLink": "Postavite PIN u Postavkama →"
+        "setupHint": "Kreirajte naloge osoblja da bi se recepcija mogla prijaviti.",
+        "setupLink": "Upravljajte osobljem u Postavkama →"
       },
       "receptionStaff": {
         "title": "Nalozi osoblja recepcije",
-        "description": "Svako se prijavljuje svojim loginom i PIN-om na recepciji — odvojeno od zajedničkog desk PIN-a iznad.",
+        "description": "Svako se prijavljuje svojim loginom i PIN-om na recepciji.",
         "loginUrlLabel": "Prijava na recepciju",
         "loginLabel": "Login",
         "loginHint": "Mala slova, brojevi, tačke, donje crte ili crtice.",
@@ -1207,7 +1201,7 @@
         "statusDisabled": "Onemogućen",
         "activeSummary": "{count} aktivnih · max {max}",
         "activeLimitReached": "Dostignut je maksimum od {max} aktivnih naloga.",
-        "empty": "Još nema naloga. Dodajte ispod.",
+        "empty": "Još nema naloga. Kreirajte prvi.",
         "loading": "Učitavanje…",
         "created": "Nalog je dodat.",
         "errors": {

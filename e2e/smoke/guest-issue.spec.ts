@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loadE2eConfig } from '../fixtures';
-import { loginToReceptionDesk } from '../helpers/reception';
+import { hasReceptionSmokeCredentials, loginToReceptionDesk } from '../helpers/reception';
 import { checkInWithPin, openConcierge } from '../helpers/guest';
 
 const config = loadE2eConfig();
@@ -57,7 +57,10 @@ test.describe('guest issue report', () => {
 
 test.describe('reception issues tab', () => {
   test.beforeEach(() => {
-    test.skip(!config.receptionDeskPin, 'Set E2E_RECEPTION_DESK_PIN in e2e/env.local');
+    test.skip(
+      !hasReceptionSmokeCredentials(config),
+      'Set E2E_RECEPTION_LOGIN + E2E_RECEPTION_PIN in e2e/env.local'
+    );
   });
 
   test('shows open issue after guest report', async ({ page, browser }) => {

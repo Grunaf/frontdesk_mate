@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 
 import { AdminField, adminFieldWidthClass } from '@/app/admin/(protected)/tenants/ui/AdminField';
-import { DESK_PIN_MIN_LENGTH } from '@/entities/reception-user';
+import { RECEPTION_USER_PIN_MIN_LENGTH } from '@/entities/reception-user';
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 
@@ -26,6 +26,7 @@ interface ReceptionStaffFormProps {
   users: ReceptionStaffUser[];
   disabled?: boolean;
   onUserCreated: (user: ReceptionStaffUser) => void;
+  onCancel: () => void;
   onError: (message: string) => void;
 }
 
@@ -40,7 +41,7 @@ function platformCreateErrorMessage(error: ReceptionStaffMutateError): string {
     case 'invalid_display_name':
       return 'Display name is required.';
     case 'invalid_pin':
-      return `PIN must be at least ${DESK_PIN_MIN_LENGTH} characters.`;
+      return `PIN must be at least ${RECEPTION_USER_PIN_MIN_LENGTH} characters.`;
     case 'validation':
       return 'Check the fields and try again.';
     case 'unauthorized':
@@ -61,6 +62,7 @@ export function ReceptionStaffForm({
   users,
   disabled = false,
   onUserCreated,
+  onCancel,
   onError,
 }: ReceptionStaffFormProps) {
   const t = useTranslations('pages.owner.receptionStaff');
@@ -77,6 +79,13 @@ export function ReceptionStaffForm({
   const limitReached = isActiveReceptionStaffLimitReached(users);
   const formDisabled = disabled || limitReached || isPending;
 
+  const clearDraft = () => {
+    setLogin('');
+    setDisplayName('');
+    setPin('');
+    setFieldErrors({});
+  };
+
   const ownerFieldError = (key: 'login' | 'displayName' | 'pin', code: string) => {
     if (key === 'login') {
       if (code === 'required') return t('errors.loginRequired');
@@ -85,13 +94,12 @@ export function ReceptionStaffForm({
     if (key === 'displayName' && code === 'required') return t('errors.displayNameRequired');
     if (key === 'pin') {
       if (code === 'required') return t('errors.pinRequired');
-      if (code === 'too_short') return t('errors.pinTooShort', { min: DESK_PIN_MIN_LENGTH });
+      if (code === 'too_short') return t('errors.pinTooShort', { min: RECEPTION_USER_PIN_MIN_LENGTH });
     }
     return t('errors.validation');
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = () => {
     setFieldErrors({});
 
     const validation = validateReceptionStaffCreateDraft({ login, displayName, pin });
@@ -107,7 +115,7 @@ export function ReceptionStaffForm({
               : key === 'login' && code === 'invalid'
                 ? 'Invalid login'
                 : key === 'pin' && code === 'too_short'
-                  ? `At least ${DESK_PIN_MIN_LENGTH} characters`
+                  ? `At least ${RECEPTION_USER_PIN_MIN_LENGTH} characters`
                   : 'Invalid';
       }
       setFieldErrors(next);
@@ -133,11 +141,14 @@ export function ReceptionStaffForm({
         return;
       }
 
-      setLogin('');
-      setDisplayName('');
-      setPin('');
+      clearDraft();
       onUserCreated(result.user);
     });
+  };
+
+  const handleCancel = () => {
+    clearDraft();
+    onCancel();
   };
 
   const loginLabel = surface === 'owner' ? t('loginLabel') : 'Login';
@@ -145,20 +156,13 @@ export function ReceptionStaffForm({
   const pinLabel = surface === 'owner' ? t('pinLabel') : 'PIN';
   const pinHint =
     surface === 'owner'
-      ? t('pinHint', { min: DESK_PIN_MIN_LENGTH })
-      : `At least ${DESK_PIN_MIN_LENGTH} characters. Staff sign in with login + PIN at reception.`;
+      ? t('pinHint', { min: RECEPTION_USER_PIN_MIN_LENGTH })
+      : `At least ${RECEPTION_USER_PIN_MIN_LENGTH} characters. Staff sign in with login + PIN at reception.`;
   const submitLabel = surface === 'owner' ? t('addUser') : 'Add staff account';
+  const cancelLabel = surface === 'owner' ? t('cancel') : 'Cancel';
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-      {limitReached ? (
-        <p className="text-xs text-amber-800 dark:text-amber-200">
-          {surface === 'owner'
-            ? t('activeLimitReached', { max: MAX_ACTIVE_RECEPTION_STAFF })
-            : `Maximum of ${MAX_ACTIVE_RECEPTION_STAFF} active staff accounts reached.`}
-        </p>
-      ) : null}
-
+    <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-4">
         {surface === 'platform' ? (
           <>
@@ -243,13 +247,24 @@ export function ReceptionStaffForm({
         {fieldErrors.pin ? <span className="text-xs text-destructive">{fieldErrors.pin}</span> : null}
       </label>
 
-      <button
-        type="submit"
-        disabled={formDisabled}
-        className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-      >
-        {isPending ? (surface === 'owner' ? t('adding') : 'Adding…') : submitLabel}
-      </button>
-    </form>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={formDisabled}
+          onClick={handleSubmit}
+          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {isPending ? (surface === 'owner' ? t('adding') : 'Adding…') : submitLabel}
+        </button>
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={handleCancel}
+          className="inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          {cancelLabel}
+        </button>
+      </div>
+    </div>
   );
 }

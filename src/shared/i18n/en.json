@@ -1308,21 +1308,15 @@
         }
       },
       "receptionDesk": {
-        "title": "Reception desk PIN",
-        "description": "Staff use this PIN to sign in at your reception desk site — not for guests.",
+        "title": "Reception desk access",
+        "description": "Staff sign in with personal login and PIN at your reception desk site — not for guests.",
         "loginUrlLabel": "Reception login",
-        "statusSet": "PIN set",
-        "statusNotSet": "PIN not set",
-        "pinLabel": "PIN",
-        "pinHint": "At least 6 characters. Leave empty to keep the current PIN.",
-        "pinPlaceholderUnchanged": "•••••• (unchanged)",
-        "pinPlaceholderNew": "Set a PIN for staff",
-        "setupHint": "Reception desk login uses a separate staff PIN.",
-        "setupLink": "Set PIN in Settings →"
+        "setupHint": "Create staff accounts so reception can sign in.",
+        "setupLink": "Manage staff in Settings →"
       },
       "receptionStaff": {
         "title": "Reception staff accounts",
-        "description": "Each person signs in with their own login and PIN at the reception desk — separate from the shared desk PIN above.",
+        "description": "Each person signs in with their own login and PIN at the reception desk.",
         "loginUrlLabel": "Reception login",
         "loginLabel": "Login",
         "loginHint": "Lowercase letters, numbers, dots, underscores, or hyphens.",
@@ -1342,7 +1336,7 @@
         "statusDisabled": "Disabled",
         "activeSummary": "{count} active · max {max}",
         "activeLimitReached": "You already have the maximum of {max} active staff accounts.",
-        "empty": "No staff accounts yet. Add one below.",
+        "empty": "No staff accounts yet. Create the first account.",
         "loading": "Loading staff…",
         "created": "Staff account added.",
         "errors": {
