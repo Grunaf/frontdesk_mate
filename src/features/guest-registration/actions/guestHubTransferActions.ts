@@ -12,6 +12,7 @@ import type {
   ListGuestHubTransfersFilter,
   ResolveGuestHubTransferResult,
 } from '@/entities/guest-hub-transfer/server';
+import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEvent';
 
 export async function listGuestHubTransfersAction(
   tenantSlug: string,
@@ -52,6 +53,11 @@ export async function resolveGuestHubTransferAction(input: {
       transferId: input.transferId,
     });
     if (result.ok) {
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'resolveGuestHubTransfer',
+        subjectId: input.transferId,
+      });
       revalidatePath('/');
     }
     return result;

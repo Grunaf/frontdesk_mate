@@ -18,6 +18,7 @@ import type {
   UpdateGuestReservationResult,
   SetGuestReservationBookingPaidResult,
 } from '@/entities/guest-stay/server';
+import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEvent';
 
 export type CreateGuestStayActionResult =
   | CreateGuestStayResult
@@ -56,6 +57,12 @@ export async function createGuestStayAction(input: {
     );
 
     if (result.ok) {
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'createGuestStay',
+        subjectId: result.stay.id,
+        bedId: result.stay.bed_id || input.bedId,
+      });
       revalidatePath('/');
     }
 
@@ -76,6 +83,11 @@ export async function revokeGuestStayAction(input: { tenantSlug: string; stayId:
   try {
     const status = await revokeGuestStay(input);
     if (status === 'ok') {
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'revokeGuestStay',
+        subjectId: input.stayId,
+      });
       revalidatePath('/');
       return { ok: true as const };
     }
@@ -120,6 +132,11 @@ export async function reissueGuestStayAction(input: {
     );
 
     if (result.ok) {
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'reissueGuestStay',
+        subjectId: result.stay.id,
+      });
       revalidatePath('/');
     }
 
@@ -165,6 +182,12 @@ export async function updateGuestReservationAction(input: {
     });
 
     if (result.ok) {
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'updateGuestReservation',
+        subjectId: result.stay.id,
+        bedId: result.stay.bed_id || input.bedId,
+      });
       revalidatePath('/');
     }
 
@@ -198,6 +221,12 @@ export async function setGuestReservationBookingPaidAction(input: {
     });
 
     if (result.ok) {
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'setGuestReservationBookingPaid',
+        subjectId: result.stay.id,
+        paid: input.paid,
+      });
       revalidatePath('/');
     }
 
@@ -231,6 +260,11 @@ export async function completeDeskCheckInAction(input: {
     });
 
     if (result.ok) {
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'completeDeskCheckIn',
+        subjectId: result.stay.id,
+      });
       revalidatePath('/');
     }
 
