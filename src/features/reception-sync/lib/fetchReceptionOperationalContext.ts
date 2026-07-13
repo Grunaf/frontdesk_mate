@@ -1,4 +1,4 @@
-import type { ReceptionOperationalContext } from '../model/receptionOperationalContext';
+import type { ReceptionOperationalContext } from '../model/types';
 
 export type FetchReceptionOperationalContextResult =
   | { ok: true; context: ReceptionOperationalContext }
@@ -15,6 +15,8 @@ function isReceptionOperationalContext(value: unknown): value is ReceptionOperat
   return (
     typeof record.generatedAt === 'string' &&
     typeof record.operationalDayStartTime === 'string' &&
+    (record.actorDisplayName === undefined ||
+      (typeof record.actorDisplayName === 'string' && record.actorDisplayName.length > 0)) &&
     operational !== null &&
     typeof operational === 'object' &&
     typeof (operational as Record<string, unknown>).operationalDate === 'string' &&

@@ -6,6 +6,7 @@ import { isDeskPinConfigured } from '@/app/reception/lib/deskPin';
 import { AdminField, adminFieldWidthClass } from '@/app/admin/(protected)/tenants/ui/AdminField';
 import { getTenantPublicUrl } from '@/shared/config';
 import { cn } from '@/shared/lib/utils';
+import { ReceptionStaffManagement } from '@/features/reception-staff-management';
 
 export type ReceptionDeskPinSurface = 'platform' | 'owner';
 
@@ -82,6 +83,12 @@ export function ReceptionDeskPinFields({
             )}
           />
         </label>
+        <ReceptionStaffManagement
+          surface="owner"
+          tenantSlug={tenantSlug}
+          locale={locale}
+          disabled={disabled}
+        />
       </div>
     );
   }

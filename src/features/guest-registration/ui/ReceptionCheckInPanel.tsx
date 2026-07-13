@@ -58,7 +58,8 @@ import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { RevokeAccessDialog } from './RevokeAccessDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
-import type { ReceptionOperationalContext } from '@/features/reception-sync';
+import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
+import { LEGACY_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
 import {
   useReceptionOperationalRollover,
   useReceptionOperationalSync,
@@ -130,8 +131,14 @@ export function ReceptionCheckInPanel({
   }, [searchParams]);
 
   const { context, refresh } = useReceptionOperationalSync(initialContext, tenantSlug);
-  const { stays, openIssues, openTransfers, operational } = context;
+  const deskContext = context as ReceptionOperationalContext;
+  const { stays, openIssues, openTransfers, operational } = deskContext;
+  const signedInAsLabel = deskContext.actorDisplayName ?? LEGACY_RECEPTION_ACTOR_LABEL;
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     return subscribeReceptionRefresh(() => {
@@ -570,6 +577,7 @@ export function ReceptionCheckInPanel({
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reception desk</p>
           <h1 className="truncate text-xl font-semibold">{tenantName}</h1>
           <p className="text-xs text-muted-foreground">{deskStats}</p>
+          <p className="text-xs text-muted-foreground">Signed in as {signedInAsLabel}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <Button

@@ -27,6 +27,7 @@ import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { HostelPolicyFields } from './HostelPolicyFields';
 import { ReceptionBookingPlatformsFields } from './ReceptionBookingPlatformsFields';
 import { ReceptionDeskPinFields } from '@/features/owner-reception-desk';
+import { ReceptionStaffManagement } from '@/features/reception-staff-management';
 
 export type ContactsFieldsScope = 'full' | 'launch-core';
 
@@ -139,13 +140,23 @@ function ReceptionDeskModule({
         width="lg"
       />
       {showReceptionDeskPinFields ? (
-        <ReceptionDeskPinFields
-          surface={surface}
-          tenantSlug={deskPinTenantSlug}
-          locale={locale}
-          deskPinHash={settings?.reception?.deskPinHash}
-          disabled={readOnly}
-        />
+        <>
+          <ReceptionDeskPinFields
+            surface={surface}
+            tenantSlug={deskPinTenantSlug}
+            locale={locale}
+            deskPinHash={settings?.reception?.deskPinHash}
+            disabled={readOnly}
+          />
+          {surface === 'platform' ? (
+            <ReceptionStaffManagement
+              surface="platform"
+              tenantSlug={deskPinTenantSlug}
+              locale={locale}
+              disabled={readOnly}
+            />
+          ) : null}
+        </>
       ) : null}
       {showReceptionToggles ? (
         <>
