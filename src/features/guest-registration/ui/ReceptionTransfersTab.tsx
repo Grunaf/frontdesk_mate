@@ -31,58 +31,53 @@ const DIRECTION_LABELS: Record<GuestHubTransferRecord['direction'], string> = {
 
 interface ReceptionTransfersTabProps {
   tenantSlug: string;
-  initialTransfers: GuestHubTransferRecord[];
+  openTransfers: GuestHubTransferRecord[];
   resolveBedLabel: (bedId: string) => string;
   onFocusStay: (stayId: string) => void;
   isActive: boolean;
-  onOpenCountChange: (count: number) => void;
+  onOperationalRefresh: () => Promise<unknown>;
 }
 
 export function ReceptionTransfersTab({
   tenantSlug,
-  initialTransfers,
+  openTransfers,
   resolveBedLabel,
   onFocusStay,
   isActive,
-  onOpenCountChange,
+  onOperationalRefresh,
 }: ReceptionTransfersTabProps) {
   const [filter, setFilter] = useState<TransfersFilter>('open');
-  const [transfers, setTransfers] = useState(initialTransfers);
+  const [doneTransfers, setDoneTransfers] = useState<GuestHubTransferRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const refreshTransfers = useCallback(
-    async (nextFilter: TransfersFilter = filter) => {
-      const updated = await listGuestHubTransfersAction(tenantSlug, nextFilter);
-      setTransfers(updated);
+  const loadDoneTransfers = useCallback(async () => {
+    const updated = await listGuestHubTransfersAction(tenantSlug, 'done');
+    setDoneTransfers(updated);
+  }, [tenantSlug]);
 
-      if (nextFilter === 'open') {
-        onOpenCountChange(updated.length);
-        return;
-      }
-
-      const openTransfers = await listGuestHubTransfersAction(tenantSlug, 'open');
-      onOpenCountChange(openTransfers.length);
-    },
-    [filter, onOpenCountChange, tenantSlug]
-  );
-
-  useEffect(() => {
-    onOpenCountChange(initialTransfers.length);
-  }, [initialTransfers, onOpenCountChange]);
+  const transfers = filter === 'open' ? openTransfers : doneTransfers;
 
   useEffect(() => {
     if (!isActive) {
       return;
     }
 
-    void refreshTransfers();
-  }, [isActive, refreshTransfers]);
+    void onOperationalRefresh();
+  }, [isActive, onOperationalRefresh]);
+
+  useEffect(() => {
+    if (filter === 'done' && isActive) {
+      void loadDoneTransfers();
+    }
+  }, [filter, isActive, loadDoneTransfers]);
 
   const handleFilterChange = (nextFilter: string) => {
     const resolved = nextFilter as TransfersFilter;
     setFilter(resolved);
-    void refreshTransfers(resolved);
+    if (resolved === 'done') {
+      void loadDoneTransfers();
+    }
   };
 
   const handleResolve = (transferId: string) => {
@@ -95,7 +90,10 @@ export function ReceptionTransfersTab({
         return;
       }
 
-      await refreshTransfers();
+      await onOperationalRefresh();
+      if (filter === 'done') {
+        await loadDoneTransfers();
+      }
     });
   };
 

@@ -25,62 +25,57 @@ const CATEGORY_LABELS: Record<GuestIssueRecord['category'], string> = {
 
 interface IssuesListProps {
   tenantSlug: string;
-  initialIssues: GuestIssueRecord[];
+  openIssues: GuestIssueRecord[];
   onFocusStay: (stayId: string) => void;
   isActive: boolean;
-  onOpenCountChange: (count: number) => void;
+  onOperationalRefresh: () => Promise<unknown>;
 }
 
 export function IssuesList({
   tenantSlug,
-  initialIssues,
+  openIssues,
   onFocusStay,
   isActive,
-  onOpenCountChange,
+  onOperationalRefresh,
 }: IssuesListProps) {
   const [filter, setFilter] = useState<IssuesFilter>('open');
-  const [issues, setIssues] = useState(initialIssues);
+  const [doneIssues, setDoneIssues] = useState<GuestIssueRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const refreshIssues = useCallback(
-    async (nextFilter: IssuesFilter = filter) => {
-      const updated = await listGuestIssuesAction(tenantSlug, nextFilter);
-      setIssues(updated);
+  const loadDoneIssues = useCallback(async () => {
+    const updated = await listGuestIssuesAction(tenantSlug, 'done');
+    setDoneIssues(updated);
+  }, [tenantSlug]);
 
-      if (nextFilter === 'open') {
-        onOpenCountChange(updated.length);
-        return;
-      }
-
-      const openIssues = await listGuestIssuesAction(tenantSlug, 'open');
-      onOpenCountChange(openIssues.length);
-    },
-    [filter, onOpenCountChange, tenantSlug]
-  );
-
-  useEffect(() => {
-    onOpenCountChange(initialIssues.length);
-  }, [initialIssues, onOpenCountChange]);
+  const issues = filter === 'open' ? openIssues : doneIssues;
 
   useEffect(() => {
     if (!isActive) {
       return;
     }
 
-    void refreshIssues();
+    void onOperationalRefresh();
 
     const interval = window.setInterval(() => {
-      void refreshIssues();
+      void onOperationalRefresh();
     }, 30_000);
 
     return () => window.clearInterval(interval);
-  }, [isActive, refreshIssues]);
+  }, [isActive, onOperationalRefresh]);
+
+  useEffect(() => {
+    if (filter === 'done' && isActive) {
+      void loadDoneIssues();
+    }
+  }, [filter, isActive, loadDoneIssues]);
 
   const handleFilterChange = (nextFilter: string) => {
     const resolved = nextFilter as IssuesFilter;
     setFilter(resolved);
-    void refreshIssues(resolved);
+    if (resolved === 'done') {
+      void loadDoneIssues();
+    }
   };
 
   const handleResolve = (issueId: string) => {
@@ -93,7 +88,10 @@ export function IssuesList({
         return;
       }
 
-      await refreshIssues();
+      await onOperationalRefresh();
+      if (filter === 'done') {
+        await loadDoneIssues();
+      }
     });
   };
 

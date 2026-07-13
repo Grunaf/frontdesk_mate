@@ -12,6 +12,7 @@ interface ReceptionHubViewProps {
   snapshot: ReceptionHubSnapshot;
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
+  operationalDayUpdatedNotice?: boolean;
 }
 
 function formatOperationalDayCaption(snapshot: ReceptionHubSnapshot): string {
@@ -87,9 +88,18 @@ export function ReceptionHubView({
   snapshot,
   resolveBedLabel,
   onViewStay,
+  operationalDayUpdatedNotice = false,
 }: ReceptionHubViewProps) {
   return (
     <div className="space-y-5">
+      {operationalDayUpdatedNotice ? (
+        <p
+          role="status"
+          className="rounded-md border border-border/80 bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+        >
+          Operational day updated
+        </p>
+      ) : null}
       <p className="text-xs text-muted-foreground">{formatOperationalDayCaption(snapshot)}</p>
 
       <HubSection title="Expected arrivals">

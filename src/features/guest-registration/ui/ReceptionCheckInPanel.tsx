@@ -26,7 +26,6 @@ import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModule
 import {
   createGuestStayAction,
   completeDeskCheckInAction,
-  listActiveGuestStaysAction,
   reissueGuestStayAction,
   revokeGuestStayAction,
   updateGuestReservationAction,
@@ -60,6 +59,10 @@ import { RevokeAccessDialog } from './RevokeAccessDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync';
+import {
+  useReceptionOperationalRollover,
+  useReceptionOperationalSync,
+} from '@/features/reception-sync';
 
 interface ReceptionCheckInPanelProps {
   tenantSlug: string;
@@ -124,13 +127,30 @@ export function ReceptionCheckInPanel({
     }
   }, [searchParams]);
 
-  const [generatedAt, setGeneratedAt] = useState(initialContext.generatedAt);
-  const [operational, setOperational] = useState(initialContext.operational);
-  const [stays, setStays] = useState(initialContext.stays);
+  const { context, refresh } = useReceptionOperationalSync(initialContext, tenantSlug);
+  const { stays, openIssues, openTransfers, operational } = context;
+  const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
+
+  const { rolloverEpoch } = useReceptionOperationalRollover(operational.endsAt, refresh, {
+    onRollover: () => setOperationalDayUpdatedNotice(true),
+  });
+
+  useEffect(() => {
+    if (!operationalDayUpdatedNotice) {
+      return;
+    }
+
+    const timerId = window.setTimeout(() => {
+      setOperationalDayUpdatedNotice(false);
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [operationalDayUpdatedNotice]);
+
   const [issueOverlayOpen, setIssueOverlayOpen] = useState(false);
   const [deskTab, setDeskTab] = useState<DeskTab>('desk');
-  const [openIssueCount, setOpenIssueCount] = useState(initialContext.openIssues.length);
-  const [openTransferCount, setOpenTransferCount] = useState(initialContext.openTransfers.length);
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
   const [bookingPlatformId, setBookingPlatformId] = useState('');
@@ -162,8 +182,8 @@ export function ReceptionCheckInPanel({
   );
 
   const hubSnapshot = useMemo(
-    () => resolveReceptionHubSnapshot(tenantSettings, stays),
-    [tenantSettings, stays]
+    () => resolveReceptionHubSnapshot(tenantSettings, stays, new Date()),
+    [tenantSettings, stays, rolloverEpoch]
   );
 
   const inventory = useMemo(
@@ -287,12 +307,6 @@ export function ReceptionCheckInPanel({
     }
   };
 
-  const refreshStays = useCallback(async () => {
-    const updated = await listActiveGuestStaysAction(tenantSlug);
-    setStays(updated);
-    return updated;
-  }, [tenantSlug]);
-
   const createErrorMessage = (code: string): string => {
     switch (code) {
       case 'unauthorized':
@@ -411,21 +425,12 @@ export function ReceptionCheckInPanel({
           if (!result.ok) {
             setError(createErrorMessage(result.error));
             if (result.error === 'access_overlap') {
-              await refreshStays();
+              await refresh();
             }
             return;
           }
 
-          setStays((current) =>
-            current.map((stay) =>
-              stay.id === result.stay.id
-                ? {
-                    ...result.stay,
-                    magicLinkUrl: stay.magicLinkUrl,
-                  }
-                : stay
-            )
-          );
+          await refresh();
           openStayDetail(result.stay.id);
           clearEditDraft();
           return;
@@ -445,17 +450,12 @@ export function ReceptionCheckInPanel({
         if (!result.ok) {
           setError(createErrorMessage(result.error));
           if (result.error === 'access_overlap') {
-            await refreshStays();
+            await refresh();
           }
           return;
         }
 
-        const stayWithLink: GuestStayRecordWithLink = {
-          ...result.stay,
-          magicLinkUrl: result.magicLinkUrl,
-        };
-
-        setStays((current) => [stayWithLink, ...current]);
+        await refresh();
         openStayDetail(result.stay.id);
         setStayPins((current) => ({ ...current, [result.stay.id]: result.guestPin }));
         resetCreateIssueForm();
@@ -478,14 +478,7 @@ export function ReceptionCheckInPanel({
         return;
       }
 
-      const stayWithLink: GuestStayRecordWithLink = {
-        ...result.stay,
-        magicLinkUrl: result.magicLinkUrl,
-      };
-
-      setStays((current) =>
-        current.map((stay) => (stay.id === stayId ? stayWithLink : stay))
-      );
+      await refresh();
       openStayDetail(stayId);
       setStayPins((current) => ({ ...current, [stayId]: result.guestPin }));
       setPendingReissueAccessStay(null);
@@ -502,17 +495,7 @@ export function ReceptionCheckInPanel({
         return;
       }
 
-      setStays((current) =>
-        current.map((stay) =>
-          stay.id === stayId
-            ? {
-                ...stay,
-                desk_checked_in_at: result.stay.desk_checked_in_at,
-                key_issued_at: result.stay.key_issued_at,
-              }
-            : stay
-        )
-      );
+      await refresh();
     });
   };
 
@@ -526,7 +509,7 @@ export function ReceptionCheckInPanel({
         return;
       }
 
-      setStays((current) => current.filter((stay) => stay.id !== stayId));
+      await refresh();
       setStayPins((current) => {
         const next = { ...current };
         delete next[stayId];
@@ -640,17 +623,11 @@ export function ReceptionCheckInPanel({
           tourismRegistrationRequired={tourismRegistrationRequired}
           tenantSlug={tenantSlug}
           tenantSettings={tenantSettings}
-          onTourismExportedAtChange={(stayId, tourismExportedAt) => {
-            setStays((current) =>
-              current.map((stay) =>
-                stay.id === stayId ? { ...stay, tourism_exported_at: tourismExportedAt } : stay
-              )
-            );
+          onTourismExportedAtChange={() => {
+            void refresh();
           }}
-          onStayBookingBalanceChange={(updatedStay) => {
-            setStays((current) =>
-              current.map((stay) => (stay.id === updatedStay.id ? updatedStay : stay))
-            );
+          onStayBookingBalanceChange={() => {
+            void refresh();
           }}
           onRevoke={(stayId) => {
             setPendingRevokeStayId(stayId);
@@ -717,10 +694,10 @@ export function ReceptionCheckInPanel({
               <TabsTrigger value="plan">Plan</TabsTrigger>
               <TabsTrigger value="access">Access</TabsTrigger>
               <TabsTrigger value="issues">
-                Issues{openIssueCount > 0 ? ` (${openIssueCount})` : ''}
+                Issues{openIssues.length > 0 ? ` (${openIssues.length})` : ''}
               </TabsTrigger>
               <TabsTrigger value="transfers">
-                Transfers{openTransferCount > 0 ? ` (${openTransferCount})` : ''}
+                Transfers{openTransfers.length > 0 ? ` (${openTransfers.length})` : ''}
               </TabsTrigger>
             </TabsList>
 
@@ -729,6 +706,7 @@ export function ReceptionCheckInPanel({
                 snapshot={hubSnapshot}
                 resolveBedLabel={resolveBedLabel}
                 onViewStay={openStayDetail}
+                operationalDayUpdatedNotice={operationalDayUpdatedNotice}
               />
             </TabsContent>
 
@@ -758,21 +736,21 @@ export function ReceptionCheckInPanel({
             <TabsContent value="issues">
               <IssuesList
                 tenantSlug={tenantSlug}
-                initialIssues={initialContext.openIssues}
+                openIssues={openIssues}
                 onFocusStay={openStayDetail}
                 isActive={deskTab === 'issues'}
-                onOpenCountChange={setOpenIssueCount}
+                onOperationalRefresh={refresh}
               />
             </TabsContent>
 
             <TabsContent value="transfers">
               <ReceptionTransfersTab
                 tenantSlug={tenantSlug}
-                initialTransfers={initialContext.openTransfers}
+                openTransfers={openTransfers}
                 resolveBedLabel={resolveBedLabel}
                 onFocusStay={openStayDetail}
                 isActive={deskTab === 'transfers'}
-                onOpenCountChange={setOpenTransferCount}
+                onOperationalRefresh={refresh}
               />
             </TabsContent>
           </Tabs>
