@@ -1,3 +1,4 @@
+import { SITE_CONFIG } from '@/shared/config';
 import type { GuestIntent } from './guestIntent';
 import { guestIntentToEntry } from './guestIntent';
 import {
@@ -36,9 +37,16 @@ export function resolvePostCheckInPath(input: {
     return `/${input.locale}/check-in/intent`;
   }
 
+  const entry = resolveEntryForLanding(input);
+
+  // Desk / at-reception → Settlement (stay-setup), not arrival-guide preparation.
+  if (entry === 'desk') {
+    return `/${input.locale}${SITE_CONFIG.routes.app.staySetup.path}`;
+  }
+
   return resolveGuestWelcomePath({
     locale: input.locale,
-    entry: resolveEntryForLanding(input),
+    entry,
     modeOnsite: input.modeOnsite,
   });
 }

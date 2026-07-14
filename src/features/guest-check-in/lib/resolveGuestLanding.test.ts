@@ -44,8 +44,9 @@ describe('resolvePostCheckInPath', () => {
     expect(resolvePostCheckInPath({ locale: 'en', urlEntry: 'remote' })).toBe(
       '/en/welcome?step=info'
     );
+    expect(resolvePostCheckInPath({ locale: 'en', urlEntry: 'desk' })).toBe('/en/stay-setup');
     expect(resolvePostCheckInPath({ locale: 'en', storedIntent: 'at_desk' })).toBe(
-      '/en/welcome?step=info'
+      '/en/stay-setup'
     );
   });
 });

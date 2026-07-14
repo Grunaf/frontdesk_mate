@@ -15,6 +15,12 @@ export function guestIntentToEntry(intent: GuestIntent): GuestEntryParam {
   return 'remote';
 }
 
+export function guestEntryToIntent(entry: GuestEntryParam): GuestIntent {
+  if (entry === 'door') return 'at_door';
+  if (entry === 'desk') return 'at_desk';
+  return 'planning';
+}
+
 function readAllGuestIntents(): StoredGuestIntent[] {
   if (typeof window === 'undefined') return [];
 

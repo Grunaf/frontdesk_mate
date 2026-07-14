@@ -5,10 +5,9 @@ import { useEffect } from 'react';
 import {
   readGuestIntent,
   writeGuestIntent,
-  guestIntentToEntry,
   type GuestIntent,
 } from '../lib/guestIntent';
-import { resolveGuestWelcomePath } from '../lib/resolveGuestWelcomePath';
+import { resolvePostCheckInPath } from '../lib/resolveGuestLanding';
 import { useGuestSession } from './GuestSessionProvider';
 import { useTranslations } from '@/shared/i18n';
 import { Button } from '@/shared/ui';
@@ -35,9 +34,9 @@ export function GuestIntentScreen({ locale }: GuestIntentScreenProps) {
     const storedIntent = readGuestIntent(currentTenantSlug);
     if (storedIntent) {
       router.replace(
-        resolveGuestWelcomePath({
+        resolvePostCheckInPath({
           locale,
-          entry: guestIntentToEntry(storedIntent),
+          storedIntent,
         })
       );
     }
@@ -48,9 +47,9 @@ export function GuestIntentScreen({ locale }: GuestIntentScreenProps) {
 
     writeGuestIntent(currentTenantSlug, intent);
     router.replace(
-      resolveGuestWelcomePath({
+      resolvePostCheckInPath({
         locale,
-        entry: guestIntentToEntry(intent),
+        storedIntent: intent,
       })
     );
   };

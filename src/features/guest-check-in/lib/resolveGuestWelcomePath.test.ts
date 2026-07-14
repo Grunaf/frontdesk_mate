@@ -32,7 +32,7 @@ describe('resolveWelcomeStep', () => {
     expect(resolveWelcomeStep({ modeOnsite: true })).toBe('arrival');
   });
 
-  it('maps desk to preparation', () => {
+  it('maps desk to preparation (legacy welcome helper; landing uses stay-setup)', () => {
     expect(resolveWelcomeStep({ entry: 'desk' })).toBe('info');
   });
 });

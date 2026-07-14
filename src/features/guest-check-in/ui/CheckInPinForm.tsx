@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { activateGuestStayByPinAction } from '../actions/activateGuestStayByPin';
 import { parseGuestEntryParam } from '../lib/resolveGuestWelcomePath';
-import { readGuestIntent } from '../lib/guestIntent';
+import { guestEntryToIntent, readGuestIntent, writeGuestIntent } from '../lib/guestIntent';
 import { resolvePostCheckInPath } from '../lib/resolveGuestLanding';
 import {
   normalizePinActivationError,
@@ -51,6 +51,11 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
       trackCheckInSuccess(registration.tenantSlug);
       clearPendingGuestPinActivation();
       writeGuestRegistrationIndex(registration);
+      if (entry) {
+        writeGuestIntent(registration.tenantSlug, guestEntryToIntent(entry));
+      } else if (modeOnsite) {
+        writeGuestIntent(registration.tenantSlug, 'at_door');
+      }
       router.refresh();
       router.replace(
         resolvePostCheckInPath({ locale, urlEntry: entry, modeOnsite, storedIntent })

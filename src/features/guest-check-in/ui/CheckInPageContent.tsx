@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { activateGuestStayAction } from '../actions/activateGuestStay';
 import { parseGuestEntryParam } from '../lib/resolveGuestWelcomePath';
-import { readGuestIntent } from '../lib/guestIntent';
+import { guestEntryToIntent, readGuestIntent, writeGuestIntent } from '../lib/guestIntent';
 import { resolvePostCheckInPath } from '../lib/resolveGuestLanding';
 import { CheckInPinForm } from './CheckInPinForm';
 import { useGuestSession } from './GuestSessionProvider';
@@ -39,17 +39,29 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
     storedIntent,
   });
 
+  const persistEntryIntent = (tenantSlug: string) => {
+    if (entry) {
+      writeGuestIntent(tenantSlug, guestEntryToIntent(entry));
+      return;
+    }
+    if (modeOnsite) {
+      writeGuestIntent(tenantSlug, 'at_door');
+    }
+  };
+
   useEffect(() => {
     if (isRegistered && !token) {
+      if (currentTenantSlug) persistEntryIntent(currentTenantSlug);
       router.replace(landingPath);
     }
-  }, [isRegistered, token, landingPath, router]);
+  }, [isRegistered, token, landingPath, router, currentTenantSlug, entry, modeOnsite]);
 
   useEffect(() => {
     if (!isRegistered || !token) return;
 
+    if (currentTenantSlug) persistEntryIntent(currentTenantSlug);
     router.replace(landingPath);
-  }, [isRegistered, token, landingPath, router]);
+  }, [isRegistered, token, landingPath, router, currentTenantSlug, entry, modeOnsite]);
 
   useEffect(() => {
     if (!token || isRegistered) return;
@@ -63,6 +75,7 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
           bedId: result.registration.bedId,
           exp: result.registration.exp,
         });
+        persistEntryIntent(result.registration.tenantSlug);
         router.refresh();
         router.replace(landingPath);
         return;
@@ -71,7 +84,7 @@ export function CheckInPageContent({ locale }: CheckInPageContentProps) {
       setCorrectTenantSlug(result.correctTenantSlug ?? null);
       setErrorKey(result.error);
     });
-  }, [token, isRegistered, locale, router, landingPath]);
+  }, [token, isRegistered, locale, router, landingPath, entry, modeOnsite]);
 
   if (token) {
     if (isRegistered) {
