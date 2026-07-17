@@ -158,3 +158,25 @@ export type ActivateGuestStayByPinResult =
       ok: false;
       error: 'invalid_pin' | 'expired' | 'revoked' | 'db_unavailable';
     };
+
+/** Grant lookup without writing session cookies or activated_at. */
+export type GuestStayPreview = {
+  stayId: string;
+  tenantSlug: string;
+  bedId: string;
+};
+
+export type PreviewGuestStayByTokenResult =
+  | { ok: true; stay: GuestStayPreview }
+  | {
+      ok: false;
+      error: 'invalid_token' | 'expired' | 'revoked' | 'wrong_hostel' | 'db_unavailable';
+      correctTenantSlug?: string;
+    };
+
+export type PreviewGuestStayByPinResult =
+  | { ok: true; stay: GuestStayPreview }
+  | {
+      ok: false;
+      error: 'invalid_pin' | 'expired' | 'revoked' | 'db_unavailable';
+    };

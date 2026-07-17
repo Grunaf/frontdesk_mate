@@ -1,6 +1,4 @@
-import { getOwnerSession, getOwnerTenantContext } from '@/entities/hostel-owner';
-import { OwnerTenantFormDraftBoundary } from '@/features/owner-settings';
-import { OwnerPortalShell } from '@/features/owner-shell';
+import { getOwnerSession } from '@/entities/hostel-owner';
 import { redirect } from 'next/navigation';
 
 interface OwnerProtectedLayoutProps {
@@ -16,14 +14,5 @@ export default async function OwnerProtectedLayout({ children, params }: OwnerPr
     redirect(`/${locale}/login`);
   }
 
-  const context = await getOwnerTenantContext();
-  if (!context) {
-    return children;
-  }
-
-  return (
-    <OwnerPortalShell locale={locale} context={context}>
-      <OwnerTenantFormDraftBoundary>{children}</OwnerTenantFormDraftBoundary>
-    </OwnerPortalShell>
-  );
+  return children;
 }

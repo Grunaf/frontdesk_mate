@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createOwnerServerClient } from '@/shared/lib/db/supabase-owner-server';
+import { ownerPortalOriginUrl } from '../../../lib/resolveOwnerPortalOrigin';
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ locale: string }> }
 ) {
   const { locale } = await context.params;
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const nextPath = searchParams.get('next') ?? '/';
 
@@ -15,9 +16,11 @@ export async function GET(
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(new URL(`/${locale}${nextPath}`, origin));
+      return NextResponse.redirect(ownerPortalOriginUrl(request, `/${locale}${nextPath}`));
     }
   }
 
-  return NextResponse.redirect(new URL(`/${locale}/login?error=auth_callback`, origin));
+  return NextResponse.redirect(
+    ownerPortalOriginUrl(request, `/${locale}/login?error=auth_callback`),
+  );
 }

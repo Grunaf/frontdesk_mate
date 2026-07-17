@@ -1,4 +1,5 @@
 import type { TenantOwnerForAdmin } from '@/entities/hostel-owner/server/getTenantOwnerForAdmin';
+import { LinkTenantOwnerForm } from './LinkTenantOwnerForm';
 
 type TenantOwnerPanelProps = {
   tenantId: string;
@@ -44,7 +45,12 @@ export function TenantOwnerPanel({ tenantId, tenantSlug, owner }: TenantOwnerPan
           </div>
         </dl>
       ) : (
-        <p className="text-sm text-muted-foreground">Self-service not linked — legacy or manual tenant.</p>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Self-service not linked — legacy or manual tenant. Assign an owner email below.
+          </p>
+          <LinkTenantOwnerForm tenantId={tenantId} />
+        </div>
       )}
     </section>
   );

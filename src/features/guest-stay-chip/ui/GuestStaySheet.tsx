@@ -109,7 +109,7 @@ export function GuestStaySheet({
   const bedLocationLockReason =
     registrationStatusLoading || checkInStarted
       ? bedLocationLocked
-        ? ('tourism' as const)
+        ? ('registration' as const)
         : null
       : ('before_check_in' as const);
 
@@ -128,7 +128,7 @@ export function GuestStaySheet({
     ? undefined
     : bedLocationLockReason === 'before_check_in'
       ? undefined
-      : bedLocationLockReason === 'tourism'
+      : bedLocationLockReason === 'registration'
         ? registerPath
         : settlementPath;
 

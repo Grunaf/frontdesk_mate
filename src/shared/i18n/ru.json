@@ -963,6 +963,17 @@
         "title": "Откройте ссылку или введите PIN",
         "description": "Ресепшен выдаёт ссылку, QR или 6-значный PIN на бумажке после назначения кровати. Введите PIN здесь, если нет сети — синхронизируем, когда появится интернет."
       },
+      "alreadyCheckedIn": {
+        "title": "Вы уже заселены",
+        "description": "На этом телефоне активна кровать {bed}. Продолжите проживание или введите другой PIN ниже, если ресепшен выдал новый код.",
+        "continue": "Перейти к проживанию"
+      },
+      "staySwitch": {
+        "title": "Ссылка на другое проживание",
+        "description": "На этом телефоне сейчас кровать {currentBed}. Эта ссылка открывает кровать {incomingBed}. Переключить проживание?",
+        "switch": "Переключить",
+        "keep": "Оставить текущее"
+      },
       "intent": {
         "metaTitle": "Где вы сейчас?",
         "metaDescription": "Выберите, где вы сейчас — откроем нужный шаг гида: от подготовки до кровати.",
@@ -977,8 +988,10 @@
       },
       "pin": {
         "label": "PIN для check-in",
+        "otherStayLabel": "PIN другого проживания",
         "placeholder": "000 000",
         "hint": "6 цифр с бумажки, которую дал ресепшен",
+        "otherStayHint": "Введите 6-значный PIN для другого проживания на этом телефоне",
         "submit": "Зарегистрироваться",
         "activating": "Проверяем PIN…",
         "queuedTitle": "Сохранено офлайн",
@@ -1147,6 +1160,11 @@
         "title": "Frontdesk Mate",
         "subtitle": "Кабинет владельца"
       },
+      "desktopRequired": {
+        "title": "Откройте на компьютере",
+        "description": "Кабинет владельца рассчитан на большой экран. Вход, настройка и параметры на телефоне недоступны.",
+        "hint": "Откройте эту страницу в браузере на ноутбуке или компьютере."
+      },
       "locale": {
         "en": "English",
         "sr": "Srpski"
@@ -1154,6 +1172,8 @@
       "nav": {
         "setup": "Настройка",
         "settings": "Параметры",
+        "knowledge": "База знаний",
+        "activity": "Активность",
         "signOut": "Выйти"
       },
       "lifecycle": {
@@ -1319,6 +1339,162 @@
         "loginUrlLabel": "Reception login",
         "setupHint": "Create staff accounts so reception can sign in.",
         "setupLink": "Manage staff in Settings →"
+      },
+      "activity": {
+        "title": "Активность",
+        "subtitle": "Недавние действия сотрудников на reception desk.",
+        "empty": "Пока нет записанных действий сотрудников.",
+        "formerStaff": "Бывший сотрудник",
+        "emptyDetail": "—",
+        "columns": {
+          "time": "Время",
+          "staff": "Сотрудник",
+          "event": "Событие",
+          "detail": "Детали"
+        },
+        "eventTypes": {
+          "guest_stay_created": "Создано проживание",
+          "guest_stay_updated": "Обновлено проживание",
+          "guest_stay_revoked": "Отозван доступ",
+          "guest_stay_reissued": "Перевыпущен доступ",
+          "desk_check_in_completed": "Заселение на ресепшене",
+          "booking_paid_set": "Бронь отмечена оплаченной",
+          "hub_transfer_resolved": "Закрыт hub transfer"
+        }
+      },
+      "knowledge": {
+        "title": "База знаний сотрудников",
+        "subtitle": "Документируйте роли, статические чеклисты обязанностей и инструкции. Сотрудники увидят это позже в своих модулях.",
+        "readOnly": "Редактирование недоступно, пока подписка не активна.",
+        "tabs": {
+          "bootstrap": "Собрать структуру",
+          "roles": "Роли",
+          "articles": "Инструкции"
+        },
+        "ai": {
+          "copyPrompt": "Скопировать AI-промпт",
+          "promptCopied": "Промпт скопирован — вставьте во внешний AI, затем вставьте ответ ниже.",
+          "generateWithAi": "Сгенерировать через AI",
+          "generating": "Генерация…",
+          "pasteReplyLabel": "Вставить ответ AI",
+          "pasteReplyHint": "Вставьте полный ответ AI или нажмите «Сгенерировать через AI». Система извлечёт JSON и разложит по ролям, чеклистам или инструкциям.",
+          "preview": "Проверить разбор",
+          "applying": "Сохранение…"
+        },
+        "bootstrap": {
+          "modeAuto": "Автогенерация",
+          "modeManual": "Вручную (промпты)",
+          "modeAriaLabel": "Режим сборки структуры",
+          "advancedPaste": "Дополнительно: вставить ответ",
+          "applyReplace": "Готово — роли и чеклисты заменены.",
+          "parseOk": "Разобрано ролей: {count}. Проверьте и примените.",
+          "confirmReplace": "Это заменит все текущие роли и чеклисты. Инструкции останутся. Продолжить?",
+          "checkReadiness": "Проверить готовность",
+          "updateReadiness": "Обновить готовность",
+          "checkingReadiness": "Проверка…",
+          "readinessTitle": "AI-готовность",
+          "readinessStale": "Ответы изменились — обновите readiness, чтобы пересчитать оценку.",
+          "resetCycle": "Сбросить цикл",
+          "mustUse": "Обязательно учесть",
+          "missing": "Не хватает",
+          "unclear": "Неясно",
+          "followUp": "Уточняющие вопросы",
+          "followUpAnswerPlaceholder": "Ваш ответ",
+          "answeredClarifications": "Ответы на уточнения",
+          "readyGreen": "Можно генерировать структуру.",
+          "readyYellow": "Можно, но есть пробелы — смотрите ниже.",
+          "readyRed": "Мало данных — ответьте на вопросы ниже.",
+          "generateYellowHint": "Есть пробелы — структура будет приблизительной.",
+          "otherNotesIncomplete": "Заполните текст для каждого выбранного Other.",
+          "generateStructure": "Сгенерировать структуру",
+          "pipelineProgress": "Пайплайн",
+          "questionnaire": {
+            "fromSettings": "Из настроек",
+            "openSettingsContacts": "Открыть Contacts",
+            "openSettingsGuestApp": "Открыть Guest app / карту комнат",
+            "checkInTime": "Время check-in",
+            "checkOutTime": "Время check-out",
+            "receptionOpen": "Ресепшен открывается",
+            "receptionClose": "Ресепшен закрывается",
+            "receptionHint": "Подсказка по часам ресепшена",
+            "sizeFromMap": "Комнаты: {rooms} · Кровати: {beds} (из карты комнат)",
+            "sizeUnknown": "Неизвестно",
+            "roomCount": "Комнаты",
+            "bedCount": "Кровати",
+            "laundry": "Прачечная на месте",
+            "quietHours": "Тихие часы",
+            "laborModel": "Модель труда",
+            "laborPaid": "Наёмные",
+            "laborVolunteers": "Волонтёры",
+            "laborMix": "Смешанная",
+            "nightCoverage": "Кто на ночи?",
+            "nightStaff": "Сотрудники",
+            "nightVolunteer": "Волонтёр",
+            "nightOnCallOwner": "Владелец на связи",
+            "nightClosed": "Закрыто",
+            "cleaningOwner": "Кто убирает (смена гостей)?",
+            "cleaningDepth": "Кто делает глубокую уборку?",
+            "cleaningStaff": "Сотрудники",
+            "cleaningVolunteers": "Волонтёры",
+            "cleaningOutsource": "Аутсорс",
+            "cleaningMixed": "Смешанно",
+            "cleaningDepthOwner": "Владелец",
+            "laundryOps": "Кто стирает / выносит бельё?",
+            "guestPayments": "Кто принимает оплату / депозит?",
+            "paymentsPaidStaff": "Наёмные",
+            "paymentsOwner": "Владелец",
+            "paymentsNone": "Никто (только онлайн)",
+            "keysAccess": "Кто выдаёт ключи / коды?",
+            "keysPaidStaff": "Наёмные",
+            "keysOwner": "Владелец",
+            "keysVolunteer": "Волонтёр",
+            "keysSelfService": "Self-service",
+            "peakDays": "Пиковые дни / сезонность",
+            "peakDaysPlaceholder": "напр. пт–вс, летние фестивали",
+            "specialConstraints": "Особые ограничения",
+            "specialConstraintsPlaceholder": "Химикаты, язык, возраст волонтёров — что AI обязан учесть",
+            "yes": "Да",
+            "no": "Нет",
+            "other": "Другое",
+            "otherNotePlaceholder": "Укажите свой вариант",
+            "otherNoteRequired": "Обязательно при выборе Other",
+            "timePlaceholder": "напр. 14:00",
+            "criticalPrefillHint": "Check-in, часы ресепшена и карта комнат пусты. Сначала заполните Settings — так результат будет лучше."
+          }
+        },
+        "roles": {
+          "empty": "Ролей пока нет. Соберите структуру из ответа AI.",
+          "headcount": "Нужно людей",
+          "laborType": "Труд",
+          "checklistTitle": "Обязанности",
+          "delete": "Удалить роль"
+        },
+        "articles": {
+          "empty": "Инструкций пока нет.",
+          "aiTopicLabel": "О чём должна быть инструкция?",
+          "applyImport": "Инструкция импортирована.",
+          "parseOk": "Инструкция разобрана. Проверьте и импортируйте.",
+          "addManual": "Добавить инструкцию вручную",
+          "titleLabel": "Заголовок",
+          "bodyLabel": "Текст инструкции",
+          "videoUrlLabel": "URL видео (необязательно)",
+          "roleLabel": "Связанная роль",
+          "roleNone": "Без роли",
+          "saveManual": "Сохранить инструкцию",
+          "delete": "Удалить"
+        },
+        "errors": {
+          "unauthorized": "Войдите снова, чтобы продолжить.",
+          "forbidden": "Редактирование сейчас недоступно.",
+          "invalid": "Не удалось использовать ответ AI. Скопируйте промпт снова и вставьте полный JSON-ответ.",
+          "write": "Не удалось сохранить. Попробуйте ещё раз.",
+          "notFound": "Элемент не найден.",
+          "notConfigured": "Генерация AI не настроена. Скопируйте промпт и вставьте ответ вручную.",
+          "rateLimited": "Лимит AI исчерпан. Подождите или используйте копирование промпта / вставку.",
+          "provider": "Ошибка AI-провайдера. Попробуйте ещё раз или скопируйте промпт и вставьте ответ.",
+          "invalidInput": "Добавьте чуть больше деталей (хотя бы короткий абзац) перед генерацией.",
+          "notReady": "Ещё не готово — ответьте на уточняющие вопросы или добавьте недостающее, затем проверьте снова."
+        }
       },
       "receptionStaff": {
         "title": "Учётки reception",
@@ -1607,7 +1783,7 @@
       "copyLineName": "Имя: {guestName}",
       "showRoomMapLink": "Карта комнаты и маршрут",
       "bedLockedUntilCheckIn": "Кровать и маршрут откроются с {time} в день заселения.",
-      "bedLockedUntilTourism": "Complete tourist registration to see your bed assignment.",
+      "bedLockedUntilRegistration": "Завершите регистрацию, чтобы увидеть назначение кровати.",
       "tourismSummaryHeading": "Tourist registration",
       "tourismStatusNotStarted": "Not started",
       "tourismStatusInProgress": "In progress",

@@ -1,23 +1,28 @@
 import type { OwnerTenantContext } from '@/entities/hostel-owner';
 import { resolveOwnerEditAccess } from '@/entities/hostel-owner/lib/resolveOwnerEditAccess';
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { OwnerShellProvider } from '../model/OwnerShellContext';
 import { OwnerLifecycleBanner, OwnerSubscriptionReadOnly } from './OwnerShellBlocks';
+import { OwnerPortalNav } from './OwnerPortalNav';
 import { OwnerReadOnlyNotice } from './OwnerReadOnlyNotice';
+
+export type OwnerPortalChromeMode = 'full' | 'minimal';
 
 interface OwnerPortalShellProps {
   locale: string;
   context: OwnerTenantContext;
   children: React.ReactNode;
+  chrome?: OwnerPortalChromeMode;
 }
 
-export async function OwnerPortalShell({ locale, context, children }: OwnerPortalShellProps) {
+export async function OwnerPortalShell({
+  locale,
+  context,
+  children,
+  chrome = 'full',
+}: OwnerPortalShellProps) {
   const t = await getTranslations('pages.owner.nav');
   const editAccess = resolveOwnerEditAccess(context.lifecycleStatus);
-
-  const navLinkClass =
-    'inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground';
 
   return (
     <OwnerShellProvider
@@ -32,19 +37,24 @@ export async function OwnerPortalShell({ locale, context, children }: OwnerPorta
             <p className="text-sm font-semibold">{context.name}</p>
             <p className="font-mono text-xs text-muted-foreground">{context.slug}</p>
           </div>
-          <nav className="flex flex-wrap gap-1" aria-label="Owner portal">
-            <Link href={`/${locale}/setup`} className={navLinkClass}>
-              {t('setup')}
-            </Link>
-            <Link href={`/${locale}/settings`} className={navLinkClass}>
-              {t('settings')}
-            </Link>
-          </nav>
+          <OwnerPortalNav
+            locale={locale}
+            labels={{
+              setup: t('setup'),
+              settings: t('settings'),
+              knowledge: t('knowledge'),
+              activity: t('activity'),
+            }}
+          />
         </div>
 
-        <OwnerLifecycleBanner status={context.lifecycleStatus} />
-        <OwnerReadOnlyNotice />
-        <OwnerSubscriptionReadOnly context={context} />
+        {chrome === 'full' ? (
+          <>
+            <OwnerLifecycleBanner status={context.lifecycleStatus} />
+            <OwnerReadOnlyNotice />
+            <OwnerSubscriptionReadOnly context={context} />
+          </>
+        ) : null}
 
         <div>{children}</div>
 

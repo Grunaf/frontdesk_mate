@@ -822,6 +822,17 @@
         "title": "Open your link or enter your PIN",
         "description": "Reception sends a personal link, QR, or a 6-digit PIN on paper after your bed is assigned. Enter the PIN here if you are offline — we sync when you are back online."
       },
+      "alreadyCheckedIn": {
+        "title": "You are already checked in",
+        "description": "This phone is checked in as bed {bed}. Continue to your stay, or enter another PIN below if reception gave you a different code.",
+        "continue": "Continue to my stay"
+      },
+      "staySwitch": {
+        "title": "Another stay link",
+        "description": "This phone is checked in as bed {currentBed}. This link opens bed {incomingBed}. Switch stays on this phone?",
+        "switch": "Switch stay",
+        "keep": "Keep current stay"
+      },
       "intent": {
         "metaTitle": "Where are you now?",
         "metaDescription": "Choose where you are — we'll open the right step in your arrival guide, from travel prep to your bed.",
@@ -836,8 +847,10 @@
       },
       "pin": {
         "label": "Check-in PIN",
+        "otherStayLabel": "Different stay PIN",
         "placeholder": "000 000",
         "hint": "6 digits from the paper slip reception gave you",
+        "otherStayHint": "Enter a 6-digit PIN for another stay on this phone",
         "submit": "Check in",
         "activating": "Checking PIN…",
         "queuedTitle": "Saved offline",
@@ -1006,6 +1019,11 @@
         "title": "Frontdesk Mate",
         "subtitle": "Portal za vlasnike"
       },
+      "desktopRequired": {
+        "title": "Otvorite na računaru",
+        "description": "Portal za vlasnike je namenjen velikom ekranu. Prijava, podešavanje i postavke nisu dostupni na telefonu.",
+        "hint": "Otvorite ovu stranicu u pregledaču na laptopu ili računaru."
+      },
       "locale": {
         "en": "English",
         "sr": "Srpski"
@@ -1013,6 +1031,8 @@
       "nav": {
         "setup": "Podešavanje",
         "settings": "Postavke",
+        "knowledge": "Baza znanja",
+        "activity": "Aktivnost",
         "signOut": "Odjava"
       },
       "lifecycle": {
@@ -1178,6 +1198,162 @@
         "loginUrlLabel": "Prijava na recepciju",
         "setupHint": "Kreirajte naloge osoblja da bi se recepcija mogla prijaviti.",
         "setupLink": "Upravljajte osobljem u Postavkama →"
+      },
+      "activity": {
+        "title": "Aktivnost",
+        "subtitle": "Nedavne akcije osoblja na recepciji.",
+        "empty": "Još nema zabeleženih akcija osoblja.",
+        "formerStaff": "Bivše osoblje",
+        "emptyDetail": "—",
+        "columns": {
+          "time": "Vreme",
+          "staff": "Osoblje",
+          "event": "Događaj",
+          "detail": "Detalji"
+        },
+        "eventTypes": {
+          "guest_stay_created": "Kreiran boravak",
+          "guest_stay_updated": "Ažuriran boravak",
+          "guest_stay_revoked": "Pristup opozvan",
+          "guest_stay_reissued": "Pristup ponovo izdat",
+          "desk_check_in_completed": "Prijava na recepciji završena",
+          "booking_paid_set": "Rezervacija označena kao plaćena",
+          "hub_transfer_resolved": "Hub transfer rešen"
+        }
+      },
+      "knowledge": {
+        "title": "Baza znanja osoblja",
+        "subtitle": "Dokumentujte uloge, statične checkliste odgovornosti i uputstva. Osoblje će to kasnije čitati u svojim modulima.",
+        "readOnly": "Izmena je onemogućena dok pretplata nije aktivna.",
+        "tabs": {
+          "bootstrap": "Sastavi strukturu",
+          "roles": "Uloge",
+          "articles": "Uputstva"
+        },
+        "ai": {
+          "copyPrompt": "Kopiraj AI prompt",
+          "promptCopied": "Prompt je kopiran — nalepi u AI alat, zatim nalepi odgovor ispod.",
+          "generateWithAi": "Generiši uz AI",
+          "generating": "Generisanje…",
+          "pasteReplyLabel": "Nalepi AI odgovor",
+          "pasteReplyHint": "Nalepi ceo AI odgovor ili koristi Generiši uz AI. Aplikacija izvlači JSON u uloge, checkliste ili uputstva.",
+          "preview": "Pregledaj parsiranje",
+          "applying": "Čuvanje…"
+        },
+        "bootstrap": {
+          "modeAuto": "Auto generate",
+          "modeManual": "Ručno (promptovi)",
+          "modeAriaLabel": "Režim sastavljanja strukture",
+          "advancedPaste": "Napredno: nalepi odgovor",
+          "applyReplace": "Primenjeno — uloge i checkliste zamenjene.",
+          "parseOk": "Parsirao {count} uloga. Pregledajte i primenite.",
+          "confirmReplace": "Ovo zamenjuje sve postojeće uloge i checkliste. Uputstva ostaju. Nastaviti?",
+          "checkReadiness": "Proveri spremnost",
+          "updateReadiness": "Ažuriraj spremnost",
+          "checkingReadiness": "Provera…",
+          "readinessTitle": "AI spremnost",
+          "readinessStale": "Odgovori su se promenili — ažurirajte spremnost da osvežite procenu.",
+          "resetCycle": "Resetuj ciklus",
+          "mustUse": "Obavezno uzeti u obzir",
+          "missing": "Nedostaje",
+          "unclear": "Nejasno",
+          "followUp": "Dodatna pitanja",
+          "followUpAnswerPlaceholder": "Vaš odgovor",
+          "answeredClarifications": "Odgovori na pojašnjenja",
+          "readyGreen": "Spremno za generisanje strukture.",
+          "readyYellow": "Može, ali ima praznina — pogledajte ispod.",
+          "readyRed": "Nema dovoljno detalja — odgovorite na pitanja ispod.",
+          "generateYellowHint": "Ima praznina — generisana struktura će biti približna.",
+          "otherNotesIncomplete": "Popunite tekst za svaki izabrani Other.",
+          "generateStructure": "Generiši strukturu",
+          "pipelineProgress": "Pipeline",
+          "questionnaire": {
+            "fromSettings": "Iz podešavanja",
+            "openSettingsContacts": "Otvori Contacts",
+            "openSettingsGuestApp": "Otvori Guest app / mapu soba",
+            "checkInTime": "Vreme check-in",
+            "checkOutTime": "Vreme check-out",
+            "receptionOpen": "Recepcija se otvara",
+            "receptionClose": "Recepcija se zatvara",
+            "receptionHint": "Napomena o radnom vremenu recepcije",
+            "sizeFromMap": "Sobe: {rooms} · Kreveti: {beds} (iz mape soba)",
+            "sizeUnknown": "Nepoznato",
+            "roomCount": "Sobe",
+            "bedCount": "Kreveti",
+            "laundry": "Vešernica na licu mesta",
+            "quietHours": "Tihi sati",
+            "laborModel": "Model rada",
+            "laborPaid": "Plaćeno osoblje",
+            "laborVolunteers": "Volonteri",
+            "laborMix": "Mešovito",
+            "nightCoverage": "Ko pokriva noći?",
+            "nightStaff": "Osoblje",
+            "nightVolunteer": "Volonter",
+            "nightOnCallOwner": "Vlasnik na vezi",
+            "nightClosed": "Zatvoreno",
+            "cleaningOwner": "Ko čisti (smene gostiju)?",
+            "cleaningDepth": "Ko radi dubinsko čišćenje?",
+            "cleaningStaff": "Osoblje",
+            "cleaningVolunteers": "Volonteri",
+            "cleaningOutsource": "Outsourcing",
+            "cleaningMixed": "Mešovito",
+            "cleaningDepthOwner": "Vlasnik",
+            "laundryOps": "Ko pere / nosi veš?",
+            "guestPayments": "Ko prima uplate / depozit?",
+            "paymentsPaidStaff": "Plaćeno osoblje",
+            "paymentsOwner": "Vlasnik",
+            "paymentsNone": "Niko (samo online)",
+            "keysAccess": "Ko izdaje ključeve / kodove?",
+            "keysPaidStaff": "Plaćeno osoblje",
+            "keysOwner": "Vlasnik",
+            "keysVolunteer": "Volonter",
+            "keysSelfService": "Self-service",
+            "peakDays": "Vršni dani / sezona",
+            "peakDaysPlaceholder": "npr. pet–ned, letnji festivali",
+            "specialConstraints": "Posebna ograničenja",
+            "specialConstraintsPlaceholder": "Hemikalije, jezik, starosna granica volontera — šta AI mora poštovati",
+            "yes": "Da",
+            "no": "Ne",
+            "other": "Drugo",
+            "otherNotePlaceholder": "Opišite svoj slučaj",
+            "otherNoteRequired": "Obavezno kada je izabrano Drugo",
+            "timePlaceholder": "npr. 14:00",
+            "criticalPrefillHint": "Check-in, radno vreme recepcije i mapa soba izgledaju prazno. Prvo popunite Settings radi boljeg rezultata."
+          }
+        },
+        "roles": {
+          "empty": "Još nema uloga. Koristite Sastavi strukturu iz AI odgovora.",
+          "headcount": "Potrebno ljudi",
+          "laborType": "Rad",
+          "checklistTitle": "Odgovornosti",
+          "delete": "Obriši ulogu"
+        },
+        "articles": {
+          "empty": "Još nema uputstava.",
+          "aiTopicLabel": "O čemu treba da bude uputstvo?",
+          "applyImport": "Uputstvo uvezeno.",
+          "parseOk": "Uputstvo parsirano. Pregledajte i uvezite.",
+          "addManual": "Dodaj uputstvo ručno",
+          "titleLabel": "Naslov",
+          "bodyLabel": "Tekst uputstva",
+          "videoUrlLabel": "URL videa (opciono)",
+          "roleLabel": "Povezana uloga",
+          "roleNone": "Bez uloge",
+          "saveManual": "Sačuvaj uputstvo",
+          "delete": "Obriši"
+        },
+        "errors": {
+          "unauthorized": "Prijavite se ponovo da nastavite.",
+          "forbidden": "Izmena trenutno nije dostupna.",
+          "invalid": "AI odgovor nije upotrebljiv. Kopirajte prompt ponovo i nalepite ceo JSON odgovor.",
+          "write": "Nije sačuvano. Pokušajte ponovo.",
+          "notFound": "Stavka nije pronađena.",
+          "notConfigured": "AI generisanje nije konfigurisano. Koristite Kopiraj AI prompt i nalepite odgovor.",
+          "rateLimited": "AI limit dostignut. Sačekajte ili koristite Kopiraj prompt / Nalepi.",
+          "provider": "Greška AI provajdera. Pokušajte ponovo ili koristite Kopiraj prompt / Nalepi.",
+          "invalidInput": "Dodajte malo više detalja (bar kratak pasus) pre generisanja.",
+          "notReady": "Još nije spremno — odgovorite na pitanja ili dodajte ono što nedostaje, pa ponovo proverite spremnost."
+        }
       },
       "receptionStaff": {
         "title": "Nalozi osoblja recepcije",
@@ -1613,7 +1789,7 @@
       "copyLineName": "Name: {guestName}",
       "showRoomMapLink": "Show room map & directions",
       "bedLockedUntilCheckIn": "Your bed and directions unlock from {time} on your check-in day.",
-      "bedLockedUntilTourism": "Complete tourist registration to see your bed assignment.",
+      "bedLockedUntilRegistration": "Complete registration to see your bed assignment.",
       "tourismSummaryHeading": "Tourist registration",
       "tourismStatusNotStarted": "Not started",
       "tourismStatusInProgress": "In progress",

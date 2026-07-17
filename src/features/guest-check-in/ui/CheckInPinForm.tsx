@@ -3,13 +3,16 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { activateGuestStayByPinAction } from '../actions/activateGuestStayByPin';
+import { previewGuestStayByPinAction } from '../actions/previewGuestStayByPin';
 import { parseGuestEntryParam } from '../lib/resolveGuestWelcomePath';
 import { guestEntryToIntent, readGuestIntent, writeGuestIntent } from '../lib/guestIntent';
 import { resolvePostCheckInPath } from '../lib/resolveGuestLanding';
+import { resolveStaySwitchDecision } from '../lib/resolveStaySwitchDecision';
 import {
   normalizePinActivationError,
   shouldQueuePinActivationError,
 } from '../lib/pinActivationErrors';
+import { StaySwitchConfirm } from './StaySwitchConfirm';
 import { useGuestSession } from './GuestSessionProvider';
 import { useTranslations } from '@/shared/i18n';
 import { trackCheckInSuccess } from '@/shared/lib/analytics';
@@ -24,6 +27,7 @@ import { Loader2 } from 'lucide-react';
 
 interface CheckInPinFormProps {
   locale: string;
+  onSwitchUiChange?: (active: boolean) => void;
 }
 
 function formatPinDisplay(pin: string): string {
@@ -32,19 +36,30 @@ function formatPinDisplay(pin: string): string {
   return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
-export function CheckInPinForm({ locale }: CheckInPinFormProps) {
+export function CheckInPinForm({ locale, onSwitchUiChange }: CheckInPinFormProps) {
   const t = useTranslations('pages.checkIn.pin');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentTenantSlug, isRegistered } = useGuestSession();
+  const { currentTenantSlug, session } = useGuestSession();
   const entry = parseGuestEntryParam(searchParams.get('entry'));
   const modeOnsite = searchParams.get('mode') === 'onsite';
   const storedIntent = currentTenantSlug ? readGuestIntent(currentTenantSlug) : null;
   const [pin, setPin] = useState('');
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isQueued, setIsQueued] = useState(false);
+  const [pendingSwitch, setPendingSwitch] = useState<{
+    pin: string;
+    bedId: string;
+  } | null>(null);
   const [isPending, startTransition] = useTransition();
   const syncingRef = useRef(false);
+
+  const landingPath = resolvePostCheckInPath({
+    locale,
+    urlEntry: entry,
+    modeOnsite,
+    storedIntent,
+  });
 
   const completeActivation = useCallback(
     (registration: { tenantSlug: string; bedId: string; exp: number }) => {
@@ -56,17 +71,58 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
       } else if (modeOnsite) {
         writeGuestIntent(registration.tenantSlug, 'at_door');
       }
+      setPendingSwitch(null);
       router.refresh();
-      router.replace(
-        resolvePostCheckInPath({ locale, urlEntry: entry, modeOnsite, storedIntent })
-      );
+      router.replace(landingPath);
     },
-    [entry, locale, modeOnsite, router, storedIntent]
+    [entry, landingPath, locale, modeOnsite, router]
+  );
+
+  const runActivatePin = useCallback(
+    (normalizedPin: string) => {
+      startTransition(async () => {
+        try {
+          const result = await activateGuestStayByPinAction(normalizedPin, locale);
+          if (result.ok) {
+            completeActivation(result.registration);
+            return;
+          }
+
+          if (shouldQueuePinActivationError(result.error)) {
+            if (currentTenantSlug) {
+              writePendingGuestPinActivation({
+                tenantSlug: currentTenantSlug,
+                pin: normalizedPin,
+                queuedAt: Date.now(),
+              });
+            }
+            setIsQueued(true);
+            setPendingSwitch(null);
+            return;
+          }
+
+          clearPendingGuestPinActivation();
+          setErrorKey(normalizePinActivationError(result.error));
+          setPendingSwitch(null);
+        } catch {
+          if (currentTenantSlug) {
+            writePendingGuestPinActivation({
+              tenantSlug: currentTenantSlug,
+              pin: normalizedPin,
+              queuedAt: Date.now(),
+            });
+          }
+          setIsQueued(true);
+          setPendingSwitch(null);
+        }
+      });
+    },
+    [completeActivation, currentTenantSlug, locale]
   );
 
   const activatePin = useCallback(
     (rawPin: string) => {
-      if (!currentTenantSlug || isRegistered) return;
+      if (!currentTenantSlug) return;
 
       const normalizedPin = rawPin.replace(/\D/g, '').slice(0, 6);
       if (normalizedPin.length !== 6) return;
@@ -86,24 +142,34 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
         }
 
         try {
-          const result = await activateGuestStayByPinAction(normalizedPin, locale);
-          if (result.ok) {
-            completeActivation(result.registration);
+          const preview = await previewGuestStayByPinAction(normalizedPin);
+          if (!preview.ok) {
+            if (shouldQueuePinActivationError(preview.error)) {
+              writePendingGuestPinActivation({
+                tenantSlug: currentTenantSlug,
+                pin: normalizedPin,
+                queuedAt: Date.now(),
+              });
+              setIsQueued(true);
+              return;
+            }
+
+            clearPendingGuestPinActivation();
+            setErrorKey(normalizePinActivationError(preview.error));
             return;
           }
 
-          if (shouldQueuePinActivationError(result.error)) {
-            writePendingGuestPinActivation({
-              tenantSlug: currentTenantSlug,
-              pin: normalizedPin,
-              queuedAt: Date.now(),
-            });
-            setIsQueued(true);
+          const decision = resolveStaySwitchDecision({
+            currentStayId: session?.stayId,
+            incomingStayId: preview.stay.stayId,
+          });
+
+          if (decision === 'confirm' && session) {
+            setPendingSwitch({ pin: normalizedPin, bedId: preview.stay.bedId });
             return;
           }
 
-          clearPendingGuestPinActivation();
-          setErrorKey(normalizePinActivationError(result.error));
+          runActivatePin(normalizedPin);
         } catch {
           writePendingGuestPinActivation({
             tenantSlug: currentTenantSlug,
@@ -114,11 +180,11 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
         }
       });
     },
-    [completeActivation, currentTenantSlug, isRegistered, locale]
+    [currentTenantSlug, runActivatePin, session]
   );
 
   const syncPending = useCallback(() => {
-    if (!currentTenantSlug || isRegistered || syncingRef.current) return;
+    if (!currentTenantSlug || session || syncingRef.current) return;
 
     const pending = readPendingGuestPinActivation(currentTenantSlug);
     if (!pending) return;
@@ -153,7 +219,7 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
         syncingRef.current = false;
       }
     });
-  }, [completeActivation, currentTenantSlug, isRegistered, locale]);
+  }, [completeActivation, currentTenantSlug, locale, session]);
 
   useEffect(() => {
     const pending = currentTenantSlug ? readPendingGuestPinActivation(currentTenantSlug) : null;
@@ -174,26 +240,44 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
     return () => window.removeEventListener('online', handleOnline);
   }, [syncPending]);
 
+  useEffect(() => {
+    onSwitchUiChange?.(Boolean(pendingSwitch && session));
+  }, [onSwitchUiChange, pendingSwitch, session]);
+
   const handlePinChange = (value: string) => {
     const normalized = value.replace(/\D/g, '').slice(0, 6);
     setPin(normalized);
     setErrorKey(null);
     setIsQueued(false);
+    setPendingSwitch(null);
 
     if (normalized.length === 6) {
       activatePin(normalized);
     }
   };
 
-  if (isRegistered) {
-    return null;
+  if (pendingSwitch && session) {
+    return (
+      <StaySwitchConfirm
+        currentBedId={session.bedId}
+        incomingBedId={pendingSwitch.bedId}
+        isPending={isPending}
+        onSwitch={() => runActivatePin(pendingSwitch.pin)}
+        onKeep={() => {
+          setPendingSwitch(null);
+          setPin('');
+          clearPendingGuestPinActivation();
+          onSwitchUiChange?.(false);
+        }}
+      />
+    );
   }
 
   return (
     <div className="w-full max-w-sm space-y-4 text-left">
       <div className="space-y-1.5">
         <Label htmlFor="guest-check-in-pin" className="text-sm">
-          {t('label')}
+          {session ? t('otherStayLabel') : t('label')}
         </Label>
         <Input
           id="guest-check-in-pin"
@@ -207,7 +291,9 @@ export function CheckInPinForm({ locale }: CheckInPinFormProps) {
           className="text-center text-2xl tracking-[0.35em] font-semibold"
           disabled={isPending}
         />
-        <p className="text-xs text-muted-foreground">{t('hint')}</p>
+        <p className="text-xs text-muted-foreground">
+          {session ? t('otherStayHint') : t('hint')}
+        </p>
       </div>
 
       {isPending ? (

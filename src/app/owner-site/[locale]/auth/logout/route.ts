@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createOwnerServerClient } from '@/shared/lib/db/supabase-owner-server';
+import { ownerPortalOriginUrl } from '../../../lib/resolveOwnerPortalOrigin';
 
 export async function POST(
   request: Request,
@@ -9,6 +10,5 @@ export async function POST(
   const supabase = await createOwnerServerClient();
   await supabase.auth.signOut();
 
-  const { origin } = new URL(request.url);
-  return NextResponse.redirect(new URL(`/${locale}/login`, origin), 303);
+  return NextResponse.redirect(ownerPortalOriginUrl(request, `/${locale}/login`), 303);
 }

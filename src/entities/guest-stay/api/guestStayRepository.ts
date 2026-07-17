@@ -35,8 +35,11 @@ import type {
   CreateGuestStayInput,
   CreateGuestStayResult,
   GuestSessionPayload,
+  GuestStayPreview,
   GuestStayRecord,
   GuestStayRecordWithLink,
+  PreviewGuestStayByPinResult,
+  PreviewGuestStayByTokenResult,
   ReissueGuestStayInput,
   ReissueGuestStayResult,
   ResolvedGuestSession,
@@ -807,6 +810,147 @@ export async function activateGuestStayByPin(input: {
       checkOutAt: stay.check_out_at,
     }),
   };
+}
+
+function toGuestStayPreview(stay: GuestStayRecord, tenantSlug: string): GuestStayPreview {
+  return {
+    stayId: stay.id,
+    tenantSlug,
+    bedId: stay.bed_id,
+  };
+}
+
+/** Resolve magic-link token to stay identity without activating or setting cookies. */
+export async function previewGuestStayByToken(input: {
+  token: string;
+  tenantSlug: string;
+}): Promise<PreviewGuestStayByTokenResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const token = input.token.trim();
+  if (!token) {
+    return { ok: false, error: 'invalid_token' };
+  }
+
+  const tokenHash = hashAccessToken(token);
+  const { data, error } = await admin
+    .from('guest_access_grants')
+    .select(
+      `${GUEST_ACCESS_GRANT_COLUMNS}, guest_reservations!inner (${GUEST_RESERVATION_COLUMNS}, tenants!inner(slug))`
+    )
+    .eq('access_token_hash', tokenHash)
+    .is('revoked_at', null)
+    .maybeSingle();
+
+  if (error) {
+    console.error('previewGuestStayByToken:', error.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!data) {
+    return { ok: false, error: 'invalid_token' };
+  }
+
+  const row = data as Record<string, unknown>;
+  const reservationRaw = row.guest_reservations;
+  const reservation = (
+    Array.isArray(reservationRaw) ? reservationRaw[0] : reservationRaw
+  ) as Record<string, unknown> & {
+    tenants?: { slug: string } | { slug: string }[];
+  };
+  if (!reservation) {
+    return { ok: false, error: 'invalid_token' };
+  }
+
+  const tenants = reservation.tenants;
+  const tenantSlug = Array.isArray(tenants) ? tenants[0]?.slug : tenants?.slug;
+
+  if (!tenantSlug) {
+    return { ok: false, error: 'invalid_token' };
+  }
+
+  if (tenantSlug !== input.tenantSlug) {
+    return { ok: false, error: 'wrong_hostel', correctTenantSlug: tenantSlug };
+  }
+
+  const stay = mapReservationGrantToStayRecord(reservation, row, tenantSlug);
+  if (!stay) {
+    return { ok: false, error: 'invalid_token' };
+  }
+
+  if (stay.revoked_at) {
+    return { ok: false, error: 'revoked' };
+  }
+
+  if (!isStayActive(stay)) {
+    return { ok: false, error: 'expired' };
+  }
+
+  return { ok: true, stay: toGuestStayPreview(stay, tenantSlug) };
+}
+
+/** Resolve PIN to stay identity without activating or setting cookies. */
+export async function previewGuestStayByPin(input: {
+  pin: string;
+  tenantSlug: string;
+}): Promise<PreviewGuestStayByPinResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!isGuestPinFormatValid(input.pin)) {
+    return { ok: false, error: 'invalid_pin' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'invalid_pin' };
+  }
+
+  const pinHash = hashGuestPin(input.tenantSlug, input.pin);
+
+  const { data, error } = await admin
+    .from('guest_access_grants')
+    .select(`${GUEST_ACCESS_GRANT_COLUMNS}, guest_reservations!inner (${GUEST_RESERVATION_COLUMNS})`)
+    .eq('tenant_id', tenant.id)
+    .eq('pin_hash', pinHash)
+    .is('revoked_at', null)
+    .maybeSingle();
+
+  if (error) {
+    console.error('previewGuestStayByPin:', error.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!data) {
+    return { ok: false, error: 'invalid_pin' };
+  }
+
+  const row = data as Record<string, unknown>;
+  const storedHash = row.pin_hash ? String(row.pin_hash) : '';
+  if (!verifyGuestPin(input.tenantSlug, input.pin, storedHash)) {
+    return { ok: false, error: 'invalid_pin' };
+  }
+
+  const reservationRaw = row.guest_reservations;
+  const reservation = (
+    Array.isArray(reservationRaw) ? reservationRaw[0] : reservationRaw
+  ) as Record<string, unknown>;
+  const stay = mapReservationGrantToStayRecord(reservation, row, tenant.slug);
+  const activationError = resolveGuestPinActivationError(stay);
+  if (activationError) {
+    return { ok: false, error: activationError };
+  }
+
+  if (!stay) {
+    return { ok: false, error: 'invalid_pin' };
+  }
+
+  return { ok: true, stay: toGuestStayPreview(stay, tenant.slug) };
 }
 
 async function loadStayForSessionValidation(

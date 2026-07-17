@@ -37,6 +37,7 @@ const TOP_LEVEL_AUDIT_KEYS: (keyof TenantSettings)[] = [
   'arrivalGetOffAtByRoute',
   'arrivalLocalByRoute',
   'arrivalRouteTipsByRoute',
+  'staffKnowledgeIntake',
 ];
 
 function stableStringify(value: unknown): string {

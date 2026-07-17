@@ -11,23 +11,38 @@ type ReceptionAuditActorSource = {
   actorDisplayName: string | null;
 };
 
-const EVENT_TYPE_LABELS: Record<ReceptionAuditEventType, string> = {
-  guest_stay_created: 'Guest stay created',
-  guest_stay_updated: 'Guest stay updated',
-  guest_stay_revoked: 'Guest stay revoked',
-  guest_stay_reissued: 'Guest stay reissued',
-  desk_check_in_completed: 'Desk check-in completed',
-  booking_paid_set: 'Booking marked paid',
-  hub_transfer_resolved: 'Hub transfer resolved',
+export type ReceptionAuditEventTypeLabels = Record<ReceptionAuditEventType, string>;
+
+export type ReceptionAuditFormatLabels = {
+  formerStaff: string;
+  emptyDetail: string;
+  eventTypes: ReceptionAuditEventTypeLabels;
 };
 
-export function formatReceptionAuditEventLabel(eventType: ReceptionAuditEventType): string {
-  return EVENT_TYPE_LABELS[eventType];
+export const DEFAULT_RECEPTION_AUDIT_FORMAT_LABELS: ReceptionAuditFormatLabels = {
+  formerStaff: 'Former staff',
+  emptyDetail: '—',
+  eventTypes: {
+    guest_stay_created: 'Guest stay created',
+    guest_stay_updated: 'Guest stay updated',
+    guest_stay_revoked: 'Guest stay revoked',
+    guest_stay_reissued: 'Guest stay reissued',
+    desk_check_in_completed: 'Desk check-in completed',
+    booking_paid_set: 'Booking marked paid',
+    hub_transfer_resolved: 'Hub transfer resolved',
+  },
+};
+
+export function formatReceptionAuditEventLabel(
+  eventType: ReceptionAuditEventType,
+  labels: ReceptionAuditEventTypeLabels = DEFAULT_RECEPTION_AUDIT_FORMAT_LABELS.eventTypes
+): string {
+  return labels[eventType];
 }
 
-export function formatReceptionAuditEventTime(iso: string): string {
+export function formatReceptionAuditEventTime(iso: string, locale = 'en-GB'): string {
   try {
-    return new Intl.DateTimeFormat('en-GB', {
+    return new Intl.DateTimeFormat(locale, {
       dateStyle: 'short',
       timeStyle: 'short',
     }).format(new Date(iso));
@@ -36,22 +51,31 @@ export function formatReceptionAuditEventTime(iso: string): string {
   }
 }
 
-export function formatReceptionAuditActor(event: ReceptionAuditActorSource): string {
+export function formatReceptionAuditActor(
+  event: ReceptionAuditActorSource,
+  labels: Pick<ReceptionAuditFormatLabels, 'formerStaff' | 'emptyDetail'> = {
+    formerStaff: DEFAULT_RECEPTION_AUDIT_FORMAT_LABELS.formerStaff,
+    emptyDetail: DEFAULT_RECEPTION_AUDIT_FORMAT_LABELS.emptyDetail,
+  }
+): string {
   const displayName = event.actorDisplayName?.trim();
   if (displayName) return displayName;
 
   const login = event.actorLogin?.trim();
   if (login) return login;
 
-  if (event.actorReceptionUserId) return 'Former staff';
-  return '—';
+  if (event.actorReceptionUserId) return labels.formerStaff;
+  return labels.emptyDetail;
 }
 
-export function formatReceptionAuditEventDetail(event: ReceptionAuditEventDetailSource): string {
+export function formatReceptionAuditEventDetail(
+  event: ReceptionAuditEventDetailSource,
+  emptyDetail = DEFAULT_RECEPTION_AUDIT_FORMAT_LABELS.emptyDetail
+): string {
   const parts: string[] = [];
   const summary = event.flags.summary?.trim();
   if (summary) parts.push(summary);
   const subjectId = event.subjectId?.trim();
   if (subjectId) parts.push(subjectId);
-  return parts.length > 0 ? parts.join(' · ') : '—';
+  return parts.length > 0 ? parts.join(' · ') : emptyDetail;
 }

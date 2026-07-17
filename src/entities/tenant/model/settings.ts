@@ -82,7 +82,7 @@ export interface TenantSettings {
     canHelpWithTaxi?: boolean;
     /** Optional per-tenant hint under the reception link */
     availabilityHint?: string;
-    /** Message template for Booking / chat (placeholders: {sendLink}, {pin}, {pinOrHelp}, …) */
+    /** Message template for Booking / chat (placeholders: {sendLink}, {pin}, {pinOrHelp}, {guestName}, {hostelName}) */
     guestAccessMessageTemplate?: string;
     /** Substituted for {pinOrHelp} when PIN is not available at copy time */
     guestAccessPinMissingText?: string;
@@ -168,7 +168,41 @@ export interface TenantSettings {
   >;
   /** Hostel-specific tips merged with city pack tips in guest modal (max 5 total). */
   arrivalRouteTipsByRoute?: Partial<Record<'airport' | 'bus_central' | 'bus_istochno' | 'train_station', LocalizedText[]>>;
+  /**
+   * Staff-knowledge Build structure questionnaire (ops answers).
+   * Operational times (check-in / reception) still live in top-level settings when synced.
+   */
+  staffKnowledgeIntake?: StaffKnowledgeIntakeSettings;
 }
+
+/** Persisted owner answers from `/knowledge` Build structure questionnaire. */
+export type StaffKnowledgeIntakeSettings = {
+  laborModel?: 'paid' | 'volunteers' | 'mix';
+  nightCoverage?: string;
+  cleaningOwner?: string;
+  cleaningDepth?: string;
+  /** Legacy `unknown` may still exist in stored JSON until next save. */
+  laundry?: 'yes' | 'no' | 'other' | 'unknown';
+  laundryOps?: string;
+  guestPayments?: string;
+  keysAccess?: string;
+  peakDays?: string;
+  specialConstraints?: string;
+  quietHours?: string;
+  /** Free-text when a chip field is `other` (per-field). */
+  otherNotes?: {
+    laundry?: string;
+    nightCoverage?: string;
+    cleaningOwner?: string;
+    cleaningDepth?: string;
+    laundryOps?: string;
+    guestPayments?: string;
+    keysAccess?: string;
+  };
+  /** Used when guestStay room map is empty. */
+  roomCountOverride?: number | null;
+  bedCountOverride?: number | null;
+};
 
 export interface TenantRecord {
   id: string;

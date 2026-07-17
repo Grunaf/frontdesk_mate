@@ -7,12 +7,15 @@ import { OwnerSettingsCoordinator } from '@/features/owner-settings';
 import { buildSubscriptionDefaults } from '@/app/admin/(protected)/tenants/sections/SubscriptionFields';
 import { redirect } from 'next/navigation';
 
-interface OwnerSettingsLayoutProps {
+interface OwnerSettingsEditorLayoutProps {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }
 
-export default async function OwnerSettingsLayout({ children, params }: OwnerSettingsLayoutProps) {
+export default async function OwnerSettingsEditorLayout({
+  children,
+  params,
+}: OwnerSettingsEditorLayoutProps) {
   const { locale } = await params;
   const context = await getOwnerTenantContext();
 

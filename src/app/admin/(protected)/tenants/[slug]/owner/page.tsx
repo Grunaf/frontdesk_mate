@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getTenantOwnerForAdmin } from '@/entities/hostel-owner/server/getTenantOwnerForAdmin';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { listTenantAuditEventsForAdmin } from '@/entities/tenant-audit/server/listTenantAuditEventsForAdmin';
-import { TenantOwnerOpsView } from '@/features/platform-tenant-ops/ui/TenantOwnerOpsView';
+import { TenantOwnerOpsView } from '@/features/platform-tenant-ops';
 
 interface AdminTenantOwnerPageProps {
   params: Promise<{ slug: string }>;

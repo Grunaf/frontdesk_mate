@@ -957,6 +957,17 @@
         "title": "Open your link or enter your PIN",
         "description": "Reception sends a personal link, QR, or a 6-digit PIN on paper after your bed is assigned. Enter the PIN here if you are offline — we sync when you are back online."
       },
+      "alreadyCheckedIn": {
+        "title": "You are already checked in",
+        "description": "This phone is checked in as bed {bed}. Continue to your stay, or enter another PIN below if reception gave you a different code.",
+        "continue": "Continue to my stay"
+      },
+      "staySwitch": {
+        "title": "Another stay link",
+        "description": "This phone is checked in as bed {currentBed}. This link opens bed {incomingBed}. Switch stays on this phone?",
+        "switch": "Switch stay",
+        "keep": "Keep current stay"
+      },
       "intent": {
         "metaTitle": "Where are you now?",
         "metaDescription": "Choose where you are — we'll open the right step in your arrival guide, from travel prep to your bed.",
@@ -971,8 +982,10 @@
       },
       "pin": {
         "label": "Check-in PIN",
+        "otherStayLabel": "Different stay PIN",
         "placeholder": "000 000",
         "hint": "6 digits from the paper slip reception gave you",
+        "otherStayHint": "Enter a 6-digit PIN for another stay on this phone",
         "submit": "Check in",
         "activating": "Checking PIN…",
         "queuedTitle": "Saved offline",
@@ -1141,6 +1154,11 @@
         "title": "Frontdesk Mate",
         "subtitle": "Owner portal"
       },
+      "desktopRequired": {
+        "title": "Open on a computer",
+        "description": "The owner dashboard is designed for a desktop screen. Sign-in, setup, and settings are not available on phones.",
+        "hint": "Open this page on a laptop or desktop browser to continue."
+      },
       "locale": {
         "en": "English",
         "sr": "Srpski"
@@ -1148,6 +1166,8 @@
       "nav": {
         "setup": "Setup",
         "settings": "Settings",
+        "knowledge": "Staff knowledge",
+        "activity": "Activity",
         "signOut": "Sign out"
       },
       "lifecycle": {
@@ -1313,6 +1333,162 @@
         "loginUrlLabel": "Reception login",
         "setupHint": "Create staff accounts so reception can sign in.",
         "setupLink": "Manage staff in Settings →"
+      },
+      "activity": {
+        "title": "Activity",
+        "subtitle": "Recent staff actions on the reception desk.",
+        "empty": "No staff actions logged yet.",
+        "formerStaff": "Former staff",
+        "emptyDetail": "—",
+        "columns": {
+          "time": "Time",
+          "staff": "Staff",
+          "event": "Event",
+          "detail": "Detail"
+        },
+        "eventTypes": {
+          "guest_stay_created": "Guest stay created",
+          "guest_stay_updated": "Guest stay updated",
+          "guest_stay_revoked": "Guest stay revoked",
+          "guest_stay_reissued": "Guest stay reissued",
+          "desk_check_in_completed": "Desk check-in completed",
+          "booking_paid_set": "Booking marked paid",
+          "hub_transfer_resolved": "Hub transfer resolved"
+        }
+      },
+      "knowledge": {
+        "title": "Staff knowledge",
+        "subtitle": "Document hostel roles, static responsibility checklists, and instructions for your team. Staff will read this later in their own modules.",
+        "readOnly": "Editing is disabled until your subscription is active.",
+        "tabs": {
+          "bootstrap": "Build structure",
+          "roles": "Roles",
+          "articles": "Instructions"
+        },
+        "ai": {
+          "copyPrompt": "Copy AI prompt",
+          "promptCopied": "Prompt copied — paste it into your AI tool, then paste the reply below.",
+          "generateWithAi": "Generate with AI",
+          "generating": "Generating…",
+          "pasteReplyLabel": "Paste AI reply",
+          "pasteReplyHint": "Paste the full AI response, or use Generate with AI. The app extracts JSON into roles, checklists, or articles.",
+          "preview": "Preview parse",
+          "applying": "Saving…"
+        },
+        "bootstrap": {
+          "modeAuto": "Auto generate",
+          "modeManual": "Manual (prompts)",
+          "modeAriaLabel": "Build structure authoring mode",
+          "advancedPaste": "Advanced: paste reply",
+          "applyReplace": "Applied — roles and checklists replaced.",
+          "parseOk": "Parsed {count} roles. Review and apply to save.",
+          "confirmReplace": "This replaces all existing roles and checklists. Instructions (articles) stay. Continue?",
+          "checkReadiness": "Check readiness",
+          "updateReadiness": "Update readiness",
+          "checkingReadiness": "Checking…",
+          "readinessTitle": "AI readiness",
+          "readinessStale": "Answers changed — update readiness to refresh the assessment.",
+          "resetCycle": "Reset cycle",
+          "mustUse": "Must use",
+          "missing": "Missing",
+          "unclear": "Unclear",
+          "followUp": "Follow-up questions",
+          "followUpAnswerPlaceholder": "Your answer",
+          "answeredClarifications": "Answered clarifications",
+          "readyGreen": "Ready to generate structure.",
+          "readyYellow": "Usable, but a few gaps remain — review below.",
+          "readyRed": "Not enough detail yet — answer the questions below.",
+          "generateYellowHint": "Some gaps remain — the generated structure will be approximate.",
+          "otherNotesIncomplete": "Fill in the Other details for each selected Other chip.",
+          "generateStructure": "Generate structure",
+          "pipelineProgress": "Pipeline",
+          "questionnaire": {
+            "fromSettings": "From settings",
+            "openSettingsContacts": "Open Contacts settings",
+            "openSettingsGuestApp": "Open Guest app / room map",
+            "checkInTime": "Check-in time",
+            "checkOutTime": "Check-out time",
+            "receptionOpen": "Reception opens",
+            "receptionClose": "Reception closes",
+            "receptionHint": "Reception hours hint",
+            "sizeFromMap": "Rooms: {rooms} · Beds: {beds} (from room map)",
+            "sizeUnknown": "Unknown",
+            "roomCount": "Rooms",
+            "bedCount": "Beds",
+            "laundry": "Laundry on site",
+            "quietHours": "Quiet hours",
+            "laborModel": "Labor model",
+            "laborPaid": "Paid staff",
+            "laborVolunteers": "Volunteers",
+            "laborMix": "Mix",
+            "nightCoverage": "Who covers nights?",
+            "nightStaff": "Staff",
+            "nightVolunteer": "Volunteer",
+            "nightOnCallOwner": "On-call owner",
+            "nightClosed": "Closed",
+            "cleaningOwner": "Who cleans (turnovers)?",
+            "cleaningDepth": "Who does deep cleaning?",
+            "cleaningStaff": "Staff",
+            "cleaningVolunteers": "Volunteers",
+            "cleaningOutsource": "Outsourced",
+            "cleaningMixed": "Mixed",
+            "cleaningDepthOwner": "Owner",
+            "laundryOps": "Who handles laundry?",
+            "guestPayments": "Who takes payments / deposits?",
+            "paymentsPaidStaff": "Paid staff",
+            "paymentsOwner": "Owner",
+            "paymentsNone": "None (online only)",
+            "keysAccess": "Who issues keys / codes?",
+            "keysPaidStaff": "Paid staff",
+            "keysOwner": "Owner",
+            "keysVolunteer": "Volunteer",
+            "keysSelfService": "Self-service",
+            "peakDays": "Peak days / seasonality",
+            "peakDaysPlaceholder": "e.g. Fri–Sun, summer festival weeks",
+            "specialConstraints": "Special constraints",
+            "specialConstraintsPlaceholder": "Chemicals, language, volunteer age limits, anything AI must respect",
+            "yes": "Yes",
+            "no": "No",
+            "other": "Other",
+            "otherNotePlaceholder": "Describe your case",
+            "otherNoteRequired": "Required when Other is selected",
+            "timePlaceholder": "e.g. 14:00",
+            "criticalPrefillHint": "Check-in, reception hours, and room map look empty. Fill Settings first for better results."
+          }
+        },
+        "roles": {
+          "empty": "No roles yet. Use Build structure to create them from an AI reply.",
+          "headcount": "People needed",
+          "laborType": "Labor",
+          "checklistTitle": "Responsibilities",
+          "delete": "Delete role"
+        },
+        "articles": {
+          "empty": "No instructions yet.",
+          "aiTopicLabel": "What should the instruction cover?",
+          "applyImport": "Instruction imported.",
+          "parseOk": "Parsed instruction. Review and import.",
+          "addManual": "Add instruction manually",
+          "titleLabel": "Title",
+          "bodyLabel": "Instruction text",
+          "videoUrlLabel": "Video URL (optional)",
+          "roleLabel": "Related role",
+          "roleNone": "No role",
+          "saveManual": "Save instruction",
+          "delete": "Delete"
+        },
+        "errors": {
+          "unauthorized": "Sign in again to continue.",
+          "forbidden": "Editing is not available for this hostel right now.",
+          "invalid": "Could not use that AI reply. Copy the prompt again and paste a full JSON reply.",
+          "write": "Could not save. Try again.",
+          "notFound": "Item not found.",
+          "notConfigured": "AI generate is not configured. Use Copy AI prompt and paste the reply instead.",
+          "rateLimited": "AI rate limit reached. Wait a few minutes, or use Copy AI prompt / Paste.",
+          "provider": "AI provider error. Try again, or use Copy AI prompt / Paste.",
+          "invalidInput": "Add a bit more detail (at least a short paragraph) before generating.",
+          "notReady": "Not ready yet — answer the follow-up questions or add missing details, then check readiness again."
+        }
       },
       "receptionStaff": {
         "title": "Reception staff accounts",
@@ -1601,7 +1777,7 @@
       "copyLineName": "Name: {guestName}",
       "showRoomMapLink": "Show room map & directions",
       "bedLockedUntilCheckIn": "Your bed and directions unlock from {time} on your check-in day.",
-      "bedLockedUntilTourism": "Complete tourist registration to see your bed assignment.",
+      "bedLockedUntilRegistration": "Complete registration to see your bed assignment.",
       "tourismSummaryHeading": "Tourist registration",
       "tourismStatusNotStarted": "Not started",
       "tourismStatusInProgress": "In progress",
