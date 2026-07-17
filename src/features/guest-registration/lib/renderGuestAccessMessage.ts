@@ -4,7 +4,6 @@ export interface GuestAccessMessageContext {
   pinMissingText: string;
   guestName?: string;
   hostelName: string;
-  bedLabel: string;
 }
 
 function formatGuestPinForMessage(pin: string): string {
@@ -25,13 +24,13 @@ function resolveGuestNameLabel(name: string | undefined): string {
   return trimmed || 'Guest';
 }
 
-const PLACEHOLDER_PATTERN = /\{(sendLink|pin|pinOrHelp|guestName|hostelName|bedLabel)\}/g;
+const PLACEHOLDER_PATTERN = /\{(sendLink|pin|pinOrHelp|guestName|hostelName)\}/g;
 
 export function collapseGuestAccessMessage(text: string): string {
   return text
     .split('\n')
     .map((line) => line.replace(/\s{2,}/g, ' ').trim())
-    .filter((line) => line.length > 0 && !/^[^:]+:\s*$/.test(line))
+    .filter((line) => line.length > 0)
     .join('\n');
 }
 
@@ -48,7 +47,6 @@ export function renderGuestAccessMessage(
     pinOrHelp,
     guestName,
     hostelName: ctx.hostelName.trim(),
-    bedLabel: ctx.bedLabel.trim(),
   };
 
   const rendered = template.replace(PLACEHOLDER_PATTERN, (_, key: string) => values[key] ?? '');

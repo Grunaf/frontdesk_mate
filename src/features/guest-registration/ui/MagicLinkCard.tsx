@@ -10,7 +10,6 @@ interface MagicLinkCardProps {
   magicLinkUrl: string;
   bedId: string;
   bedLabel?: string;
-  omitBedFromMessage?: boolean;
   guestName?: string;
   guestPin?: string;
   hostelName: string;
@@ -25,14 +24,7 @@ function formatGuestPin(pin: string): string {
   return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
-function resolveSubtitle(
-  guestName: string | undefined,
-  bedLabel: string,
-  omitBedFromMessage: boolean
-): string {
-  if (omitBedFromMessage) {
-    return guestName ? `${guestName} · copy message for Booking chat` : 'Copy message for Booking chat';
-  }
+function resolveSubtitle(guestName: string | undefined, bedLabel: string): string {
   if (guestName) {
     return `${guestName} · ${bedLabel}`;
   }
@@ -45,7 +37,6 @@ export function MagicLinkCard({
   magicLinkUrl,
   bedId,
   bedLabel,
-  omitBedFromMessage = false,
   guestName,
   guestPin,
   hostelName,
@@ -57,7 +48,7 @@ export function MagicLinkCard({
   const [copied, setCopied] = useState<CopiedKind>(null);
   const [showSendLink, setShowSendLink] = useState(false);
 
-  const messageBedLabel = omitBedFromMessage ? '' : bedLabel?.trim() || bedId;
+  const displayBedLabel = bedLabel?.trim() || bedId;
 
   const sendMagicLinkUrl = useMemo(
     () => appendGuestEntryToMagicLink(magicLinkUrl, 'remote'),
@@ -77,7 +68,6 @@ export function MagicLinkCard({
         pinMissingText: guestAccessPinMissingText,
         guestName,
         hostelName,
-        bedLabel: messageBedLabel,
       }),
     [
       guestAccessMessageTemplate,
@@ -86,7 +76,6 @@ export function MagicLinkCard({
       guestAccessPinMissingText,
       guestName,
       hostelName,
-      messageBedLabel,
     ]
   );
 
@@ -121,7 +110,7 @@ export function MagicLinkCard({
       <div>
         <p className="text-sm font-semibold text-foreground">Guest access ready</p>
         <p className="text-xs text-muted-foreground">
-          {resolveSubtitle(guestName, messageBedLabel || bedId, omitBedFromMessage)}
+          {resolveSubtitle(guestName, displayBedLabel)}
         </p>
       </div>
 

@@ -22,7 +22,6 @@ import {
   resolveReservationBookingBalance,
 } from '@/entities/guest-stay/lib/validateReservationBookingBalance';
 import { formatMinorAsDecimalInput, getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
-import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import {
   createGuestStayAction,
   completeDeskCheckInAction,
@@ -187,10 +186,6 @@ export function ReceptionCheckInPanel({
   const [editDraft, setEditDraft] = useState<EditReservationDraft | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const omitBedFromGuestMessage = useMemo(
-    () => isRoomMapModuleEnabled(tenantSettings),
-    [tenantSettings]
-  );
   const rangeValid = isValidAccessRange(checkInDate, checkOutDate);
 
   const accessPeriod = useMemo(
@@ -637,7 +632,6 @@ export function ReceptionCheckInPanel({
           guestAccessMessageTemplate={guestAccessMessageTemplate}
           guestAccessPinMissingText={guestAccessPinMissingText}
           resolveBedLabel={resolveBedLabel}
-          omitBedFromGuestMessage={omitBedFromGuestMessage}
           tourismRegistrationRequired={tourismRegistrationRequired}
           tenantSlug={tenantSlug}
           tenantSettings={tenantSettings}

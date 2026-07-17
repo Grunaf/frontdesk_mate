@@ -9,6 +9,7 @@ describe('guestAccessMessage defaults', () => {
     expect(DEFAULT_GUEST_ACCESS_MESSAGE_TEMPLATE).toContain('{sendLink}');
     expect(DEFAULT_GUEST_ACCESS_MESSAGE_TEMPLATE).toMatch(/Check in/i);
     expect(DEFAULT_GUEST_ACCESS_MESSAGE_TEMPLATE).toContain('Concierge');
+    expect(DEFAULT_GUEST_ACCESS_MESSAGE_TEMPLATE).not.toContain('{bedLabel}');
   });
 
   it('guides PIN recovery via Check in chip', () => {

@@ -171,8 +171,7 @@ function GuestAccessMessageModule({ settings }: { settings?: TenantSettings }) {
         <strong className="font-medium text-foreground">Check in</strong> on Concierge (top right in
         the guest app). Placeholders: <code className="text-xs">{'{sendLink}'}</code>,{' '}
         <code className="text-xs">{'{pin}'}</code>, <code className="text-xs">{'{pinOrHelp}'}</code>,{' '}
-        <code className="text-xs">{'{guestName}'}</code>, <code className="text-xs">{'{hostelName}'}</code>,{' '}
-        <code className="text-xs">{'{bedLabel}'}</code>.
+        <code className="text-xs">{'{guestName}'}</code>, <code className="text-xs">{'{hostelName}'}</code>.
       </p>
       <AdminTextarea
         label="Message template"

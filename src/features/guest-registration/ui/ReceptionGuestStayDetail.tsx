@@ -345,7 +345,6 @@ export interface ReceptionGuestStayDetailProps {
   guestAccessMessageTemplate: string;
   guestAccessPinMissingText: string;
   resolveBedLabel: (bedId: string) => string;
-  omitBedFromGuestMessage?: boolean;
   tourismRegistrationRequired?: boolean;
   tenantSlug?: string;
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
@@ -481,7 +480,6 @@ export function ReceptionGuestStayDetail({
   guestAccessMessageTemplate,
   guestAccessPinMissingText,
   resolveBedLabel,
-  omitBedFromGuestMessage = false,
   tourismRegistrationRequired = false,
   tenantSlug,
   onTourismExportedAtChange,
@@ -550,7 +548,6 @@ export function ReceptionGuestStayDetail({
           hostelName={hostelName}
           guestAccessMessageTemplate={guestAccessMessageTemplate}
           guestAccessPinMissingText={guestAccessPinMissingText}
-          omitBedFromMessage={omitBedFromGuestMessage}
         />
       )}
 
