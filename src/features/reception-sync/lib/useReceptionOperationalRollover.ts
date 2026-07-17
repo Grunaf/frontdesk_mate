@@ -47,7 +47,7 @@ export function useReceptionOperationalRollover(
   }, [endsAt, runRolloverRefresh]);
 
   useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let debounceTimer: number | null = null;
 
     const onVisibilityChange = () => {
       if (document.visibilityState !== 'visible') {

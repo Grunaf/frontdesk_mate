@@ -35,9 +35,9 @@ vi.mock('react', async (importOriginal) => {
         if (existing) {
           return existing;
         }
-        const promise = Promise.resolve(fn(...args)) as ReturnType<T>;
+        const promise = Promise.resolve(fn(...args));
         requestCache.set(key, promise);
-        return promise;
+        return promise as ReturnType<T>;
       }) as T,
   };
 });

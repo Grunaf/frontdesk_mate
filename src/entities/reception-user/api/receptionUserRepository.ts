@@ -236,11 +236,19 @@ export async function setReceptionUserPinHash(input: {
   userId: string;
   pin: string;
 }): Promise<SetReceptionUserPinHashResult> {
-  return updateReceptionUser({
+  const result = await updateReceptionUser({
     tenantSlug: input.tenantSlug,
     userId: input.userId,
     pin: input.pin,
   });
+  if (result.ok) {
+    return result;
+  }
+  // Unreachable when only `pin` is set; narrows UpdateReceptionUserResult.
+  if (result.error === 'invalid_display_name') {
+    return { ok: false, error: 'db_unavailable' };
+  }
+  return { ok: false, error: result.error };
 }
 
 export async function disableReceptionUser(input: {
