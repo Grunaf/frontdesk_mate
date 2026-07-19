@@ -21,6 +21,7 @@ export type StayEssentialsConciergeBannerProgress = {
 export type StayEssentialsConciergeRegistrationStatus = {
   tourismRequired: boolean;
   tourismComplete: boolean;
+  entryDateComplete: boolean;
   contactComplete: boolean;
 };
 
@@ -47,10 +48,12 @@ function resolveSlotFromStatus(input: {
   propertyTimeZone?: string | null;
   registrationStatus: StayEssentialsConciergeRegistrationStatus;
 }): StayEssentialsConciergeBannerSlot {
-  const { tourismRequired, tourismComplete, contactComplete } = input.registrationStatus;
+  const { tourismRequired, tourismComplete, entryDateComplete, contactComplete } =
+    input.registrationStatus;
   const registrationProgress = resolvePreCheckInBannerProgress({
     tourismRequired,
     tourismComplete,
+    entryDateComplete,
     contactComplete,
   });
 
@@ -144,6 +147,7 @@ export function useStayEssentialsConciergeBannerSlot(): StayEssentialsConciergeB
       const registrationStatus: StayEssentialsConciergeRegistrationStatus = {
         tourismRequired: result.status.tourismRequired,
         tourismComplete: result.status.tourismComplete,
+        entryDateComplete: result.status.entryDateComplete,
         contactComplete: result.status.contactComplete,
       };
 

@@ -1,7 +1,11 @@
 'use server';
 
 import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
-import { isTourismRegistrationComplete } from '@/entities/guest-tourism-registration';
+import {
+  isEntryDateComplete,
+  isTourismRegistrationComplete,
+  resolveSharedEntryStampDate,
+} from '@/entities/guest-tourism-registration';
 import { getTourismRegistrationByStayId } from '@/entities/guest-tourism-registration/server';
 import { resolveTourismRegistrationRequired } from '@/entities/tenant';
 import { getTenantRecord } from '@/entities/tenant/server';
@@ -11,6 +15,8 @@ import { isStayContactComplete } from '../lib/isStayContactComplete';
 export type StaySetupStatus = {
   tourismRequired: boolean;
   tourismComplete: boolean;
+  entryDateComplete: boolean;
+  entryStampDate: string | null;
   contactComplete: boolean;
   /** Desk admitted guest to settle in (`passport_checked_at` set). */
   passportVerified: boolean;
@@ -43,10 +49,14 @@ export async function getStaySetupStatusAction(
 
   const tourismRequired = resolveTourismRegistrationRequired(tenant.settings);
   let tourismComplete = false;
+  let entryDateComplete = false;
+  let entryStampDate: string | null = null;
 
   if (tourismRequired) {
     const registration = await getTourismRegistrationByStayId(session.stayId);
     tourismComplete = registration ? isTourismRegistrationComplete(registration) : false;
+    entryDateComplete = registration ? isEntryDateComplete(registration) : false;
+    entryStampDate = registration ? resolveSharedEntryStampDate(registration) : null;
   }
 
   const admin = getSupabaseAdmin();
@@ -83,6 +93,9 @@ export async function getStaySetupStatusAction(
   if (tourismRequired && tourismComplete) {
     completedSteps += 1;
   }
+  if (tourismRequired && entryDateComplete) {
+    completedSteps += 1;
+  }
   if (contactComplete) {
     completedSteps += 1;
   }
@@ -92,6 +105,8 @@ export async function getStaySetupStatusAction(
     status: {
       tourismRequired,
       tourismComplete,
+      entryDateComplete,
+      entryStampDate,
       contactComplete,
       passportVerified,
       stayContactWhatsapp: stayContactWhatsapp ?? legacyTourismContact,

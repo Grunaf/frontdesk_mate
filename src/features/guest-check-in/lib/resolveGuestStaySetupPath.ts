@@ -31,6 +31,7 @@ export type StaySetupDeepLinkStep = StaySetupStep;
 export function resolveStaySetupDeepLinkStep(input: {
   tourismRequired: boolean;
   tourismComplete: boolean;
+  entryDateComplete: boolean;
   contactComplete: boolean;
   passportVerified: boolean;
   preferSettlement?: boolean;
@@ -38,6 +39,7 @@ export function resolveStaySetupDeepLinkStep(input: {
   const completion: StaySetupCompletion = {
     tourismRequired: input.tourismRequired,
     tourismComplete: input.tourismComplete,
+    entryDateComplete: input.entryDateComplete,
     contactComplete: input.contactComplete,
     passportVerified: input.passportVerified,
   };

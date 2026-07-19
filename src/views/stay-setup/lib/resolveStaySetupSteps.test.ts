@@ -16,8 +16,21 @@ describe('resolveStaySetupSteps', () => {
       resolveFirstIncompleteStaySetupStep(true, {
         tourismRequired: true,
         tourismComplete: false,
+        entryDateComplete: true,
         contactComplete: false,
         passportVerified: false,
+      })
+    ).toBe('registration');
+  });
+
+  it('stays on registration when tourism complete but entry date incomplete', () => {
+    expect(
+      resolveFirstIncompleteStaySetupStep(true, {
+        tourismRequired: true,
+        tourismComplete: true,
+        entryDateComplete: false,
+        contactComplete: true,
+        passportVerified: true,
       })
     ).toBe('registration');
   });
@@ -27,6 +40,7 @@ describe('resolveStaySetupSteps', () => {
       resolveFirstIncompleteStaySetupStep(true, {
         tourismRequired: true,
         tourismComplete: true,
+        entryDateComplete: true,
         contactComplete: false,
         passportVerified: false,
       })
@@ -38,6 +52,7 @@ describe('resolveStaySetupSteps', () => {
       resolveFirstIncompleteStaySetupStep(true, {
         tourismRequired: true,
         tourismComplete: true,
+        entryDateComplete: true,
         contactComplete: true,
         passportVerified: false,
       })
@@ -49,6 +64,7 @@ describe('resolveStaySetupSteps', () => {
       resolveFirstIncompleteStaySetupStep(false, {
         tourismRequired: false,
         tourismComplete: false,
+        entryDateComplete: true,
         contactComplete: true,
         passportVerified: false,
       })
@@ -60,6 +76,7 @@ describe('resolveStaySetupSteps', () => {
       resolveFirstIncompleteStaySetupStep(true, {
         tourismRequired: true,
         tourismComplete: true,
+        entryDateComplete: true,
         contactComplete: true,
         passportVerified: true,
       })
@@ -70,6 +87,7 @@ describe('resolveStaySetupSteps', () => {
     const beforePassport = {
       tourismRequired: true,
       tourismComplete: true,
+      entryDateComplete: true,
       contactComplete: true,
       passportVerified: false,
     };
@@ -99,6 +117,7 @@ describe('resolveStaySetupSteps', () => {
       resolveStaySetupStepOrder(true, {
         tourismRequired: true,
         tourismComplete: true,
+        entryDateComplete: true,
         contactComplete: true,
         passportVerified: true,
       })
@@ -118,6 +137,7 @@ describe('resolveStaySetupSteps', () => {
     const completion = {
       tourismRequired: true,
       tourismComplete: true,
+      entryDateComplete: true,
       contactComplete: true,
       passportVerified: true,
     };
@@ -131,6 +151,7 @@ describe('resolveStaySetupSteps', () => {
       resolvePreviousStaySetupStep('registration', false, {
         tourismRequired: false,
         tourismComplete: false,
+        entryDateComplete: true,
         contactComplete: false,
         passportVerified: false,
       })
@@ -141,6 +162,7 @@ describe('resolveStaySetupSteps', () => {
     const completion = {
       tourismRequired: true,
       tourismComplete: true,
+      entryDateComplete: true,
       contactComplete: true,
       passportVerified: true,
     };
@@ -152,6 +174,7 @@ describe('resolveStaySetupSteps', () => {
     const completion = {
       tourismRequired: true,
       tourismComplete: true,
+      entryDateComplete: true,
       contactComplete: true,
       passportVerified: false,
     };
@@ -162,6 +185,7 @@ describe('resolveStaySetupSteps', () => {
     const completion = {
       tourismRequired: true,
       tourismComplete: true,
+      entryDateComplete: true,
       contactComplete: true,
       passportVerified: false,
     };
@@ -174,6 +198,7 @@ describe('resolveStaySetupSteps', () => {
     const completion = {
       tourismRequired: false,
       tourismComplete: false,
+      entryDateComplete: true,
       contactComplete: true,
       passportVerified: true,
     };

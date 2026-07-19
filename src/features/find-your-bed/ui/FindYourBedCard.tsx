@@ -29,6 +29,7 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const [status, setStatus] = useState<{
     tourismComplete: boolean;
+    entryDateComplete: boolean;
     contactComplete: boolean;
     passportVerified: boolean;
   } | null>(null);
@@ -49,6 +50,7 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
       }
       setStatus({
         tourismComplete: result.status.tourismComplete,
+        entryDateComplete: result.status.entryDateComplete,
         contactComplete: result.status.contactComplete,
         passportVerified: result.status.passportVerified,
       });
@@ -64,6 +66,7 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
   const completion: StaySetupCompletion = {
     tourismRequired: tourismRegistrationRequired,
     tourismComplete: status?.tourismComplete ?? false,
+    entryDateComplete: status?.entryDateComplete ?? false,
     contactComplete: status?.contactComplete ?? false,
     passportVerified: status?.passportVerified ?? false,
   };
@@ -71,6 +74,7 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
   const step = resolveStaySetupDeepLinkStep({
     tourismRequired: tourismRegistrationRequired,
     tourismComplete: completion.tourismComplete,
+    entryDateComplete: completion.entryDateComplete,
     contactComplete: completion.contactComplete,
     passportVerified: completion.passportVerified,
     preferSettlement: true,

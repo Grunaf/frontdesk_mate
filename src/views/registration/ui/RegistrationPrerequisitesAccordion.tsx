@@ -13,7 +13,7 @@ import { cn } from '@/shared/lib/utils';
 import type { RegistrationAccordionItem } from '../lib/resolveRegistrationAccordionItem';
 import {
   isRegistrationContactAccordionDisabled,
-  shouldShowRegistrationRegisterAccordionItem,
+  shouldShowRegistrationIdentityAccordionItem,
 } from '../lib/resolveRegistrationAccordionItem';
 
 import type { RegistrationSurface } from '../lib/registrationSurface';
@@ -21,6 +21,7 @@ import type { RegistrationSurface } from '../lib/registrationSurface';
 type RegistrationPrerequisitesAccordionProps = {
   tourismRequired: boolean;
   tourismComplete: boolean;
+  entryDateComplete: boolean;
   contactComplete: boolean;
   passportVerified?: boolean;
   value: RegistrationAccordionItem;
@@ -31,6 +32,8 @@ type RegistrationPrerequisitesAccordionProps = {
   onTourismComplete: () => void;
   onContactComplete: (savedWhatsapp: string) => void;
   onContactDraftChange?: (draft: string) => void;
+  /** When tourism required, contact back returns to arrival card (not an accordion item). */
+  onContactBackToArrival?: () => void;
   registrationSurface?: RegistrationSurface;
   showIntroHeading?: boolean;
 };
@@ -38,6 +41,7 @@ type RegistrationPrerequisitesAccordionProps = {
 export function RegistrationPrerequisitesAccordion({
   tourismRequired,
   tourismComplete,
+  entryDateComplete,
   contactComplete,
   passportVerified = false,
   value,
@@ -48,14 +52,19 @@ export function RegistrationPrerequisitesAccordion({
   onTourismComplete,
   onContactComplete,
   onContactDraftChange,
+  onContactBackToArrival,
   registrationSurface = 'standalone',
   showIntroHeading = true,
 }: RegistrationPrerequisitesAccordionProps) {
   const navigationMode = registrationSurface;
   const t = useTranslations('pages.staySetup.tabs');
 
-  const showRegister = shouldShowRegistrationRegisterAccordionItem(tourismRequired);
-  const contactLocked = isRegistrationContactAccordionDisabled(tourismRequired, tourismComplete);
+  const showIdentity = shouldShowRegistrationIdentityAccordionItem(tourismRequired);
+  const contactLocked = isRegistrationContactAccordionDisabled(
+    tourismRequired,
+    tourismComplete,
+    entryDateComplete
+  );
 
   return (
     <Accordion
@@ -74,23 +83,25 @@ export function RegistrationPrerequisitesAccordion({
       }}
       className="border-none"
     >
-      {showRegister ? (
+      {showIdentity ? (
         <AccordionItem
-          value="register"
+          value="identity"
           className="border-b border-border/60 bg-transparent data-open:bg-transparent"
         >
           <AccordionTrigger
             size="section"
             className={cn('min-h-12 items-center py-3', tourismComplete && 'text-foreground/80')}
           >
-            {t('register')}
+            {t('identity')}
           </AccordionTrigger>
           <AccordionContent className="pb-0">
             <TourismGuestsRegistrationPanel
               interactionEnabled={interactionEnabled}
               navigationMode={navigationMode}
               showIntroHeading={showIntroHeading}
-              showPassportWaiting={tourismComplete && contactComplete && !passportVerified}
+              showPassportWaiting={
+                tourismComplete && entryDateComplete && contactComplete && !passportVerified
+              }
               onComplete={onTourismComplete}
             />
           </AccordionContent>
@@ -119,9 +130,13 @@ export function RegistrationPrerequisitesAccordion({
             onDraftChange={onContactDraftChange}
             onComplete={onContactComplete}
             onBack={
-              showRegister
+              showIdentity
                 ? () => {
-                    onValueChange('register');
+                    if (onContactBackToArrival && tourismComplete) {
+                      onContactBackToArrival();
+                      return;
+                    }
+                    onValueChange('identity');
                   }
                 : undefined
             }

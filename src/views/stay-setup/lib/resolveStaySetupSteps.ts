@@ -3,6 +3,8 @@ export type StaySetupStep = 'registration' | 'essentials' | 'room';
 export type StaySetupCompletion = {
   tourismRequired: boolean;
   tourismComplete: boolean;
+  /** Required when tourism is on; entry stamp date for guests on the stay. */
+  entryDateComplete: boolean;
   contactComplete: boolean;
   /** Desk admitted guest (`passport_checked_at`). Independent of tourism form complete. */
   passportVerified: boolean;
@@ -15,7 +17,10 @@ const LEGACY_URL_STEP_ALIASES: Record<string, StaySetupStep> = {
 };
 
 export function isStaySetupRegistrationComplete(completion: StaySetupCompletion): boolean {
-  return (!completion.tourismRequired || completion.tourismComplete) && completion.contactComplete;
+  const tourismOk =
+    !completion.tourismRequired ||
+    (completion.tourismComplete && completion.entryDateComplete);
+  return tourismOk && completion.contactComplete;
 }
 
 /** Bed / room unlock: registration aggregate + desk passport admit. */

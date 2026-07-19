@@ -53,6 +53,8 @@ import { StaySetupStepProgressBar } from './StaySetupStepProgressBar';
 
 export interface StaySetupInitialState {
   tourismComplete: boolean;
+  entryDateComplete: boolean;
+  entryStampDate: string | null;
   contactComplete: boolean;
   passportVerified: boolean;
   stayContactWhatsapp: string | null;
@@ -93,15 +95,20 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   const {
     tourismComplete,
+    entryDateComplete,
     contactComplete,
     passportVerified,
     stayContactWhatsapp,
     completion,
     registrationComplete,
+    showArrivalStep,
     accordionValue,
     setAccordionValue,
     handleTourismComplete,
+    handleEntryDateComplete,
     handleContactComplete,
+    openArrivalStep,
+    closeArrivalStepToIdentity,
     applyRegistrationStatus,
     contactDraftWhatsapp,
     setContactDraftWhatsapp,
@@ -150,18 +157,24 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const handleCompletionSync = useCallback(
     (status: {
       tourismComplete: boolean;
+      entryDateComplete: boolean;
+      entryStampDate: string | null;
       contactComplete: boolean;
       passportVerified: boolean;
     }) => {
       const merged = mergeRegistrationStatusMonotonic(
-        { tourismComplete, contactComplete, passportVerified },
+        { tourismComplete, entryDateComplete, contactComplete, passportVerified },
         status
       );
-      applyRegistrationStatus(merged);
+      applyRegistrationStatus({
+        ...merged,
+        entryStampDate: status.entryStampDate,
+      });
 
       const nextCompletion: StaySetupCompletion = {
         tourismRequired: tourismRegistrationRequired,
         tourismComplete: merged.tourismComplete,
+        entryDateComplete: merged.entryDateComplete,
         contactComplete: merged.contactComplete,
         passportVerified: merged.passportVerified,
       };
@@ -180,6 +193,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       tourismRegistrationRequired,
       checkInStarted,
       tourismComplete,
+      entryDateComplete,
       contactComplete,
       passportVerified,
     ]
@@ -358,17 +372,22 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
           <RegistrationStepBody
             tourismRequired={tourismRegistrationRequired}
             tourismComplete={tourismComplete}
+            entryDateComplete={entryDateComplete}
             contactComplete={contactComplete}
             registrationComplete={registrationComplete}
             passportVerified={passportVerified}
+            showArrivalStep={showArrivalStep}
             accordionValue={accordionValue}
             onAccordionValueChange={setAccordionValue}
             interactionEnabled={isRegistered}
             tenantSlug={slug ?? ''}
             stayContactWhatsapp={stayContactWhatsapp}
             onTourismComplete={handleTourismComplete}
+            onEntryDateComplete={handleEntryDateComplete}
             onContactComplete={handleContactComplete}
             onContactDraftChange={setContactDraftWhatsapp}
+            onOpenArrivalStep={openArrivalStep}
+            onArrivalBackToIdentity={closeArrivalStepToIdentity}
             showCompleteHint={false}
             registrationSurface="wizard"
           />
@@ -407,6 +426,8 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     t,
     tourismRegistrationRequired,
     tourismComplete,
+    entryDateComplete,
+    showArrivalStep,
     contactComplete,
     passportVerified,
     registrationComplete,
@@ -415,7 +436,10 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     slug,
     stayContactWhatsapp,
     handleTourismComplete,
+    handleEntryDateComplete,
     handleContactComplete,
+    openArrivalStep,
+    closeArrivalStepToIdentity,
     setContactDraftWhatsapp,
     essentialsRulesAcknowledged,
     essentialsHasHouseRules,

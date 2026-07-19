@@ -9,12 +9,16 @@ import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
 import {
   compressImageForUpload,
   CompressImageForUploadError,
+  completeTourismRegistrationForReceptionAction,
+  createTourismGuestForReceptionAction,
   getTourismDocumentSignedUrlAction,
   loadTourismRegistrationForReceptionAction,
+  ReceptionTourismGuestIdentityForm,
   setPassportCheckedAction,
   setTourismExportedAction,
-  setTourismGuestEntryStampDateAction,
+  updateTourismGuestIdentityForReceptionAction,
   uploadTourismDocumentForReceptionAction,
+  type ReceptionTourismGuestIdentityValues,
 } from '@/features/guest-tourism-registration';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
 import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
@@ -26,8 +30,9 @@ import {
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
 import { MagicLinkCard } from './MagicLinkCard';
+import { ReceptionArrivalDatesBlock } from './ReceptionArrivalDatesBlock';
 import { ReceptionStayDetailShell, RECEPTION_STAY_DETAIL_TITLE_ID } from './ReceptionStayDetailShell';
-import { Button, Input } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 import { setGuestReservationBookingPaidAction } from '../actions/receptionActions';
 
 export { RECEPTION_STAY_DETAIL_TITLE_ID };
@@ -190,8 +195,13 @@ function StayTourismRegistrationBlock({
   const [actionError, setActionError] = useState<string | null>(null);
   const [isLoading, startLoad] = useTransition();
   const [isPending, startAction] = useTransition();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
 
   const exportedAt = registration?.tourism_exported_at ?? stay.tourism_exported_at ?? null;
+  const checkInDate = stayRecordCheckInDate(stay);
+  const registrationComplete = Boolean(registration?.tourism_registration_completed_at);
+  const hasGuests = Boolean(registration && registration.guests.length > 0);
 
   useEffect(() => {
     startLoad(async () => {
@@ -311,31 +321,112 @@ function StayTourismRegistrationBlock({
     });
   };
 
-  const handleSaveEntryStampDate = (guestId: string, entryStampDate: string) => {
+  const handleSaveEntryStampDates = (patchByGuestId: Record<string, string | null>) => {
+    setRegistration((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        guests: current.guests.map((guest) => {
+          if (!(guest.id in patchByGuestId)) {
+            return guest;
+          }
+          return {
+            ...guest,
+            entry_stamp_date: patchByGuestId[guest.id] ?? null,
+            entry_stamp_storage_path: '',
+          };
+        }),
+      };
+    });
+  };
+
+  const resolveIdentityActionError = (code: string): string => {
+    switch (code) {
+      case 'unauthorized':
+        return 'Sign in again at reception desk.';
+      case 'registration_closed':
+        return 'Registration is already complete — you cannot add more guests.';
+      case 'invalid_input':
+        return 'Check the guest details and try again.';
+      case 'feature_disabled':
+        return 'Tourist registration is not enabled for this hostel.';
+      case 'no_guests':
+        return 'Add at least one guest before completing registration.';
+      default:
+        return 'Could not save guest identity.';
+    }
+  };
+
+  const handleAddGuest = (values: ReceptionTourismGuestIdentityValues) => {
     startAction(async () => {
       setActionError(null);
-      const trimmed = entryStampDate.trim();
-      const nextDate = trimmed.length > 0 ? trimmed : null;
-      const result = await setTourismGuestEntryStampDateAction({
+      const result = await createTourismGuestForReceptionAction({
+        tenantSlug,
+        stayId: stay.id,
+        identity: values,
+      });
+      if (!result.ok) {
+        setActionError(resolveIdentityActionError(result.error));
+        return;
+      }
+
+      setRegistration((current) => {
+        if (!current) {
+          return {
+            stay_id: stay.id,
+            tourism_contact_whatsapp: null,
+            tourism_registration_completed_at: null,
+            tourism_exported_at: stay.tourism_exported_at ?? null,
+            guests: [result.guest],
+          };
+        }
+        return {
+          ...current,
+          guests: [...current.guests, result.guest],
+        };
+      });
+      setShowAddForm(false);
+    });
+  };
+
+  const handleUpdateGuest = (guestId: string, values: ReceptionTourismGuestIdentityValues) => {
+    startAction(async () => {
+      setActionError(null);
+      const result = await updateTourismGuestIdentityForReceptionAction({
         tenantSlug,
         stayId: stay.id,
         guestId,
-        entryStampDate: nextDate,
+        identity: values,
       });
       if (!result.ok) {
-        setActionError(
-          result.error === 'invalid_date'
-            ? 'Enter a valid entry date.'
-            : result.error === 'unauthorized'
-              ? 'Sign in again at reception desk.'
-              : 'Could not save entry date.'
-        );
+        setActionError(resolveIdentityActionError(result.error));
         return;
       }
-      patchGuest(guestId, {
-        entry_stamp_date: nextDate,
-        entry_stamp_storage_path: '',
+
+      patchGuest(guestId, result.guest);
+      setEditingGuestId(null);
+    });
+  };
+
+  const handleCompleteRegistration = () => {
+    startAction(async () => {
+      setActionError(null);
+      const result = await completeTourismRegistrationForReceptionAction({
+        tenantSlug,
+        stayId: stay.id,
       });
+      if (!result.ok) {
+        setActionError(resolveIdentityActionError(result.error));
+        return;
+      }
+
+      setRegistration((current) =>
+        current
+          ? { ...current, tourism_registration_completed_at: result.completedAt }
+          : current
+      );
+      setShowAddForm(false);
+      setEditingGuestId(null);
     });
   };
 
@@ -392,31 +483,128 @@ function StayTourismRegistrationBlock({
           Guest document copies were removed after the retention period. Export status and
           completion time are kept for audit.
         </p>
-      ) : registration && registration.guests.length > 0 ? (
-        <ul className="space-y-3">
-          {registration.guests.map((guest) => (
-            <li
-              key={guest.id}
-              className="space-y-2 border-t border-border/50 pt-2 first:border-t-0 first:pt-0"
-            >
-              <p className="text-xs font-medium">
-                {guest.first_name} {guest.last_name}
-              </p>
-              <ReceptionTourismGuestDocuments
-                guest={guest}
+      ) : (
+        <div className="space-y-3">
+          {hasGuests ? (
+            <>
+              <ReceptionArrivalDatesBlock
+                tenantSlug={tenantSlug}
+                stayId={stay.id}
+                guests={registration!.guests}
                 disabled={isPending}
-                onUploadPassport={(file) => handleUploadPassport(guest.id, file)}
-                onViewPassport={() => handleViewPassport(guest.id)}
-                onSaveEntryStampDate={(date) => handleSaveEntryStampDate(guest.id, date)}
+                onError={setActionError}
+                onGuestsPatched={handleSaveEntryStampDates}
               />
-            </li>
-          ))}
-        </ul>
-      ) : !loadError ? (
-        <p className="text-xs text-muted-foreground">
-          Guest has not submitted tourism data yet
-        </p>
-      ) : null}
+              <ul className="space-y-3">
+                {registration!.guests.map((guest) => (
+                  <li
+                    key={guest.id}
+                    className="space-y-2 border-t border-border/50 pt-2 first:border-t-0 first:pt-0"
+                  >
+                    {editingGuestId === guest.id ? (
+                      <ReceptionTourismGuestIdentityForm
+                        checkInDate={checkInDate}
+                        initialValues={{
+                          firstName: guest.first_name,
+                          lastName: guest.last_name,
+                          citizenship: guest.citizenship,
+                          passportNumber: guest.passport_number,
+                          dateOfBirth: guest.date_of_birth,
+                          gender: guest.gender,
+                        }}
+                        submitLabel="Save guest"
+                        pendingLabel="Saving…"
+                        disabled={isPending}
+                        isPending={isPending}
+                        onCancel={() => setEditingGuestId(null)}
+                        onSubmit={(values) => handleUpdateGuest(guest.id, values)}
+                      />
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium">
+                              {guest.first_name} {guest.last_name}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {guest.citizenship} · {guest.passport_number} · {guest.date_of_birth} ·{' '}
+                              {guest.gender === 'female' ? 'Female' : 'Male'}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[11px]"
+                            disabled={isPending}
+                            onClick={() => {
+                              setShowAddForm(false);
+                              setEditingGuestId(guest.id);
+                            }}
+                          >
+                            Edit identity
+                          </Button>
+                        </div>
+                        <ReceptionTourismGuestDocuments
+                          guest={guest}
+                          disabled={isPending}
+                          onUploadPassport={(file) => handleUploadPassport(guest.id, file)}
+                          onViewPassport={() => handleViewPassport(guest.id)}
+                        />
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : !loadError ? (
+            <p className="text-xs text-muted-foreground">
+              No tourism guests yet — add identity details at the desk or wait for the guest app.
+            </p>
+          ) : null}
+
+          {showAddForm && !registrationComplete ? (
+            <ReceptionTourismGuestIdentityForm
+              checkInDate={checkInDate}
+              submitLabel="Add guest"
+              pendingLabel="Adding…"
+              disabled={isPending}
+              isPending={isPending}
+              onCancel={() => setShowAddForm(false)}
+              onSubmit={handleAddGuest}
+            />
+          ) : null}
+
+          <div className="flex flex-wrap gap-1.5">
+            {!registrationComplete && !showAddForm ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-[11px]"
+                disabled={isPending || isLoading}
+                onClick={() => {
+                  setEditingGuestId(null);
+                  setShowAddForm(true);
+                }}
+              >
+                Add guest
+              </Button>
+            ) : null}
+            {hasGuests && !registrationComplete ? (
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 text-[11px]"
+                disabled={isPending || isLoading}
+                onClick={handleCompleteRegistration}
+              >
+                Complete registration
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       <label className="flex cursor-pointer items-start gap-2 text-xs">
         <input
@@ -437,21 +625,14 @@ function ReceptionTourismGuestDocuments({
   disabled,
   onUploadPassport,
   onViewPassport,
-  onSaveEntryStampDate,
 }: {
   guest: GuestTourismGuest;
   disabled: boolean;
   onUploadPassport: (file: File) => void;
   onViewPassport: () => void;
-  onSaveEntryStampDate: (date: string) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [entryDateDraft, setEntryDateDraft] = useState(guest.entry_stamp_date ?? '');
   const hasPassport = Boolean(guest.passport_storage_path.trim());
-
-  useEffect(() => {
-    setEntryDateDraft(guest.entry_stamp_date ?? '');
-  }, [guest.entry_stamp_date, guest.id]);
 
   return (
     <div className="space-y-2">
@@ -492,28 +673,6 @@ function ReceptionTourismGuestDocuments({
             View passport
           </Button>
         ) : null}
-      </div>
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="space-y-1">
-          <span className="block text-[11px] text-muted-foreground">Entry date</span>
-          <Input
-            type="date"
-            className="h-8 w-[11rem] text-xs"
-            value={entryDateDraft}
-            disabled={disabled}
-            onChange={(event) => setEntryDateDraft(event.target.value)}
-          />
-        </label>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 text-[11px]"
-          disabled={disabled || entryDateDraft === (guest.entry_stamp_date ?? '')}
-          onClick={() => onSaveEntryStampDate(entryDateDraft)}
-        >
-          Save date
-        </Button>
       </div>
     </div>
   );

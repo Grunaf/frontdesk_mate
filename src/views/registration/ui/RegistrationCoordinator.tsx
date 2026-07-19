@@ -43,15 +43,20 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     tenantSlug,
     tourismRequired,
     tourismComplete,
+    entryDateComplete,
     contactComplete,
     passportVerified,
     stayContactWhatsapp,
     completion,
     registrationComplete,
+    showArrivalStep,
     accordionValue,
     setAccordionValue,
     handleTourismComplete,
+    handleEntryDateComplete,
     handleContactComplete,
+    openArrivalStep,
+    closeArrivalStepToIdentity,
     contactDraftWhatsapp,
     setContactDraftWhatsapp,
   } = useRegistrationStepState({ initial, isRegistered });
@@ -96,6 +101,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
       const nextCompletion = {
         tourismRequired,
         tourismComplete,
+        entryDateComplete,
         contactComplete: true,
         passportVerified,
       };
@@ -117,6 +123,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
       router,
       tourismRequired,
       tourismComplete,
+      entryDateComplete,
       passportVerified,
     ]
   );
@@ -181,17 +188,22 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
           <RegistrationStepBody
             tourismRequired={tourismRequired}
             tourismComplete={tourismComplete}
+            entryDateComplete={entryDateComplete}
             contactComplete={contactComplete}
             registrationComplete={registrationComplete}
             passportVerified={passportVerified}
+            showArrivalStep={showArrivalStep}
             accordionValue={accordionValue}
             onAccordionValueChange={setAccordionValue}
             interactionEnabled={isRegistered}
             tenantSlug={tenantSlug}
             stayContactWhatsapp={stayContactWhatsapp}
             onTourismComplete={handleTourismComplete}
+            onEntryDateComplete={handleEntryDateComplete}
             onContactComplete={onContactComplete}
             onContactDraftChange={setContactDraftWhatsapp}
+            onOpenArrivalStep={openArrivalStep}
+            onArrivalBackToIdentity={closeArrivalStepToIdentity}
             registrationSurface="standalone"
           />
         </div>

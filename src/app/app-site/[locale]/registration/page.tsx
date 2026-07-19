@@ -1,7 +1,11 @@
 import { setRequestLocale } from 'next-intl/server';
 import { isStayContactComplete } from '@/features/guest-stay-contact';
 import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
-import { isTourismRegistrationComplete } from '@/entities/guest-tourism-registration';
+import {
+  isEntryDateComplete,
+  isTourismRegistrationComplete,
+  resolveSharedEntryStampDate,
+} from '@/entities/guest-tourism-registration';
 import { getTourismRegistrationByStayId } from '@/entities/guest-tourism-registration/server';
 import { resolveTourismRegistrationRequired } from '@/entities/tenant';
 import { resolveTenantAccess } from '@/entities/tenant/server';
@@ -17,6 +21,8 @@ export default async function RegistrationPage({ params }: RegistrationPageProps
   setRequestLocale(locale);
 
   let tourismComplete = false;
+  let entryDateComplete = false;
+  let entryStampDate: string | null = null;
   let contactComplete = false;
   let passportVerified = false;
   let stayContactWhatsapp: string | null = null;
@@ -30,6 +36,8 @@ export default async function RegistrationPage({ params }: RegistrationPageProps
       if (tourismRequired) {
         const registration = await getTourismRegistrationByStayId(session.stayId);
         tourismComplete = registration ? isTourismRegistrationComplete(registration) : false;
+        entryDateComplete = registration ? isEntryDateComplete(registration) : false;
+        entryStampDate = registration ? resolveSharedEntryStampDate(registration) : null;
       }
 
       const admin = getSupabaseAdmin();
@@ -61,6 +69,8 @@ export default async function RegistrationPage({ params }: RegistrationPageProps
     <RegistrationCoordinator
       initial={{
         tourismComplete,
+        entryDateComplete,
+        entryStampDate,
         contactComplete,
         passportVerified,
         stayContactWhatsapp,

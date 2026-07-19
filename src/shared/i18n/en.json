@@ -805,7 +805,9 @@
       },
       "tabs": {
         "registration": "Guest registration",
-        "register": "Guest registration",
+        "register": "Passport details",
+        "identity": "Passport details",
+        "entryDate": "Entry date",
         "contact": "Contact",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
@@ -820,7 +822,7 @@
         "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
       },
       "register": {
-        "actionButton": "Continue to contact",
+        "actionButton": "Continue to entry date",
         "loading": "Loading registration…",
         "intro": {
           "title": "Tourist registration ({country})",
@@ -871,7 +873,7 @@
         },
         "complete": {
           "summaryTitle": "Registration complete",
-          "continue": "Continue to contact",
+          "continue": "Continue to entry date",
           "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
         },
         "fieldErrors": {
@@ -897,6 +899,25 @@
           "uploadFailed": "Upload failed. Check your connection and try again.",
           "dbUnavailable": "Service is temporarily unavailable. Try again in a moment.",
           "noGuests": "Add at least one guest before completing."
+        }
+      },
+      "entryDate": {
+        "title": "Arrival / entry dates",
+        "description": "Enter the date each guest entered the country (from the passport stamp or entry record).",
+        "dateLabel": "Date of entry",
+        "modeLegend": "Did everyone arrive on the same day?",
+        "modeSame": "Same day for everyone",
+        "modeDifferent": "Different dates",
+        "hint": "One date is applied to everyone on this booking.",
+        "hintDifferent": "Enter the entry date for each guest.",
+        "loading": "Loading guests…",
+        "emptyGuests": "Add guests in passport details first.",
+        "savedBadge": "Saved",
+        "continue": "Continue to contact",
+        "saving": "Saving…",
+        "errors": {
+          "invalidDate": "Choose a valid entry date.",
+          "generic": "Something went wrong. Try again."
         }
       },
       "contact": {

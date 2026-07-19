@@ -11,6 +11,7 @@ describe('reconcileStepAfterCompletionSync', () => {
   const complete = {
     tourismRequired: true,
     tourismComplete: true,
+    entryDateComplete: true,
     contactComplete: true,
     passportVerified: true,
   };
@@ -33,6 +34,7 @@ describe('reconcileStepAfterCompletionSync', () => {
         {
           tourismRequired: true,
           tourismComplete: true,
+          entryDateComplete: true,
           contactComplete: false,
           passportVerified: false,
         },
@@ -49,6 +51,7 @@ describe('reconcileStepAfterCompletionSync', () => {
         {
           tourismRequired: true,
           tourismComplete: true,
+          entryDateComplete: true,
           contactComplete: true,
           passportVerified: false,
         },
@@ -62,10 +65,10 @@ describe('mergeRegistrationStatusMonotonic', () => {
   it('never clears completion flags from a stale server response', () => {
     expect(
       mergeRegistrationStatusMonotonic(
-        { tourismComplete: true, contactComplete: true, passportVerified: true },
-        { tourismComplete: false, contactComplete: false, passportVerified: false }
+        { tourismComplete: true, entryDateComplete: true, contactComplete: true, passportVerified: true },
+        { tourismComplete: false, entryDateComplete: true, contactComplete: false, passportVerified: false }
       )
-    ).toEqual({ tourismComplete: true, contactComplete: true, passportVerified: true });
+    ).toEqual({ tourismComplete: true, entryDateComplete: true, contactComplete: true, passportVerified: true });
   });
 });
 
@@ -90,6 +93,7 @@ describe('resolveStaySetupStepFromUrl', () => {
   const completion = {
     tourismRequired: true,
     tourismComplete: true,
+    entryDateComplete: true,
     contactComplete: true,
     passportVerified: true,
   };

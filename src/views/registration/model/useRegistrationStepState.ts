@@ -6,7 +6,10 @@ import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant
 import type { StaySetupInitialState } from '@/views/stay-setup';
 import { isStaySetupRegistrationComplete } from '@/views/stay-setup/lib/resolveStaySetupSteps';
 import type { RegistrationAccordionItem } from '../lib/resolveRegistrationAccordionItem';
-import { resolveOpenRegistrationAccordionItem } from '../lib/resolveRegistrationAccordionItem';
+import {
+  resolveOpenRegistrationAccordionItem,
+  shouldShowRegistrationArrivalStep,
+} from '../lib/resolveRegistrationAccordionItem';
 
 type UseRegistrationStepStateInput = {
   initial: StaySetupInitialState;
@@ -24,26 +27,35 @@ export function useRegistrationStepState({
   const tourismRequired = resolveTourismRegistrationRequired(settings);
 
   const [tourismComplete, setTourismComplete] = useState(initial.tourismComplete);
+  const [entryDateComplete, setEntryDateComplete] = useState(initial.entryDateComplete);
+  const [entryStampDate, setEntryStampDate] = useState(initial.entryStampDate);
   const [contactComplete, setContactComplete] = useState(initial.contactComplete);
   const [passportVerified, setPassportVerified] = useState(initial.passportVerified);
   const [stayContactWhatsapp, setStayContactWhatsapp] = useState(initial.stayContactWhatsapp);
   const [contactDraftWhatsapp, setContactDraftWhatsapp] = useState(initial.stayContactWhatsapp ?? '');
+  /** Explicit arrival card override (e.g. back from contact while dates already saved). */
+  const [arrivalStepForced, setArrivalStepForced] = useState(false);
   const [accordionValue, setAccordionValue] = useState<RegistrationAccordionItem>(() =>
     resolveOpenRegistrationAccordionItem({
       tourismRequired,
       tourismComplete: initial.tourismComplete,
+      entryDateComplete: initial.entryDateComplete,
       contactComplete: initial.contactComplete,
     })
   );
 
   useEffect(() => {
     setTourismComplete(initial.tourismComplete);
+    setEntryDateComplete(initial.entryDateComplete);
+    setEntryStampDate(initial.entryStampDate);
     setContactComplete(initial.contactComplete);
     setPassportVerified(initial.passportVerified);
     setStayContactWhatsapp(initial.stayContactWhatsapp);
     setContactDraftWhatsapp(initial.stayContactWhatsapp ?? '');
   }, [
     initial.tourismComplete,
+    initial.entryDateComplete,
+    initial.entryStampDate,
     initial.contactComplete,
     initial.passportVerified,
     initial.stayContactWhatsapp,
@@ -61,6 +73,8 @@ export function useRegistrationStepState({
       }
 
       setTourismComplete(result.status.tourismComplete);
+      setEntryDateComplete(result.status.entryDateComplete);
+      setEntryStampDate(result.status.entryStampDate);
       setContactComplete(result.status.contactComplete);
       setPassportVerified(result.status.passportVerified);
     });
@@ -74,16 +88,28 @@ export function useRegistrationStepState({
     () => ({
       tourismRequired,
       tourismComplete,
+      entryDateComplete,
       contactComplete,
       passportVerified,
     }),
-    [tourismRequired, tourismComplete, contactComplete, passportVerified]
+    [tourismRequired, tourismComplete, entryDateComplete, contactComplete, passportVerified]
   );
 
   const registrationComplete = isStaySetupRegistrationComplete(completion);
 
+  const showArrivalStep =
+    arrivalStepForced ||
+    shouldShowRegistrationArrivalStep(tourismRequired, tourismComplete, entryDateComplete);
+
   const handleTourismComplete = useCallback(() => {
     setTourismComplete(true);
+    setArrivalStepForced(false);
+  }, []);
+
+  const handleEntryDateComplete = useCallback((savedDate: string | null) => {
+    setEntryStampDate(savedDate);
+    setEntryDateComplete(true);
+    setArrivalStepForced(false);
     setAccordionValue('contact');
   }, []);
 
@@ -93,16 +119,31 @@ export function useRegistrationStepState({
     setContactComplete(true);
   }, []);
 
+  const openArrivalStep = useCallback(() => {
+    setArrivalStepForced(true);
+  }, []);
+
+  const closeArrivalStepToIdentity = useCallback(() => {
+    setArrivalStepForced(false);
+    setAccordionValue('identity');
+  }, []);
+
   const applyRegistrationStatus = useCallback(
     (status: {
       tourismComplete: boolean;
+      entryDateComplete: boolean;
       contactComplete: boolean;
       passportVerified?: boolean;
+      entryStampDate?: string | null;
     }) => {
       setTourismComplete(status.tourismComplete);
+      setEntryDateComplete(status.entryDateComplete);
       setContactComplete(status.contactComplete);
       if (status.passportVerified !== undefined) {
         setPassportVerified(status.passportVerified);
+      }
+      if (status.entryStampDate !== undefined) {
+        setEntryStampDate(status.entryStampDate);
       }
     },
     []
@@ -112,6 +153,8 @@ export function useRegistrationStepState({
     tenantSlug,
     tourismRequired,
     tourismComplete,
+    entryDateComplete,
+    entryStampDate,
     contactComplete,
     passportVerified,
     stayContactWhatsapp,
@@ -119,10 +162,14 @@ export function useRegistrationStepState({
     setContactDraftWhatsapp,
     completion,
     registrationComplete,
+    showArrivalStep,
     accordionValue,
     setAccordionValue,
     handleTourismComplete,
+    handleEntryDateComplete,
     handleContactComplete,
+    openArrivalStep,
+    closeArrivalStepToIdentity,
     applyRegistrationStatus,
   };
 }

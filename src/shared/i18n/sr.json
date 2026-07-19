@@ -1476,7 +1476,9 @@
       },
       "tabs": {
         "registration": "Tourist registration",
-        "register": "Tourist registration",
+        "register": "Podaci iz pasoša",
+        "identity": "Podaci iz pasoša",
+        "entryDate": "Datum ulaska",
         "contact": "Contact",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
@@ -1491,7 +1493,7 @@
         "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
       },
       "register": {
-        "actionButton": "Continue to settlement",
+        "actionButton": "Nastavi na datum ulaska",
         "loading": "Loading registration…",
         "intro": {
           "title": "Tourist registration ({country})",
@@ -1547,7 +1549,7 @@
         },
         "complete": {
           "summaryTitle": "Registration complete",
-          "continue": "Continue to contact",
+          "continue": "Nastavi na datum ulaska",
           "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
         },
         "fieldErrors": {
@@ -1574,6 +1576,25 @@
           "dbUnavailable": "Service is temporarily unavailable. Try again in a moment.",
           "invalidWhatsapp": "Enter a valid WhatsApp number with country code.",
           "noGuests": "Add at least one guest before completing."
+        }
+      },
+      "entryDate": {
+        "title": "Datumi dolaska / ulaska",
+        "description": "Unesite datum ulaska u zemlju za svakog gosta (sa pečata u pasošu ili evidencije ulaska).",
+        "dateLabel": "Datum ulaska",
+        "modeLegend": "Da li su svi stigli istog dana?",
+        "modeSame": "Isti dan za sve",
+        "modeDifferent": "Različiti datumi",
+        "hint": "Jedan datum važi za celu rezervaciju.",
+        "hintDifferent": "Unesite datum ulaska za svakog gosta.",
+        "loading": "Učitavanje gostiju…",
+        "emptyGuests": "Prvo dodajte goste u podacima iz pasoša.",
+        "savedBadge": "Sačuvano",
+        "continue": "Nastavi na kontakt",
+        "saving": "Čuvanje…",
+        "errors": {
+          "invalidDate": "Izaberite ispravan datum ulaska.",
+          "generic": "Something went wrong. Try again."
         }
       },
       "settlement": {

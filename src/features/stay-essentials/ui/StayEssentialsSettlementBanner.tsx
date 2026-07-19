@@ -52,11 +52,17 @@ export function StayEssentialsSettlementBanner() {
             return;
           }
 
-          const { tourismRequired, tourismComplete, contactComplete, passportVerified } =
-            result.status;
+          const {
+            tourismRequired,
+            tourismComplete,
+            entryDateComplete,
+            contactComplete,
+            passportVerified,
+          } = result.status;
           const registrationComplete = resolvePreCheckInBannerProgress({
             tourismRequired,
             tourismComplete,
+            entryDateComplete,
             contactComplete,
           }).isComplete;
           const settlementProgress = readStaySettlementBannerProgress(slug, stayId);
@@ -74,6 +80,7 @@ export function StayEssentialsSettlementBanner() {
               completion: {
                 tourismRequired,
                 tourismComplete,
+                entryDateComplete,
                 contactComplete,
                 passportVerified,
               },

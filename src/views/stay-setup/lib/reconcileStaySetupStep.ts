@@ -76,17 +76,25 @@ export function reconcileStepAfterCompletionSync(
 export function mergeRegistrationStatusMonotonic(
   current: {
     tourismComplete: boolean;
+    entryDateComplete: boolean;
     contactComplete: boolean;
     passportVerified?: boolean;
   },
   incoming: {
     tourismComplete: boolean;
+    entryDateComplete: boolean;
     contactComplete: boolean;
     passportVerified?: boolean;
   }
-): { tourismComplete: boolean; contactComplete: boolean; passportVerified: boolean } {
+): {
+  tourismComplete: boolean;
+  entryDateComplete: boolean;
+  contactComplete: boolean;
+  passportVerified: boolean;
+} {
   return {
     tourismComplete: current.tourismComplete || incoming.tourismComplete,
+    entryDateComplete: current.entryDateComplete || incoming.entryDateComplete,
     contactComplete: current.contactComplete || incoming.contactComplete,
     passportVerified: Boolean(current.passportVerified) || Boolean(incoming.passportVerified),
   };

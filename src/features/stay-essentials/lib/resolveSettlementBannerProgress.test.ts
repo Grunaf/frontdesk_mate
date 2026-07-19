@@ -51,6 +51,7 @@ describe('resolveSettlementBannerProgress', () => {
         registrationStatus: {
           tourismRequired: true,
           tourismComplete: false,
+          entryDateComplete: false,
           contactComplete: false,
         },
       })

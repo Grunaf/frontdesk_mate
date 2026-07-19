@@ -10,6 +10,7 @@ export type TourismGuestListItem = {
   id: string;
   firstName: string;
   lastName: string;
+  entryStampDate: string | null;
 };
 
 export type ListTourismGuestsForSessionActionResult =
@@ -44,6 +45,7 @@ export async function listTourismGuestsForSessionAction(
     id: guest.id,
     firstName: guest.first_name,
     lastName: guest.last_name,
+    entryStampDate: guest.entry_stamp_date,
   }));
 
   return {

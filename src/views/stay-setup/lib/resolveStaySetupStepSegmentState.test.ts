@@ -5,6 +5,7 @@ describe('resolveStaySetupStepSegmentState', () => {
   const registrationIncomplete = {
     tourismRequired: true,
     tourismComplete: true,
+    entryDateComplete: true,
     contactComplete: false,
     passportVerified: false,
   };
