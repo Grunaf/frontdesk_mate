@@ -13,8 +13,18 @@ test.describe('admin smoke', () => {
 
   test('opens tenant edit form for configured slug', async ({ page }) => {
     await loginAsAdmin(page, config);
-    await page.goto(e2eAdminUrl(config, `/admin/tenants/${config.tenantSlug}`));
-    await expect(page.getByRole('heading', { name: `Edit: ${config.tenantSlug}` })).toBeVisible();
-    await expect(page.locator('input[name="cityPackId"]')).toHaveValue(config.cityPackId);
+    await page.goto(
+      e2eAdminUrl(config, `/admin/tenants/${config.tenantSlug}/settings/identity`)
+    );
+    await expect(page).toHaveURL(
+      new RegExp(`/admin/tenants/${config.tenantSlug}/settings/identity`),
+      { timeout: config.navTimeoutMs }
+    );
+    await expect(
+      page.getByRole('heading', { name: `Edit: ${config.tenantSlug}` })
+    ).toBeVisible({ timeout: config.navTimeoutMs });
+    await expect(page.locator('input[name="cityPackId"]')).toHaveValue(config.cityPackId, {
+      timeout: config.navTimeoutMs,
+    });
   });
 });

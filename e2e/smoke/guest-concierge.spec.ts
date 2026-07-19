@@ -97,13 +97,15 @@ test.describe('guest concierge stay chip', () => {
       timeout: config.navTimeoutMs,
     });
     await expect(page.getByLabel('Stay setup steps')).toBeVisible();
-    // Wizard has no standalone "Guest registration" heading — assert registration-step body
-    // (Contact always; Passport details when tourism required).
+    // Wizard has no standalone "Guest registration" heading. Tourism tenants show both
+    // Passport details + Contact triggers — use .first() to avoid strict-mode dual match.
     await expect(
-      page.getByRole('button', {
-        name: /Contact|Контакт|Passport details|Паспортные данные|Podaci iz pasoša/i,
-      })
-    ).toBeVisible();
+      page
+        .getByRole('button', {
+          name: /Passport details|Паспортные данные|Podaci iz pasoša|Contact|Контакт/i,
+        })
+        .first()
+    ).toBeVisible({ timeout: config.navTimeoutMs });
   });
 
   test('hides stay chip on arrival guide', async ({ page }) => {
