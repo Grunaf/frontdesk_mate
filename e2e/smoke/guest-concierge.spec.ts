@@ -97,7 +97,13 @@ test.describe('guest concierge stay chip', () => {
       timeout: config.navTimeoutMs,
     });
     await expect(page.getByLabel('Stay setup steps')).toBeVisible();
-    await expect(page.getByText(/Guest registration|Туристическая регистрация|Регистрация гост/i).first()).toBeVisible();
+    // Wizard has no standalone "Guest registration" heading — assert registration-step body
+    // (Contact always; Passport details when tourism required).
+    await expect(
+      page.getByRole('button', {
+        name: /Contact|Контакт|Passport details|Паспортные данные|Podaci iz pasoša/i,
+      })
+    ).toBeVisible();
   });
 
   test('hides stay chip on arrival guide', async ({ page }) => {
