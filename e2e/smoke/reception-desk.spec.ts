@@ -80,7 +80,7 @@ test.describe('reception desk smoke', () => {
     await expect(page.getByText('Paper PIN')).toBeVisible();
   });
 
-  test('marks guest arrived from stay detail', async ({ page }) => {
+  test('admits guest to check-in from stay detail', async ({ page }) => {
     await loginToReceptionDesk(page, config);
     await openIssueGuestAccessOverlay(page);
 
@@ -89,9 +89,9 @@ test.describe('reception desk smoke', () => {
     await issueButton.click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
 
-    await page.getByRole('button', { name: 'Mark arrived' }).click();
-    await expect(page.getByText(/^Arrived · /)).toBeVisible({ timeout: config.navTimeoutMs });
-    await expect(page.getByRole('button', { name: 'Mark arrived' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Admit to check-in' }).click();
+    await expect(page.getByText(/^Admitted · /)).toBeVisible({ timeout: config.navTimeoutMs });
+    await expect(page.getByRole('button', { name: 'Admit to check-in' })).toHaveCount(0);
   });
 
   test('moves guest to another bed in place', async ({ page }) => {

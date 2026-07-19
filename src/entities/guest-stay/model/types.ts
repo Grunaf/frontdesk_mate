@@ -152,12 +152,17 @@ export type CompleteDeskCheckInResult =
       error: 'not_found' | 'tenant_not_found' | 'already_revoked' | 'db_unavailable';
     };
 
-/** Desk admits guest to settle in (`passport_checked_at`). Independent of desk arrival / eTurist export. */
+/**
+ * Desk admits guest to settle in.
+ * `checked: true` dual-writes `passport_checked_at` + `desk_checked_in_at` (optional `key_issued_at`).
+ */
 export type SetPassportCheckedAtInput = {
   tenantSlug: string;
   stayId: string;
-  /** `true` sets timestamp to now; `false` clears it (un-admit). */
+  /** `true` sets timestamps to now; `false` clears admit timestamps (un-admit). */
   checked: boolean;
+  /** When admitting, optionally record room key handoff. */
+  keyIssued?: boolean;
 };
 
 export type SetPassportCheckedAtResult =

@@ -63,6 +63,7 @@ export async function setPassportCheckedAction(input: {
   tenantSlug: string;
   stayId: string;
   checked: boolean;
+  keyIssued?: boolean;
 }): Promise<SetPassportCheckedActionResult> {
   try {
     await assertReceptionAuthenticated(input.tenantSlug);
@@ -75,6 +76,7 @@ export async function setPassportCheckedAction(input: {
       tenantSlug: input.tenantSlug,
       stayId: input.stayId,
       checked: input.checked,
+      keyIssued: input.keyIssued,
     });
 
     if (!result.ok) {

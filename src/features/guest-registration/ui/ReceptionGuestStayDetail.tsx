@@ -88,10 +88,12 @@ function StayAdmitToCheckInBlock({
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startAction] = useTransition();
   const [passportCheckedAt, setPassportCheckedAt] = useState(stay.passport_checked_at);
+  const [keyIssued, setKeyIssued] = useState(false);
   const admitted = Boolean(passportCheckedAt);
 
   useEffect(() => {
     setPassportCheckedAt(stay.passport_checked_at);
+    setKeyIssued(false);
   }, [stay.passport_checked_at, stay.id]);
 
   const handleSetChecked = (checked: boolean) => {
@@ -101,6 +103,7 @@ function StayAdmitToCheckInBlock({
         tenantSlug,
         stayId: stay.id,
         checked,
+        keyIssued: checked ? keyIssued : undefined,
       });
       if (!result.ok) {
         setActionError(
@@ -126,10 +129,7 @@ function StayAdmitToCheckInBlock({
         Check-in admit
       </p>
       {admitted ? (
-        <p className="text-sm font-medium text-emerald-800">
-          Admitted
-          {passportCheckedAt ? ` · ${formatReceptionDateTime(passportCheckedAt)}` : null}
-        </p>
+        <p className="text-sm font-medium text-emerald-800">Admitted</p>
       ) : (
         <p className="text-xs text-muted-foreground">
           {tourismRegistrationRequired
@@ -150,15 +150,27 @@ function StayAdmitToCheckInBlock({
           Undo admit
         </Button>
       ) : (
-        <Button
-          type="button"
-          size="sm"
-          className="h-8"
-          disabled={isPending}
-          onClick={() => handleSetChecked(true)}
-        >
-          Admit to check-in
-        </Button>
+        <div className="space-y-2">
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={keyIssued}
+              disabled={isPending}
+              onChange={(event) => setKeyIssued(event.target.checked)}
+            />
+            <span>Room key issued</span>
+          </label>
+          <Button
+            type="button"
+            size="sm"
+            className="h-8"
+            disabled={isPending}
+            onClick={() => handleSetChecked(true)}
+          >
+            Admit to check-in
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -596,24 +608,7 @@ export interface ReceptionGuestStayDetailProps {
   onChangeDates: (stay: GuestStayRecordWithLink) => void;
   onMoveBed: (stay: GuestStayRecordWithLink) => void;
   onReissueAccess: (stay: GuestStayRecordWithLink) => void;
-  onMarkArrived: (input: { stayId: string; keyIssued: boolean }) => void;
-  markArrivedError?: string | null;
   tenantSettings?: TenantSettings;
-}
-
-function canMarkDeskArrived(
-  stay: GuestStayRecordWithLink,
-  tenantSettings?: TenantSettings
-): boolean {
-  if (stay.revoked_at || stay.desk_checked_in_at) {
-    return false;
-  }
-  const status = resolveGuestAccessStatus(
-    stay,
-    new Date(),
-    guestAccessCheckInPolicyFromSettings(tenantSettings)
-  );
-  return status !== 'ended';
 }
 
 function ReceptionGuestStayDetailActions({
@@ -623,9 +618,6 @@ function ReceptionGuestStayDetailActions({
   onMoveBed,
   onReissueAccess,
   onRevoke,
-  onMarkArrived,
-  markArrivedError,
-  tenantSettings,
 }: Pick<
   ReceptionGuestStayDetailProps,
   | 'stay'
@@ -634,39 +626,9 @@ function ReceptionGuestStayDetailActions({
   | 'onMoveBed'
   | 'onReissueAccess'
   | 'onRevoke'
-  | 'onMarkArrived'
-  | 'markArrivedError'
-  | 'tenantSettings'
 >) {
-  const [keyIssued, setKeyIssued] = useState(false);
-  const showMarkArrived = canMarkDeskArrived(stay, tenantSettings);
-
   return (
     <div className="flex flex-col gap-3">
-      {markArrivedError ? <p className="text-xs text-destructive">{markArrivedError}</p> : null}
-      {showMarkArrived ? (
-        <div className="space-y-2">
-          <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              className="mt-0.5"
-              checked={keyIssued}
-              disabled={isPending}
-              onChange={(event) => setKeyIssued(event.target.checked)}
-            />
-            <span>Room key issued</span>
-          </label>
-          <Button
-            type="button"
-            size="default"
-            className="w-full"
-            disabled={isPending}
-            onClick={() => onMarkArrived({ stayId: stay.id, keyIssued })}
-          >
-            Mark arrived
-          </Button>
-        </div>
-      ) : null}
       <div className="flex flex-col gap-2 lg:flex-row">
         <Button
           type="button"
@@ -732,8 +694,6 @@ export function ReceptionGuestStayDetail({
   onChangeDates,
   onMoveBed,
   onReissueAccess,
-  onMarkArrived,
-  markArrivedError,
   tenantSettings,
 }: ReceptionGuestStayDetailProps) {
   const status = resolveGuestAccessStatus(
@@ -751,6 +711,7 @@ export function ReceptionGuestStayDetail({
     stay.booking_platform_id,
     stay.booking_external_id
   );
+  const admittedAt = stay.passport_checked_at ?? stay.desk_checked_in_at;
 
   const header = (
     <header className="space-y-1">
@@ -767,14 +728,9 @@ export function ReceptionGuestStayDetail({
         {formatDisplayDate(checkInDay)} → {formatDisplayDate(checkOutDay)} ·{' '}
         {guestAccessStatusLabel(status)}
       </p>
-      {stay.desk_checked_in_at ? (
+      {admittedAt ? (
         <p className="text-xs font-medium text-emerald-800">
-          Arrived · {formatReceptionDateTime(stay.desk_checked_in_at)}
-        </p>
-      ) : null}
-      {stay.passport_checked_at ? (
-        <p className="text-xs font-medium text-emerald-800">
-          Admitted · {formatReceptionDateTime(stay.passport_checked_at)}
+          Admitted · {formatReceptionDateTime(admittedAt)}
         </p>
       ) : null}
       {bookingSourceLine ? (
@@ -835,9 +791,6 @@ export function ReceptionGuestStayDetail({
       onMoveBed={onMoveBed}
       onReissueAccess={onReissueAccess}
       onRevoke={onRevoke}
-      onMarkArrived={onMarkArrived}
-      markArrivedError={markArrivedError}
-      tenantSettings={tenantSettings}
     />
   );
 

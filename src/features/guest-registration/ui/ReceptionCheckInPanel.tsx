@@ -24,7 +24,6 @@ import {
 import { formatMinorAsDecimalInput, getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
 import {
   createGuestStayAction,
-  completeDeskCheckInAction,
   reissueGuestStayAction,
   revokeGuestStayAction,
   updateGuestReservationAction,
@@ -182,7 +181,6 @@ export function ReceptionCheckInPanel({
   const [pendingRevokeStayId, setPendingRevokeStayId] = useState<string | null>(null);
   const [pendingReissueAccessStay, setPendingReissueAccessStay] =
     useState<GuestStayRecordWithLink | null>(null);
-  const [markArrivedError, setMarkArrivedError] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditReservationDraft | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -235,7 +233,6 @@ export function ReceptionCheckInPanel({
   );
 
   const openStayDetail = useCallback((stayId: string) => {
-    setMarkArrivedError(null);
     setSelectedStayId(stayId);
   }, []);
 
@@ -497,20 +494,6 @@ export function ReceptionCheckInPanel({
     });
   };
 
-  const handleMarkArrived = ({ stayId, keyIssued }: { stayId: string; keyIssued: boolean }) => {
-    setMarkArrivedError(null);
-
-    startTransition(async () => {
-      const result = await completeDeskCheckInAction({ tenantSlug, stayId, keyIssued });
-      if (!result.ok) {
-        setMarkArrivedError(createErrorMessage(result.error));
-        return;
-      }
-
-      await refresh();
-    });
-  };
-
   const handleRevoke = (stayId: string) => {
     setRevokeError(null);
 
@@ -658,8 +641,6 @@ export function ReceptionCheckInPanel({
           onReissueAccess={(stay) => {
             setPendingReissueAccessStay(stay);
           }}
-          onMarkArrived={handleMarkArrived}
-          markArrivedError={markArrivedError}
         />
       ) : null}
 

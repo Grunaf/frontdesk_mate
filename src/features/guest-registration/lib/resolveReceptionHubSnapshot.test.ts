@@ -66,7 +66,20 @@ describe('resolveReceptionHubSnapshot', () => {
     expect(afterRollover.expectedToday).toEqual([]);
   });
 
-  it('excludes desk-checked-in guests from arrival buckets', () => {
+  it('excludes admitted guests (passport verified) from arrival buckets', () => {
+    const now = new Date('2026-07-09T08:30:00.000Z');
+    const stay = makeStay({
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      passport_checked_at: '2026-07-09T09:00:00.000Z',
+    });
+
+    const snapshot = resolveReceptionHubSnapshot(settings, [stay], now);
+
+    expect(snapshot.expectedToday).toEqual([]);
+    expect(snapshot.noShow).toEqual([]);
+  });
+
+  it('excludes legacy desk-checked-in guests from arrival buckets', () => {
     const now = new Date('2026-07-09T08:30:00.000Z');
     const stay = makeStay({
       check_in_at: '2026-07-09T14:00:00.000Z',
