@@ -61,6 +61,7 @@ export {
   resolveTourismRegistrationRequired,
   resolveTourismRegistrationConfig,
   resolveTourismRegistrationProfile,
+  resolvePlanStayStatusEnabled,
   normalizeGuestStayComplianceOnRead,
   finalizeGuestStayForSave,
 } from './lib/normalizeGuestStaySettings';

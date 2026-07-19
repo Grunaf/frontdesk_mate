@@ -23,6 +23,7 @@ import { HostelPlacesFields } from './HostelPlacesFields';
 import { HouseRulesFields } from './HouseRulesFields';
 import type { CityPackInheritanceSurface } from '../ui/CityPackInheritanceCard';
 import { GuestTourismRegistrationComplianceField } from '@/features/guest-tourism-registration';
+import { PlanStayStatusField } from './PlanStayStatusField';
 
 interface GuestAppFieldsProps {
   tenantSlug: string;
@@ -195,7 +196,13 @@ export function GuestAppFields({
   return (
     <div className="space-y-6">
       {showHubCompliance ? (
-        <GuestTourismRegistrationComplianceField mergedSettings={mergedSettings} disabled={readOnly} />
+        <>
+          <GuestTourismRegistrationComplianceField
+            mergedSettings={mergedSettings}
+            disabled={readOnly}
+          />
+          <PlanStayStatusField mergedSettings={mergedSettings} disabled={readOnly} />
+        </>
       ) : null}
       <AdminSettingsDrillDown
         activeModuleId={activeModuleId}

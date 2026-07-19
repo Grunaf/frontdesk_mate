@@ -47,6 +47,11 @@ export interface GuestStayConfig {
   /** @deprecated Use tourismRegistration instead. Kept for backward compat with existing tenant data. */
   tourismRegistrationRequired?: boolean;
   tourismRegistration?: TourismRegistrationConfig;
+  /**
+   * When true, Plan shows booking lifecycle badges (arrival / checked-in / leaving / late).
+   * Default off. Independent of housekeeping statuses.
+   */
+  planStayStatusEnabled?: boolean;
 }
 
 export type GuestStayStepKind = 'floor_path' | 'room_door';

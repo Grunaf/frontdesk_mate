@@ -341,6 +341,8 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
   const tourismRegistrationRequired =
     String(formData.get('tourismRegistrationRequired') || '').trim() === 'true';
   const tourismProfileId = String(formData.get('tourismProfileId') || '').trim() || undefined;
+  const planStayStatusEnabled =
+    String(formData.get('planStayStatusEnabled') || '').trim() === 'true';
   const houseRules = parseHouseRules(formData);
 
   let guestStay = parseGuestStay(formData);
@@ -354,6 +356,7 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
     guestStay: roomMapEnabled ? guestStay : undefined,
     tourismRegistrationRequired,
     tourismProfileId,
+    planStayStatusEnabled,
   });
 
   const arrivalAccessInput = readArrivalAccess(formData);

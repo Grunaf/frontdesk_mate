@@ -37,6 +37,13 @@ export function resolveTourismRegistrationProfile(
   return getTourismRegistrationProfile(config.profileId);
 }
 
+/** Plan lifecycle badges (arrival / checked-in / leaving / late). Default off. */
+export function resolvePlanStayStatusEnabled(
+  settings: TenantSettings | undefined
+): boolean {
+  return settings?.guestStay?.planStayStatusEnabled === true;
+}
+
 function guestStayHasRoomMapData(guestStay: GuestStayConfig): boolean {
   return (
     (guestStay.floors?.length ?? 0) > 0 ||
@@ -70,6 +77,25 @@ function stripLegacyTourismFields(
   return rest;
 }
 
+function applyPlanStayStatusFlag(
+  guestStay: GuestStayConfig,
+  enabled: boolean
+): GuestStayConfig {
+  if (enabled) {
+    return { ...guestStay, planStayStatusEnabled: true };
+  }
+  const { planStayStatusEnabled: _omit, ...rest } = guestStay;
+  return rest;
+}
+
+function guestStayHasPersistableContent(guestStay: GuestStayConfig): boolean {
+  return (
+    guestStayHasRoomMapData(guestStay) ||
+    hasTourismConfig(guestStay) ||
+    guestStay.planStayStatusEnabled === true
+  );
+}
+
 export function normalizeGuestStayComplianceOnRead(
   guestStay: GuestStayConfig | undefined
 ): GuestStayConfig | undefined {
@@ -79,16 +105,20 @@ export function normalizeGuestStayComplianceOnRead(
 
   const tourism = buildTourismRegistration(guestStay);
   const stripped = stripLegacyTourismFields(guestStay);
+  const withPlan = applyPlanStayStatusFlag(
+    stripped,
+    guestStay.planStayStatusEnabled === true
+  );
 
-  if (!guestStayHasRoomMapData(stripped) && !tourism) {
+  if (!guestStayHasPersistableContent({ ...withPlan, tourismRegistration: tourism })) {
     return undefined;
   }
 
   if (!tourism) {
-    return guestStayHasRoomMapData(stripped) ? stripped : undefined;
+    return guestStayHasPersistableContent(withPlan) ? withPlan : undefined;
   }
 
-  return { ...stripped, tourismRegistration: tourism };
+  return { ...withPlan, tourismRegistration: tourism };
 }
 
 export function finalizeGuestStayForSave(input: {
@@ -96,32 +126,41 @@ export function finalizeGuestStayForSave(input: {
   guestStay: GuestStayConfig | undefined;
   tourismRegistrationRequired: boolean;
   tourismProfileId?: string;
+  planStayStatusEnabled?: boolean;
 }): TenantSettings['guestStay'] {
   const { roomMapEnabled, tourismRegistrationRequired } = input;
   const profileId = input.tourismProfileId ?? DEFAULT_TOURISM_PROFILE_ID;
+  const planStayStatusEnabled = input.planStayStatusEnabled === true;
   let guestStay = input.guestStay;
 
   const tourismRegistration: TourismRegistrationConfig | undefined =
     tourismRegistrationRequired ? { enabled: true, profileId } : undefined;
 
   if (!roomMapEnabled) {
-    guestStay = tourismRegistration
-      ? { tourismRegistration }
-      : undefined;
+    guestStay = undefined;
+    if (tourismRegistration) {
+      guestStay = { tourismRegistration };
+    }
+    if (planStayStatusEnabled) {
+      guestStay = { ...(guestStay ?? {}), planStayStatusEnabled: true };
+    }
     return normalizeGuestStayComplianceOnRead(guestStay);
   }
 
   if (!guestStay) {
-    return tourismRegistration ? { tourismRegistration } : undefined;
+    guestStay = tourismRegistration ? { tourismRegistration } : undefined;
+    if (planStayStatusEnabled) {
+      guestStay = { ...(guestStay ?? {}), planStayStatusEnabled: true };
+    }
+    return normalizeGuestStayComplianceOnRead(guestStay);
   }
 
   const stripped = stripLegacyTourismFields(guestStay);
+  let next = applyPlanStayStatusFlag(stripped, planStayStatusEnabled);
 
   if (tourismRegistration) {
-    guestStay = { ...stripped, tourismRegistration };
-  } else {
-    guestStay = stripped;
+    next = { ...next, tourismRegistration };
   }
 
-  return normalizeGuestStayComplianceOnRead(guestStay);
+  return normalizeGuestStayComplianceOnRead(next);
 }

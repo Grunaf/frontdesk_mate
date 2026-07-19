@@ -13,6 +13,7 @@ import type { HostelPlace } from '@/entities/tenant/model/hostelPlaces';
 import { getHouseRules, migrateActiveRulesKeys } from '@/entities/house-rules';
 import {
   finalizeGuestStayForSave,
+  resolvePlanStayStatusEnabled,
   resolveTourismRegistrationConfig,
   resolveTourismRegistrationRequired,
 } from '@/entities/tenant/lib/normalizeGuestStaySettings';
@@ -31,6 +32,7 @@ export interface TenantFormDraft {
   roomMapEnabled?: boolean;
   tourismRegistrationRequired?: boolean;
   tourismProfileId?: string;
+  planStayStatusEnabled?: boolean;
   launchBookingPath?: 'engine' | 'wa';
   arrivalWalkToHostel?: LocalizedField;
   arrivalWalkToHostelByRoute?: Partial<Record<RouteId, LocalizedField>>;
@@ -190,6 +192,8 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
   const tourismProfileId =
     draft.tourismProfileId ?? existingConfig?.profileId;
   const roomMapEnabled = draft.roomMapEnabled ?? isRoomMapModuleEnabled(merged);
+  const planStayStatusEnabled =
+    draft.planStayStatusEnabled ?? resolvePlanStayStatusEnabled(base);
 
   merged = {
     ...merged,
@@ -198,6 +202,7 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       guestStay: merged.guestStay,
       tourismRegistrationRequired,
       tourismProfileId,
+      planStayStatusEnabled,
     }),
   };
 

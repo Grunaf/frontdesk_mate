@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   finalizeGuestStayForSave,
   normalizeGuestStayComplianceOnRead,
+  resolvePlanStayStatusEnabled,
   resolveTourismRegistrationConfig,
   resolveTourismRegistrationProfile,
   resolveTourismRegistrationRequired,
@@ -144,6 +145,62 @@ describe('finalizeGuestStayForSave', () => {
     expect(result).not.toHaveProperty('tourismRegistrationRequired');
     expect(result).toHaveProperty('tourismRegistration');
   });
+
+  it('persists planStayStatusEnabled without room map', () => {
+    const result = finalizeGuestStayForSave({
+      roomMapEnabled: false,
+      guestStay: undefined,
+      tourismRegistrationRequired: false,
+      planStayStatusEnabled: true,
+    });
+    expect(result).toEqual({ planStayStatusEnabled: true });
+  });
+
+  it('omits planStayStatusEnabled when off', () => {
+    const result = finalizeGuestStayForSave({
+      roomMapEnabled: false,
+      guestStay: { planStayStatusEnabled: true },
+      tourismRegistrationRequired: false,
+      planStayStatusEnabled: false,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('merges planStayStatusEnabled into room map guest stay', () => {
+    const guestStay = {
+      floors: [{ id: '1' }],
+      rooms: [{ id: 'r1', label: 'A', floorId: '1' }],
+      beds: [{ id: 'b1', roomId: 'r1' }],
+    };
+
+    const result = finalizeGuestStayForSave({
+      roomMapEnabled: true,
+      guestStay,
+      tourismRegistrationRequired: false,
+      planStayStatusEnabled: true,
+    });
+    expect(result).toMatchObject({
+      planStayStatusEnabled: true,
+      beds: guestStay.beds,
+    });
+  });
+});
+
+describe('resolvePlanStayStatusEnabled', () => {
+  it('defaults to false when missing', () => {
+    expect(resolvePlanStayStatusEnabled(undefined)).toBe(false);
+    expect(resolvePlanStayStatusEnabled({})).toBe(false);
+    expect(resolvePlanStayStatusEnabled({ guestStay: {} })).toBe(false);
+    expect(
+      resolvePlanStayStatusEnabled({ guestStay: { planStayStatusEnabled: false } })
+    ).toBe(false);
+  });
+
+  it('is true only when explicitly enabled', () => {
+    expect(
+      resolvePlanStayStatusEnabled({ guestStay: { planStayStatusEnabled: true } })
+    ).toBe(true);
+  });
 });
 
 describe('normalizeGuestStayComplianceOnRead', () => {
@@ -170,5 +227,17 @@ describe('normalizeGuestStayComplianceOnRead', () => {
     expect(result).toEqual({
       tourismRegistration: { enabled: true, profileId: 'me' },
     });
+  });
+
+  it('preserves planStayStatusEnabled alone', () => {
+    expect(
+      normalizeGuestStayComplianceOnRead({ planStayStatusEnabled: true })
+    ).toEqual({ planStayStatusEnabled: true });
+  });
+
+  it('strips planStayStatusEnabled false', () => {
+    expect(
+      normalizeGuestStayComplianceOnRead({ planStayStatusEnabled: false })
+    ).toBeUndefined();
   });
 });

@@ -7,6 +7,7 @@ import { normalizeAccessPoints } from '@/entities/tenant/lib/normalizeAccessPoin
 import { resolveCityTaxAmount, resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import {
+  resolvePlanStayStatusEnabled,
   resolveTourismRegistrationConfig,
   resolveTourismRegistrationRequired,
 } from '@/entities/tenant/lib/normalizeGuestStaySettings';
@@ -59,6 +60,7 @@ export function TenantFormHiddenPayload({
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(mergedSettings);
   const tourismConfig = resolveTourismRegistrationConfig(mergedSettings);
   const tourismProfileId = tourismConfig?.profileId ?? '';
+  const planStayStatusEnabled = resolvePlanStayStatusEnabled(mergedSettings);
   const guestStayJson =
     roomMapEnabled && mergedSettings.guestStay ? JSON.stringify(mergedSettings.guestStay) : '';
   const booking = readBookingSettings(mergedSettings);
@@ -98,6 +100,11 @@ export function TenantFormHiddenPayload({
         value={tourismRegistrationRequired ? 'true' : 'false'}
       />
       <input type="hidden" name="tourismProfileId" value={tourismProfileId} />
+      <input
+        type="hidden"
+        name="planStayStatusEnabled"
+        value={planStayStatusEnabled ? 'true' : 'false'}
+      />
       <input type="hidden" name="guestStayJson" value={guestStayJson} />
       <input
         type="hidden"

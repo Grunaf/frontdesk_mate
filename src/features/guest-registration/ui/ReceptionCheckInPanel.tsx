@@ -9,6 +9,7 @@ import type { TenantSettings } from '@/entities/tenant';
 import {
   resolveGuestAccessMessageTemplate,
   resolveGuestAccessPinMissingText,
+  resolvePlanStayStatusEnabled,
   resolveTourismRegistrationRequired,
   listReceptionBookingPlatforms,
 } from '@/entities/tenant';
@@ -22,12 +23,18 @@ import {
   resolveReservationBookingBalance,
 } from '@/entities/guest-stay/lib/validateReservationBookingBalance';
 import { formatMinorAsDecimalInput, getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
+import type { HousekeepingBedStatus, HousekeepingRoomStatus } from '@/entities/housekeeping';
 import {
   createGuestStayAction,
   reissueGuestStayAction,
   revokeGuestStayAction,
   updateGuestReservationAction,
 } from '../actions/receptionActions';
+import {
+  listHousekeepingStatusesAction,
+  upsertHousekeepingBedStatusAction,
+  upsertHousekeepingRoomStatusAction,
+} from '../actions/housekeepingActions';
 import {
   addNights,
   defaultWalkInDates,
@@ -183,8 +190,60 @@ export function ReceptionCheckInPanel({
     useState<GuestStayRecordWithLink | null>(null);
   const [editDraft, setEditDraft] = useState<EditReservationDraft | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [housekeepingBusy, startHousekeepingTransition] = useTransition();
+  const [bedStatuses, setBedStatuses] = useState<Record<string, HousekeepingBedStatus>>({});
+  const [roomStatuses, setRoomStatuses] = useState<Record<string, HousekeepingRoomStatus>>({});
 
   const rangeValid = isValidAccessRange(checkInDate, checkOutDate);
+
+  const loadHousekeepingStatuses = useCallback(async () => {
+    const maps = await listHousekeepingStatusesAction(tenantSlug);
+    setBedStatuses(maps.beds);
+    setRoomStatuses(maps.rooms);
+  }, [tenantSlug]);
+
+  useEffect(() => {
+    if (deskTab !== 'plan') return;
+    void loadHousekeepingStatuses();
+  }, [deskTab, loadHousekeepingStatuses]);
+
+  const handleSetBedStatus = useCallback(
+    (bedId: string, status: HousekeepingBedStatus) => {
+      const previous = bedStatuses[bedId];
+      setBedStatuses((current) => ({ ...current, [bedId]: status }));
+      startHousekeepingTransition(async () => {
+        const result = await upsertHousekeepingBedStatusAction({ tenantSlug, bedId, status });
+        if (!result.ok) {
+          setBedStatuses((current) => {
+            const next = { ...current };
+            if (previous) next[bedId] = previous;
+            else delete next[bedId];
+            return next;
+          });
+        }
+      });
+    },
+    [bedStatuses, tenantSlug]
+  );
+
+  const handleSetRoomStatus = useCallback(
+    (roomId: string, status: HousekeepingRoomStatus) => {
+      const previous = roomStatuses[roomId];
+      setRoomStatuses((current) => ({ ...current, [roomId]: status }));
+      startHousekeepingTransition(async () => {
+        const result = await upsertHousekeepingRoomStatusAction({ tenantSlug, roomId, status });
+        if (!result.ok) {
+          setRoomStatuses((current) => {
+            const next = { ...current };
+            if (previous) next[roomId] = previous;
+            else delete next[roomId];
+            return next;
+          });
+        }
+      });
+    },
+    [roomStatuses, tenantSlug]
+  );
 
   const accessPeriod = useMemo(
     () => resolveGuestAccessPeriod(checkInDate, checkOutDate, checkInTime, propertyTimeZone),
@@ -713,6 +772,13 @@ export function ReceptionCheckInPanel({
                 stays={stays}
                 onViewStay={openStayDetail}
                 onSelectFreeNight={handleSelectFreeNight}
+                bedStatuses={bedStatuses}
+                roomStatuses={roomStatuses}
+                onSetBedStatus={handleSetBedStatus}
+                onSetRoomStatus={handleSetRoomStatus}
+                housekeepingBusy={housekeepingBusy}
+                planStayStatusEnabled={resolvePlanStayStatusEnabled(tenantSettings)}
+                planToday={hubSnapshot.operational.operationalDate}
               />
             </TabsContent>
 
