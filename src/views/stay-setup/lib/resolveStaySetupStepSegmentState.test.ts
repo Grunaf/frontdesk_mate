@@ -6,6 +6,7 @@ describe('resolveStaySetupStepSegmentState', () => {
     tourismRequired: true,
     tourismComplete: true,
     contactComplete: false,
+    passportVerified: false,
   };
 
   it('marks current step', () => {

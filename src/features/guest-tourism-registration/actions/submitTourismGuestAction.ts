@@ -8,13 +8,12 @@ import { resolveTourismRegistrationProfile } from '@/entities/tenant';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import {
-  uploadGuestTourismDocument,
-  type GuestTourismDocumentKind,
-} from '../api/uploadGuestTourismDocument';
-import {
-  DOCUMENT_KIND_TO_STORAGE_KEY,
-  type TourismDocumentKind,
-} from '../model/tourismRegistrationProfiles';
+  isValidCitizenship,
+  isValidDateOfBirth,
+  isValidGender,
+  isValidPassportNumber,
+  normalizePassportNumber,
+} from '../lib/validateTourismGuestIdentity';
 
 const MAX_NAME_LENGTH = 120;
 
@@ -27,18 +26,8 @@ export type SubmitTourismGuestActionResult =
         | 'unauthorized'
         | 'registration_closed'
         | 'invalid_input'
-        | 'invalid_file'
-        | 'db_unavailable'
-        | 'upload_failed';
+        | 'db_unavailable';
     };
-
-function readImageFile(formData: FormData, key: string): File | null {
-  const value = formData.get(key);
-  if (!(value instanceof File) || value.size === 0) {
-    return null;
-  }
-  return value;
-}
 
 function readGuestNamePart(formData: FormData, key: string): string | null {
   const raw = String(formData.get(key) ?? '').trim();
@@ -75,47 +64,34 @@ export async function submitTourismGuestAction(
 
   const firstName = readGuestNamePart(formData, 'firstName');
   const lastName = readGuestNamePart(formData, 'lastName');
+  const citizenshipRaw = String(formData.get('citizenship') ?? '').trim().toUpperCase();
+  const passportNumberRaw = String(formData.get('passportNumber') ?? '');
+  const dateOfBirth = String(formData.get('dateOfBirth') ?? '').trim();
+  const genderRaw = String(formData.get('gender') ?? '').trim().toLowerCase();
+
   if (!firstName || !lastName) {
     return { ok: false, error: 'invalid_input' };
   }
-
-  const documentFiles: {
-    kind: TourismDocumentKind;
-    storageKind: GuestTourismDocumentKind;
-    file: File;
-  }[] = [];
-  for (const kind of profile.requiredDocumentKinds) {
-    const formKey = kind === 'entry_stamp' ? 'entryStamp' : kind;
-    const storageKind = DOCUMENT_KIND_TO_STORAGE_KEY[kind];
-    const file = readImageFile(formData, formKey);
-    if (!file) {
-      return { ok: false, error: 'invalid_input' };
-    }
-    documentFiles.push({ kind, storageKind, file });
+  if (!isValidCitizenship(citizenshipRaw)) {
+    return { ok: false, error: 'invalid_input' };
   }
-
-  const guestRowId = randomUUID();
-
-  const uploadResults: Record<string, string> = {};
-  for (const doc of documentFiles) {
-    const uploadResult = await uploadGuestTourismDocument({
-      tenantId: tenant.id,
-      stayId: session.stayId,
-      guestRowId,
-      kind: doc.storageKind,
-      file: doc.file,
-    });
-
-    if (!uploadResult.ok) {
-      return { ok: false, error: uploadResult.error };
-    }
-    uploadResults[doc.kind] = uploadResult.storagePath;
+  if (!isValidPassportNumber(passportNumberRaw)) {
+    return { ok: false, error: 'invalid_input' };
+  }
+  if (!isValidDateOfBirth(dateOfBirth)) {
+    return { ok: false, error: 'invalid_input' };
+  }
+  if (!isValidGender(genderRaw)) {
+    return { ok: false, error: 'invalid_input' };
   }
 
   const admin = getSupabaseAdmin();
   if (!admin) {
     return { ok: false, error: 'db_unavailable' };
   }
+
+  const guestRowId = randomUUID();
+  const passportNumber = normalizePassportNumber(passportNumberRaw);
 
   const { data, error } = await admin
     .from('guest_stay_tourism_guests')
@@ -124,8 +100,12 @@ export async function submitTourismGuestAction(
       stay_id: session.stayId,
       first_name: firstName,
       last_name: lastName,
-      passport_storage_path: uploadResults['passport'] ?? '',
-      entry_stamp_storage_path: uploadResults['entry_stamp'] ?? '',
+      citizenship: citizenshipRaw,
+      passport_number: passportNumber,
+      date_of_birth: dateOfBirth,
+      gender: genderRaw,
+      passport_storage_path: '',
+      entry_stamp_storage_path: '',
     })
     .select('id, first_name, last_name')
     .single();

@@ -62,3 +62,12 @@ export function TourismRegistrationPanelSkeleton({ loadingLabel }: TourismRegist
     </div>
   );
 }
+
+/** Copy shown after tourism form complete while waiting for desk passport admit. */
+export function TourismPassportVerifyWaitingCopy({ message }: { message: string }) {
+  return (
+    <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-sm leading-relaxed text-foreground">
+      {message}
+    </p>
+  );
+}

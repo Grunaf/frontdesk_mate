@@ -32,15 +32,17 @@ export function resolveStaySetupDeepLinkStep(input: {
   tourismRequired: boolean;
   tourismComplete: boolean;
   contactComplete: boolean;
+  passportVerified: boolean;
   preferSettlement?: boolean;
 }): StaySetupDeepLinkStep {
   const completion: StaySetupCompletion = {
     tourismRequired: input.tourismRequired,
     tourismComplete: input.tourismComplete,
     contactComplete: input.contactComplete,
+    passportVerified: input.passportVerified,
   };
 
-  if (!isStaySetupRegistrationComplete(completion)) {
+  if (!isStaySetupRegistrationComplete(completion) || !completion.passportVerified) {
     return 'registration';
   }
 

@@ -22,6 +22,7 @@ type RegistrationPrerequisitesAccordionProps = {
   tourismRequired: boolean;
   tourismComplete: boolean;
   contactComplete: boolean;
+  passportVerified?: boolean;
   value: RegistrationAccordionItem;
   onValueChange: (value: RegistrationAccordionItem) => void;
   interactionEnabled: boolean;
@@ -38,6 +39,7 @@ export function RegistrationPrerequisitesAccordion({
   tourismRequired,
   tourismComplete,
   contactComplete,
+  passportVerified = false,
   value,
   onValueChange,
   interactionEnabled,
@@ -88,6 +90,7 @@ export function RegistrationPrerequisitesAccordion({
               interactionEnabled={interactionEnabled}
               navigationMode={navigationMode}
               showIntroHeading={showIntroHeading}
+              showPassportWaiting={tourismComplete && contactComplete && !passportVerified}
               onComplete={onTourismComplete}
             />
           </AccordionContent>

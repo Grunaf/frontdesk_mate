@@ -12,6 +12,7 @@ describe('reconcileStepAfterCompletionSync', () => {
     tourismRequired: true,
     tourismComplete: true,
     contactComplete: true,
+    passportVerified: true,
   };
 
   it('keeps registration step when sync runs on registration', () => {
@@ -29,7 +30,28 @@ describe('reconcileStepAfterCompletionSync', () => {
       reconcileStepAfterCompletionSync(
         'room',
         true,
-        { tourismRequired: true, tourismComplete: true, contactComplete: false },
+        {
+          tourismRequired: true,
+          tourismComplete: true,
+          contactComplete: false,
+          passportVerified: false,
+        },
+        true
+      )
+    ).toBe('registration');
+  });
+
+  it('sends guest back to registration when passport not verified', () => {
+    expect(
+      reconcileStepAfterCompletionSync(
+        'room',
+        true,
+        {
+          tourismRequired: true,
+          tourismComplete: true,
+          contactComplete: true,
+          passportVerified: false,
+        },
         true
       )
     ).toBe('registration');
@@ -40,10 +62,10 @@ describe('mergeRegistrationStatusMonotonic', () => {
   it('never clears completion flags from a stale server response', () => {
     expect(
       mergeRegistrationStatusMonotonic(
-        { tourismComplete: true, contactComplete: true },
-        { tourismComplete: false, contactComplete: false }
+        { tourismComplete: true, contactComplete: true, passportVerified: true },
+        { tourismComplete: false, contactComplete: false, passportVerified: false }
       )
-    ).toEqual({ tourismComplete: true, contactComplete: true });
+    ).toEqual({ tourismComplete: true, contactComplete: true, passportVerified: true });
   });
 });
 
@@ -69,6 +91,7 @@ describe('resolveStaySetupStepFromUrl', () => {
     tourismRequired: true,
     tourismComplete: true,
     contactComplete: true,
+    passportVerified: true,
   };
 
   it('honors user intent over stale essentials url', () => {
@@ -133,5 +156,21 @@ describe('resolveStaySetupStepFromUrl', () => {
         userIntentStep: null,
       })
     ).toBe(null);
+  });
+
+  it('keeps registration when room url but passport not verified', () => {
+    expect(
+      resolveStaySetupStepFromUrl({
+        urlStep: 'room',
+        isRegistered: true,
+        tourismRegistrationRequired: true,
+        completion: { ...completion, passportVerified: false },
+        checkInDayOrLater: true,
+        registrationComplete: true,
+        contactComplete: true,
+        currentStep: 'registration',
+        userIntentStep: null,
+      })
+    ).toBe('registration');
   });
 });

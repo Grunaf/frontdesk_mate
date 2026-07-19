@@ -14,10 +14,11 @@ import { ArrivalGuideStepsShell } from '@/views/arrival-journey';
 import { RegistrationStepBody, useRegistrationStepState } from '@/views/registration';
 import { SITE_CONFIG } from '@/shared/config';
 import { useTranslations } from '@/shared/i18n';
-import { TourismRegistrationRequiredSheet } from '@/features/guest-tourism-registration';
+import { TourismRegistrationRequiredSheet, PassportVerificationRequiredSheet } from '@/features/guest-tourism-registration';
 import { Button, IconBackActionsRow } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
+  isStaySetupSettlementUnlocked,
   isStaySetupStepLocked,
   normalizeStaySetupUrlStep,
   resolveStaySetupCoordinatorStep,
@@ -53,6 +54,7 @@ import { StaySetupStepProgressBar } from './StaySetupStepProgressBar';
 export interface StaySetupInitialState {
   tourismComplete: boolean;
   contactComplete: boolean;
+  passportVerified: boolean;
   stayContactWhatsapp: string | null;
 }
 
@@ -92,6 +94,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const {
     tourismComplete,
     contactComplete,
+    passportVerified,
     stayContactWhatsapp,
     completion,
     registrationComplete,
@@ -106,6 +109,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
   const [tourismGateSheetOpen, setTourismGateSheetOpen] = useState(false);
+  const [passportGateSheetOpen, setPassportGateSheetOpen] = useState(false);
   const [settlementDayGateSheetOpen, setSettlementDayGateSheetOpen] = useState(false);
   const [essentialsHasHouseRules, setEssentialsHasHouseRules] = useState(false);
   const [essentialsRulesAcknowledged, setEssentialsRulesAcknowledged] = useState(false);
@@ -144,9 +148,13 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   }, [isRegistered]);
 
   const handleCompletionSync = useCallback(
-    (status: { tourismComplete: boolean; contactComplete: boolean }) => {
+    (status: {
+      tourismComplete: boolean;
+      contactComplete: boolean;
+      passportVerified: boolean;
+    }) => {
       const merged = mergeRegistrationStatusMonotonic(
-        { tourismComplete, contactComplete },
+        { tourismComplete, contactComplete, passportVerified },
         status
       );
       applyRegistrationStatus(merged);
@@ -155,6 +163,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         tourismRequired: tourismRegistrationRequired,
         tourismComplete: merged.tourismComplete,
         contactComplete: merged.contactComplete,
+        passportVerified: merged.passportVerified,
       };
 
       setCurrentStep((step) =>
@@ -172,6 +181,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       checkInStarted,
       tourismComplete,
       contactComplete,
+      passportVerified,
     ]
   );
 
@@ -245,6 +255,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
 
   const openCheckInSheet = () => setCheckInSheetOpen(true);
   const openTourismGateSheet = () => setTourismGateSheetOpen(true);
+  const openPassportGateSheet = () => setPassportGateSheetOpen(true);
 
   const focusRegistrationStep = useCallback(() => {
     userStepIntentRef.current = 'registration';
@@ -308,6 +319,16 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         return;
       }
 
+      if (
+        isRoomOrEssentialsStep(step) &&
+        isRegistered &&
+        registrationComplete &&
+        !passportVerified
+      ) {
+        openPassportGateSheet();
+        return;
+      }
+
       setCurrentStep(step);
     },
     [
@@ -316,6 +337,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       tourismRegistrationRequired,
       tourismComplete,
       checkInStarted,
+      passportVerified,
       focusRegistrationStep,
     ]
   );
@@ -338,6 +360,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
             tourismComplete={tourismComplete}
             contactComplete={contactComplete}
             registrationComplete={registrationComplete}
+            passportVerified={passportVerified}
             accordionValue={accordionValue}
             onAccordionValueChange={setAccordionValue}
             interactionEnabled={isRegistered}
@@ -385,6 +408,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     tourismRegistrationRequired,
     tourismComplete,
     contactComplete,
+    passportVerified,
     registrationComplete,
     accordionValue,
     isRegistered,
@@ -447,11 +471,22 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       return;
     }
 
+    if (
+      (isRoomOrEssentialsStep(activeStep.id) || activeStep.id === 'registration') &&
+      registrationComplete &&
+      checkInStarted &&
+      !passportVerified
+    ) {
+      openPassportGateSheet();
+      return;
+    }
+
     const runAdvance = async () => {
       if (
         activeStep.id === 'registration' &&
         registrationComplete &&
-        checkInStarted
+        checkInStarted &&
+        isStaySetupSettlementUnlocked(completion)
       ) {
         const saved = await ensureContactBeforeAdvance();
         if (!saved) {
@@ -562,6 +597,10 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         open={tourismGateSheetOpen}
         onOpenChange={setTourismGateSheetOpen}
         onGoToRegistration={focusRegistrationStep}
+      />
+      <PassportVerificationRequiredSheet
+        open={passportGateSheetOpen}
+        onOpenChange={setPassportGateSheetOpen}
       />
       <StaySetupSettlementDayGateSheet
         open={settlementDayGateSheetOpen}

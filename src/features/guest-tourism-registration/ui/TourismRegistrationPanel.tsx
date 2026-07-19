@@ -20,7 +20,7 @@ import {
 } from '../actions/listTourismGuestsForSessionAction';
 import { AddTourismGuestForm } from './AddTourismGuestForm';
 import { TourismGuestList } from './TourismGuestList';
-import { TourismRegistrationPanelSkeleton } from './TourismRegistrationPanelSkeleton';
+import { TourismRegistrationPanelSkeleton, TourismPassportVerifyWaitingCopy } from './TourismRegistrationPanelSkeleton';
 import { TourismRegistrationPrivacySheet } from './TourismRegistrationPrivacySheet';
 
 type TourismGuestsRegistrationPanelProps = {
@@ -29,6 +29,8 @@ type TourismGuestsRegistrationPanelProps = {
   interactionEnabled?: boolean;
   navigationMode?: 'standalone' | 'wizard';
   showIntroHeading?: boolean;
+  /** Show desk-admit waiting copy (tourism+contact done, passport not verified). */
+  showPassportWaiting?: boolean;
 };
 
 export function TourismGuestsRegistrationPanel({
@@ -36,6 +38,7 @@ export function TourismGuestsRegistrationPanel({
   interactionEnabled = true,
   navigationMode = 'standalone',
   showIntroHeading = true,
+  showPassportWaiting = false,
 }: TourismGuestsRegistrationPanelProps) {
   const t = useTranslations('pages.staySetup.register');
   const { slug: tenantSlug, settings } = useTenant();
@@ -188,6 +191,10 @@ export function TourismGuestsRegistrationPanel({
             </p>
           )}
 
+          {showPassportWaiting ? (
+            <TourismPassportVerifyWaitingCopy message={t('complete.passportWaiting')} />
+          ) : null}
+
           {reservationName ? (
             <div className="space-y-1">
               <Label>{t('reservationName.label')}</Label>
@@ -262,7 +269,7 @@ export function TourismGuestsRegistrationPanel({
 
         <AddTourismGuestForm
           tenantSlug={tenantSlug}
-          requiredDocumentKinds={profile?.requiredDocumentKinds ?? ['passport', 'entry_stamp']}
+          checkInDate={session?.checkInDate ?? ''}
           disabled={!interactionEnabled || isGuestUploadPending}
           onUploadPendingChange={setIsGuestUploadPending}
           onGuestAdded={handleGuestAdded}

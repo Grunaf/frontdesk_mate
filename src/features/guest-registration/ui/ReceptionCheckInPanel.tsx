@@ -641,6 +641,9 @@ export function ReceptionCheckInPanel({
           onStayBookingBalanceChange={() => {
             void refresh();
           }}
+          onPassportCheckedAtChange={() => {
+            void refresh();
+          }}
           onRevoke={(stayId) => {
             setPendingRevokeStayId(stayId);
           }}

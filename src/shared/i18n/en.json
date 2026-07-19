@@ -798,6 +798,11 @@
         "body": "You can complete guest registration here now. The rest of settling in will be available once check-in starts.",
         "dismiss": "Got it"
       },
+      "passportGate": {
+        "title": "Show your passport at reception",
+        "description": "To finish check-in and get your bed number, please show your original passport to reception staff.",
+        "dismiss": "Got it"
+      },
       "tabs": {
         "registration": "Guest registration",
         "register": "Guest registration",
@@ -811,7 +816,8 @@
         "allCompleteCta": "Continue to Wi‑Fi & rules",
         "continueSettlingIn": "Continue settling in",
         "completeHint": "Guest registration and contact details are complete.",
-        "incompleteHint": "Complete guest registration and contact details on the registration page."
+        "incompleteHint": "Complete guest registration and contact details on the registration page.",
+        "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
       },
       "register": {
         "actionButton": "Continue to contact",
@@ -838,10 +844,23 @@
           "heading": "Add a guest",
           "firstName": "First name",
           "lastName": "Last name",
+          "citizenship": "Citizenship",
+          "citizenshipPlaceholder": "Select country",
+          "passportNumber": "Passport number",
+          "dateOfBirth": "Date of birth",
+          "dateOfBirthPlaceholder": "Select date",
+          "dateOfBirthHelp": "Required for tourism registration. Age on check-in day is used for bed allocation planning — guests under 18 are flagged for reception review.",
+          "gender": "Gender",
+          "genderHelp": "Required for tourism registration and may be used when allocating beds by gender policy.",
+          "genderOptions": {
+            "male": "Male",
+            "female": "Female"
+          },
+          "underageWarning": "This guest will be under 18 on the check-in date. You can still submit — reception may need to review bed allocation.",
           "passport": "Passport (photo page)",
           "entryStamp": "Entry stamp photo",
           "submit": "Add guest",
-          "adding": "Uploading photos…",
+          "adding": "Adding guest…",
           "success": "Guest added."
         },
         "finish": {
@@ -852,11 +871,16 @@
         },
         "complete": {
           "summaryTitle": "Registration complete",
-          "continue": "Continue to contact"
+          "continue": "Continue to contact",
+          "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
         },
         "fieldErrors": {
           "firstName": "Enter a first name (max 120 characters).",
           "lastName": "Enter a last name (max 120 characters).",
+          "citizenship": "Select citizenship.",
+          "passportNumber": "Enter a passport number using only letters and digits (no spaces or symbols).",
+          "dateOfBirth": "Select a date of birth.",
+          "gender": "Select gender.",
           "passport": "Choose a passport photo.",
           "entryStamp": "Choose an entry stamp photo.",
           "fileTooLarge": "Image is too large. Use a photo under 10 MB.",
@@ -868,7 +892,7 @@
           "unauthorized": "Sign in with your check-in link or PIN first.",
           "featureDisabled": "Tourist registration is not enabled for this hostel.",
           "registrationClosed": "Registration is already complete — you cannot add more guests.",
-          "invalidInput": "Check names and photos, then try again.",
+          "invalidInput": "Check the required fields, then try again.",
           "invalidFile": "One of the photos was rejected. Use a clear JPG or PNG.",
           "uploadFailed": "Upload failed. Check your connection and try again.",
           "dbUnavailable": "Service is temporarily unavailable. Try again in a moment.",
@@ -1642,7 +1666,7 @@
       "title": "Your bed",
       "entrance": "Entrance"
     },
-    "findYourBed": {
+      "findYourBed": {
       "title": "Find your bed",
       "bedLabel": "Bed {bed}",
       "roomLabel": "Room {room}",
@@ -1653,7 +1677,8 @@
       "insideRoom": "Inside your room",
       "directionsToRoom": "Directions to room",
       "fallback": "Your bed assignment is not configured yet. Ask at reception or message us on WhatsApp.",
-      "viewFullGuide": "Room map & directions"
+      "viewFullGuide": "Room map & directions",
+      "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
     },
     "taxi": {
       "needHelpTitle": "Need help?",

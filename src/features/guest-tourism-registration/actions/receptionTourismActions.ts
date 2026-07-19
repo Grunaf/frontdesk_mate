@@ -9,10 +9,15 @@ import {
   getStayTourismCompletionTimestamp,
   getTourismRegistrationByStayId,
   setTourismExportedAt,
+  setTourismGuestEntryStampDate,
+  updateTourismGuestPassportPath,
   type TourismReceptionDocumentKind,
 } from '@/entities/guest-tourism-registration/server';
+import { setPassportCheckedAt } from '@/entities/guest-stay/server';
+import type { GuestStayRecord } from '@/entities/guest-stay/server';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
+import { uploadGuestTourismDocument } from '../api/uploadGuestTourismDocument';
 
 async function assertStayOwnedByTenant(
   tenantSlug: string,
@@ -45,6 +50,49 @@ async function assertStayOwnedByTenant(
   }
 
   return 'ok';
+}
+
+export type SetPassportCheckedActionResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'unauthorized' | 'not_found' | 'db_unavailable' | 'unknown';
+    };
+
+export async function setPassportCheckedAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  checked: boolean;
+}): Promise<SetPassportCheckedActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const result = await setPassportCheckedAt({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+      checked: input.checked,
+    });
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        error:
+          result.error === 'tenant_not_found' || result.error === 'not_found'
+            ? 'not_found'
+            : result.error,
+      };
+    }
+
+    revalidatePath('/');
+    return { ok: true, stay: result.stay };
+  } catch (error) {
+    console.error('setPassportCheckedAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
 }
 
 export type SetTourismExportedActionResult =
@@ -200,6 +248,124 @@ export async function loadTourismRegistrationForReceptionAction(input: {
     return { ok: true, registration };
   } catch (error) {
     console.error('loadTourismRegistrationForReceptionAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type UploadTourismDocumentForReceptionActionResult =
+  | { ok: true; storagePath: string }
+  | {
+      ok: false;
+      error:
+        | 'unauthorized'
+        | 'not_found'
+        | 'invalid_file'
+        | 'db_unavailable'
+        | 'upload_failed'
+        | 'unknown';
+    };
+
+export async function uploadTourismDocumentForReceptionAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  guestId: string;
+  formData: FormData;
+}): Promise<UploadTourismDocumentForReceptionActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const ownership = await assertStayOwnedByTenant(input.tenantSlug, input.stayId);
+    if (ownership !== 'ok') {
+      return {
+        ok: false,
+        error: ownership === 'unauthorized' ? 'unauthorized' : ownership,
+      };
+    }
+
+    const tenant = await getTenantRecord(input.tenantSlug);
+    if (!tenant) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    const file = input.formData.get('file');
+    if (!(file instanceof File)) {
+      return { ok: false, error: 'invalid_file' };
+    }
+
+    const uploaded = await uploadGuestTourismDocument({
+      tenantId: tenant.id,
+      stayId: input.stayId,
+      guestRowId: input.guestId,
+      kind: 'passport',
+      file,
+    });
+
+    if (!uploaded.ok) {
+      return { ok: false, error: uploaded.error };
+    }
+
+    const pathUpdate = await updateTourismGuestPassportPath(
+      input.stayId,
+      input.guestId,
+      uploaded.storagePath
+    );
+    if (!pathUpdate.ok) {
+      return { ok: false, error: pathUpdate.error };
+    }
+
+    revalidatePath('/');
+    return { ok: true, storagePath: uploaded.storagePath };
+  } catch (error) {
+    console.error('uploadTourismDocumentForReceptionAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type SetTourismGuestEntryStampDateActionResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error: 'unauthorized' | 'not_found' | 'invalid_date' | 'db_unavailable' | 'unknown';
+    };
+
+export async function setTourismGuestEntryStampDateAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  guestId: string;
+  entryStampDate: string | null;
+}): Promise<SetTourismGuestEntryStampDateActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const ownership = await assertStayOwnedByTenant(input.tenantSlug, input.stayId);
+    if (ownership !== 'ok') {
+      return {
+        ok: false,
+        error: ownership === 'unauthorized' ? 'unauthorized' : ownership,
+      };
+    }
+
+    const result = await setTourismGuestEntryStampDate(
+      input.stayId,
+      input.guestId,
+      input.entryStampDate
+    );
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
+
+    revalidatePath('/');
+    return { ok: true };
+  } catch (error) {
+    console.error('setTourismGuestEntryStampDateAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

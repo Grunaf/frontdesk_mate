@@ -12,16 +12,22 @@ const STAY_TOURISM_COLUMNS =
   'tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at';
 
 const GUEST_TOURISM_COLUMNS =
-  'id, stay_id, first_name, last_name, passport_storage_path, entry_stamp_storage_path, created_at';
+  'id, stay_id, first_name, last_name, citizenship, passport_number, date_of_birth, gender, passport_storage_path, entry_stamp_storage_path, entry_stamp_date, created_at';
 
 function mapGuestRow(row: Record<string, unknown>): GuestTourismGuest {
+  const gender = row.gender === 'female' ? 'female' : 'male';
   return {
     id: String(row.id),
     stay_id: String(row.stay_id),
     first_name: String(row.first_name),
     last_name: String(row.last_name),
+    citizenship: String(row.citizenship),
+    passport_number: String(row.passport_number),
+    date_of_birth: String(row.date_of_birth),
+    gender,
     passport_storage_path: String(row.passport_storage_path),
     entry_stamp_storage_path: String(row.entry_stamp_storage_path),
+    entry_stamp_date: row.entry_stamp_date ? String(row.entry_stamp_date) : null,
     created_at: String(row.created_at),
   };
 }
@@ -113,6 +119,84 @@ export async function setTourismExportedAt(
 
   if (error) {
     console.error('setTourismExportedAt:', error.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!data) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  return { ok: true };
+}
+
+export type UpdateTourismGuestPassportPathResult =
+  | { ok: true }
+  | { ok: false; error: 'not_found' | 'db_unavailable' };
+
+export async function updateTourismGuestPassportPath(
+  stayId: string,
+  guestId: string,
+  passportStoragePath: string
+): Promise<UpdateTourismGuestPassportPathResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const { data, error } = await admin
+    .from('guest_stay_tourism_guests')
+    .update({ passport_storage_path: passportStoragePath })
+    .eq('id', guestId)
+    .eq('stay_id', stayId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    console.error('updateTourismGuestPassportPath:', error.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!data) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  return { ok: true };
+}
+
+export type SetTourismGuestEntryStampDateResult =
+  | { ok: true }
+  | { ok: false; error: 'not_found' | 'db_unavailable' | 'invalid_date' };
+
+const ENTRY_STAMP_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export async function setTourismGuestEntryStampDate(
+  stayId: string,
+  guestId: string,
+  entryStampDate: string | null
+): Promise<SetTourismGuestEntryStampDateResult> {
+  if (entryStampDate != null && !ENTRY_STAMP_DATE_RE.test(entryStampDate)) {
+    return { ok: false, error: 'invalid_date' };
+  }
+
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const { data, error } = await admin
+    .from('guest_stay_tourism_guests')
+    .update({
+      entry_stamp_date: entryStampDate,
+      // Reception collects a date, not a photo — keep storage path empty.
+      entry_stamp_storage_path: '',
+    })
+    .eq('id', guestId)
+    .eq('stay_id', stayId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    console.error('setTourismGuestEntryStampDate:', error.message);
     return { ok: false, error: 'db_unavailable' };
   }
 

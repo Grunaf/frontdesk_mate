@@ -21,6 +21,7 @@ export { Alert, AlertTitle, AlertDescription, AlertAction } from './alert';
 export { Badge, badgeVariants } from './badge';
 export { Input } from './input';
 export { Label } from './label';
+export { FieldLabelHelp } from './FieldLabelHelp';
 export { Icon } from './icon';
 export { IconBackActionsRow } from './IconBackActionsRow';
 export { ThemeProvider } from './theme-provider';

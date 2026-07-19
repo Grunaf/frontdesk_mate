@@ -46,8 +46,9 @@ export function reconcileStepAfterCompletionSync(
   checkInDayOrLater: boolean
 ): StaySetupStep {
   const regComplete = isStaySetupRegistrationComplete(nextCompletion);
+  const settlementUnlocked = regComplete && nextCompletion.passportVerified;
 
-  if (!regComplete || !checkInDayOrLater) {
+  if (!settlementUnlocked || !checkInDayOrLater) {
     if (isRoomOrEssentialsStep(step)) {
       return 'registration';
     }
@@ -73,12 +74,21 @@ export function reconcileStepAfterCompletionSync(
 }
 
 export function mergeRegistrationStatusMonotonic(
-  current: { tourismComplete: boolean; contactComplete: boolean },
-  incoming: { tourismComplete: boolean; contactComplete: boolean }
-): { tourismComplete: boolean; contactComplete: boolean } {
+  current: {
+    tourismComplete: boolean;
+    contactComplete: boolean;
+    passportVerified?: boolean;
+  },
+  incoming: {
+    tourismComplete: boolean;
+    contactComplete: boolean;
+    passportVerified?: boolean;
+  }
+): { tourismComplete: boolean; contactComplete: boolean; passportVerified: boolean } {
   return {
     tourismComplete: current.tourismComplete || incoming.tourismComplete,
     contactComplete: current.contactComplete || incoming.contactComplete,
+    passportVerified: Boolean(current.passportVerified) || Boolean(incoming.passportVerified),
   };
 }
 
@@ -137,6 +147,9 @@ export function resolveStaySetupStepFromUrl(input: {
       return 'registration';
     }
     if (!input.checkInDayOrLater) {
+      return 'registration';
+    }
+    if (!input.completion.passportVerified) {
       return 'registration';
     }
     return urlStep;

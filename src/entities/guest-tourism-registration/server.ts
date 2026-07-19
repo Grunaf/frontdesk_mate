@@ -11,11 +11,15 @@ export {
   listTourismGuestsByStayId,
   removeGuestDocumentObjectsFromStorage,
   setTourismExportedAt,
+  setTourismGuestEntryStampDate,
+  updateTourismGuestPassportPath,
 } from './api/guestTourismRegistrationRepository';
 export type {
   CreateTourismDocumentSignedUrlResult,
   SetTourismExportedAtResult,
+  SetTourismGuestEntryStampDateResult,
   TourismReceptionDocumentKind,
   TourismStayEligibleForPurge,
+  UpdateTourismGuestPassportPathResult,
 } from './api/guestTourismRegistrationRepository';
 export type { GuestTourismGuest, GuestTourismRegistrationSummary } from './model/types';

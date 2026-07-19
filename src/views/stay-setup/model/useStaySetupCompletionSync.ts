@@ -7,6 +7,7 @@ import { getStaySetupStatusAction } from '@/features/guest-stay-contact';
 export type StaySetupCompletionSyncStatus = {
   tourismComplete: boolean;
   contactComplete: boolean;
+  passportVerified: boolean;
 };
 
 type UseStaySetupCompletionSyncOptions = {
@@ -44,6 +45,7 @@ export function useStaySetupCompletionSync({
       onStatusRef.current({
         tourismComplete: result.status.tourismComplete,
         contactComplete: result.status.contactComplete,
+        passportVerified: result.status.passportVerified,
       });
     });
   }, [isRegistered, isOnStaySetup, slug]);

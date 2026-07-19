@@ -4,6 +4,8 @@ export type StaySetupCompletion = {
   tourismRequired: boolean;
   tourismComplete: boolean;
   contactComplete: boolean;
+  /** Desk admitted guest (`passport_checked_at`). Independent of tourism form complete. */
+  passportVerified: boolean;
 };
 
 const LEGACY_URL_STEP_ALIASES: Record<string, StaySetupStep> = {
@@ -14,6 +16,11 @@ const LEGACY_URL_STEP_ALIASES: Record<string, StaySetupStep> = {
 
 export function isStaySetupRegistrationComplete(completion: StaySetupCompletion): boolean {
   return (!completion.tourismRequired || completion.tourismComplete) && completion.contactComplete;
+}
+
+/** Bed / room unlock: registration aggregate + desk passport admit. */
+export function isStaySetupSettlementUnlocked(completion: StaySetupCompletion): boolean {
+  return isStaySetupRegistrationComplete(completion) && completion.passportVerified;
 }
 
 export function normalizeStaySetupUrlStep(step: string | null): StaySetupStep | null {
@@ -35,6 +42,10 @@ export function resolveNextStaySetupStep(
   completion: StaySetupCompletion
 ): StaySetupStep | null {
   if (currentStep === 'registration' && !isStaySetupRegistrationComplete(completion)) {
+    return null;
+  }
+
+  if (currentStep === 'registration' && !completion.passportVerified) {
     return null;
   }
 
@@ -84,6 +95,10 @@ export function resolveFirstIncompleteStaySetupStep(
     return 'registration';
   }
 
+  if (!completion.passportVerified) {
+    return 'registration';
+  }
+
   return 'essentials';
 }
 
@@ -119,7 +134,7 @@ export function isStaySetupStepLocked(
     if (!checkInDayOrLater) {
       return true;
     }
-    return !isStaySetupRegistrationComplete(completion);
+    return !isStaySetupSettlementUnlocked(completion);
   }
 
   return false;

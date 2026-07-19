@@ -152,6 +152,21 @@ export type CompleteDeskCheckInResult =
       error: 'not_found' | 'tenant_not_found' | 'already_revoked' | 'db_unavailable';
     };
 
+/** Desk admits guest to settle in (`passport_checked_at`). Independent of desk arrival / eTurist export. */
+export type SetPassportCheckedAtInput = {
+  tenantSlug: string;
+  stayId: string;
+  /** `true` sets timestamp to now; `false` clears it (un-admit). */
+  checked: boolean;
+};
+
+export type SetPassportCheckedAtResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'not_found' | 'tenant_not_found' | 'db_unavailable';
+    };
+
 export type ActivateGuestStayByPinResult =
   | { ok: true; session: GuestSessionPayload }
   | {

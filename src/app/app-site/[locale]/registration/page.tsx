@@ -18,6 +18,7 @@ export default async function RegistrationPage({ params }: RegistrationPageProps
 
   let tourismComplete = false;
   let contactComplete = false;
+  let passportVerified = false;
   let stayContactWhatsapp: string | null = null;
 
   const access = await resolveTenantAccess('app');
@@ -35,7 +36,7 @@ export default async function RegistrationPage({ params }: RegistrationPageProps
       if (admin) {
         const { data } = await admin
           .from('guest_reservations')
-          .select('stay_contact_whatsapp, tourism_contact_whatsapp')
+          .select('stay_contact_whatsapp, tourism_contact_whatsapp, passport_checked_at')
           .eq('id', session.stayId)
           .maybeSingle();
 
@@ -51,6 +52,7 @@ export default async function RegistrationPage({ params }: RegistrationPageProps
           legacyTourismContactWhatsapp: legacy,
         });
         stayContactWhatsapp = stayContact ?? legacy;
+        passportVerified = Boolean(data?.passport_checked_at);
       }
     }
   }
@@ -60,6 +62,7 @@ export default async function RegistrationPage({ params }: RegistrationPageProps
       initial={{
         tourismComplete,
         contactComplete,
+        passportVerified,
         stayContactWhatsapp,
       }}
     />

@@ -52,16 +52,18 @@ export function StayEssentialsSettlementBanner() {
             return;
           }
 
-          const { tourismRequired, tourismComplete, contactComplete } = result.status;
+          const { tourismRequired, tourismComplete, contactComplete, passportVerified } =
+            result.status;
           const registrationComplete = resolvePreCheckInBannerProgress({
             tourismRequired,
             tourismComplete,
             contactComplete,
           }).isComplete;
           const settlementProgress = readStaySettlementBannerProgress(slug, stayId);
-          const settlementStep = registrationComplete
-            ? resolveFirstIncompleteSettlementStep(settlementProgress) ?? 'essentials'
-            : 'registration';
+          const settlementStep =
+            registrationComplete && passportVerified
+              ? resolveFirstIncompleteSettlementStep(settlementProgress) ?? 'essentials'
+              : 'registration';
 
           setInAppReturnTo(SITE_CONFIG.routes.app.concierge.path);
           push(
@@ -73,6 +75,7 @@ export function StayEssentialsSettlementBanner() {
                 tourismRequired,
                 tourismComplete,
                 contactComplete,
+                passportVerified,
               },
             })
           );

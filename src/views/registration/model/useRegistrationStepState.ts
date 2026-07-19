@@ -25,6 +25,7 @@ export function useRegistrationStepState({
 
   const [tourismComplete, setTourismComplete] = useState(initial.tourismComplete);
   const [contactComplete, setContactComplete] = useState(initial.contactComplete);
+  const [passportVerified, setPassportVerified] = useState(initial.passportVerified);
   const [stayContactWhatsapp, setStayContactWhatsapp] = useState(initial.stayContactWhatsapp);
   const [contactDraftWhatsapp, setContactDraftWhatsapp] = useState(initial.stayContactWhatsapp ?? '');
   const [accordionValue, setAccordionValue] = useState<RegistrationAccordionItem>(() =>
@@ -38,9 +39,15 @@ export function useRegistrationStepState({
   useEffect(() => {
     setTourismComplete(initial.tourismComplete);
     setContactComplete(initial.contactComplete);
+    setPassportVerified(initial.passportVerified);
     setStayContactWhatsapp(initial.stayContactWhatsapp);
     setContactDraftWhatsapp(initial.stayContactWhatsapp ?? '');
-  }, [initial.tourismComplete, initial.contactComplete, initial.stayContactWhatsapp]);
+  }, [
+    initial.tourismComplete,
+    initial.contactComplete,
+    initial.passportVerified,
+    initial.stayContactWhatsapp,
+  ]);
 
   useEffect(() => {
     if (!syncFromServer || !isRegistered || !tenantSlug) {
@@ -55,6 +62,7 @@ export function useRegistrationStepState({
 
       setTourismComplete(result.status.tourismComplete);
       setContactComplete(result.status.contactComplete);
+      setPassportVerified(result.status.passportVerified);
     });
 
     return () => {
@@ -67,8 +75,9 @@ export function useRegistrationStepState({
       tourismRequired,
       tourismComplete,
       contactComplete,
+      passportVerified,
     }),
-    [tourismRequired, tourismComplete, contactComplete]
+    [tourismRequired, tourismComplete, contactComplete, passportVerified]
   );
 
   const registrationComplete = isStaySetupRegistrationComplete(completion);
@@ -85,9 +94,16 @@ export function useRegistrationStepState({
   }, []);
 
   const applyRegistrationStatus = useCallback(
-    (status: { tourismComplete: boolean; contactComplete: boolean }) => {
+    (status: {
+      tourismComplete: boolean;
+      contactComplete: boolean;
+      passportVerified?: boolean;
+    }) => {
       setTourismComplete(status.tourismComplete);
       setContactComplete(status.contactComplete);
+      if (status.passportVerified !== undefined) {
+        setPassportVerified(status.passportVerified);
+      }
     },
     []
   );
@@ -97,6 +113,7 @@ export function useRegistrationStepState({
     tourismRequired,
     tourismComplete,
     contactComplete,
+    passportVerified,
     stayContactWhatsapp,
     contactDraftWhatsapp,
     setContactDraftWhatsapp,

@@ -13,6 +13,7 @@ export {
   revokeGuestStay,
   updateGuestReservation,
   setGuestReservationBookingPaid,
+  setPassportCheckedAt,
 } from './api/guestStayRepository';
 export {
   clearGuestSessionCookie,
@@ -34,4 +35,5 @@ export type {
   CompleteDeskCheckInResult,
   UpdateGuestReservationResult,
   SetGuestReservationBookingPaidResult,
+  SetPassportCheckedAtResult,
 } from './model/types';

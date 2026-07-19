@@ -44,6 +44,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     tourismRequired,
     tourismComplete,
     contactComplete,
+    passportVerified,
     stayContactWhatsapp,
     completion,
     registrationComplete,
@@ -88,7 +89,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     (savedWhatsapp: string) => {
       handleContactComplete(savedWhatsapp);
 
-      if (!checkInDayOrLater) {
+      if (!checkInDayOrLater || !passportVerified) {
         return;
       }
 
@@ -96,6 +97,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
         tourismRequired,
         tourismComplete,
         contactComplete: true,
+        passportVerified,
       };
 
       router.push(
@@ -108,13 +110,22 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
       );
       router.refresh();
     },
-    [checkInDayOrLater, handleContactComplete, locale, router, tourismRequired, tourismComplete]
+    [
+      checkInDayOrLater,
+      handleContactComplete,
+      locale,
+      router,
+      tourismRequired,
+      tourismComplete,
+      passportVerified,
+    ]
   );
 
   const footerPrimary = resolveRegistrationStandalonePrimary({
     isRegistered,
     checkInDayOrLater,
     registrationComplete,
+    passportVerified,
   });
 
   const openCheckInSheet = () => setCheckInSheetOpen(true);
@@ -172,6 +183,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
             tourismComplete={tourismComplete}
             contactComplete={contactComplete}
             registrationComplete={registrationComplete}
+            passportVerified={passportVerified}
             accordionValue={accordionValue}
             onAccordionValueChange={setAccordionValue}
             interactionEnabled={isRegistered}

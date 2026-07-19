@@ -1,15 +1,20 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { isTourismRegistrationComplete } from '@/entities/guest-tourism-registration';
-import type { GuestTourismRegistrationSummary } from '@/entities/guest-tourism-registration';
+import type { GuestTourismGuest, GuestTourismRegistrationSummary } from '@/entities/guest-tourism-registration';
 import type { TenantSettings } from '@/entities/tenant';
 import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
 import {
+  compressImageForUpload,
+  CompressImageForUploadError,
   getTourismDocumentSignedUrlAction,
   loadTourismRegistrationForReceptionAction,
+  setPassportCheckedAction,
   setTourismExportedAction,
+  setTourismGuestEntryStampDateAction,
+  uploadTourismDocumentForReceptionAction,
 } from '@/features/guest-tourism-registration';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
 import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
@@ -22,7 +27,7 @@ import {
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
 import { MagicLinkCard } from './MagicLinkCard';
 import { ReceptionStayDetailShell, RECEPTION_STAY_DETAIL_TITLE_ID } from './ReceptionStayDetailShell';
-import { Button } from '@/shared/ui';
+import { Button, Input } from '@/shared/ui';
 import { setGuestReservationBookingPaidAction } from '../actions/receptionActions';
 
 export { RECEPTION_STAY_DETAIL_TITLE_ID };
@@ -67,6 +72,96 @@ function tourismStatusBadgeLabel(status: TourismStatusBadge): string {
 function buildTourismWhatsappHref(e164: string): string {
   const digits = e164.replace(/\D/g, '');
   return `https://wa.me/${digits}`;
+}
+
+function StayAdmitToCheckInBlock({
+  stay,
+  tenantSlug,
+  tourismRegistrationRequired,
+  onStayUpdated,
+}: {
+  stay: GuestStayRecordWithLink;
+  tenantSlug: string;
+  tourismRegistrationRequired: boolean;
+  onStayUpdated?: (stay: GuestStayRecordWithLink) => void;
+}) {
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isPending, startAction] = useTransition();
+  const [passportCheckedAt, setPassportCheckedAt] = useState(stay.passport_checked_at);
+  const admitted = Boolean(passportCheckedAt);
+
+  useEffect(() => {
+    setPassportCheckedAt(stay.passport_checked_at);
+  }, [stay.passport_checked_at, stay.id]);
+
+  const handleSetChecked = (checked: boolean) => {
+    startAction(async () => {
+      setActionError(null);
+      const result = await setPassportCheckedAction({
+        tenantSlug,
+        stayId: stay.id,
+        checked,
+      });
+      if (!result.ok) {
+        setActionError(
+          result.error === 'unauthorized'
+            ? 'Sign in again at reception desk.'
+            : 'Could not update admit status.'
+        );
+        return;
+      }
+
+      setPassportCheckedAt(result.stay.passport_checked_at);
+      onStayUpdated?.({
+        ...stay,
+        ...result.stay,
+        magicLinkUrl: stay.magicLinkUrl,
+      });
+    });
+  };
+
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Check-in admit
+      </p>
+      {admitted ? (
+        <p className="text-sm font-medium text-emerald-800">
+          Admitted
+          {passportCheckedAt ? ` · ${formatReceptionDateTime(passportCheckedAt)}` : null}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {tourismRegistrationRequired
+            ? 'Confirm original passport was checked in person.'
+            : 'Admit guest to unlock bed selection in the guest app.'}
+        </p>
+      )}
+      {actionError ? <p className="text-xs text-destructive">{actionError}</p> : null}
+      {admitted ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8"
+          disabled={isPending}
+          onClick={() => handleSetChecked(false)}
+        >
+          Undo admit
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          className="h-8"
+          disabled={isPending}
+          onClick={() => handleSetChecked(true)}
+        >
+          Admit to check-in
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function StayTourismRegistrationBlock({
@@ -131,14 +226,14 @@ function StayTourismRegistrationBlock({
     });
   };
 
-  const handleViewDocument = (guestId: string, kind: 'passport' | 'entry_stamp') => {
+  const handleViewPassport = (guestId: string) => {
     startAction(async () => {
       setActionError(null);
       const result = await getTourismDocumentSignedUrlAction({
         tenantSlug,
         stayId: stay.id,
         guestId,
-        kind,
+        kind: 'passport',
       });
       if (!result.ok) {
         setActionError(
@@ -149,6 +244,86 @@ function StayTourismRegistrationBlock({
         return;
       }
       window.open(result.url, '_blank', 'noopener,noreferrer');
+    });
+  };
+
+  const patchGuest = (guestId: string, patch: Partial<GuestTourismGuest>) => {
+    setRegistration((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        guests: current.guests.map((guest) =>
+          guest.id === guestId ? { ...guest, ...patch } : guest
+        ),
+      };
+    });
+  };
+
+  const handleUploadPassport = (guestId: string, file: File) => {
+    startAction(async () => {
+      setActionError(null);
+      try {
+        const compressed = await compressImageForUpload(file);
+        const formData = new FormData();
+        formData.set('file', compressed);
+        const result = await uploadTourismDocumentForReceptionAction({
+          tenantSlug,
+          stayId: stay.id,
+          guestId,
+          formData,
+        });
+        if (!result.ok) {
+          setActionError(
+            result.error === 'unauthorized'
+              ? 'Sign in again at reception desk.'
+              : result.error === 'invalid_file'
+                ? 'Invalid image file.'
+                : 'Could not upload passport photo.'
+          );
+          return;
+        }
+        patchGuest(guestId, { passport_storage_path: result.storagePath });
+      } catch (error) {
+        if (error instanceof CompressImageForUploadError) {
+          setActionError(
+            error.code === 'file_too_large'
+              ? 'Image is too large.'
+              : error.code === 'not_an_image'
+                ? 'Select an image file.'
+                : 'Could not process image.'
+          );
+          return;
+        }
+        setActionError('Could not upload passport photo.');
+      }
+    });
+  };
+
+  const handleSaveEntryStampDate = (guestId: string, entryStampDate: string) => {
+    startAction(async () => {
+      setActionError(null);
+      const trimmed = entryStampDate.trim();
+      const nextDate = trimmed.length > 0 ? trimmed : null;
+      const result = await setTourismGuestEntryStampDateAction({
+        tenantSlug,
+        stayId: stay.id,
+        guestId,
+        entryStampDate: nextDate,
+      });
+      if (!result.ok) {
+        setActionError(
+          result.error === 'invalid_date'
+            ? 'Enter a valid entry date.'
+            : result.error === 'unauthorized'
+              ? 'Sign in again at reception desk.'
+              : 'Could not save entry date.'
+        );
+        return;
+      }
+      patchGuest(guestId, {
+        entry_stamp_date: nextDate,
+        entry_stamp_storage_path: '',
+      });
     });
   };
 
@@ -206,49 +381,29 @@ function StayTourismRegistrationBlock({
           completion time are kept for audit.
         </p>
       ) : registration && registration.guests.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[280px] text-left text-xs">
-            <thead>
-              <tr className="text-muted-foreground">
-                <th className="pb-1 pr-2 font-medium">Guest</th>
-                <th className="pb-1 font-medium">Documents</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registration.guests.map((guest) => (
-                <tr key={guest.id} className="border-t border-border/50">
-                  <td className="py-1.5 pr-2 align-top">
-                    {guest.first_name} {guest.last_name}
-                  </td>
-                  <td className="py-1.5 align-top">
-                    <div className="flex flex-wrap gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-[11px]"
-                        disabled={isPending}
-                        onClick={() => handleViewDocument(guest.id, 'passport')}
-                      >
-                        View passport
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-[11px]"
-                        disabled={isPending}
-                        onClick={() => handleViewDocument(guest.id, 'entry_stamp')}
-                      >
-                        View stamp
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="space-y-3">
+          {registration.guests.map((guest) => (
+            <li
+              key={guest.id}
+              className="space-y-2 border-t border-border/50 pt-2 first:border-t-0 first:pt-0"
+            >
+              <p className="text-xs font-medium">
+                {guest.first_name} {guest.last_name}
+              </p>
+              <ReceptionTourismGuestDocuments
+                guest={guest}
+                disabled={isPending}
+                onUploadPassport={(file) => handleUploadPassport(guest.id, file)}
+                onViewPassport={() => handleViewPassport(guest.id)}
+                onSaveEntryStampDate={(date) => handleSaveEntryStampDate(guest.id, date)}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : !loadError ? (
+        <p className="text-xs text-muted-foreground">
+          Guest has not submitted tourism data yet
+        </p>
       ) : null}
 
       <label className="flex cursor-pointer items-start gap-2 text-xs">
@@ -261,6 +416,93 @@ function StayTourismRegistrationBlock({
         />
         <span>Submitted to tourism organization</span>
       </label>
+    </div>
+  );
+}
+
+function ReceptionTourismGuestDocuments({
+  guest,
+  disabled,
+  onUploadPassport,
+  onViewPassport,
+  onSaveEntryStampDate,
+}: {
+  guest: GuestTourismGuest;
+  disabled: boolean;
+  onUploadPassport: (file: File) => void;
+  onViewPassport: () => void;
+  onSaveEntryStampDate: (date: string) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [entryDateDraft, setEntryDateDraft] = useState(guest.entry_stamp_date ?? '');
+  const hasPassport = Boolean(guest.passport_storage_path.trim());
+
+  useEffect(() => {
+    setEntryDateDraft(guest.entry_stamp_date ?? '');
+  }, [guest.entry_stamp_date, guest.id]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/webp,image/png,image/heic,image/heif,.jpg,.jpeg,.webp,.png,.heic,.heif"
+          className="sr-only"
+          disabled={disabled}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) {
+              onUploadPassport(file);
+            }
+          }}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-[11px]"
+          disabled={disabled}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {hasPassport ? 'Replace passport' : 'Upload passport'}
+        </Button>
+        {hasPassport ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px]"
+            disabled={disabled}
+            onClick={onViewPassport}
+          >
+            View passport
+          </Button>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="space-y-1">
+          <span className="block text-[11px] text-muted-foreground">Entry date</span>
+          <Input
+            type="date"
+            className="h-8 w-[11rem] text-xs"
+            value={entryDateDraft}
+            disabled={disabled}
+            onChange={(event) => setEntryDateDraft(event.target.value)}
+          />
+        </label>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 text-[11px]"
+          disabled={disabled || entryDateDraft === (guest.entry_stamp_date ?? '')}
+          onClick={() => onSaveEntryStampDate(entryDateDraft)}
+        >
+          Save date
+        </Button>
+      </div>
     </div>
   );
 }
@@ -349,6 +591,7 @@ export interface ReceptionGuestStayDetailProps {
   tenantSlug?: string;
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
   onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
+  onPassportCheckedAtChange?: (stay: GuestStayRecordWithLink) => void;
   onRevoke: (stayId: string) => void;
   onChangeDates: (stay: GuestStayRecordWithLink) => void;
   onMoveBed: (stay: GuestStayRecordWithLink) => void;
@@ -484,6 +727,7 @@ export function ReceptionGuestStayDetail({
   tenantSlug,
   onTourismExportedAtChange,
   onStayBookingBalanceChange,
+  onPassportCheckedAtChange,
   onRevoke,
   onChangeDates,
   onMoveBed,
@@ -528,6 +772,11 @@ export function ReceptionGuestStayDetail({
           Arrived · {formatReceptionDateTime(stay.desk_checked_in_at)}
         </p>
       ) : null}
+      {stay.passport_checked_at ? (
+        <p className="text-xs font-medium text-emerald-800">
+          Admitted · {formatReceptionDateTime(stay.passport_checked_at)}
+        </p>
+      ) : null}
       {bookingSourceLine ? (
         <p className="text-xs text-muted-foreground">{bookingSourceLine}</p>
       ) : null}
@@ -550,6 +799,15 @@ export function ReceptionGuestStayDetail({
           guestAccessPinMissingText={guestAccessPinMissingText}
         />
       )}
+
+      {tenantSlug ? (
+        <StayAdmitToCheckInBlock
+          stay={stay}
+          tenantSlug={tenantSlug}
+          tourismRegistrationRequired={tourismRegistrationRequired}
+          onStayUpdated={onPassportCheckedAtChange}
+        />
+      ) : null}
 
       {tenantSlug ? (
         <StayBookingBalanceBlock

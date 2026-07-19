@@ -34,6 +34,8 @@ import type {
   CompleteDeskCheckInResult,
   CreateGuestStayInput,
   CreateGuestStayResult,
+  SetPassportCheckedAtInput,
+  SetPassportCheckedAtResult,
   GuestSessionPayload,
   GuestStayPreview,
   GuestStayRecord,
@@ -1157,6 +1159,76 @@ export async function completeDeskCheckIn(
   }
 
   const stay = mapReservationGrantToStayRecord(updated as Record<string, unknown>, grant, tenant.slug);
+  if (!stay) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  return { ok: true, stay };
+}
+
+export async function setPassportCheckedAt(
+  input: SetPassportCheckedAtInput
+): Promise<SetPassportCheckedAtResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'tenant_not_found' };
+  }
+
+  const grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
+  if (!grant) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const { data: existing, error: loadError } = await admin
+    .from('guest_reservations')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('setPassportCheckedAt load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const passportCheckedAt = input.checked ? new Date().toISOString() : null;
+
+  const { data: updated, error: updateError } = await admin
+    .from('guest_reservations')
+    .update({
+      passport_checked_at: passportCheckedAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .maybeSingle();
+
+  if (updateError) {
+    console.error('setPassportCheckedAt update:', updateError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!updated) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const stay = mapReservationGrantToStayRecord(
+    updated as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
   if (!stay) {
     return { ok: false, error: 'db_unavailable' };
   }

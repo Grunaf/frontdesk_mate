@@ -9,6 +9,7 @@ export function resolveRegistrationStandalonePrimary(input: {
   isRegistered: boolean;
   checkInDayOrLater: boolean;
   registrationComplete: boolean;
+  passportVerified: boolean;
 }): RegistrationStandalonePrimary {
   if (!input.isRegistered) {
     return { kind: 'checkIn' };
@@ -20,6 +21,10 @@ export function resolveRegistrationStandalonePrimary(input: {
 
   if (!input.checkInDayOrLater) {
     return { kind: 'concierge' };
+  }
+
+  if (!input.passportVerified) {
+    return { kind: 'hidden' };
   }
 
   return { kind: 'continueEssentials' };

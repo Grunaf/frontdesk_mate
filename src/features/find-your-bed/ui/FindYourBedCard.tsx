@@ -30,6 +30,7 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
   const [status, setStatus] = useState<{
     tourismComplete: boolean;
     contactComplete: boolean;
+    passportVerified: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
       setStatus({
         tourismComplete: result.status.tourismComplete,
         contactComplete: result.status.contactComplete,
+        passportVerified: result.status.passportVerified,
       });
     });
 
@@ -63,12 +65,14 @@ function useStaySetupBedMapState(): StaySetupBedMapState {
     tourismRequired: tourismRegistrationRequired,
     tourismComplete: status?.tourismComplete ?? false,
     contactComplete: status?.contactComplete ?? false,
+    passportVerified: status?.passportVerified ?? false,
   };
 
   const step = resolveStaySetupDeepLinkStep({
     tourismRequired: tourismRegistrationRequired,
     tourismComplete: completion.tourismComplete,
     contactComplete: completion.contactComplete,
+    passportVerified: completion.passportVerified,
     preferSettlement: true,
   });
 
@@ -99,6 +103,10 @@ export function FindYourBedCard() {
   const { step: staySetupStep, completion: staySetupCompletion } = useStaySetupBedMapStep(true);
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
   const plan = resolveGuestStayPlan(settings, guestBedId);
+  const awaitingPassport =
+    staySetupCompletion.contactComplete &&
+    (!staySetupCompletion.tourismRequired || staySetupCompletion.tourismComplete) &&
+    !staySetupCompletion.passportVerified;
 
   if (!plan.bedId) {
     return null;
@@ -124,7 +132,13 @@ export function FindYourBedCard() {
         <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           {t('title')}
         </span>
-        <FindYourBedSummary plan={plan} variant="inline" />
+        {awaitingPassport ? (
+          <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">
+            {t('passportWaiting')}
+          </span>
+        ) : (
+          <FindYourBedSummary plan={plan} variant="inline" />
+        )}
       </span>
       <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
         <span className="hidden sm:inline">{t('viewFullGuide')}</span>

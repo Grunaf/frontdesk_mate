@@ -13,6 +13,7 @@ export type RegistrationStepBodyProps = {
   tourismComplete: boolean;
   contactComplete: boolean;
   registrationComplete: boolean;
+  passportVerified?: boolean;
   accordionValue: RegistrationAccordionItem;
   onAccordionValueChange: (value: RegistrationAccordionItem) => void;
   interactionEnabled: boolean;
@@ -31,6 +32,7 @@ export function RegistrationStepBody({
   tourismComplete,
   contactComplete,
   registrationComplete,
+  passportVerified = false,
   accordionValue,
   onAccordionValueChange,
   interactionEnabled,
@@ -48,16 +50,29 @@ export function RegistrationStepBody({
 
   if (registrationComplete && showCompleteHint) {
     return (
-      <p className={cn('text-sm text-muted-foreground', className)}>{t('registration.completeHint')}</p>
+      <div className={cn('space-y-3', className)}>
+        <p className="text-sm text-muted-foreground">{t('registration.completeHint')}</p>
+        {!passportVerified ? (
+          <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-sm leading-relaxed text-foreground">
+            {t('registration.passportWaiting')}
+          </p>
+        ) : null}
+      </div>
     );
   }
 
   return (
-    <div className={cn('py-2', className)}>
+    <div className={cn('space-y-3 py-2', className)}>
+      {registrationComplete && !passportVerified ? (
+        <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-sm leading-relaxed text-foreground">
+          {t('registration.passportWaiting')}
+        </p>
+      ) : null}
       <RegistrationPrerequisitesAccordion
         tourismRequired={tourismRequired}
         tourismComplete={tourismComplete}
         contactComplete={contactComplete}
+        passportVerified={passportVerified}
         value={accordionValue}
         onValueChange={onAccordionValueChange}
         interactionEnabled={interactionEnabled}

@@ -12,6 +12,8 @@ export type StaySetupStatus = {
   tourismRequired: boolean;
   tourismComplete: boolean;
   contactComplete: boolean;
+  /** Desk admitted guest to settle in (`passport_checked_at` set). */
+  passportVerified: boolean;
   stayContactWhatsapp: string | null;
   completedSteps: number;
   totalSteps: number;
@@ -54,7 +56,7 @@ export async function getStaySetupStatusAction(
 
   const { data, error } = await admin
     .from('guest_reservations')
-    .select('stay_contact_whatsapp, tourism_contact_whatsapp')
+    .select('stay_contact_whatsapp, tourism_contact_whatsapp, passport_checked_at')
     .eq('id', session.stayId)
     .maybeSingle();
 
@@ -74,6 +76,7 @@ export async function getStaySetupStatusAction(
     stayContactWhatsapp,
     legacyTourismContactWhatsapp: legacyTourismContact,
   });
+  const passportVerified = Boolean(data?.passport_checked_at);
 
   const totalSteps = tourismRequired ? 3 : 2;
   let completedSteps = 0;
@@ -90,6 +93,7 @@ export async function getStaySetupStatusAction(
       tourismRequired,
       tourismComplete,
       contactComplete,
+      passportVerified,
       stayContactWhatsapp: stayContactWhatsapp ?? legacyTourismContact,
       completedSteps,
       totalSteps,

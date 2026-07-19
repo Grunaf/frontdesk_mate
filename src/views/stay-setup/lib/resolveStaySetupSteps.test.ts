@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isStaySetupSettlementUnlocked,
+  isStaySetupStepLocked,
   normalizeStaySetupUrlStep,
   resolveFirstIncompleteStaySetupStep,
   resolveStaySetupCoordinatorStep,
@@ -15,6 +17,7 @@ describe('resolveStaySetupSteps', () => {
         tourismRequired: true,
         tourismComplete: false,
         contactComplete: false,
+        passportVerified: false,
       })
     ).toBe('registration');
   });
@@ -25,45 +28,68 @@ describe('resolveStaySetupSteps', () => {
         tourismRequired: true,
         tourismComplete: true,
         contactComplete: false,
+        passportVerified: false,
       })
     ).toBe('registration');
   });
 
-  it('lands on essentials when registration aggregate complete', () => {
+  it('stays on registration when forms complete but passport not verified', () => {
     expect(
       resolveFirstIncompleteStaySetupStep(true, {
         tourismRequired: true,
         tourismComplete: true,
         contactComplete: true,
+        passportVerified: false,
+      })
+    ).toBe('registration');
+  });
+
+  it('stays on registration when tourism off, contact complete, passport not verified', () => {
+    expect(
+      resolveFirstIncompleteStaySetupStep(false, {
+        tourismRequired: false,
+        tourismComplete: false,
+        contactComplete: true,
+        passportVerified: false,
+      })
+    ).toBe('registration');
+  });
+
+  it('lands on essentials when registration aggregate complete and passport verified', () => {
+    expect(
+      resolveFirstIncompleteStaySetupStep(true, {
+        tourismRequired: true,
+        tourismComplete: true,
+        contactComplete: true,
+        passportVerified: true,
       })
     ).toBe('essentials');
   });
 
-  it('goes registration → essentials → room', () => {
-    const beforeRegistrationComplete = {
+  it('goes registration → essentials → room only after passport verified', () => {
+    const beforePassport = {
       tourismRequired: true,
       tourismComplete: true,
-      contactComplete: false,
+      contactComplete: true,
+      passportVerified: false,
     };
-    expect(resolveNextStaySetupStep('registration', true, beforeRegistrationComplete)).toBe(null);
+    expect(resolveNextStaySetupStep('registration', true, beforePassport)).toBe(null);
     expect(
       resolveNextStaySetupStep('registration', true, {
-        tourismRequired: true,
-        tourismComplete: true,
-        contactComplete: true,
+        ...beforePassport,
+        passportVerified: true,
       })
     ).toBe('essentials');
     expect(
       resolveNextStaySetupStep('essentials', true, {
-        ...beforeRegistrationComplete,
-        contactComplete: true,
+        ...beforePassport,
+        passportVerified: true,
       })
     ).toBe('room');
     expect(
       resolveNextStaySetupStep('room', true, {
-        tourismRequired: true,
-        tourismComplete: true,
-        contactComplete: true,
+        ...beforePassport,
+        passportVerified: true,
       })
     ).toBe(null);
   });
@@ -74,6 +100,7 @@ describe('resolveStaySetupSteps', () => {
         tourismRequired: true,
         tourismComplete: true,
         contactComplete: true,
+        passportVerified: true,
       })
     ).toEqual(['registration', 'essentials', 'room']);
   });
@@ -92,6 +119,7 @@ describe('resolveStaySetupSteps', () => {
       tourismRequired: true,
       tourismComplete: true,
       contactComplete: true,
+      passportVerified: true,
     };
     expect(resolvePreviousStaySetupStep('room', true, completion)).toBe('essentials');
     expect(resolvePreviousStaySetupStep('essentials', true, completion)).toBe('registration');
@@ -104,6 +132,7 @@ describe('resolveStaySetupSteps', () => {
         tourismRequired: false,
         tourismComplete: false,
         contactComplete: false,
+        passportVerified: false,
       })
     ).toBe(null);
   });
@@ -113,8 +142,42 @@ describe('resolveStaySetupSteps', () => {
       tourismRequired: true,
       tourismComplete: true,
       contactComplete: true,
+      passportVerified: true,
     };
     expect(resolveStaySetupCoordinatorStep(true, completion, false)).toBe('registration');
     expect(resolveStaySetupCoordinatorStep(true, completion, true)).toBe('essentials');
+  });
+
+  it('keeps registration on check-in day until passport verified', () => {
+    const completion = {
+      tourismRequired: true,
+      tourismComplete: true,
+      contactComplete: true,
+      passportVerified: false,
+    };
+    expect(resolveStaySetupCoordinatorStep(true, completion, true)).toBe('registration');
+  });
+
+  it('locks bed/room until passport verified even when forms complete', () => {
+    const completion = {
+      tourismRequired: true,
+      tourismComplete: true,
+      contactComplete: true,
+      passportVerified: false,
+    };
+    expect(isStaySetupSettlementUnlocked(completion)).toBe(false);
+    expect(isStaySetupStepLocked('room', true, true, completion, true)).toBe(true);
+    expect(isStaySetupStepLocked('essentials', true, true, completion, true)).toBe(true);
+  });
+
+  it('unlocks bed/room when passport verified on check-in day', () => {
+    const completion = {
+      tourismRequired: false,
+      tourismComplete: false,
+      contactComplete: true,
+      passportVerified: true,
+    };
+    expect(isStaySetupSettlementUnlocked(completion)).toBe(true);
+    expect(isStaySetupStepLocked('room', true, false, completion, true)).toBe(false);
   });
 });
