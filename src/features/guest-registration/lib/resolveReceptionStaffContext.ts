@@ -3,6 +3,9 @@ import 'server-only';
 import { readReceptionSessionFromCookies } from '@/app/reception/lib/receptionSession';
 import {
   findReceptionUserById,
+  receptionStaffCanCheckIn,
+  receptionStaffCanClean,
+  receptionStaffCanManageHousekeeping,
   receptionStaffHasPermission,
   type ReceptionStaffPermission,
   type ReceptionUserRecord,
@@ -49,4 +52,36 @@ export function assertReceptionPermission(
   permission: ReceptionStaffPermission
 ): boolean {
   return receptionStaffHasPermission(ctx.permissions, permission);
+}
+
+export function staffCanCheckIn(ctx: ReceptionStaffContext): boolean {
+  return receptionStaffCanCheckIn(ctx.permissions);
+}
+
+export function staffCanClean(ctx: ReceptionStaffContext): boolean {
+  return receptionStaffCanClean(ctx.permissions);
+}
+
+export function staffCanManageHousekeeping(ctx: ReceptionStaffContext): boolean {
+  return receptionStaffCanManageHousekeeping(ctx.permissions);
+}
+
+/** Check-in desk mutations (Plan / Access / Cash / Archive / …). */
+export function assertReceptionCheckInAccess(
+  ctx: ReceptionStaffContext
+): { ok: true } | { ok: false; error: 'forbidden' } {
+  if (!staffCanCheckIn(ctx)) {
+    return { ok: false, error: 'forbidden' };
+  }
+  return { ok: true };
+}
+
+/** Housekeeping status list/update (Plan chips or Cleaning desk). */
+export function assertReceptionHousekeepingAccess(
+  ctx: ReceptionStaffContext
+): { ok: true } | { ok: false; error: 'forbidden' } {
+  if (!staffCanManageHousekeeping(ctx)) {
+    return { ok: false, error: 'forbidden' };
+  }
+  return { ok: true };
 }

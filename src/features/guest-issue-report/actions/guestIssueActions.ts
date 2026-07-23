@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { assertReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
 import {
   countOpenGuestIssues,
   createGuestIssue,
@@ -15,6 +14,18 @@ import type {
   ListGuestIssuesFilter,
   ResolveGuestIssueResult,
 } from '@/entities/guest-issue/server';
+import {
+  assertReceptionCheckInAccess,
+  resolveReceptionStaffContext,
+} from '@/features/guest-registration/lib/resolveReceptionStaffContext';
+
+async function requireReceptionCheckIn(tenantSlug: string) {
+  const staff = await resolveReceptionStaffContext(tenantSlug);
+  if (!staff.ok) return staff;
+  const gate = assertReceptionCheckInAccess(staff.ctx);
+  if (!gate.ok) return gate;
+  return staff;
+}
 
 export async function createGuestIssueAction(input: {
   tenantSlug: string;
@@ -34,21 +45,15 @@ export async function listGuestIssuesAction(
   tenantSlug: string,
   filter: ListGuestIssuesFilter
 ): Promise<GuestIssueRecord[]> {
-  try {
-    await assertReceptionAuthenticated(tenantSlug);
-  } catch {
-    return [];
-  }
+  const staff = await requireReceptionCheckIn(tenantSlug);
+  if (!staff.ok) return [];
 
   return listGuestIssues(tenantSlug, filter);
 }
 
 export async function countOpenGuestIssuesAction(tenantSlug: string): Promise<number> {
-  try {
-    await assertReceptionAuthenticated(tenantSlug);
-  } catch {
-    return 0;
-  }
+  const staff = await requireReceptionCheckIn(tenantSlug);
+  if (!staff.ok) return 0;
 
   return countOpenGuestIssues(tenantSlug);
 }
@@ -57,9 +62,8 @@ export async function resolveGuestIssueAction(input: {
   tenantSlug: string;
   issueId: string;
 }): Promise<ResolveGuestIssueResult> {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
+  const staff = await requireReceptionCheckIn(input.tenantSlug);
+  if (!staff.ok) {
     return { ok: false, error: 'unauthorized' };
   }
 

@@ -1,14 +1,15 @@
 'use server';
 
-import { assertReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
 import { bedExistsInGuestStay } from '@/entities/guest-stay';
 import {
   isHousekeepingBedStatus,
   isHousekeepingRoomStatus,
   type HousekeepingBedStatus,
+  type HousekeepingLaundryRunRecord,
   type HousekeepingRoomStatus,
 } from '@/entities/housekeeping';
 import {
+  listActiveLaundryRuns,
   listHousekeepingBedStatuses,
   listHousekeepingRoomStatuses,
   upsertHousekeepingBedStatus,
@@ -17,14 +18,23 @@ import {
 import { getTenantRecord } from '@/entities/tenant/server';
 import type { TenantSettings } from '@/entities/tenant';
 
+import {
+  assertReceptionHousekeepingAccess,
+  resolveReceptionStaffContext,
+} from '../lib/resolveReceptionStaffContext';
+
 export type HousekeepingStatusMaps = {
   beds: Record<string, HousekeepingBedStatus>;
   rooms: Record<string, HousekeepingRoomStatus>;
+  activeLaundryRuns: HousekeepingLaundryRunRecord[];
 };
 
 export type HousekeepingActionResult =
   | { ok: true }
-  | { ok: false; error: 'unauthorized' | 'not_found' | 'invalid_status' | 'db_unavailable' | 'unknown' };
+  | {
+      ok: false;
+      error: 'unauthorized' | 'forbidden' | 'not_found' | 'invalid_status' | 'db_unavailable' | 'unknown';
+    };
 
 function roomExistsInGuestStay(settings: TenantSettings, roomId: string): boolean {
   const id = roomId.trim();
@@ -33,11 +43,15 @@ function roomExistsInGuestStay(settings: TenantSettings, roomId: string): boolea
   return (settings.guestStay?.beds ?? []).some((bed) => bed.roomId === id);
 }
 
-async function resolveAuthenticatedTenant(tenantSlug: string) {
-  try {
-    await assertReceptionAuthenticated(tenantSlug);
-  } catch {
-    return { ok: false as const, error: 'unauthorized' as const };
+async function resolveHousekeepingTenant(tenantSlug: string) {
+  const staff = await resolveReceptionStaffContext(tenantSlug);
+  if (!staff.ok) {
+    return { ok: false as const, error: staff.error };
+  }
+
+  const gate = assertReceptionHousekeepingAccess(staff.ctx);
+  if (!gate.ok) {
+    return { ok: false as const, error: gate.error };
   }
 
   const tenant = await getTenantRecord(tenantSlug);
@@ -51,16 +65,15 @@ async function resolveAuthenticatedTenant(tenantSlug: string) {
 export async function listHousekeepingStatusesAction(
   tenantSlug: string
 ): Promise<HousekeepingStatusMaps> {
-  await assertReceptionAuthenticated(tenantSlug);
-
-  const tenant = await getTenantRecord(tenantSlug);
-  if (!tenant) {
-    return { beds: {}, rooms: {} };
+  const resolved = await resolveHousekeepingTenant(tenantSlug);
+  if (!resolved.ok) {
+    return { beds: {}, rooms: {}, activeLaundryRuns: [] };
   }
 
-  const [bedRows, roomRows] = await Promise.all([
-    listHousekeepingBedStatuses(tenant.id),
-    listHousekeepingRoomStatuses(tenant.id),
+  const [bedRows, roomRows, activeLaundryRuns] = await Promise.all([
+    listHousekeepingBedStatuses(resolved.tenant.id),
+    listHousekeepingRoomStatuses(resolved.tenant.id),
+    listActiveLaundryRuns(resolved.tenant.id),
   ]);
 
   const beds: Record<string, HousekeepingBedStatus> = {};
@@ -73,7 +86,7 @@ export async function listHousekeepingStatusesAction(
     rooms[row.room_id] = row.status;
   }
 
-  return { beds, rooms };
+  return { beds, rooms, activeLaundryRuns };
 }
 
 export async function upsertHousekeepingBedStatusAction(input: {
@@ -81,7 +94,7 @@ export async function upsertHousekeepingBedStatusAction(input: {
   bedId: string;
   status: HousekeepingBedStatus;
 }): Promise<HousekeepingActionResult> {
-  const resolved = await resolveAuthenticatedTenant(input.tenantSlug);
+  const resolved = await resolveHousekeepingTenant(input.tenantSlug);
   if (!resolved.ok) return resolved;
 
   if (!isHousekeepingBedStatus(input.status)) {
@@ -111,7 +124,7 @@ export async function upsertHousekeepingRoomStatusAction(input: {
   roomId: string;
   status: HousekeepingRoomStatus;
 }): Promise<HousekeepingActionResult> {
-  const resolved = await resolveAuthenticatedTenant(input.tenantSlug);
+  const resolved = await resolveHousekeepingTenant(input.tenantSlug);
   if (!resolved.ok) return resolved;
 
   if (!isHousekeepingRoomStatus(input.status)) {

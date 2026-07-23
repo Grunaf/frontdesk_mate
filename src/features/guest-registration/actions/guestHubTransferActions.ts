@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { assertReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
 import {
   countOpenGuestHubTransfers,
   listGuestHubTransfers,
@@ -13,26 +12,32 @@ import type {
   ResolveGuestHubTransferResult,
 } from '@/entities/guest-hub-transfer/server';
 import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEvent';
+import {
+  assertReceptionCheckInAccess,
+  resolveReceptionStaffContext,
+} from '../lib/resolveReceptionStaffContext';
+
+async function requireCheckIn(tenantSlug: string) {
+  const staff = await resolveReceptionStaffContext(tenantSlug);
+  if (!staff.ok) return staff;
+  const gate = assertReceptionCheckInAccess(staff.ctx);
+  if (!gate.ok) return gate;
+  return staff;
+}
 
 export async function listGuestHubTransfersAction(
   tenantSlug: string,
   filter: ListGuestHubTransfersFilter
 ): Promise<GuestHubTransferRecord[]> {
-  try {
-    await assertReceptionAuthenticated(tenantSlug);
-  } catch {
-    return [];
-  }
+  const staff = await requireCheckIn(tenantSlug);
+  if (!staff.ok) return [];
 
   return listGuestHubTransfers(tenantSlug, filter);
 }
 
 export async function countOpenGuestHubTransfersAction(tenantSlug: string): Promise<number> {
-  try {
-    await assertReceptionAuthenticated(tenantSlug);
-  } catch {
-    return 0;
-  }
+  const staff = await requireCheckIn(tenantSlug);
+  if (!staff.ok) return 0;
 
   return countOpenGuestHubTransfers(tenantSlug);
 }
@@ -41,9 +46,8 @@ export async function resolveGuestHubTransferAction(input: {
   tenantSlug: string;
   transferId: string;
 }): Promise<ResolveGuestHubTransferResult> {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
+  const staff = await requireCheckIn(input.tenantSlug);
+  if (!staff.ok) {
     return { ok: false, error: 'not_found' };
   }
 

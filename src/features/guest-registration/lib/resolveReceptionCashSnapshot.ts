@@ -45,6 +45,7 @@ function isUnpaidOperationalNightStay(
   stay: GuestStayRecordWithLink,
   operationalDate: string
 ): boolean {
+  if (stay.stay_kind === 'volunteer') return false;
   if (stay.is_archived || stay.revoked_at) return false;
   if (!guestStayCoversNight(stay, operationalDate)) return false;
   return !stay.booking_paid_at;

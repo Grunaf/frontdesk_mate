@@ -1,3 +1,6 @@
+/** Occupancy kind on guest_reservations — volunteer stays skip price/source/Cash. */
+export type GuestStayKind = 'guest' | 'volunteer';
+
 export interface GuestStayRecord {
   id: string;
   tenant_id: string;
@@ -17,6 +20,8 @@ export interface GuestStayRecord {
   tax_collected_at: string | null;
   revoked_at: string | null;
   created_at: string;
+  /** Defaults to guest when column missing (pre-migration rows). */
+  stay_kind?: GuestStayKind;
   tourism_contact_whatsapp?: string | null;
   stay_contact_whatsapp?: string | null;
   tourism_registration_completed_at?: string | null;
@@ -67,6 +72,11 @@ export type CreateGuestStayInput = {
   bookingPlatformId?: string;
   bookingExternalId?: string;
   bookingAmountDue?: string | number;
+  /**
+   * `volunteer` — no booking source/price; used by owner portal Volunteers.
+   * Defaults to `guest`.
+   */
+  stayKind?: GuestStayKind;
 };
 
 export type CreateGuestStayResult =

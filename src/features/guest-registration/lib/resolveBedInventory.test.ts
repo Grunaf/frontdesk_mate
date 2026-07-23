@@ -16,8 +16,8 @@ function makeStay(bedId: string, overrides: Partial<GuestStayRecordWithLink> = {
 const settings: TenantSettings = {
   guestStay: {
     rooms: [
-      { id: 'room-a', label: 'Room A', floorId: 'floor-1' },
-      { id: 'room-b', label: 'Room B', floorId: 'floor-1' },
+      { id: 'room-a', label: 'A', floorId: 'floor-1' },
+      { id: 'room-b', label: 'B', floorId: 'floor-1' },
     ],
     beds: [
       { id: 'bed-1', roomId: 'room-a', bedType: 'bunk', topId: 'bed-1-top', bottomId: 'bed-1-bottom' },
@@ -35,7 +35,7 @@ describe('resolveBedInventory', () => {
   it('groups beds by room in configured order', () => {
     const snapshot = resolveTonight([makeStay('bed-1-top')]);
 
-    expect(snapshot.roomGroups.map((group) => group.roomLabel)).toEqual(['Room A', 'Room B']);
+    expect(snapshot.roomGroups.map((group) => group.roomLabel)).toEqual(['A', 'B']);
     expect(snapshot.roomGroups[0]?.beds.map((entry) => entry.bedId)).toEqual([
       'bed-1-top',
       'bed-1-bottom',
@@ -51,7 +51,7 @@ describe('resolveBedInventory', () => {
     expect(top).toEqual(
       expect.objectContaining({
         bedId: 'bed-1-top',
-        displayLabel: '1 · Upper',
+        displayLabel: 'Room A · Bed 1 · Upper',
         status: 'occupied',
         nightCellStatus: 'occupied',
       })

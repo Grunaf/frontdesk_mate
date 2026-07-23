@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { assertReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
 import {
   cancelOrCheckoutGuestReservation,
   createGuestStay,
@@ -25,11 +24,28 @@ import type {
   SetGuestReservationBookingPaidResult,
 } from '@/entities/guest-stay/server';
 import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEvent';
-import { resolveReceptionStaffContext } from '../lib/resolveReceptionStaffContext';
+import {
+  assertReceptionCheckInAccess,
+  resolveReceptionStaffContext,
+  type ReceptionStaffContext,
+} from '../lib/resolveReceptionStaffContext';
+
+async function requireCheckInStaff(
+  tenantSlug: string
+): Promise<
+  | { ok: true; ctx: ReceptionStaffContext }
+  | { ok: false; error: 'unauthorized' | 'forbidden' }
+> {
+  const staff = await resolveReceptionStaffContext(tenantSlug);
+  if (!staff.ok) return staff;
+  const gate = assertReceptionCheckInAccess(staff.ctx);
+  if (!gate.ok) return gate;
+  return staff;
+}
 
 export type CreateGuestStayActionResult =
   | CreateGuestStayResult
-  | { ok: false; error: 'unauthorized' | 'unknown' };
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
 
 export async function createGuestStayAction(input: {
   tenantSlug: string;
@@ -42,10 +58,9 @@ export async function createGuestStayAction(input: {
   bookingAmountDue?: string;
   locale?: string;
 }): Promise<CreateGuestStayActionResult> {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
-    return { ok: false, error: 'unauthorized' };
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
   }
 
   try {
@@ -81,10 +96,9 @@ export async function createGuestStayAction(input: {
 }
 
 export async function revokeGuestStayAction(input: { tenantSlug: string; stayId: string }) {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
-    return { ok: false as const, error: 'unauthorized' as const };
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false as const, error: staff.error };
   }
 
   try {
@@ -115,12 +129,17 @@ export async function archiveGuestReservationAction(input: {
   stayId: string;
   operationalDate: string;
 }) {
-  const staff = await resolveReceptionStaffContext(input.tenantSlug);
+  const staff = await requireCheckInStaff(input.tenantSlug);
   if (!staff.ok) {
     return { ok: false as const, error: staff.error };
   }
 
   try {
+    const existing = await getGuestReservationForDesk(input.tenantSlug, input.stayId);
+    if (existing?.stay_kind === 'volunteer') {
+      return { ok: false as const, error: 'forbidden' as const };
+    }
+
     const result = await cancelOrCheckoutGuestReservation({
       tenantSlug: input.tenantSlug,
       stayId: input.stayId,
@@ -168,12 +187,17 @@ export async function checkoutGuestReservationAction(input: {
   stayId: string;
   operationalDate: string;
 }) {
-  const staff = await resolveReceptionStaffContext(input.tenantSlug);
+  const staff = await requireCheckInStaff(input.tenantSlug);
   if (!staff.ok) {
     return { ok: false as const, error: staff.error };
   }
 
   try {
+    const existing = await getGuestReservationForDesk(input.tenantSlug, input.stayId);
+    if (existing?.stay_kind === 'volunteer') {
+      return { ok: false as const, error: 'forbidden' as const };
+    }
+
     const result = await cancelOrCheckoutGuestReservation({
       tenantSlug: input.tenantSlug,
       stayId: input.stayId,
@@ -228,11 +252,11 @@ export async function listArchivedGuestReservationsAction(
   tenantSlug: string
 ): Promise<
   | { ok: true; items: GuestReservationArchiveListItem[] }
-  | { ok: false; error: 'unauthorized' | 'unknown' }
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' }
 > {
-  const staff = await resolveReceptionStaffContext(tenantSlug);
+  const staff = await requireCheckInStaff(tenantSlug);
   if (!staff.ok) {
-    return { ok: false, error: staff.error === 'forbidden' ? 'unauthorized' : staff.error };
+    return { ok: false, error: staff.error };
   }
 
   try {
@@ -255,11 +279,11 @@ export async function getGuestReservationForDeskAction(input: {
   locale?: string;
 }): Promise<
   | { ok: true; stay: GuestStayRecordWithLink }
-  | { ok: false; error: 'unauthorized' | 'not_found' | 'unknown' }
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'not_found' | 'unknown' }
 > {
-  const staff = await resolveReceptionStaffContext(input.tenantSlug);
+  const staff = await requireCheckInStaff(input.tenantSlug);
   if (!staff.ok) {
-    return { ok: false, error: staff.error === 'forbidden' ? 'unauthorized' : staff.error };
+    return { ok: false, error: staff.error };
   }
 
   try {
@@ -280,7 +304,7 @@ export async function restoreGuestReservationAction(input: {
   tenantSlug: string;
   stayId: string;
 }) {
-  const staff = await resolveReceptionStaffContext(input.tenantSlug);
+  const staff = await requireCheckInStaff(input.tenantSlug);
   if (!staff.ok) {
     return { ok: false as const, error: staff.error };
   }
@@ -315,23 +339,25 @@ export async function restoreGuestReservationAction(input: {
     return { ok: false as const, error: 'unknown' as const };
   }
 }export async function listActiveGuestStaysAction(tenantSlug: string, locale = 'en') {
-  await assertReceptionAuthenticated(tenantSlug);
+  const staff = await requireCheckInStaff(tenantSlug);
+  if (!staff.ok) {
+    throw new Error(staff.error);
+  }
   return listActiveGuestStays(tenantSlug, locale);
 }
 
 export type ReissueGuestStayActionResult =
   | ReissueGuestStayResult
-  | { ok: false; error: 'unauthorized' | 'unknown' };
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
 
 export async function reissueGuestStayAction(input: {
   tenantSlug: string;
   stayId: string;
   locale?: string;
 }): Promise<ReissueGuestStayActionResult> {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
-    return { ok: false, error: 'unauthorized' };
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
   }
 
   try {
@@ -361,7 +387,7 @@ export async function reissueGuestStayAction(input: {
 
 export type UpdateGuestReservationActionResult =
   | UpdateGuestReservationResult
-  | { ok: false; error: 'unauthorized' | 'unknown' };
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
 
 export async function updateGuestReservationAction(input: {
   tenantSlug: string;
@@ -374,10 +400,9 @@ export async function updateGuestReservationAction(input: {
   bookingExternalId?: string;
   bookingAmountDue?: string;
 }): Promise<UpdateGuestReservationActionResult> {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
-    return { ok: false, error: 'unauthorized' };
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
   }
 
   try {
@@ -412,17 +437,16 @@ export async function updateGuestReservationAction(input: {
 
 export type SetGuestReservationBookingPaidActionResult =
   | SetGuestReservationBookingPaidResult
-  | { ok: false; error: 'unauthorized' | 'unknown' };
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
 
 export async function setGuestReservationBookingPaidAction(input: {
   tenantSlug: string;
   stayId: string;
   paid: boolean;
 }): Promise<SetGuestReservationBookingPaidActionResult> {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
-    return { ok: false, error: 'unauthorized' };
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
   }
 
   try {
@@ -451,17 +475,16 @@ export async function setGuestReservationBookingPaidAction(input: {
 
 export type CompleteDeskCheckInActionResult =
   | CompleteDeskCheckInResult
-  | { ok: false; error: 'unauthorized' | 'unknown' };
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
 
 export async function completeDeskCheckInAction(input: {
   tenantSlug: string;
   stayId: string;
   keyIssued?: boolean;
 }): Promise<CompleteDeskCheckInActionResult> {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
-    return { ok: false, error: 'unauthorized' };
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
   }
 
   try {

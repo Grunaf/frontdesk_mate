@@ -15,8 +15,11 @@ export function resolveStayCancelCheckoutAction(input: {
   check_out_at: string;
   operationalDate: string;
   is_archived?: boolean;
+  /** Volunteer stays end only from Owner portal Volunteers. */
+  stay_kind?: 'guest' | 'volunteer' | null;
 }): StayCancelCheckoutIntent | null {
   if (input.is_archived) return null;
+  if (input.stay_kind === 'volunteer') return null;
 
   const admitted = Boolean(input.passport_checked_at || input.desk_checked_in_at);
   const checkOutDate = stayRecordCheckOutDate(input);

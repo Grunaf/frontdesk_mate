@@ -86,6 +86,21 @@ describe('resolveReceptionCashSnapshot', () => {
     expect(snapshot.stillToCollect[0]?.hasPrice).toBe(false);
   });
 
+  it('excludes volunteer stays from unpaid cohort', () => {
+    const now = new Date('2026-07-09T12:00:00.000Z');
+    const volunteer = makeStay({
+      stay_kind: 'volunteer',
+      booking_amount_due_minor: null,
+      booking_amount_currency: null,
+      booking_paid_at: null,
+    });
+
+    const snapshot = resolveReceptionCashSnapshot(settings, [volunteer], now);
+
+    expect(snapshot.unpaidCount).toBe(0);
+    expect(snapshot.stillToCollect).toEqual([]);
+  });
+
   it('sorts admitted unpaid before not admitted', () => {
     const now = new Date('2026-07-09T12:00:00.000Z');
     const waiting = makeStay({

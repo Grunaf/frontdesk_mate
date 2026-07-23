@@ -184,7 +184,7 @@ export function resolveReceptionHubSnapshot(
 
     if (!isOperationalNightDeskStay(stay, operationalDate)) continue;
 
-    if (!stay.booking_paid_at) {
+    if (stay.stay_kind !== 'volunteer' && !stay.booking_paid_at) {
       unpaid.push(stay);
     }
     if (hasGuestArrivedAtReception(stay) && !stay.key_issued_at) {

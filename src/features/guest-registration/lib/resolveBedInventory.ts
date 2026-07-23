@@ -9,7 +9,7 @@ import {
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { GuestStayConfig, StayBed } from '@/entities/tenant/model/guestStay';
 import type { TenantSettings } from '@/entities/tenant';
-import { resolveBedDisplayLabel } from '@/entities/tenant/lib/resolveBedDisplay';
+import { resolveReceptionBedLabel } from '@/entities/tenant/lib/resolveBedDisplay';
 import { todayUtcDate } from './guestAccessDates';
 
 export type BedInventoryStatus = 'free' | 'occupied';
@@ -141,7 +141,7 @@ function buildEntry(
   );
   return {
     bedId,
-    displayLabel: resolveBedDisplayLabel(settings, bedId) ?? bedId,
+    displayLabel: resolveReceptionBedLabel(settings, bedId) ?? bedId,
     status: current ? 'occupied' : 'free',
     stay: current,
     nextAccess: next,

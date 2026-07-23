@@ -48,4 +48,21 @@ describe('resolveStayCancelCheckoutAction', () => {
       })
     ).toBeNull();
   });
+
+  it('hides cancel/checkout for volunteer stays', () => {
+    expect(
+      resolveStayCancelCheckoutAction({
+        ...base,
+        passport_checked_at: null,
+        stay_kind: 'volunteer',
+      })
+    ).toBeNull();
+    expect(
+      resolveStayCancelCheckoutAction({
+        ...base,
+        passport_checked_at: '2026-07-20T12:00:00.000Z',
+        stay_kind: 'volunteer',
+      })
+    ).toBeNull();
+  });
 });

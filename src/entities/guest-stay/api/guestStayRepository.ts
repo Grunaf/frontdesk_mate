@@ -316,16 +316,23 @@ export async function createGuestStay(
     return { ok: false, error: 'access_overlap' };
   }
 
-  const bookingFields = resolveBookingSourceFields(
-    tenant.settings,
-    input.bookingPlatformId,
-    input.bookingExternalId
-  );
+  const stayKind = input.stayKind === 'volunteer' ? 'volunteer' : 'guest';
+  const isVolunteer = stayKind === 'volunteer';
+
+  const bookingFields = isVolunteer
+    ? ({ ok: true as const, platformId: null, externalId: null })
+    : resolveBookingSourceFields(
+        tenant.settings,
+        input.bookingPlatformId,
+        input.bookingExternalId
+      );
   if (!bookingFields.ok) {
     return { ok: false, error: 'invalid_booking_source' };
   }
 
-  const balanceFields = resolveBookingBalanceFields(tenant.settings, input.bookingAmountDue, true);
+  const balanceFields = isVolunteer
+    ? ({ ok: true as const, amountMinor: null, currency: null })
+    : resolveBookingBalanceFields(tenant.settings, input.bookingAmountDue, true);
   if (!balanceFields.ok) {
     return { ok: false, error: 'invalid_booking_balance' };
   }
@@ -341,6 +348,7 @@ export async function createGuestStay(
       check_out_date: period.checkOutDate,
       check_in_at: period.checkInAt,
       check_out_at: period.checkOutAt,
+      stay_kind: stayKind,
       booking_platform_id: bookingFields.platformId,
       booking_external_id: bookingFields.externalId,
       booking_amount_due_minor: balanceFields.amountMinor,
@@ -384,14 +392,18 @@ export async function createGuestStay(
 
   const magicLinkUrl = buildGuestMagicLinkUrl(tenant.slug, locale, grantResult.accessToken);
 
-  const stayKind = bookingFields.platformId ? 'reservation' : 'walk-in';
+  const pushKind = isVolunteer
+    ? 'walk-in'
+    : bookingFields.platformId
+      ? 'reservation'
+      : 'walk-in';
   void import('@/entities/reception-push/lib/receptionPushMessages').then(({ buildGuestStayPushPayload }) =>
     import('@/entities/reception-push/server').then(({ notifyReceptionDesk }) =>
       notifyReceptionDesk({
         tenantSlug: tenant.slug,
         payload: buildGuestStayPushPayload({
           guestName: input.guestName?.trim() || stay.guest_name,
-          kind: stayKind,
+          kind: pushKind,
         }),
       })
     )
@@ -1367,6 +1379,7 @@ export async function cancelOrCheckoutGuestReservation(
       check_out_date: remainderPeriod.checkOutDate,
       check_in_at: remainderPeriod.checkInAt,
       check_out_at: remainderPeriod.checkOutAt,
+      stay_kind: reservation.stay_kind === 'volunteer' ? 'volunteer' : 'guest',
       booking_platform_id: reservation.booking_platform_id ?? null,
       booking_external_id: reservation.booking_external_id ?? null,
       booking_amount_due_minor: reservation.booking_amount_due_minor ?? null,
