@@ -14,12 +14,16 @@ export const OWNER_DASHBOARD_DESKTOP_MIN_WIDTH_PX = 1024;
 export const OWNER_DASHBOARD_MOBILE_FRAME = {
   headerInner: 'mx-auto flex max-w-lg items-start justify-between gap-4',
   main: 'mx-auto max-w-lg px-4 py-6 sm:py-8',
+  /** Page body inside `main` — same width as chrome, no nested shrink. */
+  content: 'w-full',
 } as const;
 
 /** Desktop chrome while mobile UI is disabled. */
 export const OWNER_DASHBOARD_DESKTOP_FRAME = {
   headerInner: 'mx-auto flex max-w-5xl items-start justify-between gap-4',
   main: 'mx-auto max-w-5xl px-4 py-6 sm:py-8',
+  /** Page body inside `main` — same width as chrome, no nested shrink. */
+  content: 'w-full',
 } as const;
 
 export function getOwnerDashboardFrameClasses() {

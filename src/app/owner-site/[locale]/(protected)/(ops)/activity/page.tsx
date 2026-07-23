@@ -8,6 +8,7 @@ import {
   ReceptionActivityPanel,
   type ReceptionActivityPanelLabels,
 } from '@/features/reception-activity';
+import { getOwnerDashboardFrameClasses } from '@/features/owner-shell';
 
 interface OwnerActivityPageProps {
   params: Promise<{ locale: string }>;
@@ -67,8 +68,10 @@ export default async function OwnerActivityPage({ params }: OwnerActivityPagePro
     ) as ReceptionActivityPanelLabels['eventTypes'],
   };
 
+  const frame = getOwnerDashboardFrameClasses();
+
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className={frame.content}>
       <ReceptionActivityPanel
         events={events}
         error={error}

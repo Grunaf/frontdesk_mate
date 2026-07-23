@@ -10,6 +10,7 @@ import {
   StaffKnowledgePanel,
   type StaffKnowledgePanelLabels,
 } from '@/features/owner-staff-knowledge';
+import { getOwnerDashboardFrameClasses } from '@/features/owner-shell';
 
 interface OwnerKnowledgePageProps {
   params: Promise<{ locale: string }>;
@@ -158,8 +159,10 @@ export default async function OwnerKnowledgePage({ params }: OwnerKnowledgePageP
     },
   };
 
+  const frame = getOwnerDashboardFrameClasses();
+
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className={frame.content}>
       <StaffKnowledgePanel
         locale={locale}
         hostelName={context.name}

@@ -43,6 +43,7 @@ export async function OwnerPortalShell({
               setup: t('setup'),
               settings: t('settings'),
               knowledge: t('knowledge'),
+              volunteers: t('volunteers'),
               activity: t('activity'),
             }}
           />

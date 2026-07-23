@@ -8,6 +8,7 @@ type OwnerPortalNavLabels = {
   setup: string;
   settings: string;
   knowledge: string;
+  volunteers: string;
   activity: string;
 };
 
@@ -16,12 +17,15 @@ type OwnerPortalNavProps = {
   labels: OwnerPortalNavLabels;
 };
 
-type OwnerPortalNavKey = 'setup' | 'settings' | 'knowledge' | 'activity';
+type OwnerPortalNavKey = 'setup' | 'settings' | 'knowledge' | 'volunteers' | 'activity';
 
 function resolveActiveNav(pathname: string, locale: string): OwnerPortalNavKey | null {
   const prefix = `/${locale}`;
   if (pathname === `${prefix}/activity` || pathname.startsWith(`${prefix}/activity/`)) {
     return 'activity';
+  }
+  if (pathname === `${prefix}/volunteers` || pathname.startsWith(`${prefix}/volunteers/`)) {
+    return 'volunteers';
   }
   if (pathname === `${prefix}/knowledge` || pathname.startsWith(`${prefix}/knowledge/`)) {
     return 'knowledge';
@@ -55,6 +59,9 @@ export function OwnerPortalNav({ locale, labels }: OwnerPortalNavProps) {
       </Link>
       <Link href={`/${locale}/knowledge`} className={navLinkClass('knowledge')}>
         {labels.knowledge}
+      </Link>
+      <Link href={`/${locale}/volunteers`} className={navLinkClass('volunteers')}>
+        {labels.volunteers}
       </Link>
       <Link href={`/${locale}/activity`} className={navLinkClass('activity')}>
         {labels.activity}
