@@ -278,11 +278,7 @@ export async function updateReceptionStaffPermissionsAction(
     formData.getAll('permissions').map((value) => String(value))
   );
 
-  // Drop unknown keys silently via sanitize; with empty whitelist any non-empty key is invalid.
   const raw = formData.getAll('permissions').map((value) => String(value)).filter(Boolean);
-  if (raw.length > 0 && RECEPTION_STAFF_PERMISSIONS.length === 0) {
-    return { ok: false, error: 'validation' };
-  }
   const unknown = raw.filter(
     (value) => !(RECEPTION_STAFF_PERMISSIONS as readonly string[]).includes(value)
   );

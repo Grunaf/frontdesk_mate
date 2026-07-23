@@ -28,15 +28,36 @@ import type {
   ReceptionStaffUser,
 } from '../model/types';
 import {
+  DESK_CHECK_IN_PERMISSION,
+  DESK_CLEANING_PERMISSION,
   RECEPTION_STAFF_PERMISSIONS,
+  resolveEffectiveReceptionStaffPermissions,
   type ReceptionStaffPermission,
 } from '@/entities/reception-user';
 
 type PermissionLabelMeta = { platform: string; ownerKey: string };
 
-/** Filled when RECEPTION_STAFF_PERMISSIONS gains keys again. */
-const PERMISSION_BADGE_LABELS: Record<string, PermissionLabelMeta> = {};
-const PERMISSION_EDIT_LABELS: Record<string, PermissionLabelMeta> = {};
+const PERMISSION_BADGE_LABELS: Record<ReceptionStaffPermission, PermissionLabelMeta> = {
+  [DESK_CHECK_IN_PERMISSION]: {
+    platform: 'Check-in',
+    ownerKey: 'permissions.badgeCheckIn',
+  },
+  [DESK_CLEANING_PERMISSION]: {
+    platform: 'Cleaning',
+    ownerKey: 'permissions.badgeCleaning',
+  },
+};
+
+const PERMISSION_EDIT_LABELS: Record<ReceptionStaffPermission, PermissionLabelMeta> = {
+  [DESK_CHECK_IN_PERMISSION]: {
+    platform: 'Check-in (Plan, Access, Cash, Issues, Transfers, Archive)',
+    ownerKey: 'permissions.checkIn',
+  },
+  [DESK_CLEANING_PERMISSION]: {
+    platform: 'Cleaning (housekeeping statuses)',
+    ownerKey: 'permissions.cleaning',
+  },
+};
 export interface ReceptionStaffManagementProps {
   surface: ReceptionStaffSurface;
   tenantSlug: string;
@@ -221,18 +242,16 @@ function PermissionsEditRow({
 }) {
   const t = useTranslations('pages.owner.receptionStaff');
   const [open, setOpen] = useState(false);
-  const [permissions, setPermissions] = useState<ReceptionStaffPermission[]>(user.permissions);
+  const [permissions, setPermissions] = useState<ReceptionStaffPermission[]>(() =>
+    resolveEffectiveReceptionStaffPermissions(user.permissions)
+  );
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    setPermissions(user.permissions);
+    setPermissions(resolveEffectiveReceptionStaffPermissions(user.permissions));
   }, [user.permissions]);
 
   if (user.disabledAt) {
-    return null;
-  }
-
-  if (RECEPTION_STAFF_PERMISSIONS.length === 0) {
     return null;
   }
 
@@ -269,8 +288,8 @@ function PermissionsEditRow({
     });
   };
 
-  const editLabel = surface === 'owner' ? t('permissions.edit') : 'Edit permissions';
-  const saveLabel = surface === 'owner' ? t('permissions.save') : 'Save permissions';
+  const editLabel = surface === 'owner' ? t('permissions.edit') : 'Edit desk functions';
+  const saveLabel = surface === 'owner' ? t('permissions.save') : 'Save desk functions';
 
   return (
     <div className="mt-2 border-t border-border/60 pt-2">
@@ -286,27 +305,27 @@ function PermissionsEditRow({
       ) : (
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">
-            {surface === 'owner' ? t('permissions.title') : 'Permissions'}
+            {surface === 'owner' ? t('permissions.title') : 'Desk functions'}
           </p>
-            {RECEPTION_STAFF_PERMISSIONS.map((permission) => {
-              const meta = PERMISSION_EDIT_LABELS[permission];
-              const label =
-                surface === 'owner' && meta
-                  ? t(meta.ownerKey as 'permissions.lineStaff')
-                  : (meta?.platform ?? permission);
-              return (
-                <label key={permission} className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5"
-                    disabled={disabled || isPending}
-                    checked={permissions.includes(permission)}
-                    onChange={() => togglePermission(permission)}
-                  />
-                  <span>{label}</span>
-                </label>
-              );
-            })}
+          {RECEPTION_STAFF_PERMISSIONS.map((permission) => {
+            const meta = PERMISSION_EDIT_LABELS[permission];
+            const label =
+              surface === 'owner'
+                ? t(meta.ownerKey as 'permissions.checkIn')
+                : meta.platform;
+            return (
+              <label key={permission} className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  disabled={disabled || isPending}
+                  checked={permissions.includes(permission)}
+                  onChange={() => togglePermission(permission)}
+                />
+                <span>{label}</span>
+              </label>
+            );
+          })}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -321,7 +340,7 @@ function PermissionsEditRow({
               disabled={isPending}
               onClick={() => {
                 setOpen(false);
-                setPermissions(user.permissions);
+                setPermissions(resolveEffectiveReceptionStaffPermissions(user.permissions));
               }}
               className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             >
@@ -408,27 +427,21 @@ function StaffRow({
             <span className="font-normal text-muted-foreground">({user.login})</span>
           </p>
           <p className="text-xs text-muted-foreground">{statusLabel}</p>
-          {user.permissions.length > 0 ? (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {user.permissions.map((permission) => {
-                const badge = PERMISSION_BADGE_LABELS[permission];
-                return (
-                  <span
-                    key={permission}
-                    className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-                  >
-                    {surface === 'owner' && badge
-                      ? t(badge.ownerKey as 'permissions.lineStaff')
-                      : (badge?.platform ?? permission)}
-                  </span>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {surface === 'owner' ? t('permissions.lineStaff') : 'Line staff'}
-            </p>
-          )}
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {resolveEffectiveReceptionStaffPermissions(user.permissions).map((permission) => {
+              const badge = PERMISSION_BADGE_LABELS[permission];
+              return (
+                <span
+                  key={permission}
+                  className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                >
+                  {surface === 'owner'
+                    ? t(badge.ownerKey as 'permissions.badgeCheckIn')
+                    : badge.platform}
+                </span>
+              );
+            })}
+          </div>
         </div>
         {!isDisabled ? (
           <button

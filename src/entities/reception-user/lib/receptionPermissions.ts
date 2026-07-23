@@ -1,11 +1,14 @@
 /**
- * Reception staff permission whitelist (v1: empty).
- * Archive list/restore are available to any authenticated reception staff.
- * Purge/hard-delete is out of scope for Archive v1.
+ * Reception desk function permissions (whitelist).
+ * Legacy empty `permissions: []` is treated as check-in at the capability layer
+ * (`resolveEffectiveReceptionStaffPermissions` / `receptionStaffCanCheckIn`).
  */
-export const RECEPTION_STAFF_PERMISSIONS = [] as const;
+export const RECEPTION_STAFF_PERMISSIONS = ['desk.check_in', 'desk.cleaning'] as const;
 
 export type ReceptionStaffPermission = (typeof RECEPTION_STAFF_PERMISSIONS)[number];
+
+export const DESK_CHECK_IN_PERMISSION = 'desk.check_in' satisfies ReceptionStaffPermission;
+export const DESK_CLEANING_PERMISSION = 'desk.cleaning' satisfies ReceptionStaffPermission;
 
 /** Legacy keys from trash/archive experiments — always dropped on sanitize. */
 const LEGACY_DROPPED_PERMISSIONS = new Set([
@@ -37,18 +40,49 @@ export function sanitizeReceptionStaffPermissions(
   return result;
 }
 
+/**
+ * Effective desk functions after sanitize.
+ * Empty / legacy-only → check-in (compat for existing staff + new volunteers).
+ */
+export function resolveEffectiveReceptionStaffPermissions(
+  values: readonly string[] | null | undefined
+): ReceptionStaffPermission[] {
+  const sanitized = sanitizeReceptionStaffPermissions(values);
+  if (sanitized.length === 0) return [DESK_CHECK_IN_PERMISSION];
+  return sanitized;
+}
+
 export function receptionStaffHasPermission(
   permissions: readonly string[] | null | undefined,
   permission: ReceptionStaffPermission
 ): boolean {
-  return sanitizeReceptionStaffPermissions(permissions).includes(permission);
+  return resolveEffectiveReceptionStaffPermissions(permissions).includes(permission);
 }
 
-/** @deprecated Archive is available to all authenticated reception staff. */
-export function receptionStaffCanManageArchive(
-  _permissions?: readonly string[] | null
+export function receptionStaffCanCheckIn(
+  permissions: readonly string[] | null | undefined
 ): boolean {
-  return true;
+  return receptionStaffHasPermission(permissions, DESK_CHECK_IN_PERMISSION);
+}
+
+export function receptionStaffCanClean(
+  permissions: readonly string[] | null | undefined
+): boolean {
+  return receptionStaffHasPermission(permissions, DESK_CLEANING_PERMISSION);
+}
+
+/** Housekeeping status updates: Plan (check-in) or Cleaning desk. */
+export function receptionStaffCanManageHousekeeping(
+  permissions: readonly string[] | null | undefined
+): boolean {
+  return receptionStaffCanCheckIn(permissions) || receptionStaffCanClean(permissions);
+}
+
+/** @deprecated Archive is part of check-in desk; prefer receptionStaffCanCheckIn. */
+export function receptionStaffCanManageArchive(
+  permissions?: readonly string[] | null
+): boolean {
+  return receptionStaffCanCheckIn(permissions);
 }
 
 /** @deprecated Prefer receptionStaffCanManageArchive */

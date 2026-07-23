@@ -14,11 +14,17 @@ export {
   updateReceptionUserPermissions,
 } from './api/receptionUserRepository';
 export {
+  DESK_CHECK_IN_PERMISSION,
+  DESK_CLEANING_PERMISSION,
   RECEPTION_STAFF_PERMISSIONS,
   isReceptionStaffPermission,
+  receptionStaffCanCheckIn,
+  receptionStaffCanClean,
   receptionStaffCanManageArchive,
+  receptionStaffCanManageHousekeeping,
   receptionStaffCanManageTrash,
   receptionStaffHasPermission,
+  resolveEffectiveReceptionStaffPermissions,
   sanitizeReceptionStaffPermissions,
 } from './lib/receptionPermissions';
 export type { ReceptionStaffPermission } from './lib/receptionPermissions';

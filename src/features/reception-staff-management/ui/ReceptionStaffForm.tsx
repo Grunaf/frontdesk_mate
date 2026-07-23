@@ -19,14 +19,24 @@ import type {
   ReceptionStaffUser,
 } from '../model/types';
 import {
+  DESK_CHECK_IN_PERMISSION,
+  DESK_CLEANING_PERMISSION,
   RECEPTION_STAFF_PERMISSIONS,
   type ReceptionStaffPermission,
 } from '@/entities/reception-user';
 
 type PermissionLabelMeta = { platform: string; ownerKey: string };
 
-/** Filled when RECEPTION_STAFF_PERMISSIONS gains keys again. */
-const PERMISSION_LABELS: Record<string, PermissionLabelMeta> = {};
+const PERMISSION_LABELS: Record<ReceptionStaffPermission, PermissionLabelMeta> = {
+  [DESK_CHECK_IN_PERMISSION]: {
+    platform: 'Check-in (Plan, Access, Cash, Issues, Transfers, Archive)',
+    ownerKey: 'permissions.checkIn',
+  },
+  [DESK_CLEANING_PERMISSION]: {
+    platform: 'Cleaning (housekeeping statuses)',
+    ownerKey: 'permissions.cleaning',
+  },
+};
 
 interface ReceptionStaffFormProps {
   surface: ReceptionStaffSurface;
@@ -78,7 +88,9 @@ export function ReceptionStaffForm({
   const [login, setLogin] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [pin, setPin] = useState('');
-  const [permissions, setPermissions] = useState<ReceptionStaffPermission[]>([]);
+  const [permissions, setPermissions] = useState<ReceptionStaffPermission[]>([
+    DESK_CHECK_IN_PERMISSION,
+  ]);
   const [fieldErrors, setFieldErrors] = useState<{
     login?: string;
     displayName?: string;
@@ -93,7 +105,7 @@ export function ReceptionStaffForm({
     setLogin('');
     setDisplayName('');
     setPin('');
-    setPermissions([]);
+    setPermissions([DESK_CHECK_IN_PERMISSION]);
     setFieldErrors({});
   };
 
@@ -269,40 +281,37 @@ export function ReceptionStaffForm({
         {fieldErrors.pin ? <span className="text-xs text-destructive">{fieldErrors.pin}</span> : null}
       </label>
 
-      {/* Permissions UI hidden while RECEPTION_STAFF_PERMISSIONS is empty (Archive v1). */}
-      {RECEPTION_STAFF_PERMISSIONS.length > 0 ? (
-        <fieldset className="space-y-2 rounded-md border px-3 py-3">
-          <legend className="px-1 text-sm font-medium">
-            {surface === 'owner' ? t('permissions.title') : 'Permissions'}
-          </legend>
-          <p className="text-xs text-muted-foreground">
-            {surface === 'owner'
-              ? t('permissions.helper')
-              : 'Optional elevated permissions for this staff account.'}
-          </p>
-          <div className="space-y-2">
-            {RECEPTION_STAFF_PERMISSIONS.map((permission) => {
-              const meta = PERMISSION_LABELS[permission];
-              const label =
-                surface === 'owner' && meta
-                  ? t(meta.ownerKey as 'permissions.lineStaff')
-                  : (meta?.platform ?? permission);
-              return (
-                <label key={permission} className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5"
-                    disabled={formDisabled}
-                    checked={permissions.includes(permission)}
-                    onChange={() => togglePermission(permission)}
-                  />
-                  <span>{label}</span>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-      ) : null}
+      <fieldset className="space-y-2 rounded-md border px-3 py-3">
+        <legend className="px-1 text-sm font-medium">
+          {surface === 'owner' ? t('permissions.title') : 'Desk functions'}
+        </legend>
+        <p className="text-xs text-muted-foreground">
+          {surface === 'owner'
+            ? t('permissions.helper')
+            : 'Assign one or both desk functions. Empty selection behaves as Check-in.'}
+        </p>
+        <div className="space-y-2">
+          {RECEPTION_STAFF_PERMISSIONS.map((permission) => {
+            const meta = PERMISSION_LABELS[permission];
+            const label =
+              surface === 'owner'
+                ? t(meta.ownerKey as 'permissions.checkIn')
+                : meta.platform;
+            return (
+              <label key={permission} className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  disabled={formDisabled}
+                  checked={permissions.includes(permission)}
+                  onChange={() => togglePermission(permission)}
+                />
+                <span>{label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
 
       <div className="flex flex-wrap items-center gap-2">
         <button
