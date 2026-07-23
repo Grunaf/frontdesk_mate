@@ -93,6 +93,9 @@ function resolveSheetBody(
   if (!sheetBody) {
     return null;
   }
+  if ('literal' in sheetBody) {
+    return sheetBody.literal;
+  }
   if (sheetContext === 'landmark' || sheetContext === 'firstAccess') {
     return resolveEnterMessage(sheetBody, enter);
   }
@@ -106,9 +109,6 @@ function resolveSlideCode(slide: DoorAccessSlideView): DoorAccessSlideDockCode |
   const { step } = slide;
   if (step.showCode && step.code) {
     return { label: step.label, value: step.code };
-  }
-  if (step.missingCode) {
-    return 'missing';
   }
   return null;
 }
@@ -344,7 +344,6 @@ export function DoorAccessCarousel({
       title={dockTitle}
       body={dockBody}
       code={dockCode}
-      missingCodeHint={dockCode === 'missing' ? doors('noCodeHint') : undefined}
       progress={{
         count: slides.length,
         activeIndex,

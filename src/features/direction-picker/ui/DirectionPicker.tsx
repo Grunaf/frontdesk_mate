@@ -219,7 +219,6 @@ export function DirectionPicker({
           onOpenChange={setPrimaryDetailsOpen}
           route={currentRoute}
           title={primaryTitle}
-          subtitle={primarySummary}
         />
 
         {alternativeRoute && (
@@ -228,7 +227,6 @@ export function DirectionPicker({
             onOpenChange={setAlternativeDetailsOpen}
             route={alternativeRoute}
             title={alternativeTitle}
-            subtitle={alternativeSummary}
           />
         )}
 

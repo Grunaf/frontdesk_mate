@@ -13,12 +13,10 @@ import {
 
 const SWIPE_MIN_DISTANCE_PX = 48;
 
-export type DoorAccessSlideDockCode =
-  | {
-      label: string;
-      value: string;
-    }
-  | 'missing';
+export type DoorAccessSlideDockCode = {
+  label: string;
+  value: string;
+};
 
 export type DoorAccessSlideDockProgress = DoorAccessSlideProgressProps;
 
@@ -46,7 +44,6 @@ export interface DoorAccessSlideDockProps {
   title: string;
   body: string | null;
   code?: DoorAccessSlideDockCode | null;
-  missingCodeHint?: string;
   progress?: DoorAccessSlideDockProgress;
   footerAction?: DoorAccessSlideDockFooterAction;
   /** Finger swipe left → next slide. */
@@ -86,7 +83,6 @@ export function DoorAccessSlideDock({
   title,
   body,
   code = null,
-  missingCodeHint,
   progress,
   footerAction,
   onSwipeNext,
@@ -171,7 +167,7 @@ export function DoorAccessSlideDock({
               <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
             ) : null}
 
-            {code && code !== 'missing' ? (
+            {code ? (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
                 <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                   {code.label}
@@ -180,10 +176,6 @@ export function DoorAccessSlideDock({
                   {code.value}
                 </span>
               </div>
-            ) : null}
-
-            {code === 'missing' && missingCodeHint ? (
-              <p className="text-sm leading-relaxed text-muted-foreground">{missingCodeHint}</p>
             ) : null}
           </div>
         ) : null}

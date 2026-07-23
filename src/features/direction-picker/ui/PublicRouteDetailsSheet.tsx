@@ -35,13 +35,11 @@ export function PublicRouteDetailsSheet({
   onOpenChange,
   route,
   title,
-  subtitle,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   route: RouteConfig;
   title: string;
-  subtitle?: string;
 }) {
   const { settings, hostel } = useTenant();
   const routes = useTranslations();
@@ -92,9 +90,8 @@ export function PublicRouteDetailsSheet({
             <div className="shrink-0 rounded-xl bg-muted p-2 text-muted-foreground">
               <Icon icon={RouteIcon} className="h-5 w-5" />
             </div>
-            <div className="min-w-0 space-y-1 pr-8">
+            <div className="min-w-0 pr-8">
               <BottomSheetTitle className="text-base">{title}</BottomSheetTitle>
-              {subtitle ? <p className="text-sm leading-relaxed text-muted-foreground">{subtitle}</p> : null}
             </div>
           </div>
         </BottomSheetHeader>

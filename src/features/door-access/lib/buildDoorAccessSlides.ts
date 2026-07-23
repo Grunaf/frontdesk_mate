@@ -34,6 +34,7 @@ export type DoorAccessSheetTitle =
 export type DoorAccessSheetBody =
   | DoorAccessEnterMessage
   | DoorAccessDoorsMessage
+  | { literal: string }
   | null;
 
 export type DoorAccessSlideSheet = {
@@ -60,7 +61,7 @@ export type DoorAccessSlide = DoorAccessLandmarkSlide | DoorAccessAccessSlide;
 
 export interface BuildDoorAccessSlidesFlags {
   isNightMode: boolean;
-  /** Night section title interpolation (`{time}`), same as `ArrivalBanner`. */
+  /** Night section title interpolation (`{time}`), typically reception close. */
   checkInTime?: string;
 }
 
@@ -93,8 +94,8 @@ function resolveSectionBanner(plan: ArrivalAccessPlan, isNightMode: boolean): Ar
 
 function resolveAccessSlideMedia(step: ArrivalAccessStep, isNightMode: boolean): DoorAccessSlideMedia | null {
   if (step.imageSrc) return 'photo';
-  if (step.guideKey) return 'text';
-  if (isNightMode && (step.code || step.showCode || step.missingCode)) return 'text';
+  if (step.guideNote) return 'text';
+  if (isNightMode && (step.code || step.showCode)) return 'text';
   return null;
 }
 
@@ -143,7 +144,7 @@ function buildAccessStepSheet(step: ArrivalAccessStep): DoorAccessSlideSheet {
   return {
     sheetContext: 'access',
     sheetTitle: buildAccessStepSheetTitle(step),
-    sheetBody: step.guideKey ? { key: step.guideKey } : null,
+    sheetBody: step.guideNote ? { literal: step.guideNote } : null,
   };
 }
 

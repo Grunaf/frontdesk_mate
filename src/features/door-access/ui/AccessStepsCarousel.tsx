@@ -20,7 +20,7 @@ export function AccessStepsCarousel({ steps, showStepLabels = true }: AccessStep
       sheet: {
         sheetContext: 'access' as const,
         sheetTitle: step.label.trim() ? { literal: step.label } : { key: step.titleKey },
-        sheetBody: step.guideKey ? { key: step.guideKey } : null,
+        sheetBody: step.guideNote ? { literal: step.guideNote } : null,
       },
     }));
 

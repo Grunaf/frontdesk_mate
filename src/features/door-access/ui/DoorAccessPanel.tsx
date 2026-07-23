@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useHostelConfig, useModuleStatus } from '@/entities/tenant';
-import { useNightMode } from '@/shared/lib';
 import { cn } from '@/shared/lib/utils';
 import { useTranslations } from '@/shared/i18n';
 import { FeatureGate } from '@/shared/ui';
@@ -28,8 +27,7 @@ export function DoorAccessPanel({
   onHideMainPrimaryChange,
   mediaTopOverlay,
 }: DoorAccessPanelProps) {
-  const isNightMode = useNightMode();
-  const plan = useArrivalAccessPlan();
+  const { plan, isNightMode } = useArrivalAccessPlan();
   const hostel = useHostelConfig();
   const doorPhotosStatus = useModuleStatus('doorPhotos');
   const doorAccessStatus = useModuleStatus('doorAccess');
@@ -39,15 +37,16 @@ export function DoorAccessPanel({
   const hasContent =
     plan.landmark ||
     plan.dayAccess ||
-    (plan.nightAccess?.hasAnyCode || plan.nightAccess?.steps.some((s) => s.imageSrc));
+    (plan.nightAccess?.hasAnyCode ||
+      plan.nightAccess?.steps.some((s) => s.imageSrc || s.guideNote));
 
   const builtSlides = useMemo(
     () =>
       buildDoorAccessSlides(plan, {
         isNightMode,
-        checkInTime: hostel.selfCheckInTimeAfter,
+        checkInTime: hostel.reception.time.close,
       }).slides,
-    [plan, isNightMode, hostel.selfCheckInTimeAfter]
+    [plan, isNightMode, hostel.reception.time.close]
   );
 
   const slides = useMemo(() => {
@@ -105,7 +104,7 @@ export function DoorAccessPanel({
     isNightMode &&
     plan.nightAccess &&
     !plan.nightAccess.hasAnyCode &&
-    !plan.nightAccess.steps.some((step) => step.imageSrc);
+    !plan.nightAccess.steps.some((step) => step.imageSrc || step.guideNote);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -133,7 +132,7 @@ export function DoorAccessPanel({
 
       {slidesEmpty && nightNoAccessUi ? (
         <FeatureGate module="doorAccess" showPreviewBadge={false}>
-          <p className={cn(mutedHintClassName, 'mx-4')}>{doors('noCodeHint')}</p>
+          <p className={cn(mutedHintClassName, 'mx-4')}>{doors('unlockedHint')}</p>
         </FeatureGate>
       ) : null}
     </div>

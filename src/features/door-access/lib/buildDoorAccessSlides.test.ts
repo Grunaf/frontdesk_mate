@@ -145,7 +145,7 @@ describe('buildDoorAccessSlides', () => {
     expect(sectionBanner?.titleKey).toBe('guide.night.title');
   });
 
-  it('access sheet body uses guideKey under doors namespace', () => {
+  it('access sheet body uses guideNote as literal', () => {
     const settings: TenantSettings = {
       arrivalAccess: {
         accessPoints: [
@@ -154,7 +154,7 @@ describe('buildDoorAccessSlides', () => {
             id: 'floor_1',
             label: 'Floor 1',
             image: '/images/floor1.jpg',
-            guideKey: 'subDoor.guide',
+            guideNote: 'Stairs on the left, basement door.',
           },
         ],
       },
@@ -166,7 +166,7 @@ describe('buildDoorAccessSlides', () => {
       step: { id: 'floor_1' },
       sheet: {
         sheetContext: 'access',
-        sheetBody: { key: 'subDoor.guide' },
+        sheetBody: { literal: 'Stairs on the left, basement door.' },
       },
     });
   });
