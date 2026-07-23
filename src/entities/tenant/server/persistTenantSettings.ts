@@ -10,6 +10,8 @@ import type { TenantRecord, TenantSettings } from '../model/settings';
 import { getCityPackForAdmin } from '@/entities/city-pack/server';
 import { validateCityPackNeedNowPlaceIds } from '@/entities/city-pack/lib/validateOwnerCityPackPlaceSelection';
 import { parseTenantSettingsFormData } from './parseTenantSettingsFormData';
+import { finalizeStayOffersForSave } from '../lib/normalizeStayOffers';
+import { finalizeLaundrySettingsForSave } from '../lib/normalizeLaundrySettings';
 import { diffTenantSettingsForAudit } from '../lib/diffTenantSettingsForAudit';
 import { insertTenantAuditEvent } from '@/entities/tenant-audit';
 
@@ -122,8 +124,11 @@ export async function persistTenantSettings(
   }
 
   settings = stripLegacyDeskPinHash(settings);
+  settings = finalizeStayOffersForSave(settings);
+  settings = finalizeLaundrySettingsForSave(settings);
 
   const result = await upsertTenant({
+
     slug,
     originalSlug,
     name,

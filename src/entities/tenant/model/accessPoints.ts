@@ -9,7 +9,8 @@ export interface AccessPoint {
   label?: string;
   image?: string;
   code?: string;
-  guideKey?: string;
+  /** Short guest-facing note: how to reach this door before using a code. */
+  guideNote?: string;
   /** Guest floors that always need this point (e.g. ["1"]). Empty = all guests. */
   forFloors?: string[];
   /** Cross-floor access (e.g. floor 1 kitchen for floor 2 guests). */

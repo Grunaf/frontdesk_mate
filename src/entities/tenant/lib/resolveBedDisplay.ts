@@ -217,6 +217,31 @@ export function resolveBedDisplayLabel(
   return String(slot);
 }
 
+/**
+ * Reception list/card label: room + bed slot (+ bunk tier).
+ * Keeps guest/map compact labels via {@link resolveBedDisplayLabel}.
+ */
+export function resolveReceptionBedLabel(
+  settings: TenantSettings,
+  bedId: string | null | undefined
+): string | null {
+  if (!bedId?.trim()) return null;
+
+  const id = bedId.trim();
+  const guestStay = settings.guestStay;
+  const bed = findBedByGuestId(guestStay, id);
+  if (!bed) return id;
+
+  const room = (guestStay?.rooms ?? []).find((entry) => entry.id === bed.roomId);
+  const roomLabel = room?.label?.trim() || bed.roomId;
+  const slot = resolveBedSlotNumber(guestStay?.beds ?? [], bed, bed.roomId);
+  const tier = resolveTierForGuestId(bed, id);
+
+  if (tier === 'upper') return `Room ${roomLabel} · Bed ${slot} · Upper`;
+  if (tier === 'lower') return `Room ${roomLabel} · Bed ${slot} · Lower`;
+  return `Room ${roomLabel} · Bed ${slot}`;
+}
+
 export function resolveBedMapDisplayLabel(
   guestStay: GuestStayConfig | undefined,
   bed: StayBed,

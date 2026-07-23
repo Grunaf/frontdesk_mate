@@ -11,8 +11,18 @@ export type { BookingPlatformOption, ReceptionBookingSettings } from './receptio
 
 import type { TenantLandingSettings } from './landing';
 import type { TenantHostelSettings } from './hostelSettings';
+import type { StayOffer } from './stayOffers';
+import type { LaundrySettings } from './laundry';
 
-export type { LandingRoomType, TenantLandingSettings } from './landing';
+export type { LandingRoomType, LandingRoomCard, TenantLandingSettings } from './landing';
+export type { StayOffer } from './stayOffers';
+export type {
+  LaundryMachine,
+  LaundryMachinePrograms,
+  LaundryProgram,
+  LaundrySettings,
+} from './laundry';
+export { LAUNDRY_PROGRAMS, DEFAULT_LAUNDRY_PROGRAM_MINUTES } from './laundry';
 export type { TenantHostelSettings } from './hostelSettings';
 export type { CityPackId } from '@/entities/hostel';
 
@@ -117,6 +127,16 @@ export interface TenantSettings {
   };
   logoUrl?: string;
   landing?: TenantLandingSettings;
+  /**
+   * Catalog of sellable stay groups (dorm / private / etc.).
+   * Landing cards and guest-stay rooms reference these by id.
+   */
+  stayOffers?: StayOffer[];
+  /**
+   * Cleaning hub washers (machines + program durations).
+   * Not guestStay — ops config for reception Cleaning.
+   */
+  laundry?: LaundrySettings;
   /** Check-in policy, currency, and structured city tax. */
   hostel?: TenantHostelSettings;
   /** Rooms, beds, and optional floor path hints for "find your bed". */

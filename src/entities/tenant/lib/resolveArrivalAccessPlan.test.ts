@@ -88,16 +88,24 @@ describe('resolveArrivalAccessPlan', () => {
     expect(result.dayAccess?.steps).toHaveLength(0);
   });
 
-  it('shows missing code hint at night when photo exists without code', () => {
+  it('night step without code is wayfinding only (no missing-code state)', () => {
     const settings: TenantSettings = {
       arrivalAccess: {
-        accessPoints: [{ id: 'floor_1', label: 'Floor 1', image: '/door.jpg' }],
+        accessPoints: [
+          {
+            id: 'floor_1',
+            label: 'Floor 1',
+            image: '/door.jpg',
+            guideNote: 'Stairs on the left, basement door.',
+          },
+        ],
       },
     };
 
     const result = plan(settings, true);
 
-    expect(result.nightAccess?.steps[0]?.missingCode).toBe(true);
     expect(result.nightAccess?.steps[0]?.showCode).toBe(false);
+    expect(result.nightAccess?.steps[0]?.guideNote).toBe('Stairs on the left, basement door.');
+    expect(result.nightAccess?.hasAnyCode).toBe(false);
   });
 });

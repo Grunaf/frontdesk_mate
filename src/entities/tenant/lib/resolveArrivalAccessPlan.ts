@@ -18,12 +18,11 @@ export interface ArrivalAccessStep {
   titleKey: string;
   codeLabelKey: string;
   label: string;
-  guideKey?: string;
+  guideNote?: string;
   code?: string;
   imageSrc?: string;
   imageAlt: string;
   showCode: boolean;
-  missingCode: boolean;
 }
 
 export interface ArrivalLandmark {
@@ -95,7 +94,18 @@ function resolveDayBanner(layoutKind: ArrivalLayoutKind, dayMode: ArrivalDayMode
   };
 }
 
-function resolveNightBanner(layoutKind: ArrivalLayoutKind): ArrivalBannerKeys {
+function resolveNightBanner(
+  layoutKind: ArrivalLayoutKind,
+  hasAnyCode: boolean
+): ArrivalBannerKeys {
+  if (!hasAnyCode) {
+    return {
+      titleKey: 'guide.night.unlocked.title',
+      bannerKey: 'guide.night.unlocked.banner',
+      hasIcon: false,
+    };
+  }
+
   if (layoutKind === 'direct_to_floor') {
     return {
       titleKey: 'guide.night.hostelOnly.title',
@@ -130,12 +140,11 @@ function buildStep(
     titleKey: getAccessPointTitleKey(point.id),
     codeLabelKey: getAccessPointCodeLabelKey(point.id),
     label: point.label || point.id,
-    guideKey: point.guideKey,
+    guideNote: point.guideNote,
     code: point.code,
     imageSrc: includeImage ? imageSrc : undefined,
     imageAlt: point.label || point.id,
     showCode: options.isNightMode && Boolean(point.code),
-    missingCode: options.isNightMode && !point.code && Boolean(imageSrc),
   };
 }
 
@@ -187,12 +196,12 @@ export function resolveArrivalAccessPlan(
       ? {
           mode: dayMode,
           banner: resolveDayBanner(layoutKind, dayMode),
-          steps: daySteps.filter((step) => step.imageSrc || step.guideKey),
+          steps: daySteps.filter((step) => step.imageSrc || step.guideNote),
         }
       : null,
     nightAccess: hasConfiguredAccess
       ? {
-          banner: resolveNightBanner(layoutKind),
+          banner: resolveNightBanner(layoutKind, hasAnyDoorCode),
           steps: nightSteps,
           hasAnyCode: hasAnyDoorCode,
         }

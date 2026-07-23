@@ -13,6 +13,8 @@ export interface StayRoom {
   id: string;
   label: string;
   floorId: string;
+  /** Stay offer this physical room belongs to (auto-assign pool). */
+  offerId?: string;
   doorImage?: string;
   /** Room map floor width / height (snapped, clamped). Defaults: 260×220. */
   mapWidth?: number;

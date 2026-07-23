@@ -51,7 +51,7 @@ export function normalizeAccessPoints(settings: TenantSettings): AccessPoint[] {
         label: point.label?.trim() || defaults?.label || id,
         image: point.image?.trim() || undefined,
         code: point.code?.trim() || undefined,
-        guideKey: point.guideKey?.trim() || undefined,
+        guideNote: point.guideNote?.trim() || undefined,
         forFloors: point.forFloors?.map((floor) => floor.trim()).filter(Boolean),
         alsoForFloors: point.alsoForFloors?.map((floor) => floor.trim()).filter(Boolean),
         sortOrder: point.sortOrder ?? index,

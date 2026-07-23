@@ -16,8 +16,14 @@ import type { AccessPoint, ArrivalLayoutKind, TenantSettings } from '@/entities/
 import { isBookingProvider } from '@/entities/tenant';
 import { normalizeGuestStayForSave } from '@/entities/tenant/lib/resolveBedDisplay';
 import { finalizeGuestStayForSave } from '@/entities/tenant/lib/normalizeGuestStaySettings';
+import {
+  normalizeStayOffers,
+} from '@/entities/tenant/lib/normalizeStayOffers';
+import { normalizeLaundrySettings } from '@/entities/tenant/lib/normalizeLaundrySettings';
 import { normalizeReceptionBookingForSave } from '@/entities/tenant/lib/normalizeReceptionBookingSettings';
 import { normalizeHubTransferForSave } from '@/entities/tenant/lib/normalizeHubTransferSettings';
+import type { StayOffer } from '@/entities/tenant/model/stayOffers';
+import type { LaundrySettings } from '@/entities/tenant/model/laundry';
 import {
   parseArrivalGetOffAtByRouteJson,
   parseArrivalLocalByRouteJson,
@@ -110,6 +116,42 @@ function parseGuestStay(formData: FormData): TenantSettings['guestStay'] {
   }
 }
 
+function parseStayOffers(formData: FormData): StayOffer[] | undefined {
+  if (!formData.has('stayOffersJson')) {
+    return undefined;
+  }
+
+  const raw = String(formData.get('stayOffersJson') || '').trim();
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as StayOffer[];
+    if (!Array.isArray(parsed)) return [];
+    return normalizeStayOffers(parsed);
+  } catch {
+    return [];
+  }
+}
+
+function parseLaundrySettings(formData: FormData): LaundrySettings | undefined {
+  if (!formData.has('laundryJson')) {
+    return undefined;
+  }
+
+  const raw = String(formData.get('laundryJson') || '').trim();
+  if (!raw) {
+    return { machines: [] };
+  }
+
+  try {
+    return normalizeLaundrySettings(JSON.parse(raw));
+  } catch {
+    return { machines: [] };
+  }
+}
+
 function parseLanding(formData: FormData): TenantSettings['landing'] {
   const raw = String(formData.get('landingJson') || '').trim();
   let landing: TenantSettings['landing'] = {};
@@ -131,6 +173,8 @@ function parseLanding(formData: FormData): TenantSettings['landing'] {
     ...landing,
     roomsSectionTitle: roomsSectionTitle ?? landing?.roomsSectionTitle,
     roomsSectionSubtitle: roomsSectionSubtitle ?? landing?.roomsSectionSubtitle,
+    roomCards: landing?.roomCards,
+    /** Kept for one-save migrate of tenants that still only have roomTypes in draft. */
     roomTypes: landing?.roomTypes,
   };
 }
@@ -406,6 +450,8 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
     heroBgUrl: String(formData.get('heroBgUrl') || '') || undefined,
     logoUrl: String(formData.get('logoUrl') || '') || undefined,
     landing: parseLanding(formData),
+    stayOffers: parseStayOffers(formData),
+    laundry: parseLaundrySettings(formData),
     hostel,
     guestStay,
     receptionBooking: parseReceptionBooking(formData),

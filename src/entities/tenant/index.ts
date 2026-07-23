@@ -13,6 +13,7 @@ export {
   type ArrivalLandmark,
   type ArrivalBannerKeys,
 } from './lib/resolveArrivalAccessPlan';
+export { isOutsideReceptionHours } from './lib/isOutsideReceptionHours';
 export {
   normalizeAccessPoints,
   resolveArrivalLandmark,
@@ -38,7 +39,44 @@ export {
 export {
   resolveGuestBedId,
 } from './lib/resolveGuestBedId';
-export type { LandingRoomType, TenantLandingSettings } from './model/landing';
+export type { LandingRoomType, LandingRoomCard, TenantLandingSettings } from './model/landing';
+export type { StayOffer } from './model/stayOffers';
+export {
+  normalizeStayOffers,
+  normalizeStayOffersOnRead,
+  finalizeStayOffersForSave,
+  listStayOffers,
+  listStayOffersForAdmin,
+  coerceStayOffersForAdminEdit,
+  resolveStayOfferById,
+  migrateLegacyLandingRoomTypes,
+} from './lib/normalizeStayOffers';
+export type {
+  LaundryMachine,
+  LaundryMachinePrograms,
+  LaundryProgram,
+  LaundrySettings,
+} from './model/laundry';
+export {
+  DEFAULT_LAUNDRY_PROGRAM_MINUTES,
+  LAUNDRY_DURATION_MAX_MINUTES,
+  LAUNDRY_DURATION_MIN_MINUTES,
+  LAUNDRY_PROGRAMS,
+} from './model/laundry';
+export {
+  clampLaundryDurationMinutes,
+  coerceLaundryMachinesForAdminEdit,
+  createEmptyLaundryMachine,
+  finalizeLaundrySettingsForSave,
+  isLaundryProgram,
+  listLaundryMachines,
+  listLaundryMachinesForAdmin,
+  normalizeLaundryMachines,
+  normalizeLaundryPrograms,
+  normalizeLaundrySettings,
+  resolveLaundryMachineById,
+  resolveLaundryProgramDurationMinutes,
+} from './lib/normalizeLaundrySettings';
 export type {
   CityPackId,
   TenantHubTransferSettings,

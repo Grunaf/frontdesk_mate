@@ -8,6 +8,7 @@ import {
   resolveBedMapDisplayLabel,
   resolveBedPickerOptions,
   resolveBedSlotNumber,
+  resolveReceptionBedLabel,
 } from './resolveBedDisplay';
 import type { GuestStayConfig } from '../model/guestStay';
 
@@ -61,6 +62,24 @@ describe('resolveBedDisplayLabel', () => {
 
   it('falls back to raw id for legacy data', () => {
     expect(resolveBedDisplayLabel({}, '4B')).toBe('4B');
+  });
+});
+
+describe('resolveReceptionBedLabel', () => {
+  it('includes room and bed slot for single bed', () => {
+    expect(resolveReceptionBedLabel({ guestStay }, 'vega_bed_2')).toBe(
+      'Room Vega · Bed 2'
+    );
+  });
+
+  it('includes room, bed slot and tier for bunk', () => {
+    expect(resolveReceptionBedLabel({ guestStay }, 'vega_bed_1-Top')).toBe(
+      'Room Vega · Bed 1 · Upper'
+    );
+  });
+
+  it('falls back to raw id for legacy data', () => {
+    expect(resolveReceptionBedLabel({}, '4B')).toBe('4B');
   });
 });
 
