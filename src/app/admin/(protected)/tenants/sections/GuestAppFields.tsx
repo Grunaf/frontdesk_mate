@@ -18,6 +18,7 @@ import { AdminSettingsDrillDown } from '../ui/AdminSettingsDrillDown';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { CityPackNeedNowFields } from './CityPackNeedNowFields';
 import { GuestStayFields } from './GuestStayFields';
+import { StayOffersFields } from './StayOffersFields';
 import { GuestExtrasFields } from './GuestExtrasFields';
 import { HostelPlacesFields } from './HostelPlacesFields';
 import { HouseRulesFields } from './HouseRulesFields';
@@ -135,6 +136,8 @@ export function GuestAppFields({
                 readinessInput={readinessInput}
               />
             );
+          case 'stay-offers':
+            return <StayOffersFields settings={mergedSettings} />;
           case 'house-rules':
             return <HouseRulesFields settings={settings} readinessInput={readinessInput} />;
           case 'extras':

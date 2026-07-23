@@ -8,6 +8,7 @@ import type { TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantRe
 
 export const GUEST_APP_ADMIN_MODULE_IDS = [
   'room-map',
+  'stay-offers',
   'house-rules',
   'extras',
   'near-hostel',
@@ -26,6 +27,11 @@ export const GUEST_APP_ADMIN_MODULES: GuestAppAdminModuleDefinition[] = [
     id: 'room-map',
     label: 'Room map',
     description: 'Beds, wayfinding, and module toggle.',
+  },
+  {
+    id: 'stay-offers',
+    label: 'Stay offers',
+    description: 'Sellable groups for landing and reception auto-assign.',
   },
   {
     id: 'house-rules',
@@ -53,6 +59,8 @@ function guestAppCapabilityId(moduleId: GuestAppAdminModuleId): GuestAppModuleId
   switch (moduleId) {
     case 'room-map':
       return 'roomMap';
+    case 'stay-offers':
+      return null;
     case 'house-rules':
       return 'houseRules';
     case 'near-hostel':
@@ -102,6 +110,12 @@ export function getGuestAppAdminModuleHint(
   if (moduleId === 'extras') {
     return 'Optional upsells for guests';
   }
+  if (moduleId === 'stay-offers') {
+    const count = context.readinessInput.settings?.stayOffers?.length
+      ?? context.readinessInput.settings?.landing?.roomTypes?.length
+      ?? 0;
+    return count > 0 ? `${count} offer(s)` : 'Create sellable room groups';
+  }
 
   const capability = resolveGuestAppCapability(moduleId, context);
   if (!capability) {
@@ -119,7 +133,7 @@ export function getGuestAppAdminModuleStatus(
   moduleId: GuestAppAdminModuleId,
   context: GuestAppAdminSubsectionContext
 ): ModuleStatus | 'n/a' {
-  if (moduleId === 'extras') {
+  if (moduleId === 'extras' || moduleId === 'stay-offers') {
     return 'n/a';
   }
 

@@ -78,10 +78,12 @@ function emptyPoint(index: number, layoutKind: ArrivalLayoutKind): AccessPoint {
 
 function sanitizeAccessPointForDraft(point: AccessPoint): AccessPoint {
   const code = point.code?.trim();
+  const guideNote = point.guideNote?.trim();
   const forFloors = point.forFloors?.map((floor) => floor.trim()).filter(Boolean);
   return {
     ...point,
     code: code || undefined,
+    guideNote: guideNote || undefined,
     forFloors: forFloors?.length ? forFloors : undefined,
     alsoForFloors: undefined,
   };
@@ -198,11 +200,24 @@ function AccessPointRow({
         placeholder="/images/floor-1-door.jpg"
         previewAlt={point.label ?? `Access point ${index + 1}`}
       />
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium">How to reach (optional)</span>
+        <textarea
+          value={point.guideNote ?? ''}
+          onChange={(event) => onChange({ ...point, guideNote: event.target.value })}
+          placeholder="e.g. Stairs on the left of the main entrance, basement door."
+          rows={2}
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        />
+        <span className="block text-xs text-muted-foreground">
+          Short note shown before the access point — how to find this door.
+        </span>
+      </label>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-medium">Night code</p>
           <p className="text-xs text-muted-foreground">
-            Leave off if no lock yet or staff opens manually.
+            Leave off if doors are unlocked or staff opens manually.
           </p>
         </div>
         <button

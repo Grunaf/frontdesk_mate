@@ -14,6 +14,7 @@ interface RoomSetupCardProps {
   floors: StayFloor[];
   beds: StayBed[];
   guestStay?: GuestStayConfig;
+  stayOffers?: Array<{ id: string; title: string }>;
   onRoomChange: (next: StayRoom) => void;
   onBedsChange: (beds: StayBed[]) => void;
   onRemove: () => void;
@@ -25,6 +26,7 @@ export function RoomSetupCard({
   floors,
   beds,
   guestStay,
+  stayOffers = [],
   onRoomChange,
   onBedsChange,
   onRemove,
@@ -90,6 +92,29 @@ export function RoomSetupCard({
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="block space-y-1 sm:col-span-2">
+              <span className="text-[11px] font-medium text-muted-foreground">Stay offer</span>
+              <select
+                value={room.offerId ?? ''}
+                onChange={(event) =>
+                  onRoomChange({
+                    ...room,
+                    offerId: event.target.value.trim() || undefined,
+                  })
+                }
+                className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm"
+              >
+                <option value="">None (advanced bed pick only)</option>
+                {stayOffers.map((offer) => (
+                  <option key={offer.id} value={offer.id}>
+                    {offer.title || offer.id}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[10px] text-muted-foreground">
+                Rooms linked to an offer form the auto-assign pool in reception.
+              </span>
             </label>
             <div className="sm:col-span-2">
               <AdminImageField

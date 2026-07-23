@@ -25,6 +25,7 @@ import { AdminFieldRow } from '../ui/AdminField';
 import { AdminSettingsDrillDown } from '../ui/AdminSettingsDrillDown';
 import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 import { HostelPolicyFields } from './HostelPolicyFields';
+import { LaundryFields } from './LaundryFields';
 import { ReceptionBookingPlatformsFields } from './ReceptionBookingPlatformsFields';
 import { ReceptionDeskPinFields } from '@/features/owner-reception-desk';
 import { ReceptionStaffManagement } from '@/features/reception-staff-management';
@@ -363,6 +364,8 @@ export function ContactsFields({
                   embedded
                 />
               );
+            case 'laundry':
+              return <LaundryFields settings={settings} surface={surface} />;
             default:
               return null;
           }

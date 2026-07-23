@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import type { GuestStayConfig, StayBed, StayFloor, StayRoom, TenantSettings } from '@/entities/tenant';
+import { listStayOffersForAdmin } from '@/entities/tenant';
 import { isRoomMapModuleEnabled } from '@/entities/tenant/lib/resolveGuestModuleToggles';
 import { dedupeGuestStayBedIds, normalizeGuestStayLabels } from '@/entities/tenant/lib/resolveBedDisplay';
 import type { TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
@@ -217,6 +218,7 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
     ...(settings ?? {}),
     guestStay,
   };
+  const stayOffers = listStayOffersForAdmin(settings ?? {});
 
   return (
     <div className="space-y-6">
@@ -345,6 +347,7 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
                   floors={floors}
                   beds={beds}
                   guestStay={guestStay}
+                  stayOffers={stayOffers}
                   onRoomChange={(next) =>
                     applyGuestStayState((current) => ({
                       ...current,

@@ -2,6 +2,8 @@
 
 import { getHouseRules } from '@/entities/house-rules';
 import type { TenantSettings } from '@/entities/tenant';
+import { finalizeStayOffersForSave } from '@/entities/tenant/lib/normalizeStayOffers';
+import { finalizeLaundrySettingsForSave } from '@/entities/tenant/lib/normalizeLaundrySettings';
 import { readBookingSettings } from '@/entities/tenant/lib/resolveBookingConfig';
 import { normalizeAccessPoints } from '@/entities/tenant/lib/normalizeAccessPoints';
 import { resolveCityTaxAmount, resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
@@ -44,7 +46,7 @@ function serializeLandingJson(settings: TenantSettings): string {
   return JSON.stringify({
     roomsSectionTitle: settings.landing?.roomsSectionTitle,
     roomsSectionSubtitle: settings.landing?.roomsSectionSubtitle,
-    roomTypes: settings.landing?.roomTypes ?? [],
+    roomCards: settings.landing?.roomCards ?? [],
   });
 }
 
@@ -55,19 +57,24 @@ export function TenantFormHiddenPayload({
   mergedSettings,
   roomMapEnabled: roomMapEnabledOverride,
 }: TenantFormHiddenPayloadProps) {
-  const roomMapEnabled = roomMapEnabledOverride ?? isRoomMapModuleEnabled(mergedSettings);
-  const houseRules = getHouseRules(mergedSettings);
-  const tourismRegistrationRequired = resolveTourismRegistrationRequired(mergedSettings);
-  const tourismConfig = resolveTourismRegistrationConfig(mergedSettings);
+  const normalizedSettings = finalizeLaundrySettingsForSave(
+    finalizeStayOffersForSave(mergedSettings)
+  );
+  const roomMapEnabled = roomMapEnabledOverride ?? isRoomMapModuleEnabled(normalizedSettings);
+  const houseRules = getHouseRules(normalizedSettings);
+  const tourismRegistrationRequired = resolveTourismRegistrationRequired(normalizedSettings);
+  const tourismConfig = resolveTourismRegistrationConfig(normalizedSettings);
   const tourismProfileId = tourismConfig?.profileId ?? '';
   const dataController = tourismConfig?.dataController;
-  const planStayStatusEnabled = resolvePlanStayStatusEnabled(mergedSettings);
+  const planStayStatusEnabled = resolvePlanStayStatusEnabled(normalizedSettings);
   const guestStayJson =
-    roomMapEnabled && mergedSettings.guestStay ? JSON.stringify(mergedSettings.guestStay) : '';
-  const booking = readBookingSettings(mergedSettings);
-  const accessPoints = normalizeAccessPoints(mergedSettings);
-  const bedFloorMapJson = mergedSettings.arrivalAccess?.bedFloorMap
-    ? JSON.stringify(mergedSettings.arrivalAccess.bedFloorMap)
+    roomMapEnabled && normalizedSettings.guestStay
+      ? JSON.stringify(normalizedSettings.guestStay)
+      : '';
+  const booking = readBookingSettings(normalizedSettings);
+  const accessPoints = normalizeAccessPoints(normalizedSettings);
+  const bedFloorMapJson = normalizedSettings.arrivalAccess?.bedFloorMap
+    ? JSON.stringify(normalizedSettings.arrivalAccess.bedFloorMap)
     : '';
 
   return (
@@ -167,7 +174,17 @@ export function TenantFormHiddenPayload({
         name="hubTransferJson"
         value={JSON.stringify(mergedSettings.hubTransfer ?? { enabledHubCategories: [] })}
       />
-      <input type="hidden" name="landingJson" value={serializeLandingJson(mergedSettings)} />
+      <input type="hidden" name="landingJson" value={serializeLandingJson(normalizedSettings)} />
+      <input
+        type="hidden"
+        name="stayOffersJson"
+        value={JSON.stringify(normalizedSettings.stayOffers ?? [])}
+      />
+      <input
+        type="hidden"
+        name="laundryJson"
+        value={JSON.stringify(normalizedSettings.laundry ?? { machines: [] })}
+      />
       <input type="hidden" name="hostelJson" value={serializeHostelJson(mergedSettings)} />
       <input type="hidden" name="checkInTime" value={mergedSettings.checkInTime ?? ''} />
       <input type="hidden" name="checkOutTime" value={mergedSettings.checkOutTime ?? ''} />

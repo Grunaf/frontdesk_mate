@@ -113,11 +113,25 @@ export function mergeTenantSettingsWithPrevious(
     merged.hostel = previous.hostel;
   }
 
-  if (!settings.landing?.roomTypes?.length && previous.landing?.roomTypes?.length) {
+  if (!formData.has('stayOffersJson') && previous.stayOffers?.length) {
+    merged.stayOffers = previous.stayOffers;
+  }
+
+  if (!formData.has('laundryJson') && previous.laundry?.machines?.length) {
+    merged.laundry = previous.laundry;
+  }
+
+  const previousHasLandingRooms =
+    Boolean(previous.landing?.roomCards?.length) || Boolean(previous.landing?.roomTypes?.length);
+  const incomingHasLandingRooms =
+    Boolean(settings.landing?.roomCards?.length) || Boolean(settings.landing?.roomTypes?.length);
+
+  if (!incomingHasLandingRooms && previousHasLandingRooms) {
     merged.landing = {
       ...previous.landing,
       ...settings.landing,
-      roomTypes: previous.landing.roomTypes,
+      roomCards: previous.landing?.roomCards,
+      roomTypes: previous.landing?.roomTypes,
     };
   }
 

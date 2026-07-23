@@ -5,6 +5,8 @@ import type { GuestExtraConfig } from '@/entities/guest-extra';
 import type { HouseRule } from '@/entities/house-rules';
 import type {
   GuestStayConfig,
+  LaundrySettings,
+  StayOffer,
   TenantLandingSettings,
   TenantSettings,
   TourismRegistrationDataController,
@@ -33,6 +35,8 @@ export interface TenantFormDraft {
   hostelPlaces?: HostelPlace[];
   cityPackNeedNowPlaceIds?: string[];
   landing?: TenantLandingSettings;
+  stayOffers?: StayOffer[];
+  laundry?: LaundrySettings;
   hostel?: TenantHostelSettings;
   roomMapEnabled?: boolean;
   tourismRegistrationRequired?: boolean;
@@ -95,10 +99,13 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
           landing: {
             ...base.landing,
             ...draft.landing,
+            roomCards: draft.landing.roomCards ?? base.landing?.roomCards,
             roomTypes: draft.landing.roomTypes ?? base.landing?.roomTypes,
           },
         }
       : {}),
+    ...(draft.stayOffers !== undefined ? { stayOffers: draft.stayOffers } : {}),
+    ...(draft.laundry !== undefined ? { laundry: draft.laundry } : {}),
     ...(draft.hostel !== undefined
       ? {
           hostel: {

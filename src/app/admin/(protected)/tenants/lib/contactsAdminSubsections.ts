@@ -15,6 +15,7 @@ export const CONTACTS_ADMIN_MODULE_IDS = [
   'guest-access-message',
   'phones-email',
   'stay-policy',
+  'laundry',
 ] as const;
 
 export type ContactsAdminModuleId = (typeof CONTACTS_ADMIN_MODULE_IDS)[number];
@@ -50,6 +51,11 @@ export const CONTACTS_ADMIN_MODULES: ContactsAdminModuleDefinition[] = [
     id: 'stay-policy',
     label: 'Stay policy & money',
     description: 'Check-in/out times, self check-in, tax, and currency.',
+  },
+  {
+    id: 'laundry',
+    label: 'Washers',
+    description: 'Machines and wash / spin & drain durations for Cleaning.',
   },
 ];
 
@@ -108,6 +114,11 @@ export function getContactsAdminModuleHint(
         return 'Set check-in from';
       }
       return settings.propertyTimeZone?.trim() ? 'Check-in time set' : 'Set property timezone';
+    case 'laundry': {
+      const count = settings.laundry?.machines?.length ?? 0;
+      if (count === 0) return 'No washers configured';
+      return `${count} washer${count === 1 ? '' : 's'}`;
+    }
     default:
       return undefined;
   }
@@ -135,6 +146,8 @@ export function getContactsAdminModuleStatus(
         isTenantFieldMissing('propertyTimeZone', readinessInput)
         ? 'preview'
         : 'ready';
+    case 'laundry':
+      return (settings.laundry?.machines?.length ?? 0) > 0 ? 'ready' : 'preview';
     default:
       return 'n/a';
   }

@@ -90,7 +90,7 @@ export const ADMIN_SECTIONS: AdminSectionDefinition[] = [
   {
     id: 'landing',
     label: 'Landing page',
-    description: 'Public hero image and room cards for the landing site.',
+    description: 'Public hero and room cards that reference stay offers.',
   },
   {
     id: 'booking',

@@ -1,10 +1,20 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { LandingRoomType, TenantLandingSettings, TenantSettings } from '@/entities/tenant';
+import type {
+  LandingRoomCard,
+  LandingRoomType,
+  StayOffer,
+  TenantLandingSettings,
+  TenantSettings,
+} from '@/entities/tenant';
+import {
+  listStayOffersForAdmin,
+  mergeOfferIntoLandingRoomType,
+  normalizeStayOffersOnRead,
+} from '@/entities/tenant/lib/normalizeStayOffers';
 import { needsLandingBookingEngine } from '@/entities/tenant/lib/resolveLandingBookingGap';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
-import { resolveLandingRooms } from '@/entities/tenant/lib/resolveLandingRooms';
 import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
 import type { CurrencyCode } from '@/shared/lib/currency';
 import type { AdminSectionId } from '../lib/adminSections';
@@ -14,7 +24,6 @@ import { AdminImageField } from '../ui/AdminImageField';
 import { AdminSectionAlert } from '../ui/AdminSectionAlert';
 import { LandingRoomCardPreview } from '../ui/LandingRoomCardPreview';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
-import { shouldShowEngineRoomTypeId } from '../lib/tenantAdminFieldSpecs';
 
 interface LandingFieldsProps {
   tenantSlug: string;
@@ -24,42 +33,70 @@ interface LandingFieldsProps {
   scope?: 'full' | 'launch-hero' | 'launch-rooms';
 }
 
-function emptyRoom(index: number): LandingRoomType {
+function emptyCard(offerId: string): LandingRoomCard {
   return {
-    id: `room-${index + 1}`,
-    engineRoomTypeId: '',
-    title: '',
+    offerId,
     description: '',
     imageUrl: '',
   };
 }
 
-function RoomTypeEditor({
-  room,
+function slugifyOfferId(title: string, index: number, existingIds: Set<string>): string {
+  const base =
+    title
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || `offer-${index + 1}`;
+  let candidate = base;
+  let suffix = 2;
+  while (existingIds.has(candidate)) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function RoomCardEditor({
+  card,
+  offer,
+  offers,
   index,
   onChange,
   onRemove,
-  showEngineId = true,
   showDescription = true,
   settings,
   primaryCurrency,
   tenantSlug,
 }: {
-  room: LandingRoomType;
+  card: LandingRoomCard;
+  offer: StayOffer | undefined;
+  offers: StayOffer[];
   index: number;
-  onChange: (next: LandingRoomType) => void;
+  onChange: (next: LandingRoomCard) => void;
   onRemove: () => void;
-  showEngineId?: boolean;
   showDescription?: boolean;
   settings?: TenantSettings;
   primaryCurrency: CurrencyCode;
   tenantSlug: string;
 }) {
+  const previewRoom: LandingRoomType = offer
+    ? mergeOfferIntoLandingRoomType(offer, card)
+    : {
+        id: card.offerId || `card-${index + 1}`,
+        engineRoomTypeId: '',
+        title: card.title?.trim() || '',
+        description: card.description?.trim() || '',
+        priceFromEur: card.priceFromEur,
+        imageUrl: card.imageUrl?.trim() || '',
+        requiresChatUpgrade: card.requiresChatUpgrade === true,
+      };
+
   return (
     <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Room {index + 1}
+          Card {index + 1}
         </p>
         <button
           type="button"
@@ -71,24 +108,34 @@ function RoomTypeEditor({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1.5 sm:col-span-2">
-          <span className="text-sm font-medium">Title</span>
+          <span className="text-sm font-medium">Stay offer</span>
+          <select
+            value={card.offerId}
+            onChange={(event) => onChange({ ...card, offerId: event.target.value })}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          >
+            {offers.length === 0 ? <option value="">Create an offer first</option> : null}
+            {offers.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title || item.id}
+              </option>
+            ))}
+          </select>
+          <span className="block text-xs text-muted-foreground">
+            Offers are managed in Guest app → Stay offers.
+          </span>
+        </label>
+        <label className="block space-y-1.5 sm:col-span-2">
+          <span className="text-sm font-medium">Title override</span>
           <input
-            value={room.title}
-            onChange={(event) => onChange({ ...room, title: event.target.value })}
+            value={card.title ?? ''}
+            onChange={(event) =>
+              onChange({ ...card, title: event.target.value.trim() || undefined })
+            }
+            placeholder={offer?.title || 'Uses offer title'}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
           />
         </label>
-        {showEngineId ? (
-          <label className="block space-y-1.5 sm:col-span-2">
-            <span className="text-sm font-medium">Booking engine room type ID</span>
-            <input
-              value={room.engineRoomTypeId}
-              onChange={(event) => onChange({ ...room, engineRoomTypeId: event.target.value })}
-              placeholder="DORM8"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            />
-          </label>
-        ) : null}
         {showDescription ? (
           <label className="block space-y-1.5 sm:col-span-2">
             <span className="text-sm font-medium">Description</span>
@@ -96,8 +143,8 @@ function RoomTypeEditor({
               Leave empty to show photo, title, and book button only on the landing.
             </span>
             <textarea
-              value={room.description}
-              onChange={(event) => onChange({ ...room, description: event.target.value })}
+              value={card.description ?? ''}
+              onChange={(event) => onChange({ ...card, description: event.target.value })}
               rows={2}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             />
@@ -107,10 +154,10 @@ function RoomTypeEditor({
           <AdminFieldRow>
             <AdminMoneyField
               label="Price from (per night)"
-              value={room.priceFromEur ?? ''}
+              value={card.priceFromEur ?? ''}
               onChange={(value) =>
                 onChange({
-                  ...room,
+                  ...card,
                   priceFromEur: value ? Number(value) : undefined,
                 })
               }
@@ -121,35 +168,27 @@ function RoomTypeEditor({
               label="Room photo"
               tenantSlug={tenantSlug}
               kind="misc"
-              value={room.imageUrl}
-              onChange={(imageUrl) => onChange({ ...room, imageUrl })}
+              value={card.imageUrl ?? ''}
+              onChange={(imageUrl) => onChange({ ...card, imageUrl })}
               placeholder="/images/rooms/single-dorm.jpg"
-              previewAlt={room.title || `Room ${index + 1}`}
+              previewAlt={previewRoom.title || `Room ${index + 1}`}
             />
           </AdminFieldRow>
         </div>
-        <label className="block space-y-1.5 sm:col-span-2 sm:max-w-[12rem]">
-          <span className="text-sm font-medium">Internal ID</span>
-          <input
-            value={room.id}
-            onChange={(event) => onChange({ ...room, id: event.target.value })}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          />
-        </label>
         {showDescription ? (
           <label className="flex items-center gap-2 sm:col-span-2">
             <input
               type="checkbox"
-              checked={room.requiresChatUpgrade === true}
+              checked={card.requiresChatUpgrade === true}
               onChange={(event) =>
-                onChange({ ...room, requiresChatUpgrade: event.target.checked })
+                onChange({ ...card, requiresChatUpgrade: event.target.checked })
               }
             />
             <span className="text-sm">Requires chat upgrade flow (dorm beds)</span>
           </label>
         ) : null}
       </div>
-      <LandingRoomCardPreview room={room} settings={settings} />
+      <LandingRoomCardPreview room={previewRoom} settings={settings} />
     </div>
   );
 }
@@ -166,14 +205,45 @@ export function LandingFields({
     () => mergeDraftSettings(settings ?? {}, draft),
     [settings, draft]
   );
+  const migratedSettings = useMemo(
+    () => normalizeStayOffersOnRead(mergedSettings),
+    [mergedSettings]
+  );
   const heroBgUrl = mergedSettings.heroBgUrl ?? '';
+  const offers = listStayOffersForAdmin(mergedSettings);
+  const roomCards =
+    mergedSettings.landing?.roomCards ?? migratedSettings.landing?.roomCards ?? [];
 
   const patchLanding = (patch: Partial<TenantLandingSettings>) => {
     updateDraft({
       landing: {
         ...mergedSettings.landing,
-        roomTypes: mergedSettings.landing?.roomTypes ?? [],
+        roomCards: mergedSettings.landing?.roomCards ?? [],
         ...patch,
+      },
+    });
+  };
+
+  const syncCards = (nextCards: LandingRoomCard[]) => {
+    patchLanding({ roomCards: nextCards });
+  };
+
+  const addCard = () => {
+    if (offers.length > 0) {
+      const used = new Set(roomCards.map((card) => card.offerId));
+      const nextOffer = offers.find((offer) => !used.has(offer.id)) ?? offers[0];
+      syncCards([...roomCards, emptyCard(nextOffer.id)]);
+      return;
+    }
+
+    const ids = new Set(offers.map((offer) => offer.id));
+    const id = slugifyOfferId(`offer-${offers.length + 1}`, offers.length, ids);
+    const offer: StayOffer = { id, title: '', sortOrder: offers.length };
+    updateDraft({
+      stayOffers: [...offers, offer],
+      landing: {
+        ...mergedSettings.landing,
+        roomCards: [...roomCards, emptyCard(id)],
       },
     });
   };
@@ -189,7 +259,7 @@ export function LandingFields({
       hint={
         scope === 'launch-hero'
           ? 'Background on the public landing page.'
-          : 'Required with room types to show the landing instead of «coming soon».'
+          : 'Required with room cards to show the landing instead of «coming soon».'
       }
       missing={isTenantFieldMissing('heroBgUrl', readinessInput)}
     />
@@ -199,16 +269,8 @@ export function LandingFields({
     () => resolveTenantCurrency(mergedSettings).primary,
     [mergedSettings]
   );
-  const fallbackRooms = useMemo(() => resolveLandingRooms(mergedSettings), [mergedSettings]);
-  const roomTypes =
-    mergedSettings.landing?.roomTypes ??
-    (fallbackRooms.roomTypes.length > 0 ? fallbackRooms.roomTypes : []);
-  const showEngineId = shouldShowEngineRoomTypeId(mergedSettings);
   const showBookingGap = needsLandingBookingEngine(mergedSettings);
-
-  const syncRoomTypes = (nextRooms: LandingRoomType[]) => {
-    patchLanding({ roomTypes: nextRooms });
-  };
+  const offerById = useMemo(() => new Map(offers.map((offer) => [offer.id, offer])), [offers]);
 
   if (scope === 'launch-hero') {
     return <div className="space-y-4">{heroField}</div>;
@@ -217,34 +279,30 @@ export function LandingFields({
   const roomList = (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">Room types</p>
-        <button
-          type="button"
-          className="text-xs text-primary hover:underline"
-          onClick={() => syncRoomTypes([...roomTypes, emptyRoom(roomTypes.length)])}
-        >
-          Add room type
+        <p className="text-sm font-medium">Landing room cards</p>
+        <button type="button" className="text-xs text-primary hover:underline" onClick={addCard}>
+          Add card
         </button>
       </div>
-      {roomTypes.length === 0 ? (
+      {roomCards.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          Add room cards for the public landing. Fill title, image, and internal ID at minimum.
+          Pick stay offers to show on the public landing. Create offers in Guest app → Stay offers,
+          or add a card to create one.
         </p>
       ) : null}
-      {roomTypes.map((room, index) => (
-        <RoomTypeEditor
-          key={`${room.id}-${index}`}
-          room={room}
+      {roomCards.map((card, index) => (
+        <RoomCardEditor
+          key={`${card.offerId}-${index}`}
+          card={card}
+          offer={offerById.get(card.offerId)}
+          offers={offers}
           index={index}
           settings={mergedSettings}
           primaryCurrency={primaryCurrency}
-          showEngineId={showEngineId}
           showDescription={scope === 'full'}
           tenantSlug={tenantSlug}
-          onChange={(next) =>
-            syncRoomTypes(roomTypes.map((item, i) => (i === index ? next : item)))
-          }
-          onRemove={() => syncRoomTypes(roomTypes.filter((_, i) => i !== index))}
+          onChange={(next) => syncCards(roomCards.map((item, i) => (i === index ? next : item)))}
+          onRemove={() => syncCards(roomCards.filter((_, i) => i !== index))}
         />
       ))}
     </div>
