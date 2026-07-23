@@ -6,7 +6,7 @@ import {
   type CurrencyCode,
 } from '@/shared/lib/currency';
 
-export type ReservationBookingBalanceError = 'invalid_amount';
+export type ReservationBookingBalanceError = 'invalid_amount' | 'amount_required';
 
 export type ResolvedReservationBookingBalance =
   | {
@@ -19,14 +19,23 @@ export type ResolvedReservationBookingBalance =
 export function resolveReservationBookingBalance(input: {
   settings: TenantSettings;
   bookingAmountDue?: string | number | null;
+  /** When true, empty amount is rejected (create booking). */
+  required?: boolean;
 }): ResolvedReservationBookingBalance {
   const primary = resolveTenantCurrency(input.settings).primary;
+  const required = Boolean(input.required);
 
   if (input.bookingAmountDue === undefined || input.bookingAmountDue === null) {
+    if (required) {
+      return { ok: false, error: 'amount_required' };
+    }
     return { ok: true, amountMinor: null, currency: null };
   }
 
   if (typeof input.bookingAmountDue === 'string' && !input.bookingAmountDue.trim()) {
+    if (required) {
+      return { ok: false, error: 'amount_required' };
+    }
     return { ok: true, amountMinor: null, currency: null };
   }
 
@@ -42,6 +51,8 @@ export function reservationBookingBalanceErrorMessage(
   code: ReservationBookingBalanceError
 ): string {
   switch (code) {
+    case 'amount_required':
+      return 'Enter the stay balance.';
     case 'invalid_amount':
       return 'Enter a valid stay balance amount (0 or greater).';
   }

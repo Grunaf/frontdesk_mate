@@ -74,3 +74,10 @@ export {
   PopoverTitle,
   PopoverTrigger,
 } from './popover';
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from './dropdown-menu';

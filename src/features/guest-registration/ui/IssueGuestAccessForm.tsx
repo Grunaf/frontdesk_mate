@@ -1,9 +1,6 @@
 'use client';
 
-import {
-  formatAccessPeriodSummary,
-  type GuestAccessFormMode,
-} from '../lib/guestAccessDates';
+import type { GuestAccessFormMode } from '../lib/guestAccessDates';
 import { GuestAccessDateRange } from './GuestAccessDateRange';
 import { Button, Input, Label, SegmentedChipBar } from '@/shared/ui';
 
@@ -11,6 +8,13 @@ interface BedOptionGroup {
   roomId: string;
   roomLabel: string;
   beds: Array<{ bedId: string; displayLabel: string }>;
+}
+
+const BOOKING_REFERENCE_HIDDEN_PLATFORM_IDS = new Set(['walk-in', 'direct']);
+
+function showsBookingReference(platformId: string): boolean {
+  const id = platformId.trim();
+  return id.length > 0 && !BOOKING_REFERENCE_HIDDEN_PLATFORM_IDS.has(id);
 }
 
 export interface IssueGuestAccessFormProps {
@@ -38,7 +42,6 @@ export interface IssueGuestAccessFormProps {
   reissueGuestLabel?: string;
   editIntent?: 'moveBed' | 'changeDates';
   onCancelReissue?: () => void;
-  bedsAvailabilityHint: string | null;
   error: string | null;
   isPending: boolean;
   rangeValid: boolean;
@@ -47,11 +50,6 @@ export interface IssueGuestAccessFormProps {
   isEditingReservation?: boolean;
   onSubmit: () => void;
 }
-
-const MODE_ITEMS = [
-  { id: 'walk-in', label: 'Tonight' },
-  { id: 'custom', label: 'Pick dates' },
-] as const;
 
 export function resolveIssueGuestAccessSubmitLabel(props: {
   isPending: boolean;
@@ -62,18 +60,15 @@ export function resolveIssueGuestAccessSubmitLabel(props: {
   if (isPending) {
     if (isEditingReservation) return 'Saving…';
     if (isReissue) return 'Re-issuing…';
-    return 'Issuing…';
+    return 'Creating…';
   }
   if (isEditingReservation) return 'Save reservation';
   if (isReissue) return 'Save new access';
-  return 'Issue access';
+  return 'Create booking';
 }
 
 export function IssueGuestAccessFormFields({
   layout = 'standalone',
-  mode,
-  onModeChange,
-  modeLocked,
   guestName,
   onGuestNameChange,
   bookingPlatformId,
@@ -94,15 +89,11 @@ export function IssueGuestAccessFormFields({
   reissueGuestLabel,
   editIntent = 'changeDates',
   onCancelReissue,
-  bedsAvailabilityHint,
   error,
   isEditingReservation = false,
 }: Pick<
   IssueGuestAccessFormProps,
   | 'layout'
-  | 'mode'
-  | 'onModeChange'
-  | 'modeLocked'
   | 'guestName'
   | 'onGuestNameChange'
   | 'bookingPlatformId'
@@ -123,17 +114,24 @@ export function IssueGuestAccessFormFields({
   | 'reissueGuestLabel'
   | 'editIntent'
   | 'onCancelReissue'
-  | 'bedsAvailabilityHint'
   | 'error'
   | 'isEditingReservation'
 >) {
   const inShell = layout === 'shell';
   const showEditBanner = isEditingReservation && onCancelReissue && !inShell;
+  const showBookingReference = showsBookingReference(bookingPlatformId);
+
+  const handlePlatformChange = (nextPlatformId: string) => {
+    onBookingPlatformIdChange(nextPlatformId);
+    if (!showsBookingReference(nextPlatformId) && bookingExternalId) {
+      onBookingExternalIdChange('');
+    }
+  };
 
   const fieldsGrid = (
     <div className={inShell ? 'space-y-3 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-3 lg:space-y-0' : 'space-y-3'}>
       <div className="space-y-1">
-        <Label htmlFor="guest-name">Booking name (optional)</Label>
+        <Label htmlFor="guest-name">Booking name</Label>
         <p className="text-xs text-muted-foreground">The guest will see this name in the app.</p>
         <Input
           id="guest-name"
@@ -141,45 +139,49 @@ export function IssueGuestAccessFormFields({
           onChange={(event) => onGuestNameChange(event.target.value)}
           placeholder="Alex"
           autoComplete="off"
+          required
         />
       </div>
 
       {showBookingSourceFields ? (
         <>
-          <div className="space-y-1">
-            <Label htmlFor="booking-platform">Booking platform</Label>
-            <select
-              id="booking-platform"
+          <div className="space-y-1 lg:col-span-2">
+            <Label id="booking-platform-label">Booking platform</Label>
+            <SegmentedChipBar
+              ariaLabel="Booking platform"
+              bleed={false}
+              wrap
+              className="px-0"
+              items={bookingPlatformOptions.map((option) => ({
+                id: option.id,
+                label: option.label,
+              }))}
               value={bookingPlatformId}
-              onChange={(event) => onBookingPlatformIdChange(event.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Not set</option>
-              {bookingPlatformOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="booking-external-id">Booking reference</Label>
-            <p className="text-xs text-muted-foreground">OTA confirmation number (optional).</p>
-            <Input
-              id="booking-external-id"
-              value={bookingExternalId}
-              onChange={(event) => onBookingExternalIdChange(event.target.value)}
-              placeholder="e.g. 1234567890"
-              autoComplete="off"
+              onValueChange={handlePlatformChange}
             />
           </div>
+          {showBookingReference ? (
+            <div className="space-y-1">
+              <Label htmlFor="booking-external-id">Booking reference</Label>
+              <p className="text-xs text-muted-foreground">OTA confirmation number (optional).</p>
+              <Input
+                id="booking-external-id"
+                value={bookingExternalId}
+                onChange={(event) => onBookingExternalIdChange(event.target.value)}
+                placeholder="e.g. 1234567890"
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
         </>
       ) : null}
 
       <div className="space-y-1">
         <Label htmlFor="booking-balance-due">Balance due</Label>
         <p className="text-xs text-muted-foreground">
-          Remaining stay balance (optional). Not city tax.
+          {isEditingReservation
+            ? 'Remaining stay balance (optional). Not city tax.'
+            : 'Remaining stay balance. Not city tax.'}
         </p>
         <Input
           id="booking-balance-due"
@@ -188,26 +190,17 @@ export function IssueGuestAccessFormFields({
           placeholder={`e.g. 24.00 ${bookingBalanceCurrencySymbol}`.trim()}
           inputMode="decimal"
           autoComplete="off"
+          required={!isEditingReservation}
         />
       </div>
 
-      <div className="space-y-1">
-        <Label id="access-dates-label">Access dates</Label>
-        {mode === 'walk-in' ? (
-          <p
-            className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground"
-            aria-labelledby="access-dates-label"
-          >
-            {formatAccessPeriodSummary(checkInDate, checkOutDate)}
-          </p>
-        ) : (
-          <GuestAccessDateRange
-            compact
-            checkInDate={checkInDate}
-            checkOutDate={checkOutDate}
-            onChange={onDatesChange}
-          />
-        )}
+      <div className="space-y-1 lg:col-span-2">
+        <GuestAccessDateRange
+          compact
+          checkInDate={checkInDate}
+          checkOutDate={checkOutDate}
+          onChange={onDatesChange}
+        />
       </div>
 
       <div className="space-y-1">
@@ -251,21 +244,7 @@ export function IssueGuestAccessFormFields({
         </div>
       ) : null}
 
-      <SegmentedChipBar
-        ariaLabel="Access dates detail"
-        items={MODE_ITEMS.map((item) => ({
-          ...item,
-          disabled: modeLocked,
-        }))}
-        value={mode}
-        onValueChange={(id) => onModeChange(id as GuestAccessFormMode)}
-      />
-
       {fieldsGrid}
-
-      {bedsAvailabilityHint ? (
-        <p className="text-xs text-muted-foreground">{bedsAvailabilityHint}</p>
-      ) : null}
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
@@ -281,7 +260,6 @@ export function IssueGuestAccessForm(props: IssueGuestAccessFormProps) {
     isReissue,
     isEditingReservation = false,
     onSubmit,
-    mode,
     ...fieldsProps
   } = props;
 
@@ -292,20 +270,19 @@ export function IssueGuestAccessForm(props: IssueGuestAccessFormProps) {
   });
 
   if (layout === 'shell') {
-    return <IssueGuestAccessFormFields layout="shell" mode={mode} {...fieldsProps} />;
+    return <IssueGuestAccessFormFields layout="shell" {...fieldsProps} />;
   }
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold" title="App access only — not your booking system">
-          Issue guest access
+        <h2 className="text-sm font-semibold" title="Creates a booking and guest app access">
+          New booking
         </h2>
       </div>
 
       <IssueGuestAccessFormFields
         layout="standalone"
-        mode={mode}
         isEditingReservation={isEditingReservation}
         {...fieldsProps}
       />
@@ -314,7 +291,7 @@ export function IssueGuestAccessForm(props: IssueGuestAccessFormProps) {
         type="button"
         className="w-full"
         onClick={onSubmit}
-        disabled={isPending || !canSubmit || (mode === 'custom' && !rangeValid)}
+        disabled={isPending || !canSubmit || !rangeValid}
       >
         {submitLabel}
       </Button>

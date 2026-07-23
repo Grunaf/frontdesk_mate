@@ -43,15 +43,22 @@ export interface ReceptionStayDetailShellProps {
   header: ReactNode;
   body: ReactNode;
   footer: ReactNode;
+  /**
+   * Sticky region above the scrollable body (e.g. stay-detail tabs).
+   * Does not scroll with {@link body}.
+   */
+  bodyTop?: ReactNode;
   /** Defaults to {@link RECEPTION_STAY_DETAIL_TITLE_ID}. */
   titleId?: string;
   /**
    * When set, stay-detail chrome shows Edit (pencil).
-   * Mobile: close on the left, pencil on the right.
-   * Desktop: pencil left of close (close stays top-right).
+   * Mobile: close on the left; pencil (+ optional overflow) on the right.
+   * Desktop: pencil left of overflow/close (close stays top-right).
    */
   onEdit?: () => void;
   editDisabled?: boolean;
+  /** Rendered to the right of the pencil (e.g. vertical ⋮ overflow menu). */
+  headerOverflow?: ReactNode;
 }
 
 function useCloseOnEscape(open: boolean, onClose: () => void) {
@@ -68,6 +75,12 @@ function useCloseOnEscape(open: boolean, onClose: () => void) {
   }, [open, onClose]);
 }
 
+function headerActionsPaddingClass(hasEdit: boolean, hasOverflow: boolean): string {
+  if (hasEdit && hasOverflow) return 'pr-32';
+  if (hasEdit || hasOverflow) return 'pr-24';
+  return 'pr-14';
+}
+
 function DesktopStayDetailDialog({
   open,
   onClose,
@@ -75,14 +88,17 @@ function DesktopStayDetailDialog({
   accessibleTitleTooltip,
   header,
   body,
+  bodyTop,
   footer,
   titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
   onEdit,
   editDisabled = false,
+  headerOverflow,
 }: ReceptionStayDetailShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const labelledBy = titleId;
   const hasEdit = Boolean(onEdit);
+  const hasOverflow = Boolean(headerOverflow);
 
   useCloseOnEscape(open, onClose);
 
@@ -110,11 +126,11 @@ function DesktopStayDetailDialog({
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className="flex max-h-[min(90vh,800px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border bg-background shadow-lg outline-none"
+        className="flex h-[min(90vh,800px)] max-h-[min(90vh,800px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border bg-background shadow-lg outline-none"
         onClick={(event) => event.stopPropagation()}
       >
         <div
-          className={`relative shrink-0 border-b border-border/60 px-6 py-4 ${hasEdit ? 'pr-24' : 'pr-14'}`}
+          className={`relative shrink-0 border-b border-border/60 px-6 py-4 ${headerActionsPaddingClass(hasEdit, hasOverflow)}`}
         >
           <div className="absolute top-3 right-3 flex items-center gap-1">
             {onEdit ? (
@@ -129,6 +145,7 @@ function DesktopStayDetailDialog({
                 <span className="sr-only">Edit</span>
               </Button>
             ) : null}
+            {headerOverflow}
             <Button type="button" variant="ghost" size="icon" onClick={onClose}>
               <X />
               <span className="sr-only">Close</span>
@@ -146,9 +163,15 @@ function DesktopStayDetailDialog({
           </div>
         </div>
 
+        {bodyTop ? (
+          <div className="shrink-0 border-b border-border/60 px-6 pt-3 pb-2">{bodyTop}</div>
+        ) : null}
+
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">{body}</div>
 
-        <div className="shrink-0 border-t border-border/60 px-6 py-4">{footer}</div>
+        {footer ? (
+          <div className="shrink-0 border-t border-border/60 px-6 py-4">{footer}</div>
+        ) : null}
       </div>
     </div>
   );
@@ -161,13 +184,16 @@ function MobileStayDetailSheet({
   accessibleTitleTooltip,
   header,
   body,
+  bodyTop,
   footer,
   titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
   onEdit,
   editDisabled = false,
+  headerOverflow,
 }: ReceptionStayDetailShellProps) {
   const labelledBy = titleId;
-  const hasEditChrome = Boolean(onEdit);
+  const hasEditChrome = Boolean(onEdit) || Boolean(headerOverflow);
+  const hasOverflow = Boolean(headerOverflow);
 
   return (
     <BottomSheet
@@ -191,22 +217,30 @@ function MobileStayDetailSheet({
                 <span className="sr-only">Close</span>
               </Button>
             </BottomSheetClose>
-            <Button
-              type="button"
-              variant="ghost"
-              className="absolute top-3 right-3 z-10"
-              size="icon"
-              disabled={editDisabled}
-              onClick={onEdit}
-            >
-              <Pencil />
-              <span className="sr-only">Edit</span>
-            </Button>
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
+              {onEdit ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={editDisabled}
+                  onClick={onEdit}
+                >
+                  <Pencil />
+                  <span className="sr-only">Edit</span>
+                </Button>
+              ) : null}
+              {headerOverflow}
+            </div>
           </>
         ) : null}
         <BottomSheetHeader
           className={
-            hasEditChrome ? 'space-y-1 px-14 pb-3 pt-10' : 'space-y-1 px-6 pb-3'
+            hasEditChrome
+              ? hasOverflow && onEdit
+                ? 'space-y-1 px-14 pb-3 pt-10 pr-28'
+                : 'space-y-1 px-14 pb-3 pt-10'
+              : 'space-y-1 px-6 pb-3'
           }
         >
           <BottomSheetTitle
@@ -218,10 +252,15 @@ function MobileStayDetailSheet({
           </BottomSheetTitle>
           {header}
         </BottomSheetHeader>
+        {bodyTop ? (
+          <div className="shrink-0 border-b border-border/60 px-6 pt-1 pb-2">{bodyTop}</div>
+        ) : null}
         <BottomSheetBody className="space-y-4 pb-4">{body}</BottomSheetBody>
-        <BottomSheetFooter className="border-t border-border/60 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {footer}
-        </BottomSheetFooter>
+        {footer ? (
+          <BottomSheetFooter className="border-t border-border/60 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {footer}
+          </BottomSheetFooter>
+        ) : null}
       </BottomSheetContent>
     </BottomSheet>
   );
@@ -234,10 +273,12 @@ export function ReceptionStayDetailShell({
   accessibleTitleTooltip,
   header,
   body,
+  bodyTop,
   footer,
   titleId,
   onEdit,
   editDisabled,
+  headerOverflow,
 }: ReceptionStayDetailShellProps) {
   const isBelowLg = useIsBelowLg();
 
@@ -254,10 +295,12 @@ export function ReceptionStayDetailShell({
         accessibleTitleTooltip={accessibleTitleTooltip}
         header={header}
         body={body}
+        bodyTop={bodyTop}
         footer={footer}
         titleId={titleId}
         onEdit={onEdit}
         editDisabled={editDisabled}
+        headerOverflow={headerOverflow}
       />
     );
   }
@@ -270,10 +313,12 @@ export function ReceptionStayDetailShell({
       accessibleTitleTooltip={accessibleTitleTooltip}
       header={header}
       body={body}
+      bodyTop={bodyTop}
       footer={footer}
       titleId={titleId}
       onEdit={onEdit}
       editDisabled={editDisabled}
+      headerOverflow={headerOverflow}
     />
   );
 }

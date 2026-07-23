@@ -86,6 +86,7 @@ export {
   ReceptionTourismGuestIdentityForm,
   type ReceptionTourismGuestIdentityValues,
 } from './ui/ReceptionTourismGuestIdentityForm';
+export { ReceptionAddTourismGuestSheet } from './ui/ReceptionAddTourismGuestSheet';
 
 export {
   getTourismRegistrationProfile,

@@ -14,6 +14,12 @@ interface ReceptionHubViewProps {
   onViewStay: (stayId: string) => void;
   onOpenFreeBeds?: () => void;
   operationalDayUpdatedNotice?: boolean;
+  /** When set, Payment due becomes a compact callout into Cash. */
+  paymentDueCallout?: {
+    unpaidCount: number;
+    stillDueLabel: string;
+    onOpenCash: () => void;
+  } | null;
 }
 
 function formatOperationalDayCaption(snapshot: ReceptionHubSnapshot): string {
@@ -186,6 +192,7 @@ export function ReceptionHubView({
   onViewStay,
   onOpenFreeBeds,
   operationalDayUpdatedNotice = false,
+  paymentDueCallout = null,
 }: ReceptionHubViewProps) {
   return (
     <div className="space-y-5">
@@ -233,14 +240,25 @@ export function ReceptionHubView({
         </HubSection>
       ) : null}
 
-      {snapshot.unpaid.length > 0 ? (
-        <HubSection title="Payment due">
-          <HubArrivalList
-            stays={snapshot.unpaid}
-            resolveBedLabel={resolveBedLabel}
-            onViewStay={onViewStay}
-          />
-        </HubSection>
+      {paymentDueCallout && paymentDueCallout.unpaidCount > 0 ? (
+        <button
+          type="button"
+          onClick={paymentDueCallout.onOpenCash}
+          className={cn(
+            'flex w-full items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-left',
+            'text-amber-950 hover:bg-amber-100/80'
+          )}
+        >
+          <span className="min-w-0">
+            <span className="block text-xs font-medium uppercase tracking-wide text-amber-900/80">
+              Payment due
+            </span>
+            <span className="mt-0.5 block text-sm font-medium">
+              {paymentDueCallout.unpaidCount} unpaid · {paymentDueCallout.stillDueLabel} still
+            </span>
+          </span>
+          <span className="shrink-0 text-xs font-medium text-amber-900">Open cash</span>
+        </button>
       ) : null}
 
       {snapshot.keyNotIssued.length > 0 ? (

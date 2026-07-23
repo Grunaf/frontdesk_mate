@@ -22,7 +22,12 @@ import {
   reservationBookingBalanceErrorMessage,
   resolveReservationBookingBalance,
 } from '@/entities/guest-stay/lib/validateReservationBookingBalance';
-import { formatMinorAsDecimalInput, getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
+import {
+  formatMinorAsDecimalInput,
+  formatMoneyFromMinor,
+  getCurrencyDefinition,
+  isCurrencyCode,
+} from '@/shared/lib/currency';
 import type { HousekeepingBedStatus, HousekeepingRoomStatus } from '@/entities/housekeeping';
 import {
   createGuestStayAction,
@@ -39,13 +44,13 @@ import {
 import {
   addNights,
   defaultWalkInDates,
-  formatDisplayDate,
   type GuestAccessFormMode,
   type IssuedAccessFilter,
   isValidAccessRange,
 } from '../lib/guestAccessDates';
 import { resolveBedInventory, flattenBedInventory } from '../lib/resolveBedInventory';
 import { resolveReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
+import { resolveReceptionCashSnapshot } from '../lib/resolveReceptionCashSnapshot';
 import type { PlanBedFilter } from '../lib/filterPlanRoomGroupsByFreeTonight';
 import { resolveGuestAccessPeriod } from '../lib/resolveGuestAccessPeriod';
 import { BedAccessCalendar } from './BedAccessCalendar';
@@ -53,6 +58,7 @@ import { ReceptionIssueAccessOverlay } from './ReceptionIssueAccessOverlay';
 import { ReceptionIssueAccessFab } from './ReceptionIssueAccessFab';
 import { RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL } from './receptionIssueAccessCta';
 import { ReceptionHubView } from './ReceptionHubView';
+import { ReceptionCashView } from './ReceptionCashView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReceptionTransfersTab } from './ReceptionTransfersTab';
@@ -89,7 +95,7 @@ interface EditReservationDraft {
   intent: 'changeDates' | 'moveBed';
 }
 
-type DeskTab = 'desk' | 'plan' | 'access' | 'issues' | 'transfers' | 'archive';
+type DeskTab = 'desk' | 'plan' | 'access' | 'cash' | 'issues' | 'transfers' | 'archive';
 
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
@@ -126,6 +132,7 @@ export function ReceptionCheckInPanel({
       tab === 'desk' ||
       tab === 'plan' ||
       tab === 'access' ||
+      tab === 'cash' ||
       tab === 'issues' ||
       tab === 'transfers' ||
       tab === 'archive'
@@ -176,7 +183,7 @@ export function ReceptionCheckInPanel({
   const [deskTab, setDeskTab] = useState<DeskTab>('desk');
   const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
   const [planFocusToken, setPlanFocusToken] = useState(0);
-  const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
+  const [mode, setMode] = useState<GuestAccessFormMode>('custom');
   const [guestName, setGuestName] = useState('');
   const [bookingPlatformId, setBookingPlatformId] = useState('');
   const [bookingExternalId, setBookingExternalId] = useState('');
@@ -266,6 +273,11 @@ export function ReceptionCheckInPanel({
 
   const hubSnapshot = useMemo(
     () => resolveReceptionHubSnapshot(tenantSettings, planStays, new Date()),
+    [tenantSettings, planStays, rolloverEpoch]
+  );
+
+  const cashSnapshot = useMemo(
+    () => resolveReceptionCashSnapshot(tenantSettings, planStays, new Date()),
     [tenantSettings, planStays, rolloverEpoch]
   );
 
@@ -362,7 +374,7 @@ export function ReceptionCheckInPanel({
   const resetCreateIssueForm = useCallback(() => {
     setError(null);
     const nextDates = defaultWalkInDates();
-    setMode('walk-in');
+    setMode('custom');
     setCheckInDate(nextDates.checkInDate);
     setCheckOutDate(nextDates.checkOutDate);
     setGuestName('');
@@ -463,6 +475,11 @@ export function ReceptionCheckInPanel({
   const handleSubmit = () => {
     setError(null);
 
+    if (!guestName.trim()) {
+      setError('Enter a booking name.');
+      return;
+    }
+
     if (!rangeValid) {
       setError('Valid until must be on or after valid from.');
       return;
@@ -486,6 +503,7 @@ export function ReceptionCheckInPanel({
     const balanceValidation = resolveReservationBookingBalance({
       settings: tenantSettings,
       bookingAmountDue,
+      required: !editDraft,
     });
     if (!balanceValidation.ok) {
       setError(reservationBookingBalanceErrorMessage(balanceValidation.error));
@@ -504,7 +522,7 @@ export function ReceptionCheckInPanel({
             tenantSlug,
             stayId: editDraft.stayId,
             bedId,
-            guestName: guestName.trim() || undefined,
+            guestName: guestName.trim(),
             checkInDate,
             checkOutDate,
             bookingPlatformId: bookingPlatformId || undefined,
@@ -529,7 +547,7 @@ export function ReceptionCheckInPanel({
         const result = await createGuestStayAction({
           tenantSlug,
           bedId,
-          guestName: guestName.trim() || undefined,
+          guestName: guestName.trim(),
           checkInDate,
           checkOutDate,
           bookingPlatformId: bookingPlatformId || undefined,
@@ -618,12 +636,6 @@ export function ReceptionCheckInPanel({
     setBedId(nextBedId);
     setIssueOverlayOpen(true);
   };
-
-  const bedsAvailabilityHint = rangeValid
-    ? availableBedIds.length === 0
-      ? `No beds for ${formatDisplayDate(checkInDate)} – ${formatDisplayDate(checkOutDate)}`
-      : `${availableBedIds.length} bed${availableBedIds.length === 1 ? '' : 's'} available for ${formatDisplayDate(checkInDate)} – ${formatDisplayDate(checkOutDate)}`
-    : null;
 
   if (bedOptions.length === 0) {
     return (
@@ -755,11 +767,21 @@ export function ReceptionCheckInPanel({
         reissueGuestLabel={editDraft?.guestName}
         editIntent={editDraft?.intent}
         onCancelReissue={editDraft ? clearEditDraft : undefined}
-        bedsAvailabilityHint={bedsAvailabilityHint}
         error={error}
         isPending={isPending}
         rangeValid={rangeValid}
-        canSubmit={rangeValid && availableBedIds.length > 0 && Boolean(bedId)}
+        canSubmit={
+          rangeValid &&
+          availableBedIds.length > 0 &&
+          Boolean(bedId) &&
+          Boolean(guestName.trim()) &&
+          (Boolean(editDraft) ||
+            resolveReservationBookingBalance({
+              settings: tenantSettings,
+              bookingAmountDue,
+              required: true,
+            }).ok)
+        }
         isReissue={false}
         isEditingReservation={Boolean(editDraft)}
         onSubmit={handleSubmit}
@@ -771,6 +793,7 @@ export function ReceptionCheckInPanel({
               <TabsTrigger value="desk">Desk</TabsTrigger>
               <TabsTrigger value="plan">Plan</TabsTrigger>
               <TabsTrigger value="access">Access</TabsTrigger>
+              <TabsTrigger value="cash">Cash</TabsTrigger>
               <TabsTrigger value="issues">
                 Issues{openIssues.length > 0 ? ` (${openIssues.length})` : ''}
               </TabsTrigger>
@@ -787,6 +810,19 @@ export function ReceptionCheckInPanel({
                 onViewStay={openStayDetail}
                 onOpenFreeBeds={openPlanFreeBeds}
                 operationalDayUpdatedNotice={operationalDayUpdatedNotice}
+                paymentDueCallout={
+                  cashSnapshot.unpaidCount > 0
+                    ? {
+                        unpaidCount: cashSnapshot.unpaidCount,
+                        stillDueLabel: formatMoneyFromMinor(
+                          cashSnapshot.stillDueMinor,
+                          cashSnapshot.currency,
+                          'en'
+                        ),
+                        onOpenCash: () => setDeskTab('cash'),
+                      }
+                    : null
+                }
               />
             </TabsContent>
 
@@ -820,6 +856,14 @@ export function ReceptionCheckInPanel({
                 revokeError={revokeError}
                 resolveBedLabel={resolveBedLabel}
                 tenantSettings={tenantSettings}
+              />
+            </TabsContent>
+
+            <TabsContent value="cash">
+              <ReceptionCashView
+                snapshot={cashSnapshot}
+                resolveBedLabel={resolveBedLabel}
+                onViewStay={openStayDetail}
               />
             </TabsContent>
 

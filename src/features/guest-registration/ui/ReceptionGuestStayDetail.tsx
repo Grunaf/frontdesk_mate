@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
-import { isTourismRegistrationComplete } from '@/entities/guest-tourism-registration';
 import type { GuestTourismGuest, GuestTourismRegistrationSummary } from '@/entities/guest-tourism-registration';
 import type { TenantSettings } from '@/entities/tenant';
 import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
@@ -14,6 +13,7 @@ import {
   getTourismDocumentSignedUrlAction,
   loadTourismRegistrationForReceptionAction,
   ReceptionTourismGuestIdentityForm,
+  ReceptionAddTourismGuestSheet,
   setPassportCheckedAction,
   setTourismExportedAction,
   updateTourismGuestIdentityForReceptionAction,
@@ -30,54 +30,53 @@ import {
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
 import { resolveStayCancelCheckoutAction } from '../lib/resolveStayCancelCheckoutAction';
+import {
+  resolveAccessTabBadge,
+  resolveTourismStatusBadge,
+  resolveTourismTabBadge,
+  tourismStatusBadgeLabel,
+  type StayDetailTabBadgeTone,
+  type StayDetailTabId,
+  type TourismStatusBadge,
+} from '../lib/resolveStayDetailTabBadge';
 import { MagicLinkCard } from './MagicLinkCard';
 import { ReceptionArrivalDatesBlock } from './ReceptionArrivalDatesBlock';
 import { ReceptionStayDetailShell, RECEPTION_STAY_DETAIL_TITLE_ID } from './ReceptionStayDetailShell';
-import { Button } from '@/shared/ui';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/ui';
+import { cn } from '@/shared/lib/utils';
+import { EllipsisVertical } from 'lucide-react';
 import { setGuestReservationBookingPaidAction } from '../actions/receptionActions';
 
 export { RECEPTION_STAY_DETAIL_TITLE_ID };
 
-type TourismStatusBadge = 'not_started' | 'in_progress' | 'complete' | 'documents_purged';
-
-function isTourismDocumentsPurged(registration: GuestTourismRegistrationSummary | null): boolean {
-  if (!registration) return false;
-  return (
-    registration.tourism_registration_completed_at != null && registration.guests.length === 0
-  );
-}
-
-function resolveTourismStatusBadge(
-  registration: GuestTourismRegistrationSummary | null
-): TourismStatusBadge {
-  if (isTourismDocumentsPurged(registration)) {
-    return 'documents_purged';
-  }
-  if (!registration || registration.guests.length === 0) {
-    return 'not_started';
-  }
-  if (isTourismRegistrationComplete(registration)) {
-    return 'complete';
-  }
-  return 'in_progress';
-}
-
-function tourismStatusBadgeLabel(status: TourismStatusBadge): string {
-  switch (status) {
-    case 'not_started':
-      return 'Not started';
-    case 'in_progress':
-      return 'In progress';
-    case 'complete':
-      return 'Complete';
-    case 'documents_purged':
-      return 'Documents purged';
-  }
-}
-
 function buildTourismWhatsappHref(e164: string): string {
   const digits = e164.replace(/\D/g, '');
   return `https://wa.me/${digits}`;
+}
+
+function StayDetailTabToneDot({ tone }: { tone: StayDetailTabBadgeTone }) {
+  if (tone === 'none') return null;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'size-1.5 shrink-0 rounded-full',
+        tone === 'amber' && 'bg-amber-500',
+        tone === 'emerald' && 'bg-emerald-500',
+        tone === 'muted' && 'bg-muted-foreground/50'
+      )}
+    />
+  );
 }
 
 function StayAdmitToCheckInBlock({
@@ -182,21 +181,39 @@ function StayAdmitToCheckInBlock({
   );
 }
 
+function useIsBelowLg(): boolean {
+  const [isBelowLg, setIsBelowLg] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)');
+    const update = () => setIsBelowLg(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return isBelowLg;
+}
+
 function StayTourismRegistrationBlock({
   stay,
   tenantSlug,
   onTourismExportedAtChange,
+  onTourismStatusChange,
 }: {
   stay: GuestStayRecordWithLink;
   tenantSlug: string;
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
+  onTourismStatusChange?: (status: TourismStatusBadge) => void;
 }) {
+  const isBelowLg = useIsBelowLg();
   const [registration, setRegistration] = useState<GuestTourismRegistrationSummary | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isLoading, startLoad] = useTransition();
   const [isPending, startAction] = useTransition();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [addGuestSheetOpen, setAddGuestSheetOpen] = useState(false);
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
 
   const exportedAt = registration?.tourism_exported_at ?? stay.tourism_exported_at ?? null;
@@ -225,6 +242,11 @@ function StayTourismRegistrationBlock({
   }, [stay.id, tenantSlug]);
 
   const status = resolveTourismStatusBadge(registration);
+
+  useEffect(() => {
+    onTourismStatusChange?.(status);
+  }, [status, onTourismStatusChange]);
+
   const showWhatsapp =
     registration?.tourism_registration_completed_at != null && registration.tourism_contact_whatsapp;
 
@@ -391,6 +413,7 @@ function StayTourismRegistrationBlock({
         };
       });
       setShowAddForm(false);
+      setAddGuestSheetOpen(false);
     });
   };
 
@@ -547,6 +570,7 @@ function StayTourismRegistrationBlock({
                             disabled={isPending}
                             onClick={() => {
                               setShowAddForm(false);
+                              setAddGuestSheetOpen(false);
                               setEditingGuestId(guest.id);
                             }}
                           >
@@ -571,7 +595,7 @@ function StayTourismRegistrationBlock({
             </p>
           ) : null}
 
-          {showAddForm && !registrationComplete ? (
+          {!isBelowLg && showAddForm && !registrationComplete ? (
             <ReceptionTourismGuestIdentityForm
               checkInDate={checkInDate}
               submitLabel="Add guest"
@@ -584,7 +608,7 @@ function StayTourismRegistrationBlock({
           ) : null}
 
           <div className="flex flex-wrap gap-1.5">
-            {!registrationComplete && !showAddForm ? (
+            {!registrationComplete && !(isBelowLg ? addGuestSheetOpen : showAddForm) ? (
               <Button
                 type="button"
                 size="sm"
@@ -593,7 +617,11 @@ function StayTourismRegistrationBlock({
                 disabled={isPending || isLoading}
                 onClick={() => {
                   setEditingGuestId(null);
-                  setShowAddForm(true);
+                  if (isBelowLg) {
+                    setAddGuestSheetOpen(true);
+                  } else {
+                    setShowAddForm(true);
+                  }
                 }}
               >
                 Add guest
@@ -624,6 +652,15 @@ function StayTourismRegistrationBlock({
         />
         <span>Submitted to tourism organization</span>
       </label>
+
+      <ReceptionAddTourismGuestSheet
+        open={addGuestSheetOpen}
+        onOpenChange={setAddGuestSheetOpen}
+        checkInDate={checkInDate}
+        isPending={isPending}
+        error={addGuestSheetOpen ? actionError : null}
+        onSubmit={handleAddGuest}
+      />
     </div>
   );
 }
@@ -784,16 +821,11 @@ export interface ReceptionGuestStayDetailProps {
 function ReceptionGuestStayDetailActions({
   stay,
   isPending,
-  onReissueAccess,
   onCancelOrCheckout,
   operationalDate,
 }: Pick<
   ReceptionGuestStayDetailProps,
-  | 'stay'
-  | 'isPending'
-  | 'onReissueAccess'
-  | 'onCancelOrCheckout'
-  | 'operationalDate'
+  'stay' | 'isPending' | 'onCancelOrCheckout' | 'operationalDate'
 >) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -804,35 +836,66 @@ function ReceptionGuestStayDetailActions({
     is_archived: stay.is_archived,
   });
 
+  if (endAction !== 'checkout') {
+    return null;
+  }
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 lg:flex-row">
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          className="w-full lg:flex-1"
-          disabled={isPending}
-          onClick={() => onReissueAccess(stay)}
-        >
-          Reissue access
-        </Button>
-      </div>
-      {endAction ? (
-        <div className="flex flex-col gap-2 border-t border-border/60 pt-3 lg:flex-row">
-          <Button
-            type="button"
-            variant="destructive"
-            size="default"
-            className="w-full"
-            disabled={isPending}
-            onClick={() => onCancelOrCheckout(stay.id, endAction)}
-          >
-            {endAction === 'checkout' ? 'Check out' : 'Cancel booking'}
-          </Button>
-        </div>
-      ) : null}
+    <div className="flex flex-col gap-2 lg:flex-row">
+      <Button
+        type="button"
+        variant="destructive"
+        size="default"
+        className="w-full"
+        disabled={isPending}
+        onClick={() => onCancelOrCheckout(stay.id, 'checkout')}
+      >
+        Check out
+      </Button>
     </div>
+  );
+}
+
+function ReceptionGuestStayDetailOverflowMenu({
+  stay,
+  isPending,
+  onCancelOrCheckout,
+  operationalDate,
+}: Pick<
+  ReceptionGuestStayDetailProps,
+  'stay' | 'isPending' | 'onCancelOrCheckout' | 'operationalDate'
+>) {
+  const endAction = resolveStayCancelCheckoutAction({
+    passport_checked_at: stay.passport_checked_at,
+    desk_checked_in_at: stay.desk_checked_in_at,
+    check_out_date: stay.check_out_date,
+    check_out_at: stay.check_out_at,
+    operationalDate,
+    is_archived: stay.is_archived,
+  });
+
+  if (endAction !== 'cancel') {
+    return null;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="ghost" size="icon" disabled={isPending}>
+          <EllipsisVertical />
+          <span className="sr-only">More actions</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          variant="destructive"
+          disabled={isPending}
+          onSelect={() => onCancelOrCheckout(stay.id, 'cancel')}
+        >
+          Cancel booking
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -857,6 +920,38 @@ export function ReceptionGuestStayDetail({
   tenantSettings,
   operationalDate,
 }: ReceptionGuestStayDetailProps) {
+  const [activeTab, setActiveTab] = useState<StayDetailTabId>('access');
+  const [tourismStatus, setTourismStatus] = useState<TourismStatusBadge | null>(null);
+  const showTourismTab = tourismRegistrationRequired && Boolean(tenantSlug);
+
+  useEffect(() => {
+    setActiveTab('access');
+    setTourismStatus(showTourismTab ? 'not_started' : null);
+  }, [stay.id, showTourismTab]);
+
+  useEffect(() => {
+    if (!showTourismTab || !tenantSlug) {
+      return;
+    }
+
+    let cancelled = false;
+    void loadTourismRegistrationForReceptionAction({
+      tenantSlug,
+      stayId: stay.id,
+    }).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setTourismStatus(resolveTourismStatusBadge(result.registration));
+        return;
+      }
+      setTourismStatus('not_started');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [stay.id, tenantSlug, showTourismTab]);
+
   const status = resolveGuestAccessStatus(
     stay,
     new Date(),
@@ -873,6 +968,21 @@ export function ReceptionGuestStayDetail({
     stay.booking_external_id
   );
   const admittedAt = stay.passport_checked_at ?? stay.desk_checked_in_at;
+  const endAction = resolveStayCancelCheckoutAction({
+    passport_checked_at: stay.passport_checked_at,
+    desk_checked_in_at: stay.desk_checked_in_at,
+    check_out_date: stay.check_out_date,
+    check_out_at: stay.check_out_at,
+    operationalDate,
+    is_archived: stay.is_archived,
+  });
+  const accessTabTone = resolveAccessTabBadge({
+    hasMagicLink: Boolean(stay.magicLinkUrl),
+    hasPinInSession: Boolean(stayPins[stay.id]),
+  });
+  const tourismTabTone = resolveTourismTabBadge(
+    showTourismTab ? (tourismStatus ?? 'not_started') : null
+  );
 
   const header = (
     <header className="space-y-1">
@@ -900,70 +1010,122 @@ export function ReceptionGuestStayDetail({
     </header>
   );
 
-  const body = (
-    <div className="space-y-4">
-      {!stay.magicLinkUrl ? (
-        <p className="text-xs text-muted-foreground">Link unavailable — re-issue access.</p>
-      ) : (
-        <MagicLinkCard
-          magicLinkUrl={stay.magicLinkUrl}
-          bedId={stay.bed_id}
-          bedLabel={bedLabel}
-          guestName={stay.guest_name ?? undefined}
-          guestPin={stayPins[stay.id]}
-          hostelName={hostelName}
-          guestAccessMessageTemplate={guestAccessMessageTemplate}
-          guestAccessPinMissingText={guestAccessPinMissingText}
-        />
-      )}
-
-      {tenantSlug ? (
-        <StayAdmitToCheckInBlock
-          stay={stay}
-          tenantSlug={tenantSlug}
-          tourismRegistrationRequired={tourismRegistrationRequired}
-          onStayUpdated={onPassportCheckedAtChange}
-        />
-      ) : null}
-
-      {tenantSlug ? (
-        <StayBookingBalanceBlock
-          stay={stay}
-          tenantSlug={tenantSlug}
-          onStayUpdated={onStayBookingBalanceChange}
-        />
-      ) : null}
-
-      {tourismRegistrationRequired && tenantSlug ? (
-        <StayTourismRegistrationBlock
-          stay={stay}
-          tenantSlug={tenantSlug}
-          onTourismExportedAtChange={onTourismExportedAtChange}
-        />
-      ) : null}
-    </div>
-  );
-
   const footer = (
     <ReceptionGuestStayDetailActions
       stay={stay}
       isPending={isPending}
-      onReissueAccess={onReissueAccess}
       onCancelOrCheckout={onCancelOrCheckout}
       operationalDate={operationalDate}
     />
   );
 
+  const tabsList = (
+    <TabsList variant="line" className="w-full justify-start">
+      <TabsTrigger value="access" className="inline-flex items-center gap-1.5">
+        Access
+        <StayDetailTabToneDot tone={accessTabTone} />
+      </TabsTrigger>
+      <TabsTrigger value="stay">Stay</TabsTrigger>
+      {showTourismTab ? (
+        <TabsTrigger value="tourism" className="inline-flex items-center gap-1.5">
+          Tourism
+          <StayDetailTabToneDot tone={tourismTabTone} />
+        </TabsTrigger>
+      ) : null}
+    </TabsList>
+  );
+
+  const tabsBody = (
+    <>
+      <TabsContent value="access" className="mt-0 space-y-4 outline-none">
+        {!stay.magicLinkUrl ? (
+          <p className="text-xs text-muted-foreground">Link unavailable — re-issue access.</p>
+        ) : (
+          <MagicLinkCard
+            magicLinkUrl={stay.magicLinkUrl}
+            bedId={stay.bed_id}
+            bedLabel={bedLabel}
+            guestName={stay.guest_name ?? undefined}
+            guestPin={stayPins[stay.id]}
+            hostelName={hostelName}
+            guestAccessMessageTemplate={guestAccessMessageTemplate}
+            guestAccessPinMissingText={guestAccessPinMissingText}
+          />
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="w-full"
+          disabled={isPending}
+          onClick={() => onReissueAccess(stay)}
+        >
+          Reissue access
+        </Button>
+      </TabsContent>
+
+      <TabsContent value="stay" className="mt-0 space-y-4 outline-none">
+        {tenantSlug ? (
+          <StayAdmitToCheckInBlock
+            stay={stay}
+            tenantSlug={tenantSlug}
+            tourismRegistrationRequired={tourismRegistrationRequired}
+            onStayUpdated={onPassportCheckedAtChange}
+          />
+        ) : (
+          <p className="text-xs text-muted-foreground">Stay actions unavailable.</p>
+        )}
+        {tenantSlug ? (
+          <StayBookingBalanceBlock
+            stay={stay}
+            tenantSlug={tenantSlug}
+            onStayUpdated={onStayBookingBalanceChange}
+          />
+        ) : null}
+      </TabsContent>
+
+      {showTourismTab ? (
+        <TabsContent value="tourism" className="mt-0 outline-none">
+          {activeTab === 'tourism' && tenantSlug ? (
+            <StayTourismRegistrationBlock
+              stay={stay}
+              tenantSlug={tenantSlug}
+              onTourismExportedAtChange={onTourismExportedAtChange}
+              onTourismStatusChange={setTourismStatus}
+            />
+          ) : null}
+        </TabsContent>
+      ) : null}
+    </>
+  );
+
   return (
-    <ReceptionStayDetailShell
-      open={open}
-      onClose={onClose}
-      accessibleTitle={guestLabel}
-      header={header}
-      body={body}
-      footer={footer}
-      onEdit={() => onEditStay(stay)}
-      editDisabled={isPending}
-    />
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => setActiveTab(value as StayDetailTabId)}
+      className="contents"
+    >
+      <ReceptionStayDetailShell
+        open={open}
+        onClose={onClose}
+        accessibleTitle={guestLabel}
+        header={header}
+        bodyTop={tabsList}
+        body={tabsBody}
+        footer={footer}
+        onEdit={() => onEditStay(stay)}
+        editDisabled={isPending}
+        headerOverflow={
+          endAction === 'cancel' ? (
+            <ReceptionGuestStayDetailOverflowMenu
+              stay={stay}
+              isPending={isPending}
+              onCancelOrCheckout={onCancelOrCheckout}
+              operationalDate={operationalDate}
+            />
+          ) : undefined
+        }
+      />
+    </Tabs>
   );
 }

@@ -254,11 +254,12 @@ function resolveBookingSourceFields(
 
 function resolveBookingBalanceFields(
   settings: TenantSettings,
-  bookingAmountDue?: string | number
+  bookingAmountDue?: string | number,
+  required = false
 ):
   | { ok: true; amountMinor: number | null; currency: string | null; paidAt: string | null | undefined }
   | { ok: false } {
-  const resolved = resolveReservationBookingBalance({ settings, bookingAmountDue });
+  const resolved = resolveReservationBookingBalance({ settings, bookingAmountDue, required });
   if (!resolved.ok) {
     return { ok: false };
   }
@@ -324,7 +325,7 @@ export async function createGuestStay(
     return { ok: false, error: 'invalid_booking_source' };
   }
 
-  const balanceFields = resolveBookingBalanceFields(tenant.settings, input.bookingAmountDue);
+  const balanceFields = resolveBookingBalanceFields(tenant.settings, input.bookingAmountDue, true);
   if (!balanceFields.ok) {
     return { ok: false, error: 'invalid_booking_balance' };
   }

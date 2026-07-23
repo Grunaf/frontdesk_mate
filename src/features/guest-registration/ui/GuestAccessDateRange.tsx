@@ -55,7 +55,7 @@ export function GuestAccessDateRange({
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="check-in-date">Check-in date</Label>
           <Input
@@ -75,11 +75,11 @@ export function GuestAccessDateRange({
             onChange={(event) => handleUntilChange(event.target.value)}
           />
         </div>
-
-        <p className="text-sm text-muted-foreground sm:pb-2">
-          {rangeValid ? formatAccessNightsLabel(nights) : '—'}
-        </p>
       </div>
+
+      <p className="text-sm text-muted-foreground">
+        {rangeValid ? formatAccessNightsLabel(nights) : '—'}
+      </p>
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" onClick={applyTonight}>

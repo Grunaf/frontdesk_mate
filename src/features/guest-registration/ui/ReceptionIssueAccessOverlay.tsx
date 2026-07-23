@@ -57,7 +57,7 @@ export function ReceptionIssueAccessOverlay({
   onSubmit,
   ...fieldsProps
 }: ReceptionIssueAccessOverlayProps) {
-  const { mode, editIntent, reissueGuestLabel } = fieldsProps;
+  const { editIntent, reissueGuestLabel } = fieldsProps;
 
   const submitLabel = resolveIssueGuestAccessSubmitLabel({
     isPending,
@@ -77,8 +77,8 @@ export function ReceptionIssueAccessOverlay({
     <ReceptionStayDetailShell
       open={open}
       onClose={onClose}
-      accessibleTitle="Issue guest access"
-      accessibleTitleTooltip="App access only — not your booking system"
+      accessibleTitle={isEditingReservation ? 'Edit booking' : 'New booking'}
+      accessibleTitleTooltip="Creates a booking and guest app access — not your booking system"
       titleId={RECEPTION_ISSUE_ACCESS_TITLE_ID}
       header={
         <IssueAccessOverlayHeader
@@ -106,7 +106,7 @@ export function ReceptionIssueAccessOverlay({
             type="button"
             className="sm:min-w-[10rem]"
             onClick={onSubmit}
-            disabled={isPending || !canSubmit || (mode === 'custom' && !rangeValid)}
+            disabled={isPending || !canSubmit || !rangeValid}
           >
             {submitLabel}
           </Button>

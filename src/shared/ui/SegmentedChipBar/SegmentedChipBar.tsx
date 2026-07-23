@@ -21,6 +21,8 @@ export interface SegmentedChipBarProps {
   ariaLabel: string;
   /** Bleed into horizontal padding of a px-4 parent (default). Use false at page edge. */
   bleed?: boolean;
+  /** Wrap chips onto next lines instead of horizontal scroll. */
+  wrap?: boolean;
   className?: string;
 }
 
@@ -31,11 +33,16 @@ export function SegmentedChipBar({
   onLockedClick,
   ariaLabel,
   bleed = true,
+  wrap = false,
   className,
 }: SegmentedChipBarProps) {
   const tabRefs = useRef(new Map<string, HTMLButtonElement>());
 
   useEffect(() => {
+    if (wrap) {
+      return;
+    }
+
     const activeTab = tabRefs.current.get(value);
     if (!activeTab) {
       return;
@@ -50,14 +57,15 @@ export function SegmentedChipBar({
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [value, items]);
+  }, [value, items, wrap]);
 
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        'no-scrollbar flex items-center justify-start gap-2 overflow-x-auto py-1.5',
+        'flex items-center justify-start gap-2 py-1.5',
+        wrap ? 'flex-wrap' : 'no-scrollbar overflow-x-auto',
         bleed ? '-mx-4 px-4 sm:mx-0 sm:px-0' : 'px-4',
         className
       )}
