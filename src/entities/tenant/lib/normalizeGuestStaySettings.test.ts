@@ -124,12 +124,54 @@ describe('finalizeGuestStayForSave', () => {
     expect(result).not.toHaveProperty('tourismRegistrationRequired');
   });
 
-  it('passes custom profile id', () => {
+  it('persists dataController on tourism registration', () => {
     const result = finalizeGuestStayForSave({
       roomMapEnabled: false,
       guestStay: undefined,
       tourismRegistrationRequired: true,
-      tourismProfileId: 'me',
+      dataController: {
+        legalName: 'Hostel DOO',
+        address: 'Main 1',
+        email: 'privacy@hostel.me',
+        phone: '+38260000000',
+      },
+    });
+    expect(result).toEqual({
+      tourismRegistration: {
+        enabled: true,
+        profileId: 'me',
+        dataController: {
+          legalName: 'Hostel DOO',
+          address: 'Main 1',
+          email: 'privacy@hostel.me',
+          phone: '+38260000000',
+        },
+      },
+    });
+  });
+
+  it('persists entryStampHelpImage on tourism registration', () => {
+    const result = finalizeGuestStayForSave({
+      roomMapEnabled: false,
+      guestStay: undefined,
+      tourismRegistrationRequired: true,
+      entryStampHelpImage: ' https://cdn.example/stamp.jpg ',
+    });
+    expect(result).toEqual({
+      tourismRegistration: {
+        enabled: true,
+        profileId: 'me',
+        entryStampHelpImage: 'https://cdn.example/stamp.jpg',
+      },
+    });
+  });
+
+  it('omits empty dataController', () => {
+    const result = finalizeGuestStayForSave({
+      roomMapEnabled: false,
+      guestStay: undefined,
+      tourismRegistrationRequired: true,
+      dataController: { legalName: '  ', email: '' },
     });
     expect(result).toEqual({
       tourismRegistration: { enabled: true, profileId: 'me' },

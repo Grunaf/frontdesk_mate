@@ -1,14 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import {
   resolveGuestStaySetupPath,
   resolveStaySetupDeepLinkStep,
 } from '@/features/guest-check-in/lib/resolveGuestStaySetupPath';
-import { getStaySetupStatusAction } from '@/features/guest-stay-contact';
+import { useStaySetupStatus } from '@/features/guest-stay-contact';
 import { resolveGuestStayPlan, resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
-import { useIsGuestRegistered } from '@/features/guest-check-in';
 import { useTranslations, useLocale } from '@/shared/i18n';
 import { Button, Icon } from '@/shared/ui';
 import { ArrowRight } from 'lucide-react';
@@ -23,45 +21,11 @@ type StaySetupBedMapState = {
   statusLoading: boolean;
 };
 
+/** Bed-map deep link from shared StaySetupStatus (SSR provider) — no duplicate fetch. */
 function useStaySetupBedMapState(): StaySetupBedMapState {
-  const { settings, slug } = useTenant();
-  const isRegistered = useIsGuestRegistered();
+  const { settings } = useTenant();
+  const { status, statusLoading } = useStaySetupStatus();
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
-  const [status, setStatus] = useState<{
-    tourismComplete: boolean;
-    entryDateComplete: boolean;
-    contactComplete: boolean;
-    passportVerified: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!isRegistered || !slug) {
-      setStatus(null);
-      return;
-    }
-
-    let cancelled = false;
-    void getStaySetupStatusAction(slug).then((result) => {
-      if (cancelled || !result.ok) {
-        if (!cancelled) {
-          setStatus(null);
-        }
-        return;
-      }
-      setStatus({
-        tourismComplete: result.status.tourismComplete,
-        entryDateComplete: result.status.entryDateComplete,
-        contactComplete: result.status.contactComplete,
-        passportVerified: result.status.passportVerified,
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isRegistered, slug]);
-
-  const statusLoading = isRegistered && Boolean(slug?.trim()) && status === null;
 
   const completion: StaySetupCompletion = {
     tourismRequired: tourismRegistrationRequired,

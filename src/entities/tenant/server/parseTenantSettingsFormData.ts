@@ -341,6 +341,14 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
   const tourismRegistrationRequired =
     String(formData.get('tourismRegistrationRequired') || '').trim() === 'true';
   const tourismProfileId = String(formData.get('tourismProfileId') || '').trim() || undefined;
+  const tourismDataController = {
+    legalName: String(formData.get('tourismDataControllerLegalName') || '').trim() || undefined,
+    address: String(formData.get('tourismDataControllerAddress') || '').trim() || undefined,
+    email: String(formData.get('tourismDataControllerEmail') || '').trim() || undefined,
+    phone: String(formData.get('tourismDataControllerPhone') || '').trim() || undefined,
+  };
+  const tourismEntryStampHelpImage =
+    String(formData.get('tourismEntryStampHelpImage') || '').trim() || undefined;
   const planStayStatusEnabled =
     String(formData.get('planStayStatusEnabled') || '').trim() === 'true';
   const houseRules = parseHouseRules(formData);
@@ -357,6 +365,8 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
     tourismRegistrationRequired,
     tourismProfileId,
     planStayStatusEnabled,
+    dataController: tourismDataController,
+    entryStampHelpImage: tourismEntryStampHelpImage,
   });
 
   const arrivalAccessInput = readArrivalAccess(formData);

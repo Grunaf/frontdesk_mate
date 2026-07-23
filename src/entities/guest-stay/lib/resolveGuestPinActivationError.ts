@@ -3,6 +3,9 @@ export type GuestPinActivationError = 'invalid_pin' | 'expired' | 'revoked';
 export interface GuestPinStaySnapshot {
   revoked_at: string | null;
   check_out_at: string;
+  is_archived?: boolean;
+  /** @deprecated use is_archived */
+  is_deleted?: boolean;
 }
 
 export function resolveGuestPinActivationError(
@@ -12,7 +15,7 @@ export function resolveGuestPinActivationError(
     return 'invalid_pin';
   }
 
-  if (stay.revoked_at) {
+  if (stay.revoked_at || stay.is_archived || stay.is_deleted) {
     return 'revoked';
   }
 

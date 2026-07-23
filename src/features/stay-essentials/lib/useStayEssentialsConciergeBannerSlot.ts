@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useMemo } from 'react';
 import { useGuestSession, useIsGuestRegistered } from '@/features/guest-check-in';
-import { getStaySetupStatusAction } from '@/features/guest-stay-contact';
+import { useStaySetupStatus, type StaySetupStatus } from '@/features/guest-stay-contact';
 import { useTenant } from '@/entities/tenant';
 import { resolvePreCheckInBannerProgress } from './resolvePreCheckInBannerProgress';
 import { resolveSettlementBannerProgress } from './resolveSettlementBannerProgress';
@@ -39,6 +38,20 @@ export type StayEssentialsConciergeBannerSlot =
       registrationStatus: StayEssentialsConciergeRegistrationStatus;
       stayId: string;
     };
+
+function toRegistrationStatus(
+  status: Pick<
+    StaySetupStatus,
+    'tourismRequired' | 'tourismComplete' | 'entryDateComplete' | 'contactComplete'
+  >
+): StayEssentialsConciergeRegistrationStatus {
+  return {
+    tourismRequired: status.tourismRequired,
+    tourismComplete: status.tourismComplete,
+    entryDateComplete: status.entryDateComplete,
+    contactComplete: status.contactComplete,
+  };
+}
 
 function resolveSlotFromStatus(input: {
   isRegistered: boolean;
@@ -112,61 +125,42 @@ function resolveSlotFromStatus(input: {
   };
 }
 
+/** Derives concierge banner slot from shared StaySetupStatus context (SSR + revalidate). */
 export function useStayEssentialsConciergeBannerSlot(): StayEssentialsConciergeBannerSlot {
-  const pathname = usePathname();
   const { slug, hostel } = useTenant();
   const isRegistered = useIsGuestRegistered();
   const { session, checkInAt } = useGuestSession();
   const stayId = session?.stayId ?? null;
+  const { status, statusLoading } = useStaySetupStatus();
 
-  const shouldFetch = isRegistered && Boolean(slug?.trim());
-
-  const [slot, setSlot] = useState<StayEssentialsConciergeBannerSlot>(() =>
-    shouldFetch ? { kind: 'loading' } : { kind: 'hidden' }
-  );
-
-  useEffect(() => {
-    if (!shouldFetch) {
-      setSlot({ kind: 'hidden' });
-      return;
+  return useMemo(() => {
+    if (!isRegistered || !slug?.trim()) {
+      return { kind: 'hidden' };
     }
 
-    let cancelled = false;
-    setSlot({ kind: 'loading' });
+    if (statusLoading && status == null) {
+      return { kind: 'loading' };
+    }
 
-    void getStaySetupStatusAction(slug!).then((result) => {
-      if (cancelled) {
-        return;
-      }
+    if (!status) {
+      return { kind: 'hidden' };
+    }
 
-      if (!result.ok) {
-        setSlot({ kind: 'hidden' });
-        return;
-      }
-
-      const registrationStatus: StayEssentialsConciergeRegistrationStatus = {
-        tourismRequired: result.status.tourismRequired,
-        tourismComplete: result.status.tourismComplete,
-        entryDateComplete: result.status.entryDateComplete,
-        contactComplete: result.status.contactComplete,
-      };
-
-      setSlot(
-        resolveSlotFromStatus({
-          isRegistered,
-          slug,
-          stayId,
-          checkInAt,
-          propertyTimeZone: hostel.propertyTimeZone,
-          registrationStatus,
-        })
-      );
+    return resolveSlotFromStatus({
+      isRegistered,
+      slug,
+      stayId,
+      checkInAt,
+      propertyTimeZone: hostel.propertyTimeZone,
+      registrationStatus: toRegistrationStatus(status),
     });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [shouldFetch, isRegistered, slug, stayId, checkInAt, pathname, hostel.propertyTimeZone]);
-
-  return slot;
+  }, [
+    isRegistered,
+    slug,
+    stayId,
+    checkInAt,
+    hostel.propertyTimeZone,
+    status,
+    statusLoading,
+  ]);
 }

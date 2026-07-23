@@ -155,9 +155,23 @@ describe('resolveBedInventory', () => {
     expect(resolveTonight([orphanLater]).orphanStays).toEqual([]);
   });
 
-  it('ignores revoked stays', () => {
+  it('keeps revoked-access stays for bed-night occupancy (lived after checkout)', () => {
     const snapshot = resolveTonight([
       makeStay('bed-2', { revoked_at: '2026-06-22T12:00:00.000Z' }),
+    ]);
+
+    const bed2 = flattenBedInventory(snapshot).find((entry) => entry.bedId === 'bed-2');
+    expect(bed2).toEqual(
+      expect.objectContaining({
+        bedId: 'bed-2',
+        status: 'occupied',
+      })
+    );
+  });
+
+  it('ignores archived stays for occupancy', () => {
+    const snapshot = resolveTonight([
+      makeStay('bed-2', { is_archived: true }),
     ]);
 
     const bed2 = flattenBedInventory(snapshot).find((entry) => entry.bedId === 'bed-2');

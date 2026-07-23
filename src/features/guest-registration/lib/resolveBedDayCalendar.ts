@@ -1,6 +1,6 @@
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
-  guestAccessCoversNight,
+  guestStayCoversNight,
   guestAccessCheckInPolicyFromSettings,
   resolveNightCellStatus,
   type BedNightCellStatus,
@@ -89,7 +89,7 @@ function findStayForNight(
   nightDate: string,
   stays: GuestStayRecordWithLink[]
 ): GuestStayRecordWithLink | undefined {
-  return stays.find((stay) => stay.bed_id === bedId && guestAccessCoversNight(stay, nightDate));
+  return stays.find((stay) => stay.bed_id === bedId && guestStayCoversNight(stay, nightDate));
 }
 
 function buildRow(
@@ -124,22 +124,23 @@ export function resolveBedDayCalendar(
 ): BedDayCalendarSnapshot {
   const inventory = resolveBedInventory(settings, stays, now);
   const { rangeStart, rangeEnd, days } = resolveCalendarRange(view, anchorDate);
-  const activeStays = stays.filter((stay) => !stay.revoked_at);
+  // Occupancy is booking-based: include lived shortened stays even when access is revoked.
+  const occupancyStays = stays.filter((stay) => !stay.is_archived);
   const configuredBedIds = new Set(listGuestStayBedIds(settings));
 
   const roomGroups: BedDayCalendarRoomGroup[] = inventory.roomGroups.map((group) => ({
     roomId: group.roomId,
     roomLabel: group.roomLabel,
-    rows: group.beds.map((bed) => buildRow(settings, bed.bedId, days, activeStays, now)),
+    rows: group.beds.map((bed) => buildRow(settings, bed.bedId, days, occupancyStays, now)),
   }));
 
-  const orphanStays = activeStays.filter((stay) => !configuredBedIds.has(stay.bed_id));
+  const orphanStays = occupancyStays.filter((stay) => !configuredBedIds.has(stay.bed_id));
   if (orphanStays.length > 0) {
     const orphanBedIds = [...new Set(orphanStays.map((stay) => stay.bed_id))];
     roomGroups.push({
       roomId: '__orphan__',
       roomLabel: 'Unknown beds',
-      rows: orphanBedIds.map((bedId) => buildRow(settings, bedId, days, activeStays, now)),
+      rows: orphanBedIds.map((bedId) => buildRow(settings, bedId, days, occupancyStays, now)),
     });
   }
 

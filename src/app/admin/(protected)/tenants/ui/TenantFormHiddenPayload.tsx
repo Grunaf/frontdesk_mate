@@ -60,6 +60,7 @@ export function TenantFormHiddenPayload({
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(mergedSettings);
   const tourismConfig = resolveTourismRegistrationConfig(mergedSettings);
   const tourismProfileId = tourismConfig?.profileId ?? '';
+  const dataController = tourismConfig?.dataController;
   const planStayStatusEnabled = resolvePlanStayStatusEnabled(mergedSettings);
   const guestStayJson =
     roomMapEnabled && mergedSettings.guestStay ? JSON.stringify(mergedSettings.guestStay) : '';
@@ -100,6 +101,31 @@ export function TenantFormHiddenPayload({
         value={tourismRegistrationRequired ? 'true' : 'false'}
       />
       <input type="hidden" name="tourismProfileId" value={tourismProfileId} />
+      <input
+        type="hidden"
+        name="tourismDataControllerLegalName"
+        value={dataController?.legalName ?? ''}
+      />
+      <input
+        type="hidden"
+        name="tourismDataControllerAddress"
+        value={dataController?.address ?? ''}
+      />
+      <input
+        type="hidden"
+        name="tourismDataControllerEmail"
+        value={dataController?.email ?? ''}
+      />
+      <input
+        type="hidden"
+        name="tourismDataControllerPhone"
+        value={dataController?.phone ?? ''}
+      />
+      <input
+        type="hidden"
+        name="tourismEntryStampHelpImage"
+        value={tourismConfig?.entryStampHelpImage ?? ''}
+      />
       <input
         type="hidden"
         name="planStayStatusEnabled"

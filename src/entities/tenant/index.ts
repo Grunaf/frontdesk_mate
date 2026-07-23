@@ -68,6 +68,7 @@ export {
 export type {
   GuestStayConfig,
   TourismRegistrationConfig,
+  TourismRegistrationDataController,
   GuestStayPlan,
   GuestStayStep,
   StayBed,

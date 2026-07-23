@@ -6,7 +6,8 @@ export type TenantAuditEventType =
   | 'owner_linked'
   | 'reception_staff_user_created'
   | 'reception_staff_user_disabled'
-  | 'reception_staff_pin_changed';
+  | 'reception_staff_pin_changed'
+  | 'reception_staff_permissions_updated';
 
 export type TenantAuditEventFlags = {
   nameChanged?: boolean;

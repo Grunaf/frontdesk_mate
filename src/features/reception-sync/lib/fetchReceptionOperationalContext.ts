@@ -23,8 +23,10 @@ function isReceptionOperationalContext(value: unknown): value is ReceptionOperat
     typeof (operational as Record<string, unknown>).startsAt === 'string' &&
     typeof (operational as Record<string, unknown>).endsAt === 'string' &&
     Array.isArray(record.stays) &&
+    (record.planStays === undefined || Array.isArray(record.planStays)) &&
     Array.isArray(record.openIssues) &&
-    Array.isArray(record.openTransfers)
+    Array.isArray(record.openTransfers) &&
+    (record.staffPermissions === undefined || Array.isArray(record.staffPermissions))
   );
 }
 

@@ -15,6 +15,7 @@ import { RegistrationStepBody, useRegistrationStepState } from '@/views/registra
 import { SITE_CONFIG } from '@/shared/config';
 import { useTranslations } from '@/shared/i18n';
 import { TourismRegistrationRequiredSheet, PassportVerificationRequiredSheet } from '@/features/guest-tourism-registration';
+import type { TourismGuestListItem } from '@/features/guest-tourism-registration';
 import { Button, IconBackActionsRow } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
@@ -58,6 +59,8 @@ export interface StaySetupInitialState {
   contactComplete: boolean;
   passportVerified: boolean;
   stayContactWhatsapp: string | null;
+  /** SSR guest list for registration panels (avoids client waterfall skeleton). */
+  tourismGuests: TourismGuestListItem[];
 }
 
 interface StaySetupCoordinatorProps {
@@ -101,14 +104,11 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     stayContactWhatsapp,
     completion,
     registrationComplete,
-    showArrivalStep,
     accordionValue,
     setAccordionValue,
     handleTourismComplete,
     handleEntryDateComplete,
     handleContactComplete,
-    openArrivalStep,
-    closeArrivalStepToIdentity,
     applyRegistrationStatus,
     contactDraftWhatsapp,
     setContactDraftWhatsapp,
@@ -370,24 +370,24 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         label: t('tabs.registration'),
         render: () => (
           <RegistrationStepBody
+            className="flex min-h-0 flex-1 flex-col"
             tourismRequired={tourismRegistrationRequired}
             tourismComplete={tourismComplete}
             entryDateComplete={entryDateComplete}
             contactComplete={contactComplete}
             registrationComplete={registrationComplete}
             passportVerified={passportVerified}
-            showArrivalStep={showArrivalStep}
             accordionValue={accordionValue}
             onAccordionValueChange={setAccordionValue}
             interactionEnabled={isRegistered}
             tenantSlug={slug ?? ''}
             stayContactWhatsapp={stayContactWhatsapp}
+            initialTourismGuests={initial.tourismGuests}
+            initialTourismComplete={initial.tourismComplete}
             onTourismComplete={handleTourismComplete}
             onEntryDateComplete={handleEntryDateComplete}
             onContactComplete={handleContactComplete}
             onContactDraftChange={setContactDraftWhatsapp}
-            onOpenArrivalStep={openArrivalStep}
-            onArrivalBackToIdentity={closeArrivalStepToIdentity}
             showCompleteHint={false}
             registrationSurface="wizard"
           />
@@ -427,7 +427,6 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     tourismRegistrationRequired,
     tourismComplete,
     entryDateComplete,
-    showArrivalStep,
     contactComplete,
     passportVerified,
     registrationComplete,
@@ -435,11 +434,11 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     isRegistered,
     slug,
     stayContactWhatsapp,
+    initial.tourismGuests,
+    initial.tourismComplete,
     handleTourismComplete,
     handleEntryDateComplete,
     handleContactComplete,
-    openArrivalStep,
-    closeArrivalStepToIdentity,
     setContactDraftWhatsapp,
     essentialsRulesAcknowledged,
     essentialsHasHouseRules,
@@ -596,7 +595,14 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       </ArrivalGuideStepsShell>
 
       <main className="flex min-h-0 flex-1 flex-col px-4 pt-1 pb-4">
-        <div className="min-h-0 flex-1 overflow-y-auto">{activeStep?.render()}</div>
+        <div
+          className={cn(
+            'min-h-0 flex-1',
+            currentStep === 'registration' ? 'flex flex-col' : 'overflow-y-auto'
+          )}
+        >
+          {activeStep?.render()}
+        </div>
         {showPrimaryButton ? (
           <IconBackActionsRow className="mt-3" onBack={showBackButton ? handleBackAction : undefined}>
             <Button size="lg" disabled={primaryDisabled} onClick={handlePrimaryAction}>

@@ -20,6 +20,7 @@ export {
   createReceptionUserAction,
   disableReceptionUserAction,
   listReceptionStaffUsersAction,
+  updateReceptionStaffPermissionsAction,
   updateReceptionUserPinAction,
 } from './actions/receptionStaffActions';
 

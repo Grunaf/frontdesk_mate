@@ -1,4 +1,4 @@
-export type RegistrationAccordionItem = 'identity' | 'contact';
+export type RegistrationAccordionItem = 'identity' | 'entryDate' | 'contact';
 
 export type RegistrationAccordionCompletion = {
   tourismRequired: boolean;
@@ -11,13 +11,15 @@ export function shouldShowRegistrationIdentityAccordionItem(tourismRequired: boo
   return tourismRequired;
 }
 
-/** Arrival / entry dates card between identity and contact — not an accordion item. */
-export function shouldShowRegistrationArrivalStep(
+export function shouldShowRegistrationEntryDateAccordionItem(tourismRequired: boolean): boolean {
+  return tourismRequired;
+}
+
+export function isRegistrationEntryDateAccordionDisabled(
   tourismRequired: boolean,
-  tourismComplete: boolean,
-  entryDateComplete: boolean
+  tourismComplete: boolean
 ): boolean {
-  return tourismRequired && tourismComplete && !entryDateComplete;
+  return tourismRequired && !tourismComplete;
 }
 
 export function isRegistrationContactAccordionDisabled(
@@ -29,15 +31,17 @@ export function isRegistrationContactAccordionDisabled(
 }
 
 /**
- * Accordion open state only: identity | contact.
- * When arrival dates are still incomplete, callers should show the Arrival card
- * instead of relying on an accordion item.
+ * Accordion open state: identity → entryDate → contact when tourism required.
  */
 export function resolveOpenRegistrationAccordionItem(
   completion: RegistrationAccordionCompletion
 ): RegistrationAccordionItem {
   if (completion.tourismRequired && !completion.tourismComplete) {
     return 'identity';
+  }
+
+  if (completion.tourismRequired && !completion.entryDateComplete) {
+    return 'entryDate';
   }
 
   return 'contact';

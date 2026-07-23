@@ -1,10 +1,26 @@
-import type { GuestStayConfig, TourismRegistrationConfig } from '../model/guestStay';
+import type {
+  GuestStayConfig,
+  TourismRegistrationConfig,
+  TourismRegistrationDataController,
+} from '../model/guestStay';
 import type { TenantSettings } from '../model/settings';
 import {
   DEFAULT_TOURISM_PROFILE_ID,
   getTourismRegistrationProfile,
   type TourismRegistrationProfile,
 } from '@/features/guest-tourism-registration/model/tourismRegistrationProfiles';
+
+function sanitizeDataController(
+  input: TourismRegistrationDataController | undefined
+): TourismRegistrationDataController | undefined {
+  if (!input) return undefined;
+  const legalName = input.legalName?.trim() || undefined;
+  const address = input.address?.trim() || undefined;
+  const email = input.email?.trim() || undefined;
+  const phone = input.phone?.trim() || undefined;
+  if (!legalName && !address && !email && !phone) return undefined;
+  return { legalName, address, email, phone };
+}
 
 export function resolveTourismRegistrationConfig(
   settings: TenantSettings | undefined
@@ -121,20 +137,35 @@ export function normalizeGuestStayComplianceOnRead(
   return { ...withPlan, tourismRegistration: tourism };
 }
 
+function sanitizeEntryStampHelpImage(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
+}
+
 export function finalizeGuestStayForSave(input: {
   roomMapEnabled: boolean;
   guestStay: GuestStayConfig | undefined;
   tourismRegistrationRequired: boolean;
   tourismProfileId?: string;
   planStayStatusEnabled?: boolean;
+  dataController?: TourismRegistrationDataController;
+  entryStampHelpImage?: string;
 }): TenantSettings['guestStay'] {
   const { roomMapEnabled, tourismRegistrationRequired } = input;
   const profileId = input.tourismProfileId ?? DEFAULT_TOURISM_PROFILE_ID;
   const planStayStatusEnabled = input.planStayStatusEnabled === true;
+  const dataController = sanitizeDataController(input.dataController);
+  const entryStampHelpImage = sanitizeEntryStampHelpImage(input.entryStampHelpImage);
   let guestStay = input.guestStay;
 
-  const tourismRegistration: TourismRegistrationConfig | undefined =
-    tourismRegistrationRequired ? { enabled: true, profileId } : undefined;
+  const tourismRegistration: TourismRegistrationConfig | undefined = tourismRegistrationRequired
+    ? {
+        enabled: true,
+        profileId,
+        ...(dataController ? { dataController } : {}),
+        ...(entryStampHelpImage ? { entryStampHelpImage } : {}),
+      }
+    : undefined;
 
   if (!roomMapEnabled) {
     guestStay = undefined;

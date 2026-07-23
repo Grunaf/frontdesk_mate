@@ -29,6 +29,7 @@ import {
   resolveGuestAccessStatus,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
+import { resolveStayCancelCheckoutAction } from '../lib/resolveStayCancelCheckoutAction';
 import { MagicLinkCard } from './MagicLinkCard';
 import { ReceptionArrivalDatesBlock } from './ReceptionArrivalDatesBlock';
 import { ReceptionStayDetailShell, RECEPTION_STAY_DETAIL_TITLE_ID } from './ReceptionStayDetailShell';
@@ -377,6 +378,10 @@ function StayTourismRegistrationBlock({
             tourism_contact_whatsapp: null,
             tourism_registration_completed_at: null,
             tourism_exported_at: stay.tourism_exported_at ?? null,
+            entry_transport_type: null,
+            entry_point_code: null,
+            entry_point_label: null,
+            entry_details_status: null,
             guests: [result.guest],
           };
         }
@@ -507,10 +512,13 @@ function StayTourismRegistrationBlock({
                         initialValues={{
                           firstName: guest.first_name,
                           lastName: guest.last_name,
-                          citizenship: guest.citizenship,
-                          passportNumber: guest.passport_number,
                           dateOfBirth: guest.date_of_birth,
+                          countryOfBirth: guest.country_of_birth,
+                          placeOfBirth: guest.place_of_birth,
                           gender: guest.gender,
+                          citizenship: guest.citizenship,
+                          documentType: guest.document_type,
+                          passportNumber: guest.passport_number,
                         }}
                         submitLabel="Save guest"
                         pendingLabel="Saving…"
@@ -763,52 +771,42 @@ export interface ReceptionGuestStayDetailProps {
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
   onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
   onPassportCheckedAtChange?: (stay: GuestStayRecordWithLink) => void;
-  onRevoke: (stayId: string) => void;
-  onChangeDates: (stay: GuestStayRecordWithLink) => void;
-  onMoveBed: (stay: GuestStayRecordWithLink) => void;
+  /** Cancel (not admitted) or check out (admitted, still in-house) → Archive. */
+  onCancelOrCheckout: (stayId: string, intent: 'cancel' | 'checkout') => void;
+  /** Opens unified edit (bed + dates). */
+  onEditStay: (stay: GuestStayRecordWithLink) => void;
   onReissueAccess: (stay: GuestStayRecordWithLink) => void;
   tenantSettings?: TenantSettings;
+  /** Current operational calendar day — gates Check out vs ended stays. */
+  operationalDate: string;
 }
 
 function ReceptionGuestStayDetailActions({
   stay,
   isPending,
-  onChangeDates,
-  onMoveBed,
   onReissueAccess,
-  onRevoke,
+  onCancelOrCheckout,
+  operationalDate,
 }: Pick<
   ReceptionGuestStayDetailProps,
   | 'stay'
   | 'isPending'
-  | 'onChangeDates'
-  | 'onMoveBed'
   | 'onReissueAccess'
-  | 'onRevoke'
+  | 'onCancelOrCheckout'
+  | 'operationalDate'
 >) {
+  const endAction = resolveStayCancelCheckoutAction({
+    passport_checked_at: stay.passport_checked_at,
+    desk_checked_in_at: stay.desk_checked_in_at,
+    check_out_date: stay.check_out_date,
+    check_out_at: stay.check_out_at,
+    operationalDate,
+    is_archived: stay.is_archived,
+  });
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 lg:flex-row">
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          className="w-full lg:flex-1"
-          disabled={isPending}
-          onClick={() => onMoveBed(stay)}
-        >
-          Move bed
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          className="w-full lg:flex-1"
-          disabled={isPending}
-          onClick={() => onChangeDates(stay)}
-        >
-          Change dates
-        </Button>
         <Button
           type="button"
           variant="outline"
@@ -819,17 +817,21 @@ function ReceptionGuestStayDetailActions({
         >
           Reissue access
         </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          size="default"
-          className="w-full lg:flex-1"
-          disabled={isPending}
-          onClick={() => onRevoke(stay.id)}
-        >
-          Revoke access
-        </Button>
       </div>
+      {endAction ? (
+        <div className="flex flex-col gap-2 border-t border-border/60 pt-3 lg:flex-row">
+          <Button
+            type="button"
+            variant="destructive"
+            size="default"
+            className="w-full"
+            disabled={isPending}
+            onClick={() => onCancelOrCheckout(stay.id, endAction)}
+          >
+            {endAction === 'checkout' ? 'Check out' : 'Cancel booking'}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -849,11 +851,11 @@ export function ReceptionGuestStayDetail({
   onTourismExportedAtChange,
   onStayBookingBalanceChange,
   onPassportCheckedAtChange,
-  onRevoke,
-  onChangeDates,
-  onMoveBed,
+  onCancelOrCheckout,
+  onEditStay,
   onReissueAccess,
   tenantSettings,
+  operationalDate,
 }: ReceptionGuestStayDetailProps) {
   const status = resolveGuestAccessStatus(
     stay,
@@ -946,10 +948,9 @@ export function ReceptionGuestStayDetail({
     <ReceptionGuestStayDetailActions
       stay={stay}
       isPending={isPending}
-      onChangeDates={onChangeDates}
-      onMoveBed={onMoveBed}
       onReissueAccess={onReissueAccess}
-      onRevoke={onRevoke}
+      onCancelOrCheckout={onCancelOrCheckout}
+      operationalDate={operationalDate}
     />
   );
 
@@ -961,6 +962,8 @@ export function ReceptionGuestStayDetail({
       header={header}
       body={body}
       footer={footer}
+      onEdit={() => onEditStay(stay)}
+      editDisabled={isPending}
     />
   );
 }

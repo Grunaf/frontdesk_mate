@@ -1,8 +1,8 @@
 'use client';
 
-import { EntryDateStepPanel } from '@/features/guest-tourism-registration';
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
+import type { TourismGuestListItem } from '@/features/guest-tourism-registration';
 import type { RegistrationAccordionItem } from '../lib/resolveRegistrationAccordionItem';
 import type { RegistrationSurface } from '../lib/registrationSurface';
 import { RegistrationPrerequisitesAccordion } from './RegistrationPrerequisitesAccordion';
@@ -16,18 +16,17 @@ export type RegistrationStepBodyProps = {
   contactComplete: boolean;
   registrationComplete: boolean;
   passportVerified?: boolean;
-  showArrivalStep: boolean;
   accordionValue: RegistrationAccordionItem;
   onAccordionValueChange: (value: RegistrationAccordionItem) => void;
   interactionEnabled: boolean;
   tenantSlug: string;
   stayContactWhatsapp: string | null;
+  initialTourismGuests?: TourismGuestListItem[];
+  initialTourismComplete?: boolean;
   onTourismComplete: () => void;
   onEntryDateComplete: (savedDate: string | null) => void;
   onContactComplete: (savedWhatsapp: string) => void;
   onContactDraftChange?: (draft: string) => void;
-  onOpenArrivalStep?: () => void;
-  onArrivalBackToIdentity?: () => void;
   className?: string;
   showCompleteHint?: boolean;
   registrationSurface?: RegistrationSurface;
@@ -40,24 +39,22 @@ export function RegistrationStepBody({
   contactComplete,
   registrationComplete,
   passportVerified = false,
-  showArrivalStep,
   accordionValue,
   onAccordionValueChange,
   interactionEnabled,
   tenantSlug,
   stayContactWhatsapp,
+  initialTourismGuests,
+  initialTourismComplete,
   onTourismComplete,
   onEntryDateComplete,
   onContactComplete,
   onContactDraftChange,
-  onOpenArrivalStep,
-  onArrivalBackToIdentity,
   className,
   showCompleteHint = true,
   registrationSurface = 'standalone',
 }: RegistrationStepBodyProps) {
   const t = useTranslations('pages.staySetup');
-  const showIntroHeading = registrationSurface === 'standalone';
 
   if (registrationComplete && showCompleteHint) {
     return (
@@ -72,32 +69,15 @@ export function RegistrationStepBody({
     );
   }
 
-  if (showArrivalStep) {
-    return (
-      <div className={cn('space-y-3 py-2', className)}>
-        <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3">
-          <EntryDateStepPanel
-            tenantSlug={tenantSlug}
-            entryDateComplete={entryDateComplete}
-            interactionEnabled={interactionEnabled}
-            navigationMode={registrationSurface}
-            showIntroHeading={showIntroHeading}
-            onComplete={onEntryDateComplete}
-            onBack={onArrivalBackToIdentity}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={cn('space-y-3 py-2', className)}>
+    <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       {registrationComplete && !passportVerified ? (
-        <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-sm leading-relaxed text-foreground">
+        <p className="shrink-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-sm leading-relaxed text-foreground">
           {t('registration.passportWaiting')}
         </p>
       ) : null}
       <RegistrationPrerequisitesAccordion
+        className="min-h-0 flex-1"
         tourismRequired={tourismRequired}
         tourismComplete={tourismComplete}
         entryDateComplete={entryDateComplete}
@@ -108,12 +88,13 @@ export function RegistrationStepBody({
         interactionEnabled={interactionEnabled}
         tenantSlug={tenantSlug}
         stayContactWhatsapp={stayContactWhatsapp}
+        initialTourismGuests={initialTourismGuests}
+        initialTourismComplete={initialTourismComplete}
         onTourismComplete={onTourismComplete}
+        onEntryDateComplete={onEntryDateComplete}
         onContactComplete={onContactComplete}
         onContactDraftChange={onContactDraftChange}
-        onContactBackToArrival={onOpenArrivalStep}
         registrationSurface={registrationSurface}
-        showIntroHeading={showIntroHeading}
       />
     </div>
   );

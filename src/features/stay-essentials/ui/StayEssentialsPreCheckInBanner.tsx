@@ -1,6 +1,6 @@
 'use client';
 
-import { resolveGuestRegistrationPath } from '@/features/guest-check-in';
+import { resolveGuestStaySetupPath } from '@/features/guest-check-in';
 import { useLocale, useTranslations } from '@/shared/i18n';
 import { SITE_CONFIG } from '@/shared/config';
 import { setInAppReturnTo } from '@/shared/lib';
@@ -20,6 +20,8 @@ export function StayEssentialsPreCheckInBanner() {
     return null;
   }
 
+  const { registrationStatus } = slot;
+
   return (
     <StayEssentialsConciergeBannerLayout
       title={title}
@@ -30,7 +32,20 @@ export function StayEssentialsPreCheckInBanner() {
       pending={pending}
       onClick={() => {
         setInAppReturnTo(SITE_CONFIG.routes.app.concierge.path);
-        push(resolveGuestRegistrationPath({ locale }));
+        push(
+          resolveGuestStaySetupPath({
+            locale,
+            step: 'registration',
+            tourismRequired: registrationStatus.tourismRequired,
+            completion: {
+              tourismRequired: registrationStatus.tourismRequired,
+              tourismComplete: registrationStatus.tourismComplete,
+              entryDateComplete: registrationStatus.entryDateComplete,
+              contactComplete: registrationStatus.contactComplete,
+              passportVerified: false,
+            },
+          })
+        );
       }}
     />
   );

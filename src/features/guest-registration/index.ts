@@ -1,4 +1,19 @@
-export { createGuestStayAction, listActiveGuestStaysAction, reissueGuestStayAction, revokeGuestStayAction, updateGuestReservationAction, completeDeskCheckInAction } from './actions/receptionActions';
+export {
+  createGuestStayAction,
+  listActiveGuestStaysAction,
+  reissueGuestStayAction,
+  revokeGuestStayAction,
+  archiveGuestReservationAction,
+  cancelGuestReservationAction,
+  checkoutGuestReservationAction,
+  trashGuestReservationAction,
+  restoreGuestReservationAction,
+  listArchivedGuestReservationsAction,
+  listTrashedGuestReservationsAction,
+  getGuestReservationForDeskAction,
+  updateGuestReservationAction,
+  completeDeskCheckInAction,
+} from './actions/receptionActions';
 export {
   countOpenGuestHubTransfersAction,
   listGuestHubTransfersAction,

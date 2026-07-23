@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { GuestStayPlan } from '@/entities/tenant';
@@ -8,8 +7,8 @@ import { resolveReceptionContact } from '@/entities/tenant/lib/resolveReceptionC
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import { formatBedLocationLine } from '@/features/find-your-bed/lib/formatBedLocation';
 import { useStaySetupBedMapStep } from '@/features/find-your-bed/ui/FindYourBedCard';
-import { resolveGuestRegistrationPath } from '@/features/guest-check-in/lib/resolveGuestRegistrationPath';
 import { resolveGuestStaySetupPath } from '@/features/guest-check-in/lib/resolveGuestStaySetupPath';
+import { useStaySetupStatus } from '@/features/guest-stay-contact';
 import { listTourismGuestsForSessionAction } from '@/features/guest-tourism-registration';
 import { ReceptionContactActions, useReceptionContactLabels } from '@/features/reception-contact';
 import { useTranslations, useLocale } from '@/shared/i18n';
@@ -29,6 +28,7 @@ import {
   resolveGuestStayBedLabel,
 } from '../lib/buildExtendStayWhatsappMessage';
 import { formatGuestStayDateRange } from '../lib/formatGuestStayDates';
+import { resolveTourismSummaryFromStaySetupStatus } from '../lib/resolveTourismSummaryFromStaySetupStatus';
 import { formatStayReference, isStayCheckInStarted } from '@/entities/guest-stay';
 import { GuestStayBedLocationCard } from './GuestStayBedLocationCard';
 import { GuestStayReceptionCard } from './GuestStayReceptionCard';
@@ -69,9 +69,11 @@ export function GuestStaySheet({
   const tIssue = useTranslations('components.guestIssue');
   const receptionLabels = useReceptionContactLabels();
   const { openReportSheet } = useGuestIssueReport();
+  const { status: staySetupStatus, statusLoading: staySetupStatusLoading } = useStaySetupStatus();
   const [copied, setCopied] = useState(false);
-  const [tourismSummary, setTourismSummary] = useState<GuestStayTourismSummaryState | null>(null);
-  const [tourismSummaryLoaded, setTourismSummaryLoaded] = useState(false);
+  const [tourismSummaryFallback, setTourismSummaryFallback] =
+    useState<GuestStayTourismSummaryState | null>(null);
+  const [tourismSummaryFallbackLoaded, setTourismSummaryFallbackLoaded] = useState(false);
 
   const dateRange = formatGuestStayDateRange(checkInAt, checkOutAt, locale, {
     checkInDate,
@@ -82,16 +84,29 @@ export function GuestStaySheet({
   const staySetupBedMap = useStaySetupBedMapStep(true);
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
 
-  const tourismSummaryForDisplay: GuestStayTourismSummaryState | null =
-    open && tourismRegistrationRequired
-      ? tourismSummaryLoaded
-        ? tourismSummary
-        : { kind: 'loading' }
+  const tourismSummaryFromStatus =
+    staySetupStatus && tourismRegistrationRequired
+      ? resolveTourismSummaryFromStaySetupStatus(staySetupStatus)
       : null;
 
+  const tourismSummaryForDisplay: GuestStayTourismSummaryState | null = (() => {
+    if (!open || !tourismRegistrationRequired) {
+      return null;
+    }
+    if (tourismSummaryFromStatus) {
+      return tourismSummaryFromStatus;
+    }
+    if (staySetupStatusLoading) {
+      return { kind: 'loading' };
+    }
+    if (tourismSummaryFallbackLoaded) {
+      return tourismSummaryFallback;
+    }
+    return { kind: 'loading' };
+  })();
+
   const registrationStatusLoading =
-    tourismRegistrationRequired &&
-    (tourismSummaryForDisplay?.kind === 'loading' || staySetupBedMap.statusLoading);
+    tourismRegistrationRequired && tourismSummaryForDisplay?.kind === 'loading';
 
   const tourismCompleteForStay =
     !tourismRegistrationRequired || tourismSummaryForDisplay?.kind === 'complete';
@@ -122,7 +137,12 @@ export function GuestStaySheet({
     completion: staySetupBedMap.completion,
   });
 
-  const registerPath = resolveGuestRegistrationPath({ locale: routeLocale });
+  const registerPath = resolveGuestStaySetupPath({
+    locale: routeLocale,
+    step: 'registration',
+    tourismRequired: tourismRegistrationRequired,
+    completion: staySetupBedMap.completion,
+  });
 
   const bedNavigatePath = registrationStatusLoading
     ? undefined
@@ -132,46 +152,59 @@ export function GuestStaySheet({
         ? registerPath
         : settlementPath;
 
+  const bedNavigateLoading = registrationStatusLoading || staySetupBedMap.statusLoading;
+
   useEffect(() => {
     if (!open || !tourismRegistrationRequired || !slug) {
-      setTourismSummary(null);
-      setTourismSummaryLoaded(false);
+      setTourismSummaryFallback(null);
+      setTourismSummaryFallbackLoaded(false);
+      return;
+    }
+
+    // Prefer shared StaySetupStatus (SSR / provider); skip guest-list fetch.
+    if (staySetupStatus) {
+      setTourismSummaryFallback(null);
+      setTourismSummaryFallbackLoaded(false);
+      return;
+    }
+
+    if (staySetupStatusLoading) {
       return;
     }
 
     let cancelled = false;
-    setTourismSummary(null);
-    setTourismSummaryLoaded(false);
+    setTourismSummaryFallback(null);
+    setTourismSummaryFallbackLoaded(false);
 
     void listTourismGuestsForSessionAction(slug).then((result) => {
       if (cancelled) {
         return;
       }
       if (!result.ok) {
-        setTourismSummary(null);
-        setTourismSummaryLoaded(true);
+        setTourismSummaryFallback(null);
+        setTourismSummaryFallbackLoaded(true);
         return;
       }
 
       const guestCount = result.guests.length;
       if (result.complete) {
-        setTourismSummary({ kind: 'complete', guestCount });
-        setTourismSummaryLoaded(true);
+        setTourismSummaryFallback({ kind: 'complete', guestCount });
+        setTourismSummaryFallbackLoaded(true);
         return;
       }
       if (guestCount === 0) {
-        setTourismSummary({ kind: 'not_started' });
-        setTourismSummaryLoaded(true);
+        setTourismSummaryFallback({ kind: 'not_started' });
+        setTourismSummaryFallbackLoaded(true);
         return;
       }
-      setTourismSummary({ kind: 'in_progress', guestCount });
-      setTourismSummaryLoaded(true);
+      setTourismSummaryFallback({ kind: 'in_progress', guestCount });
+      setTourismSummaryFallbackLoaded(true);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [open, slug, tourismRegistrationRequired]);
+  }, [open, slug, tourismRegistrationRequired, staySetupStatus, staySetupStatusLoading]);
 
   const bedLine = useMemo(
     () =>
@@ -271,7 +304,7 @@ export function GuestStaySheet({
             lockReason={bedLocationLockReason}
             checkInTimeLabel={checkInTimeLabel}
             navigatePath={bedNavigatePath}
-            navigateLoading={registrationStatusLoading}
+            navigateLoading={bedNavigateLoading}
           />
 
           {tourismSummaryForDisplay ? (

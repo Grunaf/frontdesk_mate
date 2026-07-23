@@ -96,15 +96,36 @@ export function guestAccessStatusLabel(status: GuestAccessStatus): string {
 }
 
 export function stayOverlapsBedNightRange(
-  stay: Pick<GuestStayRecord, 'bed_id' | 'check_in_at' | 'check_out_at' | 'revoked_at'>,
+  stay: Pick<GuestStayRecord, 'bed_id' | 'check_in_at' | 'check_out_at' | 'revoked_at'> & {
+    check_in_date?: string | null;
+    check_out_date?: string | null;
+    is_archived?: boolean;
+  },
   bedId: string,
   checkInAt: string,
   checkOutAt: string
 ): boolean {
-  if (stay.revoked_at || stay.bed_id !== bedId) return false;
+  // Occupancy is booking-based; revoked access still holds lived nights on Plan.
+  if (stay.is_archived || stay.bed_id !== bedId) return false;
   return guestAccessBedNightsOverlap(stay.check_in_at, stay.check_out_at, checkInAt, checkOutAt);
 }
 
+/** Bed-night occupancy for Plan/inventory (ignores access revocation). */
+export function guestStayCoversNight(
+  stay: Pick<GuestStayRecord, 'check_in_at' | 'check_out_at'> & {
+    check_in_date?: string | null;
+    check_out_date?: string | null;
+    is_archived?: boolean;
+  },
+  nightDate: string
+): boolean {
+  if (stay.is_archived) return false;
+  const start = stayRecordCheckInDate(stay);
+  const end = stayRecordCheckOutDate(stay);
+  return start <= nightDate && nightDate < end;
+}
+
+/** @deprecated Prefer guestStayCoversNight for occupancy; this still skips revoked grants. */
 export function guestAccessCoversNight(
   stay: Pick<GuestStayRecord, 'check_in_at' | 'check_out_at' | 'revoked_at'> & {
     check_in_date?: string | null;
@@ -113,9 +134,7 @@ export function guestAccessCoversNight(
   nightDate: string
 ): boolean {
   if (stay.revoked_at) return false;
-  const start = stayRecordCheckInDate(stay);
-  const end = stayRecordCheckOutDate(stay);
-  return start <= nightDate && nightDate < end;
+  return guestStayCoversNight(stay, nightDate);
 }
 
 export type BedNightCellStatus = 'occupied' | 'scheduled';
@@ -124,12 +143,13 @@ export function resolveNightCellStatus(
   stay: Pick<GuestStayRecord, 'check_in_at' | 'check_out_at' | 'revoked_at'> & {
     check_in_date?: string | null;
     check_out_date?: string | null;
+    is_archived?: boolean;
   },
   nightDate: string,
   now: Date = new Date(),
   policy?: GuestAccessCheckInPolicy | null
 ): BedNightCellStatus | null {
-  if (!guestAccessCoversNight(stay, nightDate)) return null;
+  if (!guestStayCoversNight(stay, nightDate)) return null;
   const inMs = resolveStayCheckInMs(stay, policy);
   if (Number.isFinite(inMs) && now.getTime() < inMs) return 'scheduled';
   return 'occupied';

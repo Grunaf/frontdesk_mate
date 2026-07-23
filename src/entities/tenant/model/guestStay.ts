@@ -35,9 +35,20 @@ export interface StayBed {
   rotation?: number;
 }
 
+/** Legal entity shown in the guest privacy policy (data controller / operator). */
+export interface TourismRegistrationDataController {
+  legalName?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface TourismRegistrationConfig {
   enabled: boolean;
   profileId: string;
+  dataController?: TourismRegistrationDataController;
+  /** Public URL of sample entry-stamp photo shown in guest help sheet. */
+  entryStampHelpImage?: string;
 }
 
 export interface GuestStayConfig {

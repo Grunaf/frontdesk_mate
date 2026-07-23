@@ -11,6 +11,12 @@ export type ReceptionDeskAuditMutation =
   | 'createGuestStay'
   | 'updateGuestReservation'
   | 'revokeGuestStay'
+  | 'archiveGuestReservation'
+  | 'cancelGuestReservation'
+  | 'checkoutGuestReservation'
+  | 'remainderArchived'
+  | 'trashGuestReservation'
+  | 'restoreGuestReservation'
   | 'reissueGuestStay'
   | 'completeDeskCheckIn'
   | 'setGuestReservationBookingPaid'
@@ -33,7 +39,14 @@ export type MappedReceptionDeskAuditEvent = {
 const MUTATION_TO_EVENT = {
   createGuestStay: { eventType: 'guest_stay_created', subjectType: 'guest_stay' },
   updateGuestReservation: { eventType: 'guest_stay_updated', subjectType: 'guest_stay' },
-  revokeGuestStay: { eventType: 'guest_stay_revoked', subjectType: 'guest_stay' },
+  revokeGuestStay: { eventType: 'guest_stay_cancelled', subjectType: 'guest_stay' },
+  archiveGuestReservation: { eventType: 'guest_stay_cancelled', subjectType: 'guest_stay' },
+  cancelGuestReservation: { eventType: 'guest_stay_cancelled', subjectType: 'guest_stay' },
+  checkoutGuestReservation: { eventType: 'guest_stay_checked_out', subjectType: 'guest_stay' },
+  remainderArchived: { eventType: 'guest_stay_remainder_archived', subjectType: 'guest_stay' },
+  /** @deprecated legacy trash mutation — maps to cancelled for history continuity */
+  trashGuestReservation: { eventType: 'guest_stay_cancelled', subjectType: 'guest_stay' },
+  restoreGuestReservation: { eventType: 'guest_stay_restored', subjectType: 'guest_stay' },
   reissueGuestStay: { eventType: 'guest_stay_reissued', subjectType: 'guest_stay' },
   completeDeskCheckIn: { eventType: 'desk_check_in_completed', subjectType: 'guest_stay' },
   setGuestReservationBookingPaid: { eventType: 'booking_paid_set', subjectType: 'guest_stay' },

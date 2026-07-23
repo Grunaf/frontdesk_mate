@@ -46,7 +46,6 @@ export function MagicLinkCard({
 }: MagicLinkCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState<CopiedKind>(null);
-  const [showSendLink, setShowSendLink] = useState(false);
 
   const displayBedLabel = bedLabel?.trim() || bedId;
 
@@ -139,35 +138,19 @@ export function MagicLinkCard({
           Guest not here yet — paste into Booking chat (or WhatsApp). The link opens the arrival guide
           (directions and prep). PIN / link unlock the app via Check in on Concierge.
         </p>
-        <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => copyText(guestMessage, 'message')}>
-          {copied === 'message' ? 'Copied' : 'Copy message for guest'}
-        </Button>
-        {!guestPin ? (
-          <p className="text-[11px] text-muted-foreground">PIN not stored — message uses your help text for the code.</p>
-        ) : null}
-        <div className="pt-1">
-          <button
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => copyText(guestMessage, 'message')}>
+            {copied === 'message' ? 'Copied' : 'Copy message for guest'}
+          </Button>
+          <Button
             type="button"
-            className="text-xs font-medium text-primary underline-offset-2 hover:underline"
-            onClick={() => setShowSendLink((open) => !open)}
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => copyText(sendMagicLinkUrl, 'send')}
           >
-            {showSendLink ? 'Hide send link' : 'Show send link only'}
-          </button>
-          {showSendLink ? (
-            <div className="mt-2 space-y-2">
-              <code className="block break-all rounded-md border px-2 py-2 text-[11px]">
-                {sendMagicLinkUrl}
-              </code>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => copyText(sendMagicLinkUrl, 'send')}
-              >
-                {copied === 'send' ? 'Copied' : 'Copy send link'}
-              </Button>
-            </div>
-          ) : null}
+            {copied === 'send' ? 'Copied' : 'Copy send link'}
+          </Button>
         </div>
       </div>
 

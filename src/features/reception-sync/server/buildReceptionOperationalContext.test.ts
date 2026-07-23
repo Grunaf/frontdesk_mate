@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/entities/guest-stay/server', () => ({
   listActiveGuestStays: vi.fn(),
+  listPlanGuestReservations: vi.fn(),
 }));
 
 vi.mock('@/entities/guest-issue/server', () => ({
@@ -16,10 +17,15 @@ vi.mock('@/entities/tenant/server', () => ({
   getTenantRecord: vi.fn(),
 }));
 
+vi.mock('@/features/guest-registration/lib/resolveReceptionStaffContext', () => ({
+  resolveReceptionStaffContext: vi.fn(),
+}));
+
 import { listGuestHubTransfers } from '@/entities/guest-hub-transfer/server';
 import { listGuestIssues } from '@/entities/guest-issue/server';
-import { listActiveGuestStays } from '@/entities/guest-stay/server';
+import { listActiveGuestStays, listPlanGuestReservations } from '@/entities/guest-stay/server';
 import { getTenantRecord } from '@/entities/tenant/server';
+import { resolveReceptionStaffContext } from '@/features/guest-registration/lib/resolveReceptionStaffContext';
 import { buildReceptionOperationalContext } from './buildReceptionOperationalContext';
 
 describe('buildReceptionOperationalContext', () => {
@@ -32,8 +38,18 @@ describe('buildReceptionOperationalContext', () => {
       settings: { operationalDayStartTime: '08:00' },
     } as never);
     vi.mocked(listActiveGuestStays).mockResolvedValue([]);
+    vi.mocked(listPlanGuestReservations).mockResolvedValue([]);
     vi.mocked(listGuestIssues).mockResolvedValue([]);
     vi.mocked(listGuestHubTransfers).mockResolvedValue([]);
+    vi.mocked(resolveReceptionStaffContext).mockResolvedValue({
+      ok: true,
+      ctx: {
+        id: 'user-1',
+        displayName: 'Anna',
+        permissions: [],
+        disabled: false,
+      },
+    });
   });
 
   afterEach(() => {
@@ -52,10 +68,11 @@ describe('buildReceptionOperationalContext', () => {
     });
   });
 
-  it('fetches stays, open issues, and open transfers in parallel', async () => {
+  it('fetches stays, plan occupancy, open issues, and open transfers in parallel', async () => {
     await buildReceptionOperationalContext('kotor-demo', 'en');
 
     expect(listActiveGuestStays).toHaveBeenCalledWith('kotor-demo', 'en');
+    expect(listPlanGuestReservations).toHaveBeenCalledWith('kotor-demo', 'en');
     expect(listGuestIssues).toHaveBeenCalledWith('kotor-demo', 'open');
     expect(listGuestHubTransfers).toHaveBeenCalledWith('kotor-demo', 'open');
     expect(getTenantRecord).toHaveBeenCalledWith('kotor-demo');

@@ -14,7 +14,12 @@ import {
   disableReceptionUser,
   listReceptionUsersByTenant,
   setReceptionUserPinHash,
+  updateReceptionUserPermissions,
 } from '@/entities/reception-user/server';
+import {
+  RECEPTION_STAFF_PERMISSIONS,
+  sanitizeReceptionStaffPermissions,
+} from '@/entities/reception-user';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { insertTenantAuditEvent } from '@/entities/tenant-audit';
 import type { TenantAuditEventType } from '@/entities/tenant-audit';
@@ -36,6 +41,7 @@ function toPublicUser(row: ReceptionUserRecord): ReceptionStaffUser {
     id: row.id,
     login: row.login,
     displayName: row.display_name,
+    permissions: row.permissions,
     disabledAt: row.disabled_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -108,6 +114,7 @@ async function recordReceptionStaffAuditEvent(input: {
     | 'reception_staff_user_created'
     | 'reception_staff_user_disabled'
     | 'reception_staff_pin_changed'
+    | 'reception_staff_permissions_updated'
   >;
   receptionUserId: string;
 }): Promise<void> {
@@ -169,6 +176,9 @@ export async function createReceptionUserAction(formData: FormData): Promise<Rec
   const login = String(formData.get('login') ?? '');
   const displayName = String(formData.get('displayName') ?? '');
   const pin = String(formData.get('pin') ?? '');
+  const permissions = sanitizeReceptionStaffPermissions(
+    formData.getAll('permissions').map((value) => String(value))
+  );
 
   const validation = validateReceptionStaffCreateDraft({ login, displayName, pin });
   if (!validation.ok) {
@@ -185,6 +195,7 @@ export async function createReceptionUserAction(formData: FormData): Promise<Rec
     login: login.trim(),
     displayName: displayName.trim(),
     pin: pin.trim(),
+    permissions,
   });
 
   if (!result.ok) {
@@ -239,6 +250,63 @@ export async function updateReceptionUserPinAction(
     tenantSlug: actor.slug,
     surface,
     eventType: 'reception_staff_pin_changed',
+    receptionUserId: result.user.id,
+  });
+
+  revalidateReceptionStaffPaths(actor.slug, surface, actor.locale);
+  return { ok: true, user: toPublicUser(result.user) };
+}
+
+export async function updateReceptionStaffPermissionsAction(
+  formData: FormData
+): Promise<ReceptionStaffMutateResult> {
+  const surface = parseSurface(String(formData.get('surface') ?? ''));
+  const tenantSlug = String(formData.get('tenantSlug') ?? '').trim();
+  const locale = String(formData.get('locale') ?? 'en').trim();
+  const userId = String(formData.get('userId') ?? '').trim();
+
+  if (!surface || !userId) {
+    return { ok: false, error: 'validation' };
+  }
+
+  const actor = await resolveReceptionStaffActor(tenantSlug, surface, locale);
+  if (!actor.ok) {
+    return { ok: false, error: actor.error };
+  }
+
+  const permissions = sanitizeReceptionStaffPermissions(
+    formData.getAll('permissions').map((value) => String(value))
+  );
+
+  // Drop unknown keys silently via sanitize; with empty whitelist any non-empty key is invalid.
+  const raw = formData.getAll('permissions').map((value) => String(value)).filter(Boolean);
+  if (raw.length > 0 && RECEPTION_STAFF_PERMISSIONS.length === 0) {
+    return { ok: false, error: 'validation' };
+  }
+  const unknown = raw.filter(
+    (value) => !(RECEPTION_STAFF_PERMISSIONS as readonly string[]).includes(value)
+  );
+  if (unknown.length > 0) {
+    return { ok: false, error: 'validation' };
+  }
+
+  const result = await updateReceptionUserPermissions({
+    tenantSlug: actor.slug,
+    userId,
+    permissions,
+  });
+
+  if (!result.ok) {
+    if (result.error === 'invalid_permissions') {
+      return { ok: false, error: 'validation' };
+    }
+    return { ok: false, error: result.error };
+  }
+
+  await recordReceptionStaffAuditEvent({
+    tenantSlug: actor.slug,
+    surface,
+    eventType: 'reception_staff_permissions_updated',
     receptionUserId: result.user.id,
   });
 

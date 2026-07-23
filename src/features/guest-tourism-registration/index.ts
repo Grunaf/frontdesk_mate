@@ -12,7 +12,9 @@ export {
 export {
   saveGuestEntryStampDateAction,
   saveGuestEntryStampDatesAction,
+  saveGuestEntryDetailsAction,
   type GuestEntryDateAssignment,
+  type SaveGuestEntryDetailsPayload,
   type SaveGuestEntryStampDateActionResult,
   type SaveGuestEntryStampDatesActionResult,
   type SaveGuestEntryStampDatesPayload,
@@ -41,14 +43,28 @@ export type { TourismReceptionDocumentKind } from '@/entities/guest-tourism-regi
 export {
   listTourismGuestsForSessionAction,
   type ListTourismGuestsForSessionActionResult,
+  type TourismEntryDetailsDto,
   type TourismGuestListItem,
 } from './actions/listTourismGuestsForSessionAction';
+export { mapTourismGuestListItems } from './lib/mapTourismGuestListItems';
 export {
   submitTourismGuestAction,
   type SubmitTourismGuestActionResult,
 } from './actions/submitTourismGuestAction';
 export { TourismGuestsRegistrationPanel, TourismRegistrationPanel } from './ui/TourismRegistrationPanel';
 export { EntryDateStepPanel } from './ui/EntryDateStepPanel';
+export { EntryStampHelpSheet } from './ui/EntryStampHelpSheet';
+export {
+  EntryStampPageFields,
+  EntryTransportPointFields,
+} from './ui/EntryDetailsFields';
+export {
+  getTourismEntryPointsCatalog,
+  findAirportInCatalog,
+  type TourismEntryAirport,
+  type TourismEntryPlaceSuggestion,
+  type TourismEntryPointsCatalog,
+} from './lib/tourismEntryPointsCatalog';
 export {
   ArrivalDatesFields,
   buildArrivalDatesPayload,
@@ -61,6 +77,9 @@ export {
 } from './ui/ArrivalDatesFields';
 export { TourismRegistrationRequiredSheet } from './ui/TourismRegistrationRequiredSheet';
 export { PassportVerificationRequiredSheet } from './ui/PassportVerificationRequiredSheet';
+export { TourismRegistrationPrivacySheet } from './ui/TourismRegistrationPrivacySheet';
+export { TourismRegistrationPrivacyPolicySheet } from './ui/TourismRegistrationPrivacyPolicySheet';
+export { FinishTourismGuestDraftSheet } from './ui/FinishTourismGuestDraftSheet';
 export { GuestTourismRegistrationComplianceField } from './ui/GuestTourismRegistrationComplianceField';
 export { TourismPassportVerifyWaitingCopy } from './ui/TourismRegistrationPanelSkeleton';
 export {

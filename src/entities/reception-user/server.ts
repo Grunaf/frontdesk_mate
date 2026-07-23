@@ -6,11 +6,22 @@ import { verifyReceptionUserPin } from './lib/receptionUserPin';
 export {
   createReceptionUser,
   disableReceptionUser,
+  findReceptionUserById,
   findReceptionUserByLogin,
   listReceptionUsersByTenant,
   setReceptionUserPinHash,
   updateReceptionUser,
+  updateReceptionUserPermissions,
 } from './api/receptionUserRepository';
+export {
+  RECEPTION_STAFF_PERMISSIONS,
+  isReceptionStaffPermission,
+  receptionStaffCanManageArchive,
+  receptionStaffCanManageTrash,
+  receptionStaffHasPermission,
+  sanitizeReceptionStaffPermissions,
+} from './lib/receptionPermissions';
+export type { ReceptionStaffPermission } from './lib/receptionPermissions';
 export type {
   CreateReceptionUserInput,
   CreateReceptionUserResult,
@@ -18,6 +29,8 @@ export type {
   ReceptionUserRecord,
   SetReceptionUserPinHashResult,
   UpdateReceptionUserInput,
+  UpdateReceptionUserPermissionsInput,
+  UpdateReceptionUserPermissionsResult,
   UpdateReceptionUserResult,
 } from './model/types';
 

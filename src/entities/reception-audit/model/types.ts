@@ -2,6 +2,13 @@ export type ReceptionAuditEventType =
   | 'guest_stay_created'
   | 'guest_stay_updated'
   | 'guest_stay_revoked'
+  | 'guest_stay_archived'
+  | 'guest_stay_trashed'
+  | 'guest_stay_cancelled'
+  | 'guest_stay_checked_out'
+  | 'guest_stay_remainder_archived'
+  | 'guest_stay_restored'
+  | 'guest_stay_purged'
   | 'guest_stay_reissued'
   | 'desk_check_in_completed'
   | 'booking_paid_set'
@@ -37,6 +44,13 @@ export const RECEPTION_AUDIT_EVENT_TYPES = [
   'guest_stay_created',
   'guest_stay_updated',
   'guest_stay_revoked',
+  'guest_stay_archived',
+  'guest_stay_trashed',
+  'guest_stay_cancelled',
+  'guest_stay_checked_out',
+  'guest_stay_remainder_archived',
+  'guest_stay_restored',
+  'guest_stay_purged',
   'guest_stay_reissued',
   'desk_check_in_completed',
   'booking_paid_set',

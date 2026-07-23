@@ -10,16 +10,24 @@ export {
   listStaysWithTourismGuestsPastCheckOut,
   listTourismGuestsByStayId,
   removeGuestDocumentObjectsFromStorage,
+  setStayEntryDetails,
   setTourismExportedAt,
   setTourismGuestEntryStampDate,
   updateTourismGuestPassportPath,
 } from './api/guestTourismRegistrationRepository';
 export type {
   CreateTourismDocumentSignedUrlResult,
+  SetStayEntryDetailsResult,
   SetTourismExportedAtResult,
   SetTourismGuestEntryStampDateResult,
+  StayEntryDetailsPatch,
   TourismReceptionDocumentKind,
   TourismStayEligibleForPurge,
   UpdateTourismGuestPassportPathResult,
 } from './api/guestTourismRegistrationRepository';
-export type { GuestTourismGuest, GuestTourismRegistrationSummary } from './model/types';
+export type {
+  EntryDetailsStatus,
+  EntryTransportType,
+  GuestTourismGuest,
+  GuestTourismRegistrationSummary,
+} from './model/types';

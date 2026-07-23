@@ -16,7 +16,7 @@ type StayEssentialsConciergeBannerRootProps = {
   children: ReactNode;
 };
 
-/** Single fetch + one skeleton slot for concierge pre-check-in / settlement banners. */
+/** One skeleton slot for concierge pre-check-in / settlement banners (status from StaySetupStatusProvider). */
 export function StayEssentialsConciergeBannerRoot({ children }: StayEssentialsConciergeBannerRootProps) {
   const slot = useStayEssentialsConciergeBannerSlot();
 

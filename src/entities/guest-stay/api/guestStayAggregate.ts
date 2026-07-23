@@ -9,7 +9,7 @@ import {
 import type { GuestStayRecord } from '../model/types';
 
 export const GUEST_RESERVATION_COLUMNS =
-  'id, tenant_id, guest_id, guest_name, bed_id, check_in_at, check_out_at, check_in_date, check_out_date, status, desk_checked_in_at, key_issued_at, passport_checked_at, tax_collected_at, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, stay_contact_whatsapp, booking_platform_id, booking_external_id, booking_amount_due_minor, booking_amount_currency, booking_paid_at, created_at, updated_at';
+  'id, tenant_id, guest_id, guest_name, bed_id, check_in_at, check_out_at, check_in_date, check_out_date, status, desk_checked_in_at, key_issued_at, passport_checked_at, tax_collected_at, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, stay_contact_whatsapp, booking_platform_id, booking_external_id, booking_amount_due_minor, booking_amount_currency, booking_paid_at, is_archived, archived_at, archived_by_reception_user_id, archive_kind, archive_reason, original_reservation_id, created_at, updated_at';
 
 export const GUEST_ACCESS_GRANT_COLUMNS =
   'id, tenant_id, reservation_id, access_token_hash, access_token_encrypted, pin_hash, activated_at, revoked_at, created_at, updated_at';
@@ -19,12 +19,8 @@ export function mapReservationGrantToStayRecord(
   grant: Record<string, unknown> | null,
   tenantSlug: string
 ): GuestStayRecord | null {
-  if (!grant) {
-    return null;
-  }
-
   const status = reservation.status ? String(reservation.status) : 'planned';
-  const grantRevoked = grant.revoked_at ? String(grant.revoked_at) : null;
+  const grantRevoked = grant?.revoked_at ? String(grant.revoked_at) : null;
   const revokedAt =
     grantRevoked ?? (status === 'cancelled' ? String(reservation.updated_at ?? '') : null);
 
@@ -42,7 +38,7 @@ export function mapReservationGrantToStayRecord(
     check_out_date: reservation.check_out_date
       ? String(reservation.check_out_date).slice(0, 10)
       : String(reservation.check_out_at).slice(0, 10),
-    activated_at: grant.activated_at ? String(grant.activated_at) : null,
+    activated_at: grant?.activated_at ? String(grant.activated_at) : null,
     desk_checked_in_at: reservation.desk_checked_in_at
       ? String(reservation.desk_checked_in_at)
       : null,
@@ -76,6 +72,18 @@ export function mapReservationGrantToStayRecord(
       reservation.booking_amount_currency
     ),
     booking_paid_at: reservation.booking_paid_at ? String(reservation.booking_paid_at) : null,
+    is_archived: Boolean(reservation.is_archived),
+    archived_at: reservation.archived_at ? String(reservation.archived_at) : null,
+    archived_by_reception_user_id: reservation.archived_by_reception_user_id
+      ? String(reservation.archived_by_reception_user_id)
+      : null,
+    archive_kind:
+      reservation.archive_kind === 'full' || reservation.archive_kind === 'remainder'
+        ? reservation.archive_kind
+        : null,
+    original_reservation_id: reservation.original_reservation_id
+      ? String(reservation.original_reservation_id)
+      : null,
   };
 }
 

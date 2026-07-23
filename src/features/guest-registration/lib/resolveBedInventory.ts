@@ -1,7 +1,7 @@
 import { resolveBedUnitType } from '@/entities/room/model/bed-type';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
-  guestAccessCoversNight,
+  guestStayCoversNight,
   guestAccessCheckInPolicyFromSettings,
   resolveNightCellStatus,
   type BedNightCellStatus,
@@ -109,12 +109,12 @@ function resolveStaysForBedOnNight(
       )
     );
 
-  const current = bedStays.find((stay) => guestAccessCoversNight(stay, nightDate));
+  const current = bedStays.find((stay) => guestStayCoversNight(stay, nightDate));
   const next = current
     ? undefined
     : bedStays.find(
         (stay) =>
-          !guestAccessCoversNight(stay, nightDate) && stay.check_in_at.slice(0, 10) > nightDate
+          !guestStayCoversNight(stay, nightDate) && stay.check_in_at.slice(0, 10) > nightDate
       );
 
   const nightCellStatus = current
@@ -163,7 +163,8 @@ export function resolveBedInventory(
   const { nightDate, now } = normalizeResolveOptions(options);
   const guestStay = settings.guestStay;
   const configBeds = guestStay?.beds ?? [];
-  const activeStays = stays.filter((stay) => !stay.revoked_at);
+  // Occupancy is booking-based (not access-grant-based).
+  const activeStays = stays.filter((stay) => !stay.is_archived);
   const configuredBedIds = new Set(listGuestStayBedIds(settings));
   const entriesByRoom = new Map<string, BedInventoryEntry[]>();
   const processedIds = new Set<string>();
@@ -227,7 +228,7 @@ export function resolveBedInventory(
     .filter((group): group is BedInventoryRoomGroup => group !== null);
 
   const orphanStays = activeStays.filter(
-    (stay) => !configuredBedIds.has(stay.bed_id) && guestAccessCoversNight(stay, nightDate)
+    (stay) => !configuredBedIds.has(stay.bed_id) && guestStayCoversNight(stay, nightDate)
   );
 
   return { roomGroups, orphanStays };

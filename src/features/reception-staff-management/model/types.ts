@@ -1,3 +1,5 @@
+import type { ReceptionStaffPermission } from '@/entities/reception-user';
+
 export type ReceptionStaffSurface = 'platform' | 'owner';
 
 /** Public staff row — never includes PIN or pin_hash. */
@@ -5,6 +7,7 @@ export type ReceptionStaffUser = {
   id: string;
   login: string;
   displayName: string;
+  permissions: ReceptionStaffPermission[];
   disabledAt: string | null;
   createdAt: string;
   updatedAt: string;

@@ -160,7 +160,7 @@ describe('resolveNightCellStatus', () => {
 });
 
 describe('stayOverlapsBedNightRange', () => {
-  it('ignores revoked stays', () => {
+  it('counts revoked-access stays as occupancy (lived nights still block the bed)', () => {
     expect(
       stayOverlapsBedNightRange(
         {
@@ -168,6 +168,23 @@ describe('stayOverlapsBedNightRange', () => {
           check_in_at: '2026-06-20T14:00:00.000Z',
           check_out_at: '2026-06-25T23:59:59.999Z',
           revoked_at: '2026-06-21T00:00:00.000Z',
+        },
+        'bed-1',
+        '2026-06-22T14:00:00.000Z',
+        '2026-06-28T23:59:59.999Z'
+      )
+    ).toBe(true);
+  });
+
+  it('ignores archived stays', () => {
+    expect(
+      stayOverlapsBedNightRange(
+        {
+          bed_id: 'bed-1',
+          check_in_at: '2026-06-20T14:00:00.000Z',
+          check_out_at: '2026-06-25T23:59:59.999Z',
+          revoked_at: null,
+          is_archived: true,
         },
         'bed-1',
         '2026-06-22T14:00:00.000Z',

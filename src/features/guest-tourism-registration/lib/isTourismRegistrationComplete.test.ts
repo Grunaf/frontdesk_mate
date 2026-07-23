@@ -11,10 +11,14 @@ const sampleGuest: GuestTourismGuest = {
   citizenship: 'ME',
   passport_number: 'AB123456',
   date_of_birth: '1990-01-01',
+  country_of_birth: 'ME',
+  place_of_birth: 'Podgorica',
   gender: 'male',
+  document_type: 'passport',
   passport_storage_path: 'p',
   entry_stamp_storage_path: 'e',
   entry_stamp_date: null,
+  entry_stamp_page: null,
   created_at: '2026-01-01T00:00:00.000Z',
 };
 
@@ -26,6 +30,10 @@ function summary(
     tourism_contact_whatsapp: null,
     tourism_registration_completed_at: null,
     tourism_exported_at: null,
+    entry_transport_type: null,
+    entry_point_code: null,
+    entry_point_label: null,
+    entry_details_status: null,
     guests: [],
     ...overrides,
   };

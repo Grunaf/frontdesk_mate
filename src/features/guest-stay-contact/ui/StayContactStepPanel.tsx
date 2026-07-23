@@ -1,7 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
+import type { CountryCode } from 'libphonenumber-js/min';
+import { getCountries } from 'libphonenumber-js/min';
+import { resolveTourismRegistrationConfig, useTenant } from '@/entities/tenant';
 import { useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 import { Alert, AlertDescription, Button, IconBackActionsRow } from '@/shared/ui';
@@ -10,6 +13,20 @@ import { saveStayContactAction } from '../actions/saveStayContactAction';
 import { GuestPhoneNumberField } from './GuestPhoneNumberField';
 
 export type StayContactNavigationMode = 'standalone' | 'wizard';
+
+const FALLBACK_PHONE_COUNTRY: CountryCode = 'ME';
+const KNOWN_PHONE_COUNTRIES = new Set<string>(getCountries());
+
+function resolveDefaultPhoneCountry(profileId: string | undefined): CountryCode {
+  if (!profileId) {
+    return FALLBACK_PHONE_COUNTRY;
+  }
+  const code = profileId.trim().toUpperCase();
+  if (KNOWN_PHONE_COUNTRIES.has(code)) {
+    return code as CountryCode;
+  }
+  return FALLBACK_PHONE_COUNTRY;
+}
 
 type StayContactStepPanelProps = {
   tenantSlug: string;
@@ -21,6 +38,8 @@ type StayContactStepPanelProps = {
   onBack?: () => void;
   navigationMode?: StayContactNavigationMode;
   showIntroHeading?: boolean;
+  /** Override property default country (ISO-3166 alpha-2). */
+  defaultCountry?: CountryCode;
 };
 
 export function StayContactStepPanel({
@@ -33,8 +52,17 @@ export function StayContactStepPanel({
   onBack,
   navigationMode = 'standalone',
   showIntroHeading = true,
+  defaultCountry,
 }: StayContactStepPanelProps) {
   const t = useTranslations('pages.staySetup.contact');
+  const { settings } = useTenant();
+  const resolvedDefaultCountry = useMemo(() => {
+    if (defaultCountry) {
+      return defaultCountry;
+    }
+    const profileId = resolveTourismRegistrationConfig(settings)?.profileId;
+    return resolveDefaultPhoneCountry(profileId);
+  }, [defaultCountry, settings]);
   const [contactWhatsapp, setContactWhatsapp] = useState(initialContactWhatsapp ?? '');
   const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -100,11 +128,15 @@ export function StayContactStepPanel({
     void persistContact(contactWhatsapp);
   }, [contactComplete, contactWhatsapp, isLocked, navigationMode, persistContact]);
 
-  const showFooter = navigationMode === 'standalone' && !isLocked;
+  // Footer (chevron + primary) for pinned registration chrome on standalone and stay-setup.
+  const showFooter = !isLocked;
   const panelTopPadding = showIntroHeading ? 'pt-2' : 'pt-0';
 
   return (
-    <div className={cn('flex min-h-full flex-col', panelTopPadding)} onBlur={handleWizardBlurSave}>
+    <div
+      className={cn('flex min-h-full flex-col', panelTopPadding)}
+      onBlur={navigationMode === 'wizard' && !showFooter ? handleWizardBlurSave : undefined}
+    >
       <div className="space-y-6">
         {showIntroHeading ? (
           <div className="space-y-2">
@@ -128,6 +160,8 @@ export function StayContactStepPanel({
           locked={isLocked}
           invalid={Boolean(whatsappError)}
           label={t('whatsappLabel')}
+          countryLabel={t('countryLabel')}
+          defaultCountry={resolvedDefaultCountry}
           savedBadge={isLocked ? t('savedBadge') : undefined}
         />
         {whatsappError ? <p className="text-xs text-destructive">{whatsappError}</p> : null}

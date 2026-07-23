@@ -3,7 +3,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { GuestExtraConfig } from '@/entities/guest-extra';
 import type { HouseRule } from '@/entities/house-rules';
-import type { GuestStayConfig, TenantLandingSettings, TenantSettings } from '@/entities/tenant';
+import type {
+  GuestStayConfig,
+  TenantLandingSettings,
+  TenantSettings,
+  TourismRegistrationDataController,
+} from '@/entities/tenant';
 import type { TenantBookingSettings } from '@/entities/tenant/model/booking';
 import type { ArrivalAccessConfig } from '@/entities/tenant/model/accessPoints';
 import type { TenantHostelSettings } from '@/entities/tenant/model/hostelSettings';
@@ -32,6 +37,8 @@ export interface TenantFormDraft {
   roomMapEnabled?: boolean;
   tourismRegistrationRequired?: boolean;
   tourismProfileId?: string;
+  tourismDataController?: TourismRegistrationDataController;
+  tourismEntryStampHelpImage?: string;
   planStayStatusEnabled?: boolean;
   launchBookingPath?: 'engine' | 'wa';
   arrivalWalkToHostel?: LocalizedField;
@@ -191,6 +198,14 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
   const existingConfig = resolveTourismRegistrationConfig(base);
   const tourismProfileId =
     draft.tourismProfileId ?? existingConfig?.profileId;
+  const tourismDataController =
+    draft.tourismDataController !== undefined
+      ? { ...existingConfig?.dataController, ...draft.tourismDataController }
+      : existingConfig?.dataController;
+  const tourismEntryStampHelpImage =
+    draft.tourismEntryStampHelpImage !== undefined
+      ? draft.tourismEntryStampHelpImage
+      : existingConfig?.entryStampHelpImage;
   const roomMapEnabled = draft.roomMapEnabled ?? isRoomMapModuleEnabled(merged);
   const planStayStatusEnabled =
     draft.planStayStatusEnabled ?? resolvePlanStayStatusEnabled(base);
@@ -203,6 +218,8 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
       tourismRegistrationRequired,
       tourismProfileId,
       planStayStatusEnabled,
+      dataController: tourismDataController,
+      entryStampHelpImage: tourismEntryStampHelpImage,
     }),
   };
 
@@ -231,6 +248,7 @@ export function applyDraftPatch(
     arrivalAccess,
     guestStay,
     hubTransfer,
+    tourismDataController,
     ...rest
   } = patch;
 
@@ -262,6 +280,12 @@ export function applyDraftPatch(
   }
   if (hubTransfer !== undefined) {
     next.hubTransfer = mergeDraftSlice(current.hubTransfer, hubTransfer);
+  }
+  if (tourismDataController !== undefined) {
+    next.tourismDataController = mergeDraftSlice(
+      current.tourismDataController,
+      tourismDataController
+    );
   }
 
   return next;

@@ -26,8 +26,9 @@ import { formatMinorAsDecimalInput, getCurrencyDefinition, isCurrencyCode } from
 import type { HousekeepingBedStatus, HousekeepingRoomStatus } from '@/entities/housekeeping';
 import {
   createGuestStayAction,
+  cancelGuestReservationAction,
+  checkoutGuestReservationAction,
   reissueGuestStayAction,
-  revokeGuestStayAction,
   updateGuestReservationAction,
 } from '../actions/receptionActions';
 import {
@@ -45,11 +46,8 @@ import {
 } from '../lib/guestAccessDates';
 import { resolveBedInventory, flattenBedInventory } from '../lib/resolveBedInventory';
 import { resolveReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
+import type { PlanBedFilter } from '../lib/filterPlanRoomGroupsByFreeTonight';
 import { resolveGuestAccessPeriod } from '../lib/resolveGuestAccessPeriod';
-import {
-  formatReceptionDeskStats,
-  resolveReceptionDeskStats,
-} from '../lib/resolveReceptionDeskStats';
 import { BedAccessCalendar } from './BedAccessCalendar';
 import { ReceptionIssueAccessOverlay } from './ReceptionIssueAccessOverlay';
 import { ReceptionIssueAccessFab } from './ReceptionIssueAccessFab';
@@ -58,9 +56,10 @@ import { ReceptionHubView } from './ReceptionHubView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReceptionTransfersTab } from './ReceptionTransfersTab';
+import { ReceptionArchiveTab } from './ReceptionArchiveTab';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
-import { RevokeAccessDialog } from './RevokeAccessDialog';
+import { CancelBookingDialog } from './RevokeAccessDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
@@ -71,7 +70,6 @@ import {
   useReceptionOperationalPolling,
   subscribeReceptionRefresh,
 } from '@/features/reception-sync';
-
 interface ReceptionCheckInPanelProps {
   tenantSlug: string;
   tenantName: string;
@@ -91,7 +89,7 @@ interface EditReservationDraft {
   intent: 'changeDates' | 'moveBed';
 }
 
-type DeskTab = 'desk' | 'plan' | 'access' | 'issues' | 'transfers';
+type DeskTab = 'desk' | 'plan' | 'access' | 'issues' | 'transfers' | 'archive';
 
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
@@ -129,7 +127,8 @@ export function ReceptionCheckInPanel({
       tab === 'plan' ||
       tab === 'access' ||
       tab === 'issues' ||
-      tab === 'transfers'
+      tab === 'transfers' ||
+      tab === 'archive'
     ) {
       setDeskTab(tab);
     }
@@ -137,7 +136,9 @@ export function ReceptionCheckInPanel({
 
   const { context, refresh } = useReceptionOperationalSync(initialContext, tenantSlug);
   const deskContext = context as ReceptionOperationalContext;
-  const { stays, openIssues, openTransfers, operational } = deskContext;
+  const { stays, planStays: planStaysFromContext, openIssues, openTransfers, operational } =
+    deskContext;
+  const planStays = planStaysFromContext ?? stays;
   const signedInAsLabel = deskContext.actorDisplayName ?? FALLBACK_RECEPTION_ACTOR_LABEL;
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
 
@@ -173,6 +174,8 @@ export function ReceptionCheckInPanel({
 
   const [issueOverlayOpen, setIssueOverlayOpen] = useState(false);
   const [deskTab, setDeskTab] = useState<DeskTab>('desk');
+  const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
+  const [planFocusToken, setPlanFocusToken] = useState(0);
   const [mode, setMode] = useState<GuestAccessFormMode>('walk-in');
   const [guestName, setGuestName] = useState('');
   const [bookingPlatformId, setBookingPlatformId] = useState('');
@@ -184,8 +187,13 @@ export function ReceptionCheckInPanel({
   const [error, setError] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [selectedStayId, setSelectedStayId] = useState<string | null>(null);
+  const [selectedStayOverride, setSelectedStayOverride] =
+    useState<GuestStayRecordWithLink | null>(null);
   const [stayPins, setStayPins] = useState<Record<string, string>>({});
-  const [pendingRevokeStayId, setPendingRevokeStayId] = useState<string | null>(null);
+  const [pendingArchiveStay, setPendingArchiveStay] = useState<{
+    stayId: string;
+    intent: 'cancel' | 'checkout';
+  } | null>(null);
   const [pendingReissueAccessStay, setPendingReissueAccessStay] =
     useState<GuestStayRecordWithLink | null>(null);
   const [editDraft, setEditDraft] = useState<EditReservationDraft | null>(null);
@@ -206,6 +214,12 @@ export function ReceptionCheckInPanel({
     if (deskTab !== 'plan') return;
     void loadHousekeepingStatuses();
   }, [deskTab, loadHousekeepingStatuses]);
+
+  const openPlanFreeBeds = useCallback(() => {
+    setPlanBedFilter('free_tonight');
+    setPlanFocusToken((token) => token + 1);
+    setDeskTab('plan');
+  }, []);
 
   const handleSetBedStatus = useCallback(
     (bedId: string, status: HousekeepingBedStatus) => {
@@ -251,16 +265,16 @@ export function ReceptionCheckInPanel({
   );
 
   const hubSnapshot = useMemo(
-    () => resolveReceptionHubSnapshot(tenantSettings, stays, new Date()),
-    [tenantSettings, stays, rolloverEpoch]
+    () => resolveReceptionHubSnapshot(tenantSettings, planStays, new Date()),
+    [tenantSettings, planStays, rolloverEpoch]
   );
 
   const inventory = useMemo(
     () =>
-      resolveBedInventory(tenantSettings, stays, {
+      resolveBedInventory(tenantSettings, planStays, {
         nightDate: hubSnapshot.operational.operationalDate,
       }),
-    [tenantSettings, stays, hubSnapshot.operational.operationalDate]
+    [tenantSettings, planStays, hubSnapshot.operational.operationalDate]
   );
   const guestAccessMessageTemplate = useMemo(
     () => resolveGuestAccessMessageTemplate(tenantSettings),
@@ -281,35 +295,43 @@ export function ReceptionCheckInPanel({
     },
     [inventory]
   );
-  const deskStats = useMemo(
-    () => formatReceptionDeskStats(resolveReceptionDeskStats(tenantSettings, stays)),
-    [tenantSettings, stays]
-  );
 
-  const selectedStay = useMemo(
-    () => (selectedStayId ? stays.find((stay) => stay.id === selectedStayId) ?? null : null),
-    [selectedStayId, stays]
-  );
+  const selectedStay = useMemo(() => {
+    if (!selectedStayId) return null;
+    const fromPlan = planStays.find((stay) => stay.id === selectedStayId) ?? null;
+    if (fromPlan) return fromPlan;
+    const fromActive = stays.find((stay) => stay.id === selectedStayId) ?? null;
+    if (fromActive) return fromActive;
+    if (selectedStayOverride?.id === selectedStayId) return selectedStayOverride;
+    return null;
+  }, [selectedStayId, selectedStayOverride, planStays, stays]);
 
   const openStayDetail = useCallback((stayId: string) => {
+    setSelectedStayOverride(null);
     setSelectedStayId(stayId);
+  }, []);
+
+  const openStayDetailRecord = useCallback((stay: GuestStayRecordWithLink) => {
+    setSelectedStayOverride(stay);
+    setSelectedStayId(stay.id);
   }, []);
 
   const closeStayDetail = useCallback(() => {
     setSelectedStayId(null);
+    setSelectedStayOverride(null);
   }, []);
 
   const overlappingBedIds = useMemo(() => {
     const ids = new Set<string>();
     for (const bedId of bedOptions) {
-      const overlaps = stays.some((stay) => {
+      const overlaps = planStays.some((stay) => {
         if (editDraft?.stayId === stay.id) return false;
         return stayOverlapsBedNightRange(stay, bedId, accessPeriod.checkInAt, accessPeriod.checkOutAt);
       });
       if (overlaps) ids.add(bedId);
     }
     return ids;
-  }, [accessPeriod.checkInAt, accessPeriod.checkOutAt, bedOptions, editDraft?.stayId, stays]);
+  }, [accessPeriod.checkInAt, accessPeriod.checkOutAt, bedOptions, editDraft?.stayId, planStays]);
 
   const bedsByRoom = useMemo(
     () =>
@@ -553,11 +575,15 @@ export function ReceptionCheckInPanel({
     });
   };
 
-  const handleRevoke = (stayId: string) => {
+  const handleCancelOrCheckout = (stayId: string, intent: 'cancel' | 'checkout') => {
     setRevokeError(null);
+    const operationalDate = hubSnapshot.operational.operationalDate;
 
     startTransition(async () => {
-      const result = await revokeGuestStayAction({ tenantSlug, stayId });
+      const result =
+        intent === 'checkout'
+          ? await checkoutGuestReservationAction({ tenantSlug, stayId, operationalDate })
+          : await cancelGuestReservationAction({ tenantSlug, stayId, operationalDate });
       if (!result.ok) {
         setRevokeError(result.error);
         return;
@@ -575,7 +601,7 @@ export function ReceptionCheckInPanel({
       if (editDraft?.stayId === stayId) {
         clearEditDraft();
       }
-      setPendingRevokeStayId(null);
+      setPendingArchiveStay(null);
     });
   };
 
@@ -613,7 +639,6 @@ export function ReceptionCheckInPanel({
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reception desk</p>
           <h1 className="truncate text-xl font-semibold">{tenantName}</h1>
-          <p className="text-xs text-muted-foreground">{deskStats}</p>
           <p className="text-xs text-muted-foreground">Signed in as {signedInAsLabel}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
@@ -640,13 +665,14 @@ export function ReceptionCheckInPanel({
         onPress={() => setIssueOverlayOpen(true)}
       />
 
-      <RevokeAccessDialog
-        open={pendingRevokeStayId !== null}
+      <CancelBookingDialog
+        open={pendingArchiveStay !== null}
+        intent={pendingArchiveStay?.intent ?? 'cancel'}
         isPending={isPending}
-        onKeep={() => setPendingRevokeStayId(null)}
+        onKeep={() => setPendingArchiveStay(null)}
         onConfirm={() => {
-          if (pendingRevokeStayId) {
-            handleRevoke(pendingRevokeStayId);
+          if (pendingArchiveStay) {
+            handleCancelOrCheckout(pendingArchiveStay.stayId, pendingArchiveStay.intent);
           }
         }}
       />
@@ -677,6 +703,7 @@ export function ReceptionCheckInPanel({
           tourismRegistrationRequired={tourismRegistrationRequired}
           tenantSlug={tenantSlug}
           tenantSettings={tenantSettings}
+          operationalDate={hubSnapshot.operational.operationalDate}
           onTourismExportedAtChange={() => {
             void refresh();
           }}
@@ -686,16 +713,12 @@ export function ReceptionCheckInPanel({
           onPassportCheckedAtChange={() => {
             void refresh();
           }}
-          onRevoke={(stayId) => {
-            setPendingRevokeStayId(stayId);
+          onCancelOrCheckout={(stayId, intent) => {
+            setPendingArchiveStay({ stayId, intent });
           }}
-          onChangeDates={(stay) => {
+          onEditStay={(stay) => {
             closeStayDetail();
             beginEditDraft(stay, 'changeDates');
-          }}
-          onMoveBed={(stay) => {
-            closeStayDetail();
-            beginEditDraft(stay, 'moveBed');
           }}
           onReissueAccess={(stay) => {
             setPendingReissueAccessStay(stay);
@@ -754,6 +777,7 @@ export function ReceptionCheckInPanel({
               <TabsTrigger value="transfers">
                 Transfers{openTransfers.length > 0 ? ` (${openTransfers.length})` : ''}
               </TabsTrigger>
+              <TabsTrigger value="archive">Archive</TabsTrigger>
             </TabsList>
 
             <TabsContent value="desk">
@@ -761,6 +785,7 @@ export function ReceptionCheckInPanel({
                 snapshot={hubSnapshot}
                 resolveBedLabel={resolveBedLabel}
                 onViewStay={openStayDetail}
+                onOpenFreeBeds={openPlanFreeBeds}
                 operationalDayUpdatedNotice={operationalDayUpdatedNotice}
               />
             </TabsContent>
@@ -769,7 +794,7 @@ export function ReceptionCheckInPanel({
               <BedAccessCalendar
                 embedded
                 settings={tenantSettings}
-                stays={stays}
+                stays={planStays}
                 onViewStay={openStayDetail}
                 onSelectFreeNight={handleSelectFreeNight}
                 bedStatuses={bedStatuses}
@@ -779,6 +804,9 @@ export function ReceptionCheckInPanel({
                 housekeepingBusy={housekeepingBusy}
                 planStayStatusEnabled={resolvePlanStayStatusEnabled(tenantSettings)}
                 planToday={hubSnapshot.operational.operationalDate}
+                bedFilter={planBedFilter}
+                onBedFilterChange={setPlanBedFilter}
+                focusToken={planFocusToken}
               />
             </TabsContent>
 
@@ -813,6 +841,20 @@ export function ReceptionCheckInPanel({
                 onFocusStay={openStayDetail}
                 isActive={deskTab === 'transfers'}
                 onOperationalRefresh={refresh}
+              />
+            </TabsContent>
+
+            <TabsContent value="archive">
+              <ReceptionArchiveTab
+                tenantSlug={tenantSlug}
+                isActive={deskTab === 'archive'}
+                resolveBedLabel={resolveBedLabel}
+                onOperationalRefresh={async () => {
+                  await refresh();
+                }}
+                onOpenOriginal={(stay) => {
+                  openStayDetailRecord(stay);
+                }}
               />
             </TabsContent>
           </Tabs>

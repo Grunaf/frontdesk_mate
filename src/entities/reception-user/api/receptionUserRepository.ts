@@ -4,6 +4,10 @@ import { getTenantRecord } from '@/entities/tenant/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 
 import { isReceptionLoginValid, normalizeReceptionLogin } from '../lib/normalizeReceptionLogin';
+import {
+  sanitizeReceptionStaffPermissions,
+  type ReceptionStaffPermission,
+} from '../lib/receptionPermissions';
 import { hashReceptionUserPin, isReceptionUserPinValid } from '../lib/receptionUserPin';
 import type {
   CreateReceptionUserInput,
@@ -12,11 +16,18 @@ import type {
   ReceptionUserRecord,
   SetReceptionUserPinHashResult,
   UpdateReceptionUserInput,
+  UpdateReceptionUserPermissionsInput,
+  UpdateReceptionUserPermissionsResult,
   UpdateReceptionUserResult,
 } from '../model/types';
 
 const RECEPTION_USER_COLUMNS =
-  'id, tenant_id, login, display_name, pin_hash, disabled_at, created_at, updated_at';
+  'id, tenant_id, login, display_name, pin_hash, permissions, disabled_at, created_at, updated_at';
+
+function mapPermissions(raw: unknown): ReceptionStaffPermission[] {
+  if (!Array.isArray(raw)) return [];
+  return sanitizeReceptionStaffPermissions(raw.map((entry) => String(entry)));
+}
 
 function mapRow(row: Record<string, unknown>): ReceptionUserRecord {
   return {
@@ -25,6 +36,7 @@ function mapRow(row: Record<string, unknown>): ReceptionUserRecord {
     login: String(row.login),
     display_name: String(row.display_name),
     pin_hash: String(row.pin_hash),
+    permissions: mapPermissions(row.permissions),
     disabled_at: row.disabled_at ? String(row.disabled_at) : null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
@@ -61,6 +73,35 @@ export async function listReceptionUsersByTenant(
   }
 
   return data.map((row) => mapRow(row as Record<string, unknown>));
+}
+
+export async function findReceptionUserById(
+  tenantSlug: string,
+  userId: string
+): Promise<ReceptionUserRecord | null> {
+  if (!userId.trim()) return null;
+
+  const tenantId = await resolveTenantId(tenantSlug);
+  if (!tenantId) return null;
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+
+  const { data, error } = await admin
+    .from('reception_users')
+    .select(RECEPTION_USER_COLUMNS)
+    .eq('tenant_id', tenantId)
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) {
+      console.error('findReceptionUserById:', error.message);
+    }
+    return null;
+  }
+
+  return mapRow(data as Record<string, unknown>);
 }
 
 export async function findReceptionUserByLogin(
@@ -121,6 +162,7 @@ export async function createReceptionUser(
 
   const login = normalizeReceptionLogin(input.login);
   const userId = crypto.randomUUID();
+  const permissions = sanitizeReceptionStaffPermissions(input.permissions);
   let pinHash: string;
   try {
     pinHash = hashReceptionUserPin(tenant.slug, userId, input.pin);
@@ -138,6 +180,7 @@ export async function createReceptionUser(
       login,
       display_name: displayName,
       pin_hash: pinHash,
+      permissions,
       created_at: now,
       updated_at: now,
     })
@@ -187,7 +230,7 @@ export async function updateReceptionUser(
     return { ok: false, error: 'user_disabled' };
   }
 
-  const patch: Record<string, string> = {
+  const patch: Record<string, string | ReceptionStaffPermission[]> = {
     updated_at: new Date().toISOString(),
   };
 
@@ -211,6 +254,10 @@ export async function updateReceptionUser(
     }
   }
 
+  if (input.permissions !== undefined) {
+    patch.permissions = sanitizeReceptionStaffPermissions(input.permissions);
+  }
+
   if (Object.keys(patch).length === 1) {
     return { ok: true, user: current };
   }
@@ -229,6 +276,23 @@ export async function updateReceptionUser(
   }
 
   return { ok: true, user: mapRow(data as Record<string, unknown>) };
+}
+
+export async function updateReceptionUserPermissions(
+  input: UpdateReceptionUserPermissionsInput
+): Promise<UpdateReceptionUserPermissionsResult> {
+  const result = await updateReceptionUser({
+    tenantSlug: input.tenantSlug,
+    userId: input.userId,
+    permissions: sanitizeReceptionStaffPermissions(input.permissions),
+  });
+  if (result.ok) {
+    return result;
+  }
+  if (result.error === 'invalid_display_name' || result.error === 'invalid_pin') {
+    return { ok: false, error: 'invalid_permissions' };
+  }
+  return { ok: false, error: result.error };
 }
 
 export async function setReceptionUserPinHash(input: {

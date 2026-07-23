@@ -1,6 +1,11 @@
 import { TenantProvider } from '@/entities/tenant';
 import { listPublicTenants, resolveTenantAccess } from '@/entities/tenant/server';
 import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
+import {
+  resolveStaySetupStatus,
+  type StaySetupStatus,
+} from '@/features/guest-stay-contact/server';
+import { StaySetupStatusProvider } from '@/features/guest-stay-contact';
 import { GuestAppRuntime } from '@/entities/tenant/ui/GuestAppRuntime';
 import { TenantOfflineContent } from '@/views/platform/ui/TenantOfflineContent';
 import { TenantNotFoundView } from '@/views/platform/ui/TenantNotFoundView';
@@ -39,6 +44,14 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
   const tenantSlug = tenant.slug;
   const session = await resolveGuestSessionFromCookies(tenantSlug);
 
+  let initialStaySetupStatus: StaySetupStatus | null = null;
+  if (session) {
+    const staySetup = await resolveStaySetupStatus(tenantSlug);
+    if (staySetup.ok) {
+      initialStaySetupStatus = staySetup.status;
+    }
+  }
+
   return (
     <TenantProvider config={tenant}>
       <AnalyticsProvider tenantSlug={tenantSlug} site="app">
@@ -47,14 +60,16 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
           currentTenantSlug={tenantSlug}
           sessionBedId={session?.bedId ?? null}
         >
-          <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-md flex-col overflow-hidden bg-background">
-            <AppHeaderScrollProvider>
-              <AppHeaderShell>
-                <BaseHeader translatedTitles={translatedTitles} />
-              </AppHeaderShell>
-              <AppGuestScrollMain>{children}</AppGuestScrollMain>
-            </AppHeaderScrollProvider>
-          </div>
+          <StaySetupStatusProvider initialStatus={initialStaySetupStatus}>
+            <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-md flex-col overflow-hidden bg-background">
+              <AppHeaderScrollProvider>
+                <AppHeaderShell>
+                  <BaseHeader translatedTitles={translatedTitles} />
+                </AppHeaderShell>
+                <AppGuestScrollMain>{children}</AppGuestScrollMain>
+              </AppHeaderScrollProvider>
+            </div>
+          </StaySetupStatusProvider>
         </GuestAppRuntime>
       </AnalyticsProvider>
     </TenantProvider>

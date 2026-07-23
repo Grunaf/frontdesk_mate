@@ -58,7 +58,9 @@ test.describe('guest concierge stay chip', () => {
     await expect(strip).toBeHidden();
   });
 
-  test('room map link opens registration when prerequisites are incomplete', async ({ page }) => {
+  test('room map link opens stay-setup registration when prerequisites are incomplete', async ({
+    page,
+  }) => {
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
     await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
 
@@ -66,20 +68,15 @@ test.describe('guest concierge stay chip', () => {
       name: /Show room map|room map|Карта комнаты|направления/i,
     });
     await roomMapLink.scrollIntoViewIfNeeded();
-    await expect(roomMapLink).toHaveAttribute('href', /\/registration(?:\?|$)/, {
+    await expect(roomMapLink).toHaveAttribute('href', /\/stay-setup\?.*step=registration/, {
       timeout: config.navTimeoutMs,
     });
     await roomMapLink.click();
 
-    await expect(page).toHaveURL(/\/registration(?:\?|$)/, {
+    await expect(page).toHaveURL(/\/stay-setup\?.*step=registration/, {
       timeout: config.navTimeoutMs,
     });
-    await expect(
-      page.getByRole('heading', {
-        level: 1,
-        name: /Guest registration|Tourist registration|Туристическая регистрация|Регистрация гост/i,
-      })
-    ).toBeVisible();
+    await expect(page.getByLabel('Stay setup steps')).toBeVisible();
   });
 
   // Default provision uses check-in = today → settlement banner (not pre-check-in registration).

@@ -104,7 +104,7 @@ describe('resolveReceptionHubSnapshot', () => {
     expect(snapshot.expectedToday.map((entry) => entry.id)).toEqual(['stay-1']);
   });
 
-  it('lists free beds for operational night excluding occupied reservations', () => {
+  it('lists free beds and occupied count for operational night', () => {
     const now = new Date('2026-07-09T10:00:00.000Z');
     const occupied = makeStay({ bed_id: 'bed-1', check_in_at: '2026-07-09T14:00:00.000Z' });
 
@@ -112,7 +112,120 @@ describe('resolveReceptionHubSnapshot', () => {
 
     expect(snapshot.operational.operationalDate).toBe('2026-07-09');
     expect(snapshot.freeBedEntries.map((entry) => entry.bedId)).toEqual(['bed-2']);
-    expect(snapshot.freeBedRoomGroups[0]?.beds.map((entry) => entry.bedId)).toEqual(['bed-2']);
+    expect(snapshot.occupiedBedCount).toBe(1);
+  });
+
+  it('lists unpaid stays covering the operational night', () => {
+    const now = new Date('2026-07-09T10:00:00.000Z');
+    const unpaid = makeStay({
+      id: 'unpaid',
+      bed_id: 'bed-1',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+    });
+    const paid = makeStay({
+      id: 'paid',
+      bed_id: 'bed-2',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      booking_paid_at: '2026-07-09T09:00:00.000Z',
+    });
+
+    const snapshot = resolveReceptionHubSnapshot(settings, [unpaid, paid], now);
+
+    expect(snapshot.unpaid.map((entry) => entry.id)).toEqual(['unpaid']);
+  });
+
+  it('lists admitted stays without key issued on the operational night', () => {
+    const now = new Date('2026-07-09T10:00:00.000Z');
+    const missingKey = makeStay({
+      id: 'no-key',
+      bed_id: 'bed-1',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      passport_checked_at: '2026-07-09T09:00:00.000Z',
+    });
+    const withKey = makeStay({
+      id: 'has-key',
+      bed_id: 'bed-2',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      key_issued_at: '2026-07-09T09:05:00.000Z',
+    });
+    const notAdmitted = makeStay({
+      id: 'expected',
+      bed_id: 'bed-1',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+    });
+
+    const snapshot = resolveReceptionHubSnapshot(settings, [missingKey, withKey, notAdmitted], now);
+
+    expect(snapshot.keyNotIssued.map((entry) => entry.id)).toEqual(['no-key']);
+  });
+
+  it('excludes archived and revoked stays from unpaid and key buckets', () => {
+    const now = new Date('2026-07-09T10:00:00.000Z');
+    const archived = makeStay({
+      id: 'archived',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      is_archived: true,
+    });
+    const revoked = makeStay({
+      id: 'revoked',
+      bed_id: 'bed-2',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      revoked_at: '2026-07-09T09:30:00.000Z',
+    });
+
+    const snapshot = resolveReceptionHubSnapshot(settings, [archived, revoked], now);
+
+    expect(snapshot.unpaid).toEqual([]);
+    expect(snapshot.keyNotIssued).toEqual([]);
+  });
+
+  it('lists admitted departures on last night and check-out morning', () => {
+    const lastNightNow = new Date('2026-07-09T10:00:00.000Z');
+    // Nights 08–09 → last night 09, checkout exclusive 10
+    const departing = makeStay({
+      id: 'leaving',
+      check_in_at: '2026-07-08T14:00:00.000Z',
+      check_out_at: '2026-07-10T23:59:59.999Z',
+      passport_checked_at: '2026-07-08T15:00:00.000Z',
+    });
+    const midStay = makeStay({
+      id: 'staying',
+      bed_id: 'bed-2',
+      check_in_at: '2026-07-08T14:00:00.000Z',
+      check_out_at: '2026-07-12T23:59:59.999Z',
+      passport_checked_at: '2026-07-08T15:00:00.000Z',
+    });
+
+    const onLastNight = resolveReceptionHubSnapshot(settings, [departing, midStay], lastNightNow);
+    expect(onLastNight.operational.operationalDate).toBe('2026-07-09');
+    expect(onLastNight.departures.map((entry) => entry.id)).toEqual(['leaving']);
+    expect(onLastNight.departurePhase).toBe('ahead');
+    expect(onLastNight.checkOutTimeLabel).toBeNull();
+
+    const checkoutMorning = new Date('2026-07-10T10:00:00.000Z');
+    const onCheckoutDay = resolveReceptionHubSnapshot(
+      { ...settings, checkOutTime: '11:00' },
+      [departing],
+      checkoutMorning
+    );
+    expect(onCheckoutDay.operational.operationalDate).toBe('2026-07-10');
+    expect(onCheckoutDay.departures.map((entry) => entry.id)).toEqual(['leaving']);
+    expect(onCheckoutDay.departurePhase).toBe('due_soon');
+    expect(onCheckoutDay.checkOutTimeLabel).toBe('11:00');
+  });
+
+  it('omits non-admitted stays from departures', () => {
+    const now = new Date('2026-07-09T10:00:00.000Z');
+    const notAdmitted = makeStay({
+      check_in_at: '2026-07-08T14:00:00.000Z',
+      check_out_at: '2026-07-10T23:59:59.999Z',
+    });
+
+    const snapshot = resolveReceptionHubSnapshot(settings, [notAdmitted], now);
+    expect(snapshot.departures).toEqual([]);
   });
 
   it('surfaces orphan stays for unknown beds on operational night', () => {

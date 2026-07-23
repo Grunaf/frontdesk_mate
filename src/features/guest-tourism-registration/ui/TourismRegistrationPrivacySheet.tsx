@@ -14,11 +14,13 @@ import {
 type TourismRegistrationPrivacySheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenFullPolicy?: () => void;
 };
 
 export function TourismRegistrationPrivacySheet({
   open,
   onOpenChange,
+  onOpenFullPolicy,
 }: TourismRegistrationPrivacySheetProps) {
   const t = useTranslations('pages.staySetup.register.privacy');
 
@@ -33,11 +35,21 @@ export function TourismRegistrationPrivacySheet({
           <p className="text-sm leading-relaxed text-muted-foreground">{t('body')}</p>
         </BottomSheetBody>
 
-        <BottomSheetFooter>
-          <Button type="button" variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
-            {t('dismiss')}
-          </Button>
-        </BottomSheetFooter>
+        {onOpenFullPolicy ? (
+          <BottomSheetFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                onOpenChange(false);
+                onOpenFullPolicy();
+              }}
+            >
+              {t('openFullPolicy')}
+            </Button>
+          </BottomSheetFooter>
+        ) : null}
       </BottomSheetContent>
     </BottomSheet>
   );

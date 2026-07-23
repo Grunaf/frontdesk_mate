@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   isRegistrationContactAccordionDisabled,
+  isRegistrationEntryDateAccordionDisabled,
   resolveOpenRegistrationAccordionItem,
-  shouldShowRegistrationArrivalStep,
+  shouldShowRegistrationEntryDateAccordionItem,
   shouldShowRegistrationIdentityAccordionItem,
 } from './resolveRegistrationAccordionItem';
 
@@ -18,7 +19,7 @@ describe('resolveRegistrationAccordionItem', () => {
     ).toBe('identity');
   });
 
-  it('opens contact after identity (arrival is a separate card, not accordion)', () => {
+  it('opens entryDate after identity until entry dates complete', () => {
     expect(
       resolveOpenRegistrationAccordionItem({
         tourismRequired: true,
@@ -26,7 +27,7 @@ describe('resolveRegistrationAccordionItem', () => {
         entryDateComplete: false,
         contactComplete: false,
       })
-    ).toBe('contact');
+    ).toBe('entryDate');
   });
 
   it('opens contact when identity and entry date complete but contact incomplete', () => {
@@ -51,11 +52,10 @@ describe('resolveRegistrationAccordionItem', () => {
     ).toBe('contact');
   });
 
-  it('shows arrival step after identity until entry dates complete', () => {
-    expect(shouldShowRegistrationArrivalStep(true, true, false)).toBe(true);
-    expect(shouldShowRegistrationArrivalStep(true, true, true)).toBe(false);
-    expect(shouldShowRegistrationArrivalStep(true, false, false)).toBe(false);
-    expect(shouldShowRegistrationArrivalStep(false, true, false)).toBe(false);
+  it('locks entryDate until identity complete when required', () => {
+    expect(isRegistrationEntryDateAccordionDisabled(true, false)).toBe(true);
+    expect(isRegistrationEntryDateAccordionDisabled(true, true)).toBe(false);
+    expect(isRegistrationEntryDateAccordionDisabled(false, false)).toBe(false);
   });
 
   it('locks contact until identity and entry date complete when required', () => {
@@ -65,8 +65,10 @@ describe('resolveRegistrationAccordionItem', () => {
     expect(isRegistrationContactAccordionDisabled(false, false, false)).toBe(false);
   });
 
-  it('shows identity item only when tourism required', () => {
+  it('shows identity and entryDate items only when tourism required', () => {
     expect(shouldShowRegistrationIdentityAccordionItem(true)).toBe(true);
     expect(shouldShowRegistrationIdentityAccordionItem(false)).toBe(false);
+    expect(shouldShowRegistrationEntryDateAccordionItem(true)).toBe(true);
+    expect(shouldShowRegistrationEntryDateAccordionItem(false)).toBe(false);
   });
 });

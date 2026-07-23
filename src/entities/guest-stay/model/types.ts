@@ -26,6 +26,14 @@ export interface GuestStayRecord {
   booking_amount_due_minor?: number | null;
   booking_amount_currency?: string | null;
   booking_paid_at?: string | null;
+  /** Soft-archive. Operational lists / overlap exclude these. */
+  is_archived?: boolean;
+  archived_at?: string | null;
+  archived_by_reception_user_id?: string | null;
+  /** `full` = whole booking archived; `remainder` = unlived tail linked to original. */
+  archive_kind?: 'full' | 'remainder' | null;
+  /** For remainder rows: lived/shortened original reservation. */
+  original_reservation_id?: string | null;
 }
 
 export interface GuestStayRecordWithLink extends GuestStayRecord {
@@ -199,4 +207,66 @@ export type PreviewGuestStayByPinResult =
   | {
       ok: false;
       error: 'invalid_pin' | 'expired' | 'revoked' | 'db_unavailable';
+    };
+
+/** Reservation mutation status for cancel / checkout / archive restore / purge. */
+export type GuestReservationLifecycleStatus =
+  | 'ok'
+  | 'not_found'
+  | 'db_unavailable'
+  | 'already_archived'
+  | 'not_archived'
+  | 'original_missing'
+  | 'access_overlap'
+  | 'invalid_operational_day';
+
+export type GuestReservationArchiveKind = 'full' | 'remainder';
+
+/** Why the booking left operational inventory. */
+export type GuestReservationArchiveReason = 'cancelled' | 'checked_out';
+
+export type GuestReservationArchiveListItem = {
+  id: string;
+  tenant_id: string;
+  bed_id: string;
+  guest_name: string | null;
+  check_in_date: string;
+  check_out_date: string;
+  status: string;
+  archive_kind: GuestReservationArchiveKind;
+  archive_reason: GuestReservationArchiveReason | null;
+  original_reservation_id: string | null;
+  /** False when original was purged (Open original disabled). */
+  original_exists: boolean;
+  archived_at: string;
+  archived_by_reception_user_id: string | null;
+  archived_by_display_name: string | null;
+};
+
+/** @deprecated Prefer GuestReservationArchiveListItem */
+export type GuestReservationTrashListItem = GuestReservationArchiveListItem;
+
+export type CancelOrCheckoutGuestReservationInput = {
+  tenantSlug: string;
+  stayId: string;
+  /** Operational calendar day at action time (exclusive end for lived portion). */
+  operationalDate: string;
+  archivedByReceptionUserId: string;
+  /**
+   * `cancel` — not admitted / full archive when nothing lived.
+   * `checkout` — after admit; shorten original + archive remainder when nights remain.
+   */
+  intent: 'cancel' | 'checkout';
+};
+
+export type CancelOrCheckoutGuestReservationResult =
+  | {
+      ok: true;
+      kind: 'full_archived' | 'remainder_archived' | 'checkout_no_remainder';
+      originalStayId: string;
+      archiveStayId: string | null;
+    }
+  | {
+      ok: false;
+      error: GuestReservationLifecycleStatus;
     };

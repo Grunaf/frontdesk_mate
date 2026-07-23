@@ -9,12 +9,11 @@ import {
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
 import { isCheckInDayOrLater } from '@/features/stay-essentials/lib/resolveShowSettlementBanner';
-import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
-import { ArrivalGuideStepsShell } from '@/views/arrival-journey';
+import { useTenant } from '@/entities/tenant';
 import type { StaySetupInitialState } from '@/views/stay-setup';
 import { SITE_CONFIG } from '@/shared/config';
 import { useLocale, useTranslations } from '@/shared/i18n';
-import { Button, IconBackActionsRow } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { ensureStayContactSaved } from '@/features/guest-stay-contact/lib/ensureStayContactSaved';
 import { resolveRegistrationStandalonePrimary } from '../lib/resolveRegistrationFooterAction';
@@ -49,14 +48,11 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     stayContactWhatsapp,
     completion,
     registrationComplete,
-    showArrivalStep,
     accordionValue,
     setAccordionValue,
     handleTourismComplete,
     handleEntryDateComplete,
     handleContactComplete,
-    openArrivalStep,
-    closeArrivalStepToIdentity,
     contactDraftWhatsapp,
     setContactDraftWhatsapp,
   } = useRegistrationStepState({ initial, isRegistered });
@@ -69,10 +65,6 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
 
     setCheckInSheetOpen(true);
   }, [isRegistered]);
-
-  const goBack = useCallback(() => {
-    router.push(`/${locale}${SITE_CONFIG.routes.app.staySetup.path}`);
-  }, [locale, router]);
 
   const goToConcierge = useCallback(() => {
     router.push(`/${locale}${SITE_CONFIG.routes.app.concierge.path}`);
@@ -177,45 +169,37 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
 
   return (
     <div className={cn('flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-background')}>
-      <ArrivalGuideStepsShell stepsLayout="scrollLinked">
-        <div className="mt-2 px-4">
-          <h1 className="text-lg font-semibold">{t('tabs.registration')}</h1>
-        </div>
-      </ArrivalGuideStepsShell>
-
       <main className="flex min-h-0 flex-1 flex-col px-4 pt-1 pb-4">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col">
           <RegistrationStepBody
+            className="flex min-h-0 flex-1 flex-col"
             tourismRequired={tourismRequired}
             tourismComplete={tourismComplete}
             entryDateComplete={entryDateComplete}
             contactComplete={contactComplete}
             registrationComplete={registrationComplete}
             passportVerified={passportVerified}
-            showArrivalStep={showArrivalStep}
             accordionValue={accordionValue}
             onAccordionValueChange={setAccordionValue}
             interactionEnabled={isRegistered}
             tenantSlug={tenantSlug}
             stayContactWhatsapp={stayContactWhatsapp}
+            initialTourismGuests={initial.tourismGuests}
+            initialTourismComplete={initial.tourismComplete}
             onTourismComplete={handleTourismComplete}
             onEntryDateComplete={handleEntryDateComplete}
             onContactComplete={onContactComplete}
             onContactDraftChange={setContactDraftWhatsapp}
-            onOpenArrivalStep={openArrivalStep}
-            onArrivalBackToIdentity={closeArrivalStepToIdentity}
             registrationSurface="standalone"
           />
         </div>
-        <IconBackActionsRow className="mt-3" onBack={goBack}>
-          {footerLabel ? (
-            <Button size="lg" onClick={handleFooterPrimary}>
+        {footerLabel ? (
+          <div className="mt-3 shrink-0">
+            <Button size="lg" className="w-full" onClick={handleFooterPrimary}>
               {footerLabel}
             </Button>
-          ) : (
-            <span className="sr-only" aria-hidden />
-          )}
-        </IconBackActionsRow>
+          </div>
+        ) : null}
       </main>
 
       <CheckInRequiredSheet open={checkInSheetOpen} onOpenChange={setCheckInSheetOpen} />

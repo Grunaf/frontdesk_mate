@@ -8,7 +8,10 @@ import type {
   GuestTourismGuest,
   GuestTourismRegistrationSummary,
 } from '@/entities/guest-tourism-registration';
-import { isTourismRegistrationComplete } from '@/entities/guest-tourism-registration';
+import {
+  isTourismRegistrationComplete,
+  parseEntryStampPage,
+} from '@/entities/guest-tourism-registration';
 import {
   createTourismDocumentSignedUrl,
   getStayTourismCompletionTimestamp,
@@ -30,10 +33,15 @@ import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import { uploadGuestTourismDocument } from '../api/uploadGuestTourismDocument';
 import {
   isValidCitizenship,
+  isValidCountryOfBirth,
   isValidDateOfBirth,
+  isValidDocumentType,
   isValidGender,
   isValidPassportNumber,
+  isValidPlaceOfBirth,
   normalizePassportNumber,
+  normalizePlaceOfBirth,
+  type TourismGuestDocumentType,
   type TourismGuestGender,
 } from '../lib/validateTourismGuestIdentity';
 
@@ -45,7 +53,10 @@ type TourismGuestIdentityInput = {
   citizenship: string;
   passportNumber: string;
   dateOfBirth: string;
+  countryOfBirth: string;
+  placeOfBirth: string;
   gender: string;
+  documentType: string;
 };
 
 type ParsedTourismGuestIdentity = {
@@ -54,7 +65,10 @@ type ParsedTourismGuestIdentity = {
   citizenship: string;
   passportNumber: string;
   dateOfBirth: string;
+  countryOfBirth: string;
+  placeOfBirth: string;
   gender: TourismGuestGender;
+  documentType: TourismGuestDocumentType;
 };
 
 function parseTourismGuestIdentityInput(
@@ -64,14 +78,20 @@ function parseTourismGuestIdentityInput(
   const lastName = input.lastName.trim();
   const citizenship = input.citizenship.trim().toUpperCase();
   const dateOfBirth = input.dateOfBirth.trim();
+  const countryOfBirth = input.countryOfBirth.trim().toUpperCase();
+  const placeOfBirthRaw = input.placeOfBirth;
   const genderRaw = input.gender.trim().toLowerCase();
+  const documentTypeRaw = input.documentType.trim().toLowerCase();
 
   if (!firstName || firstName.length > MAX_NAME_LENGTH) return null;
   if (!lastName || lastName.length > MAX_NAME_LENGTH) return null;
   if (!isValidCitizenship(citizenship)) return null;
   if (!isValidPassportNumber(input.passportNumber)) return null;
   if (!isValidDateOfBirth(dateOfBirth)) return null;
+  if (!isValidCountryOfBirth(countryOfBirth)) return null;
+  if (!isValidPlaceOfBirth(placeOfBirthRaw)) return null;
   if (!isValidGender(genderRaw)) return null;
+  if (!isValidDocumentType(documentTypeRaw)) return null;
 
   return {
     firstName,
@@ -79,9 +99,40 @@ function parseTourismGuestIdentityInput(
     citizenship,
     passportNumber: normalizePassportNumber(input.passportNumber),
     dateOfBirth,
+    countryOfBirth,
+    placeOfBirth: normalizePlaceOfBirth(placeOfBirthRaw),
     gender: genderRaw,
+    documentType: documentTypeRaw,
   };
 }
+
+function mapTourismGuestRow(row: Record<string, unknown>): GuestTourismGuest {
+  const citizenship = String(row.citizenship ?? '');
+  return {
+    id: String(row.id),
+    stay_id: String(row.stay_id),
+    first_name: String(row.first_name),
+    last_name: String(row.last_name),
+    citizenship,
+    passport_number: String(row.passport_number ?? ''),
+    date_of_birth: String(row.date_of_birth ?? ''),
+    country_of_birth: String(row.country_of_birth ?? citizenship),
+    place_of_birth: String(row.place_of_birth ?? ''),
+    gender: row.gender === 'female' ? 'female' : 'male',
+    document_type: row.document_type === 'id_card' ? 'id_card' : 'passport',
+    passport_storage_path: String(row.passport_storage_path ?? ''),
+    entry_stamp_storage_path: String(row.entry_stamp_storage_path ?? ''),
+    entry_stamp_date:
+      row.entry_stamp_date == null || row.entry_stamp_date === ''
+        ? null
+        : String(row.entry_stamp_date),
+    entry_stamp_page: parseEntryStampPage(row.entry_stamp_page),
+    created_at: String(row.created_at),
+  };
+}
+
+const TOURISM_GUEST_SELECT_COLUMNS =
+  'id, stay_id, first_name, last_name, citizenship, passport_number, date_of_birth, country_of_birth, place_of_birth, gender, document_type, passport_storage_path, entry_stamp_storage_path, entry_stamp_date, entry_stamp_page, created_at';
 
 async function assertStayOwnedByTenant(
   tenantSlug: string,
@@ -502,13 +553,14 @@ export async function createTourismGuestForReceptionAction(input: {
         citizenship: identity.citizenship,
         passport_number: identity.passportNumber,
         date_of_birth: identity.dateOfBirth,
+        country_of_birth: identity.countryOfBirth,
+        place_of_birth: identity.placeOfBirth,
         gender: identity.gender,
+        document_type: identity.documentType,
         passport_storage_path: '',
         entry_stamp_storage_path: '',
       })
-      .select(
-        'id, stay_id, first_name, last_name, citizenship, passport_number, date_of_birth, gender, passport_storage_path, entry_stamp_storage_path, entry_stamp_date, created_at'
-      )
+      .select(TOURISM_GUEST_SELECT_COLUMNS)
       .single();
 
     if (error || !data) {
@@ -516,27 +568,10 @@ export async function createTourismGuestForReceptionAction(input: {
       return { ok: false, error: 'db_unavailable' };
     }
 
-    const row = data as Record<string, unknown>;
     revalidatePath('/');
     return {
       ok: true,
-      guest: {
-        id: String(row.id),
-        stay_id: String(row.stay_id),
-        first_name: String(row.first_name),
-        last_name: String(row.last_name),
-        citizenship: String(row.citizenship ?? ''),
-        passport_number: String(row.passport_number ?? ''),
-        date_of_birth: String(row.date_of_birth ?? ''),
-        gender: row.gender === 'female' ? 'female' : 'male',
-        passport_storage_path: String(row.passport_storage_path ?? ''),
-        entry_stamp_storage_path: String(row.entry_stamp_storage_path ?? ''),
-        entry_stamp_date:
-          row.entry_stamp_date == null || row.entry_stamp_date === ''
-            ? null
-            : String(row.entry_stamp_date),
-        created_at: String(row.created_at),
-      },
+      guest: mapTourismGuestRow(data as Record<string, unknown>),
     };
   } catch (error) {
     console.error('createTourismGuestForReceptionAction:', error);
@@ -601,13 +636,14 @@ export async function updateTourismGuestIdentityForReceptionAction(input: {
         citizenship: identity.citizenship,
         passport_number: identity.passportNumber,
         date_of_birth: identity.dateOfBirth,
+        country_of_birth: identity.countryOfBirth,
+        place_of_birth: identity.placeOfBirth,
         gender: identity.gender,
+        document_type: identity.documentType,
       })
       .eq('id', input.guestId)
       .eq('stay_id', input.stayId)
-      .select(
-        'id, stay_id, first_name, last_name, citizenship, passport_number, date_of_birth, gender, passport_storage_path, entry_stamp_storage_path, entry_stamp_date, created_at'
-      )
+      .select(TOURISM_GUEST_SELECT_COLUMNS)
       .maybeSingle();
 
     if (error) {
@@ -619,27 +655,10 @@ export async function updateTourismGuestIdentityForReceptionAction(input: {
       return { ok: false, error: 'not_found' };
     }
 
-    const row = data as Record<string, unknown>;
     revalidatePath('/');
     return {
       ok: true,
-      guest: {
-        id: String(row.id),
-        stay_id: String(row.stay_id),
-        first_name: String(row.first_name),
-        last_name: String(row.last_name),
-        citizenship: String(row.citizenship ?? ''),
-        passport_number: String(row.passport_number ?? ''),
-        date_of_birth: String(row.date_of_birth ?? ''),
-        gender: row.gender === 'female' ? 'female' : 'male',
-        passport_storage_path: String(row.passport_storage_path ?? ''),
-        entry_stamp_storage_path: String(row.entry_stamp_storage_path ?? ''),
-        entry_stamp_date:
-          row.entry_stamp_date == null || row.entry_stamp_date === ''
-            ? null
-            : String(row.entry_stamp_date),
-        created_at: String(row.created_at),
-      },
+      guest: mapTourismGuestRow(data as Record<string, unknown>),
     };
   } catch (error) {
     console.error('updateTourismGuestIdentityForReceptionAction:', error);

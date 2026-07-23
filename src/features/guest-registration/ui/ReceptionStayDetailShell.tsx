@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { Pencil, X } from 'lucide-react';
 import {
   BOTTOM_SHEET_SIZES,
   BottomSheet,
   BottomSheetBody,
+  BottomSheetClose,
   BottomSheetContent,
   BottomSheetFooter,
   BottomSheetHeader,
@@ -44,6 +45,13 @@ export interface ReceptionStayDetailShellProps {
   footer: ReactNode;
   /** Defaults to {@link RECEPTION_STAY_DETAIL_TITLE_ID}. */
   titleId?: string;
+  /**
+   * When set, stay-detail chrome shows Edit (pencil).
+   * Mobile: close on the left, pencil on the right.
+   * Desktop: pencil left of close (close stays top-right).
+   */
+  onEdit?: () => void;
+  editDisabled?: boolean;
 }
 
 function useCloseOnEscape(open: boolean, onClose: () => void) {
@@ -69,9 +77,12 @@ function DesktopStayDetailDialog({
   body,
   footer,
   titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
+  onEdit,
+  editDisabled = false,
 }: ReceptionStayDetailShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const labelledBy = titleId;
+  const hasEdit = Boolean(onEdit);
 
   useCloseOnEscape(open, onClose);
 
@@ -102,17 +113,27 @@ function DesktopStayDetailDialog({
         className="flex max-h-[min(90vh,800px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border bg-background shadow-lg outline-none"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative shrink-0 border-b border-border/60 px-6 py-4 pr-14">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="absolute top-3 right-3"
-            onClick={onClose}
-          >
-            <X />
-            <span className="sr-only">Close</span>
-          </Button>
+        <div
+          className={`relative shrink-0 border-b border-border/60 px-6 py-4 ${hasEdit ? 'pr-24' : 'pr-14'}`}
+        >
+          <div className="absolute top-3 right-3 flex items-center gap-1">
+            {onEdit ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                disabled={editDisabled}
+                onClick={onEdit}
+              >
+                <Pencil />
+                <span className="sr-only">Edit</span>
+              </Button>
+            ) : null}
+            <Button type="button" variant="ghost" size="icon" onClick={onClose}>
+              <X />
+              <span className="sr-only">Close</span>
+            </Button>
+          </div>
           <div className="space-y-1">
             <h2
               id={labelledBy}
@@ -142,8 +163,11 @@ function MobileStayDetailSheet({
   body,
   footer,
   titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
+  onEdit,
+  editDisabled = false,
 }: ReceptionStayDetailShellProps) {
   const labelledBy = titleId;
+  const hasEditChrome = Boolean(onEdit);
 
   return (
     <BottomSheet
@@ -157,8 +181,34 @@ function MobileStayDetailSheet({
         className="flex flex-col px-0 pb-0"
         aria-labelledby={labelledBy}
         aria-describedby={undefined}
+        showCloseButton={!hasEditChrome}
       >
-        <BottomSheetHeader className="space-y-1 px-6 pb-3">
+        {hasEditChrome ? (
+          <>
+            <BottomSheetClose asChild>
+              <Button variant="ghost" className="absolute top-3 left-3 z-10" size="icon">
+                <X />
+                <span className="sr-only">Close</span>
+              </Button>
+            </BottomSheetClose>
+            <Button
+              type="button"
+              variant="ghost"
+              className="absolute top-3 right-3 z-10"
+              size="icon"
+              disabled={editDisabled}
+              onClick={onEdit}
+            >
+              <Pencil />
+              <span className="sr-only">Edit</span>
+            </Button>
+          </>
+        ) : null}
+        <BottomSheetHeader
+          className={
+            hasEditChrome ? 'space-y-1 px-14 pb-3 pt-10' : 'space-y-1 px-6 pb-3'
+          }
+        >
           <BottomSheetTitle
             id={labelledBy}
             className={RECEPTION_SHELL_TITLE_CLASS}
@@ -186,6 +236,8 @@ export function ReceptionStayDetailShell({
   body,
   footer,
   titleId,
+  onEdit,
+  editDisabled,
 }: ReceptionStayDetailShellProps) {
   const isBelowLg = useIsBelowLg();
 
@@ -204,6 +256,8 @@ export function ReceptionStayDetailShell({
         body={body}
         footer={footer}
         titleId={titleId}
+        onEdit={onEdit}
+        editDisabled={editDisabled}
       />
     );
   }
@@ -218,6 +272,8 @@ export function ReceptionStayDetailShell({
       body={body}
       footer={footer}
       titleId={titleId}
+      onEdit={onEdit}
+      editDisabled={editDisabled}
     />
   );
 }

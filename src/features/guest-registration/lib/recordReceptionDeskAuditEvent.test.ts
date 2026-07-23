@@ -42,9 +42,36 @@ describe('mapReceptionDeskAuditEvent', () => {
     });
 
     expect(mapReceptionDeskAuditEvent({ mutation: 'revokeGuestStay', subjectId: 'stay-3' })).toEqual({
-      eventType: 'guest_stay_revoked',
+      eventType: 'guest_stay_cancelled',
       subjectType: 'guest_stay',
       subjectId: 'stay-3',
+      flags: {},
+    });
+
+    expect(
+      mapReceptionDeskAuditEvent({ mutation: 'trashGuestReservation', subjectId: 'stay-3b' })
+    ).toEqual({
+      eventType: 'guest_stay_cancelled',
+      subjectType: 'guest_stay',
+      subjectId: 'stay-3b',
+      flags: {},
+    });
+
+    expect(
+      mapReceptionDeskAuditEvent({ mutation: 'checkoutGuestReservation', subjectId: 'stay-3c' })
+    ).toEqual({
+      eventType: 'guest_stay_checked_out',
+      subjectType: 'guest_stay',
+      subjectId: 'stay-3c',
+      flags: {},
+    });
+
+    expect(
+      mapReceptionDeskAuditEvent({ mutation: 'remainderArchived', subjectId: 'stay-3d' })
+    ).toEqual({
+      eventType: 'guest_stay_remainder_archived',
+      subjectType: 'guest_stay',
+      subjectId: 'stay-3d',
       flags: {},
     });
 

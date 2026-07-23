@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useGuestSession } from '@/features/guest-check-in';
 import { resolveTourismRegistrationProfile, useTenant } from '@/entities/tenant';
@@ -10,6 +10,7 @@ import {
   Alert,
   AlertDescription,
   Button,
+  FieldLabelHelp,
   IconBackActionsRow,
   Label,
 } from '@/shared/ui';
@@ -18,9 +19,19 @@ import {
   listTourismGuestsForSessionAction,
   type TourismGuestListItem,
 } from '../actions/listTourismGuestsForSessionAction';
-import { AddTourismGuestForm } from './AddTourismGuestForm';
+import { hasAdultGuestOnCheckIn } from '../lib/hasAdultGuestOnCheckIn';
+import {
+  clearTourismGuestDraft,
+  readTourismGuestDraft,
+  writeTourismGuestDraft,
+  type TourismGuestDraft,
+  type TourismGuestFormValues,
+} from '../lib/tourismGuestDraftStorage';
+import { AddTourismGuestSheet } from './AddTourismGuestSheet';
+import { FinishTourismGuestDraftSheet } from './FinishTourismGuestDraftSheet';
 import { TourismGuestList } from './TourismGuestList';
 import { TourismRegistrationPanelSkeleton, TourismPassportVerifyWaitingCopy } from './TourismRegistrationPanelSkeleton';
+import { TourismRegistrationPrivacyPolicySheet } from './TourismRegistrationPrivacyPolicySheet';
 import { TourismRegistrationPrivacySheet } from './TourismRegistrationPrivacySheet';
 
 type TourismGuestsRegistrationPanelProps = {
@@ -31,14 +42,26 @@ type TourismGuestsRegistrationPanelProps = {
   showIntroHeading?: boolean;
   /** Show desk-admit waiting copy (tourism+contact done, passport not verified). */
   showPassportWaiting?: boolean;
+  /** SSR guest list — skips initial client fetch / skeleton. */
+  initialGuests?: TourismGuestListItem[];
+  initialRegistrationComplete?: boolean;
+  /** Notify parent when the live guest list changes (registration accordion shares with Entry Date). */
+  onGuestsChange?: (guests: TourismGuestListItem[]) => void;
+  /** Standalone only: rendered under primary in the pinned bottom chrome (e.g. next accordion). */
+  bottomAccessory?: ReactNode;
+  className?: string;
 };
 
 export function TourismGuestsRegistrationPanel({
   onComplete,
   interactionEnabled = true,
-  navigationMode = 'standalone',
   showIntroHeading = true,
   showPassportWaiting = false,
+  initialGuests,
+  initialRegistrationComplete = false,
+  onGuestsChange,
+  bottomAccessory,
+  className,
 }: TourismGuestsRegistrationPanelProps) {
   const t = useTranslations('pages.staySetup.register');
   const { slug: tenantSlug, settings } = useTenant();
@@ -46,19 +69,49 @@ export function TourismGuestsRegistrationPanel({
   const profile = resolveTourismRegistrationProfile(settings);
   const countryVars = { country: profile?.countryNameKey ?? '' };
 
-  const [guests, setGuests] = useState<TourismGuestListItem[]>([]);
-  const [registrationComplete, setRegistrationComplete] = useState(false);
-  const [everyoneListed, setEveryoneListed] = useState(false);
-  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
-  const [privacySheetOpen, setPrivacySheetOpen] = useState(false);
+  const stayId = session?.stayId ?? '';
+  const checkInDate = session?.checkInDate ?? '';
+  const hasSsrGuests = initialGuests !== undefined;
+
+  const [guests, setGuests] = useState<TourismGuestListItem[]>(() => initialGuests ?? []);
+  const [registrationComplete, setRegistrationComplete] = useState(
+    () => initialRegistrationComplete
+  );
+  const [privacyAccepted, setPrivacyAccepted] = useState(
+    () => initialRegistrationComplete
+  );
+  const [privacyWhySheetOpen, setPrivacyWhySheetOpen] = useState(false);
+  const [privacyPolicySheetOpen, setPrivacyPolicySheetOpen] = useState(false);
+  const [addGuestSheetOpen, setAddGuestSheetOpen] = useState(false);
+  const [finishDraftSheetOpen, setFinishDraftSheetOpen] = useState(false);
+  const [draft, setDraft] = useState<TourismGuestDraft | null>(null);
+  const [editingDraft, setEditingDraft] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [completeError, setCompleteError] = useState<string | null>(null);
-  const [isLoadingList, setIsLoadingList] = useState(true);
+  const [isLoadingList, setIsLoadingList] = useState(
+    () => interactionEnabled && !hasSsrGuests
+  );
   const [isGuestUploadPending, setIsGuestUploadPending] = useState(false);
   const [isCompleting, startCompleteTransition] = useTransition();
 
   const reservationName = session?.guestName?.trim() ?? '';
+  // Pinned chrome on both /registration and stay-setup registration step.
+  const pinActionsToBottom = true;
+  // When accordion header sits above, keep content flush (pt-0).
   const panelTopPadding = showIntroHeading ? 'pt-5' : 'pt-0';
+
+  const hasAdult = useMemo(
+    () => hasAdultGuestOnCheckIn(guests, checkInDate),
+    [guests, checkInDate]
+  );
+
+  useEffect(() => {
+    if (!stayId) {
+      setDraft(null);
+      return;
+    }
+    setDraft(readTourismGuestDraft(stayId));
+  }, [stayId]);
 
   const refreshGuests = useCallback(async () => {
     const result = await listTourismGuestsForSessionAction(tenantSlug);
@@ -70,15 +123,25 @@ export function TourismGuestsRegistrationPanel({
     }
 
     setGuests(result.guests);
+    onGuestsChange?.(result.guests);
     setRegistrationComplete(result.complete);
+    if (result.complete) {
+      setPrivacyAccepted(true);
+    }
     setLoadError(null);
     return true;
-  }, [tenantSlug, t]);
+  }, [tenantSlug, t, onGuestsChange]);
 
   useEffect(() => {
     if (!interactionEnabled) {
       setIsLoadingList(false);
       setLoadError(null);
+      return;
+    }
+
+    // SSR already hydrated the list — skip first-paint skeleton/fetch.
+    if (hasSsrGuests) {
+      setIsLoadingList(false);
       return;
     }
 
@@ -98,14 +161,18 @@ export function TourismGuestsRegistrationPanel({
       }
 
       setGuests(result.guests);
+      onGuestsChange?.(result.guests);
       setRegistrationComplete(result.complete);
+      if (result.complete) {
+        setPrivacyAccepted(true);
+      }
       setIsLoadingList(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [tenantSlug, t, interactionEnabled]);
+  }, [tenantSlug, t, interactionEnabled, hasSsrGuests, onGuestsChange]);
 
   const handleGuestAdded = useCallback(async () => {
     setIsGuestUploadPending(true);
@@ -116,12 +183,51 @@ export function TourismGuestsRegistrationPanel({
     }
   }, [refreshGuests]);
 
+  const handleDraftSave = useCallback(
+    (values: TourismGuestFormValues) => {
+      if (!stayId) return;
+      const next: TourismGuestDraft = {
+        id: draft?.id ?? crypto.randomUUID(),
+        values,
+        updatedAt: new Date().toISOString(),
+      };
+      setDraft(next);
+      writeTourismGuestDraft(stayId, next);
+      setEditingDraft(false);
+    },
+    [draft?.id, stayId]
+  );
+
+  const handleDraftClear = useCallback(() => {
+    if (stayId) {
+      clearTourismGuestDraft(stayId);
+    }
+    setDraft(null);
+    setEditingDraft(false);
+  }, [stayId]);
+
+  const openDraftForm = () => {
+    setEditingDraft(true);
+    setAddGuestSheetOpen(true);
+  };
+
+  const handleAddGuestClick = () => {
+    if (!interactionEnabled || isGuestUploadPending) return;
+    if (draft) {
+      setFinishDraftSheetOpen(true);
+      return;
+    }
+    setEditingDraft(false);
+    setAddGuestSheetOpen(true);
+  };
+
   const completeDisabled =
     !interactionEnabled ||
     registrationComplete ||
     guests.length < 1 ||
-    !everyoneListed ||
-    !privacyAcknowledged ||
+    !hasAdult ||
+    Boolean(draft) ||
+    !privacyAccepted ||
     isGuestUploadPending ||
     isCompleting ||
     isLoadingList;
@@ -148,6 +254,15 @@ export function TourismGuestsRegistrationPanel({
 
     setCompleteError(null);
 
+    if (draft) {
+      setCompleteError(t('errors.finishDraftFirst'));
+      return;
+    }
+    if (!hasAdult) {
+      setCompleteError(t('errors.needAdultGuest'));
+      return;
+    }
+
     startCompleteTransition(async () => {
       const result = await completeTourismRegistrationAction(tenantSlug);
       if (!result.ok) {
@@ -156,9 +271,85 @@ export function TourismGuestsRegistrationPanel({
       }
 
       setRegistrationComplete(true);
+      setPrivacyAccepted(true);
       onComplete();
     });
   };
+
+  const privacyCheckbox = (locked: boolean) => {
+    const inputDisabled = locked || isCompleting || !interactionEnabled;
+    return (
+      <div
+        className={cn(
+          'flex items-start gap-3 text-sm leading-relaxed text-foreground',
+          inputDisabled && 'opacity-60'
+        )}
+      >
+        <input
+          type="checkbox"
+          className="mt-1 size-4 shrink-0 rounded border border-input accent-primary disabled:cursor-not-allowed"
+          checked={locked || privacyAccepted}
+          onChange={(e) => {
+            if (locked) return;
+            setPrivacyAccepted(e.target.checked);
+          }}
+          disabled={inputDisabled}
+          aria-disabled={inputDisabled}
+        />
+        <span>
+          {t('finish.agreePrefix')}{' '}
+          <button
+            type="button"
+            className="font-medium text-foreground underline underline-offset-2"
+            onClick={() => setPrivacyPolicySheetOpen(true)}
+          >
+            {t('privacyPolicy.linkLabel')}
+          </button>
+        </span>
+      </div>
+    );
+  };
+
+  const privacySheets = (
+    <>
+      <TourismRegistrationPrivacySheet
+        open={privacyWhySheetOpen}
+        onOpenChange={setPrivacyWhySheetOpen}
+        onOpenFullPolicy={() => setPrivacyPolicySheetOpen(true)}
+      />
+      <TourismRegistrationPrivacyPolicySheet
+        open={privacyPolicySheetOpen}
+        onOpenChange={setPrivacyPolicySheetOpen}
+      />
+    </>
+  );
+
+  const submitButton = (
+    <Button size="lg" className="w-full" disabled={completeDisabled} onClick={handleComplete}>
+      {isCompleting ? (
+        <>
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+          {t('finish.submitting')}
+        </>
+      ) : (
+        t('finish.submit')
+      )}
+    </Button>
+  );
+
+  const introBlock = (
+    <div className="space-y-2">
+      <div className="flex items-start gap-1.5">
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {t('intro.description', countryVars)}
+        </p>
+        <FieldLabelHelp
+          fieldLabel={t('privacy.title')}
+          onPress={() => setPrivacyWhySheetOpen(true)}
+        />
+      </div>
+    </div>
+  );
 
   if (interactionEnabled && isLoadingList) {
     return <TourismRegistrationPanelSkeleton loadingLabel={t('loading')} />;
@@ -176,8 +367,8 @@ export function TourismGuestsRegistrationPanel({
 
   if (registrationComplete) {
     return (
-      <div className={cn('flex min-h-full flex-col', panelTopPadding)}>
-        <div className="space-y-6">
+      <div className={cn('flex min-h-full flex-col', panelTopPadding, className)}>
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
           {showIntroHeading ? (
             <div className="space-y-2">
               <h2 className="text-lg font-semibold text-foreground">{t('complete.summaryTitle')}</h2>
@@ -208,52 +399,39 @@ export function TourismGuestsRegistrationPanel({
           </div>
         </div>
 
-        {navigationMode === 'standalone' ? (
-          <IconBackActionsRow className="mt-auto pt-6">
+        {privacySheets}
+
+        <div className="mt-auto shrink-0 space-y-4 pt-4">
+          {privacyCheckbox(true)}
+          <IconBackActionsRow>
             <Button size="lg" onClick={onComplete}>
               {t('complete.continue')}
             </Button>
           </IconBackActionsRow>
-        ) : null}
+          {bottomAccessory}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={cn('flex min-h-full flex-col', panelTopPadding)}>
-      <div className="space-y-6">
-        {showIntroHeading ? (
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold text-foreground">{t('intro.title', countryVars)}</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {t('intro.description', countryVars)}
-            </p>
-            <Button
-              type="button"
-              variant="link"
-              className="h-auto p-0 text-sm font-normal"
-              onClick={() => setPrivacySheetOpen(true)}
-            >
-              {t('privacy.linkLabel')}
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {t('intro.description', countryVars)}
-            </p>
-            <Button
-              type="button"
-              variant="link"
-              className="h-auto p-0 text-sm font-normal"
-              onClick={() => setPrivacySheetOpen(true)}
-            >
-              {t('privacy.linkLabel')}
-            </Button>
-          </div>
+    <div
+      className={cn(
+        'flex flex-col',
+        pinActionsToBottom ? 'min-h-0 flex-1' : 'min-h-full',
+        panelTopPadding,
+        className
+      )}
+    >
+      <div
+        className={cn(
+          'space-y-6',
+          pinActionsToBottom && 'min-h-0 flex-1 overflow-y-auto'
         )}
+      >
+        {introBlock}
 
-        <TourismRegistrationPrivacySheet open={privacySheetOpen} onOpenChange={setPrivacySheetOpen} />
+        {privacySheets}
 
         {reservationName ? (
           <div className="space-y-1 rounded-xl border bg-muted/20 p-4">
@@ -264,70 +442,81 @@ export function TourismGuestsRegistrationPanel({
 
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">{t('guestList.heading')}</h3>
-          <TourismGuestList guests={guests} />
+          <TourismGuestList
+            guests={guests}
+            draft={draft}
+            onDraftClick={interactionEnabled ? openDraftForm : undefined}
+          />
         </div>
 
-        <AddTourismGuestForm
+        <Button
+          type="button"
+          variant="outline"
+          className={cn('w-full', draft && 'opacity-60')}
+          disabled={!interactionEnabled || isGuestUploadPending}
+          onClick={handleAddGuestClick}
+        >
+          {t('addGuest.heading')}
+        </Button>
+
+        <AddTourismGuestSheet
+          open={addGuestSheetOpen}
+          onOpenChange={(open) => {
+            setAddGuestSheetOpen(open);
+            if (!open) {
+              setEditingDraft(false);
+            }
+          }}
           tenantSlug={tenantSlug}
-          checkInDate={session?.checkInDate ?? ''}
+          checkInDate={checkInDate}
+          showUnderageAloneWarning={!hasAdult}
+          initialValues={editingDraft ? draft?.values : undefined}
+          formInstanceKey={editingDraft && draft ? `draft-${draft.id}` : 'create'}
           disabled={!interactionEnabled || isGuestUploadPending}
           onUploadPendingChange={setIsGuestUploadPending}
           onGuestAdded={handleGuestAdded}
+          onDraftSave={handleDraftSave}
+          onDraftClear={handleDraftClear}
         />
 
-        <div className="space-y-4">
-        <label
-          className={cn(
-            'flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-foreground',
-            (isCompleting || !interactionEnabled) && 'pointer-events-none opacity-60'
-          )}
-        >
-          <input
-            type="checkbox"
-            className="mt-1 size-4 shrink-0 rounded border border-input accent-primary"
-            checked={everyoneListed}
-            onChange={(e) => setEveryoneListed(e.target.checked)}
-            disabled={isCompleting || !interactionEnabled}
-          />
-          <span>{t('finish.confirmLabel')}</span>
-        </label>
+        <FinishTourismGuestDraftSheet
+          open={finishDraftSheetOpen}
+          onOpenChange={setFinishDraftSheetOpen}
+          onContinue={openDraftForm}
+        />
 
-        <label
-          className={cn(
-            'flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-foreground',
-            (isCompleting || !interactionEnabled) && 'pointer-events-none opacity-60'
-          )}
-        >
-          <input
-            type="checkbox"
-            className="mt-1 size-4 shrink-0 rounded border border-input accent-primary"
-            checked={privacyAcknowledged}
-            onChange={(e) => setPrivacyAcknowledged(e.target.checked)}
-            disabled={isCompleting || !interactionEnabled}
-          />
-          <span>{t('finish.privacyConfirmLabel')}</span>
-        </label>
-
-        {completeError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{completeError}</AlertDescription>
-          </Alert>
+        {!pinActionsToBottom ? (
+          <div className="space-y-4">
+            {privacyCheckbox(false)}
+            {guests.length > 0 && !hasAdult ? (
+              <p className="text-sm text-muted-foreground">{t('errors.needAdultGuest')}</p>
+            ) : null}
+            {completeError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{completeError}</AlertDescription>
+              </Alert>
+            ) : null}
+          </div>
         ) : null}
       </div>
-      </div>
 
-      <IconBackActionsRow className="mt-auto pt-6">
-        <Button size="lg" disabled={completeDisabled} onClick={handleComplete}>
-          {isCompleting ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-              {t('finish.submitting')}
-            </>
-          ) : (
-            t('finish.submit')
-          )}
-        </Button>
-      </IconBackActionsRow>
+      {pinActionsToBottom ? (
+        <div className="mt-auto shrink-0 space-y-4 pt-4">
+          {privacyCheckbox(false)}
+          {guests.length > 0 && !hasAdult ? (
+            <p className="text-sm text-muted-foreground">{t('errors.needAdultGuest')}</p>
+          ) : null}
+          {completeError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{completeError}</AlertDescription>
+            </Alert>
+          ) : null}
+          {submitButton}
+          {bottomAccessory}
+        </div>
+      ) : (
+        <IconBackActionsRow className="mt-auto pt-6">{submitButton}</IconBackActionsRow>
+      )}
     </div>
   );
 }

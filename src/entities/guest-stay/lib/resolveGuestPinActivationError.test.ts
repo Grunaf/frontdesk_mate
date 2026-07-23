@@ -18,6 +18,16 @@ describe('resolveGuestPinActivationError', () => {
     ).toBe('revoked');
   });
 
+  it('returns revoked when stay was archived', () => {
+    expect(
+      resolveGuestPinActivationError({
+        revoked_at: null,
+        check_out_at: futureCheckout,
+        is_archived: true,
+      })
+    ).toBe('revoked');
+  });
+
   it('returns expired when checkout passed', () => {
     expect(
       resolveGuestPinActivationError({

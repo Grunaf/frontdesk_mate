@@ -61,6 +61,7 @@ export const SITE_CONFIG = {
       concierge: { path: '/', titleKey: 'concierge' },
       welcome: { path: '/welcome', titleKey: 'arrivalGuide' },
       staySetup: { path: '/stay-setup', titleKey: 'staySetup' },
+      /** AppHeader title overridden in getRouteTranslations → staySetup.tabs.registration */
       registration: { path: '/registration', titleKey: 'staySetup' },
       guide: { path: '/guide', titleKey: 'guide' },
       services: { path: '/services', titleKey: 'services' },

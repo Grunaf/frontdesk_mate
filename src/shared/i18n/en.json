@@ -703,15 +703,46 @@
           "title": "Why we collect this data",
           "linkLabel": "Why we collect this data",
           "dismiss": "Close",
-          "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
+          "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect identity details (name, citizenship, passport number, date of birth, gender) solely for this purpose and related stay service messages. Your data is accessible to reception staff and, where required, government tourism and police authorities. Document images used for scanning are deleted after text extraction unless retention is required by law. For access or correction requests, contact reception.",
+          "openFullPolicy": "Read full Privacy Policy"
+        },
+        "privacyPolicy": {
+          "title": "Privacy Policy",
+          "linkLabel": "Privacy Policy",
+          "dismiss": "Close",
+          "updatedAt": "Last updated: 22 July 2026",
+          "intro": "This Privacy Policy explains how personal data is processed when you complete booking, check-in, or registration for a stay at {hostelName}, and how responsibility is shared between the accommodation operator (data controller) and the SaaS platform {saasName} (data processor).",
+          "controllerFallback": "the accommodation operator",
+          "contactReception": "For privacy requests, contact reception.",
+          "s1Title": "1. Roles and limitation of liability",
+          "s1Body": "Data controller (operator): {controllerName}. Address: {controllerAddress}. Email: {controllerEmail}. Phone: {controllerPhone}.\n\nData processor: {saasName}, which provides the software, forms, and infrastructure for collecting and transferring registration data to the controller.\n\nImportant: {saasName} acts only as a data processor and is not the lodging provider. It is not responsible for the lawfulness, accuracy, or completeness of data you enter, or for how the hostel and its staff use that data after transfer. Submitting the form means you confirm the data is provided to the controller.",
+          "s2Title": "2. Legal bases",
+          "s2Body": "Processing is based on Montenegro’s Law on Foreigners, Law on Tourist Tax, Law on Personal Data Protection, and — where applicable — GDPR (including contract performance and legal obligation).",
+          "s3Title": "3. Data we process",
+          "s3Body": "Identity and travel data: name, date of birth, gender, citizenship, passport/ID number and validity, entry date/place, and intended stay period.\n\nContact and service data: mobile number (including messengers) and email — for booking confirmations, access codes/instructions, receipts, and stay-related service notices.\n\nDocument images and OCR: photos/scans may be used only to extract text. Images are deleted or cleared after successful recognition unless a public authority requires retention.",
+          "s4Title": "4. Registering co-guests",
+          "s4Body": "If you submit data for other people (family, minors, companions), you confirm you have authority and consent to share their data with the controller and {saasName}. You are solely responsible for inaccurate or unlawful third-party data. Checking the consent box and completing registration confirms you have read this Policy and obtained any required co-guest consent.",
+          "s5Title": "5. Purposes",
+          "s5Body": "Foreign-guest registration with competent authorities (including tourism and police systems), tourist tax calculation/recording, official guest ledger, and stay-related service communications (receipts, keys, confirmations).",
+          "s6Title": "6. Recipients",
+          "s6Body": "Data is shared with public authorities where legally required, and processed in {saasName} infrastructure only as needed to run the forms and deliver data to the controller. Neither the controller nor {saasName} sells personal data for marketing.",
+          "s7Title": "7. Security and retention",
+          "s7Body": "Transmission uses encrypted connections (TLS). Access is limited to authorised hostel staff. Data is kept for periods required by Montenegro HoReCa, tax, and police rules. OCR temporary images are destroyed after text extraction.",
+          "s8Title": "8. Your rights",
+          "s8Body": "You may ask the controller to confirm processing and to correct inaccurate data. The right to erasure (“to be forgotten”) does not apply where retention and disclosure are a legal duty of the controller under Montenegro foreigner and tourist-tax law; such data is kept for the mandatory period even if consent is later withdrawn.",
+          "s9Title": "9. Controller contact",
+          "s9Body": "Controller: {controllerName}\nAddress: {controllerAddress}\nEmail: {controllerEmail}\nPhone: {controllerPhone}"
         },
         "reservationName": {
           "label": "Name on reservation"
         },
         "guestList": {
           "heading": "Added guests",
-          "photosUploaded": "Photos uploaded",
-          "empty": "No guests added yet. Add everyone who will stay in your room or bed."
+          "photosUploaded": "Saved",
+          "empty": "No guests added yet. Add everyone who will stay in your room or bed.",
+          "draftBadge": "Draft",
+          "draftUntitled": "Unfinished guest",
+          "savedBadge": "Saved"
         },
         "addGuest": {
           "heading": "Add a guest",
@@ -721,7 +752,19 @@
           "entryStamp": "Entry stamp photo",
           "submit": "Add guest",
           "adding": "Uploading photos…",
-          "success": "Guest added."
+          "success": "Guest added.",
+          "countryOfBirth": "Country of birth",
+          "countryOfBirthPlaceholder": "Select country",
+          "placeOfBirth": "Place of birth",
+          "documentType": "Document type",
+          "documentTypeHelp": "Other document types are not offered because they are not suitable for guest identification for tourism registration.",
+          "documentTypeOptions": {
+            "passport": "Passport",
+            "idCard": "ID card"
+          },
+          "idCardNumber": "ID card number",
+          "passportNumber": "Passport number",
+          "underageWarning": "This guest will be under 18 on check-in and cannot register alone. Start with an adult guest (18+), then add younger guests."
         },
         "contact": {
           "heading": "Contact for this stay",
@@ -729,8 +772,7 @@
           "hint": "One number for the whole stay — we may contact this person about registration."
         },
         "finish": {
-          "confirmLabel": "Everyone staying at this accommodation is listed above",
-          "privacyConfirmLabel": "I have read and understand how my guest data is used",
+          "agreePrefix": "I agree to the",
           "submit": "Complete registration",
           "submitting": "Completing…"
         },
@@ -745,7 +787,11 @@
           "entryStamp": "Choose an entry stamp photo.",
           "fileTooLarge": "Image is too large. Use a photo under 10 MB.",
           "notAnImage": "File must be an image.",
-          "processingFailed": "Could not process this image. Try another photo."
+          "processingFailed": "Could not process this image. Try another photo.",
+          "countryOfBirth": "Select country of birth.",
+          "placeOfBirth": "Enter place of birth (max 120 characters).",
+          "documentType": "Select document type.",
+          "passportNumber": "Enter a document number using only letters and digits (no spaces or symbols)."
         },
         "errors": {
           "generic": "Something went wrong. Try again.",
@@ -757,7 +803,15 @@
           "uploadFailed": "Upload failed. Check your connection and try again.",
           "dbUnavailable": "Service is temporarily unavailable. Try again in a moment.",
           "invalidWhatsapp": "Enter a valid WhatsApp number with country code.",
-          "noGuests": "Add at least one guest before completing."
+          "noGuests": "Add at least one guest before completing.",
+          "needAdultGuest": "Add at least one adult guest (18+) before completing registration.",
+          "finishDraftFirst": "Finish or clear the unfinished guest draft before completing registration."
+        },
+        "draft": {
+          "finishTitle": "Finish the unfinished guest",
+          "finishBody": "You already started adding a guest. Finish that draft before adding someone else.",
+          "continue": "Continue editing",
+          "dismiss": "Close"
         }
       },
       "settlement": {
@@ -807,7 +861,7 @@
         "registration": "Guest registration",
         "register": "Passport details",
         "identity": "Passport details",
-        "entryDate": "Entry date",
+        "entryDate": "Entry details",
         "contact": "Contact",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
@@ -832,15 +886,46 @@
           "title": "Why we collect this data",
           "linkLabel": "Why we collect this data",
           "dismiss": "Close",
-          "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect your name, a photo of your passport, and entry stamp solely for this purpose. Your data is accessible only to the reception staff and the government tourism office. Document images are automatically deleted within 90 days after checkout. For access or deletion requests, contact reception."
+          "body": "Your accommodation is required by law to register foreign guests with the local tourism authority. We collect identity details (name, citizenship, passport number, date of birth, gender) solely for this purpose and related stay service messages. Your data is accessible to reception staff and, where required, government tourism and police authorities. Document images used for scanning are deleted after text extraction unless retention is required by law. For access or correction requests, contact reception.",
+          "openFullPolicy": "Read full Privacy Policy"
+        },
+        "privacyPolicy": {
+          "title": "Privacy Policy",
+          "linkLabel": "Privacy Policy",
+          "dismiss": "Close",
+          "updatedAt": "Last updated: 22 July 2026",
+          "intro": "This Privacy Policy explains how personal data is processed when you complete booking, check-in, or registration for a stay at {hostelName}, and how responsibility is shared between the accommodation operator (data controller) and the SaaS platform {saasName} (data processor).",
+          "controllerFallback": "the accommodation operator",
+          "contactReception": "For privacy requests, contact reception.",
+          "s1Title": "1. Roles and limitation of liability",
+          "s1Body": "Data controller (operator): {controllerName}. Address: {controllerAddress}. Email: {controllerEmail}. Phone: {controllerPhone}.\n\nData processor: {saasName}, which provides the software, forms, and infrastructure for collecting and transferring registration data to the controller.\n\nImportant: {saasName} acts only as a data processor and is not the lodging provider. It is not responsible for the lawfulness, accuracy, or completeness of data you enter, or for how the hostel and its staff use that data after transfer. Submitting the form means you confirm the data is provided to the controller.",
+          "s2Title": "2. Legal bases",
+          "s2Body": "Processing is based on Montenegro’s Law on Foreigners, Law on Tourist Tax, Law on Personal Data Protection, and — where applicable — GDPR (including contract performance and legal obligation).",
+          "s3Title": "3. Data we process",
+          "s3Body": "Identity and travel data: name, date of birth, gender, citizenship, passport/ID number and validity, entry date/place, and intended stay period.\n\nContact and service data: mobile number (including messengers) and email — for booking confirmations, access codes/instructions, receipts, and stay-related service notices.\n\nDocument images and OCR: photos/scans may be used only to extract text. Images are deleted or cleared after successful recognition unless a public authority requires retention.",
+          "s4Title": "4. Registering co-guests",
+          "s4Body": "If you submit data for other people (family, minors, companions), you confirm you have authority and consent to share their data with the controller and {saasName}. You are solely responsible for inaccurate or unlawful third-party data. Checking the consent box and completing registration confirms you have read this Policy and obtained any required co-guest consent.",
+          "s5Title": "5. Purposes",
+          "s5Body": "Foreign-guest registration with competent authorities (including tourism and police systems), tourist tax calculation/recording, official guest ledger, and stay-related service communications (receipts, keys, confirmations).",
+          "s6Title": "6. Recipients",
+          "s6Body": "Data is shared with public authorities where legally required, and processed in {saasName} infrastructure only as needed to run the forms and deliver data to the controller. Neither the controller nor {saasName} sells personal data for marketing.",
+          "s7Title": "7. Security and retention",
+          "s7Body": "Transmission uses encrypted connections (TLS). Access is limited to authorised hostel staff. Data is kept for periods required by Montenegro HoReCa, tax, and police rules. OCR temporary images are destroyed after text extraction.",
+          "s8Title": "8. Your rights",
+          "s8Body": "You may ask the controller to confirm processing and to correct inaccurate data. The right to erasure (“to be forgotten”) does not apply where retention and disclosure are a legal duty of the controller under Montenegro foreigner and tourist-tax law; such data is kept for the mandatory period even if consent is later withdrawn.",
+          "s9Title": "9. Controller contact",
+          "s9Body": "Controller: {controllerName}\nAddress: {controllerAddress}\nEmail: {controllerEmail}\nPhone: {controllerPhone}"
         },
         "reservationName": {
           "label": "Name on reservation"
         },
         "guestList": {
           "heading": "Added guests",
-          "photosUploaded": "Photos uploaded",
-          "empty": "No guests added yet. Add everyone who will stay in your room or bed."
+          "photosUploaded": "Saved",
+          "empty": "No guests added yet. Add everyone who will stay in your room or bed.",
+          "draftBadge": "Draft",
+          "draftUntitled": "Unfinished guest",
+          "savedBadge": "Saved"
         },
         "addGuest": {
           "heading": "Add a guest",
@@ -858,16 +943,25 @@
             "male": "Male",
             "female": "Female"
           },
-          "underageWarning": "This guest will be under 18 on the check-in date. You can still submit — reception may need to review bed allocation.",
+          "underageWarning": "This guest will be under 18 on check-in and cannot register alone. Start with an adult guest (18+), then add younger guests.",
           "passport": "Passport (photo page)",
           "entryStamp": "Entry stamp photo",
           "submit": "Add guest",
           "adding": "Adding guest…",
-          "success": "Guest added."
+          "success": "Guest added.",
+          "countryOfBirth": "Country of birth",
+          "countryOfBirthPlaceholder": "Select country",
+          "placeOfBirth": "Place of birth",
+          "documentType": "Document type",
+          "documentTypeHelp": "Other document types are not offered because they are not suitable for guest identification for tourism registration.",
+          "documentTypeOptions": {
+            "passport": "Passport",
+            "idCard": "ID card"
+          },
+          "idCardNumber": "ID card number"
         },
         "finish": {
-          "confirmLabel": "Everyone staying at this accommodation is listed above",
-          "privacyConfirmLabel": "I have read and understand how my guest data is used",
+          "agreePrefix": "I agree to the",
           "submit": "Complete registration",
           "submitting": "Completing…"
         },
@@ -880,14 +974,17 @@
           "firstName": "Enter a first name (max 120 characters).",
           "lastName": "Enter a last name (max 120 characters).",
           "citizenship": "Select citizenship.",
-          "passportNumber": "Enter a passport number using only letters and digits (no spaces or symbols).",
+          "passportNumber": "Enter a document number using only letters and digits (no spaces or symbols).",
           "dateOfBirth": "Select a date of birth.",
           "gender": "Select gender.",
           "passport": "Choose a passport photo.",
           "entryStamp": "Choose an entry stamp photo.",
           "fileTooLarge": "Image is too large. Use a photo under 10 MB.",
           "notAnImage": "File must be an image.",
-          "processingFailed": "Could not process this image. Try another photo."
+          "processingFailed": "Could not process this image. Try another photo.",
+          "countryOfBirth": "Select country of birth.",
+          "placeOfBirth": "Enter place of birth (max 120 characters).",
+          "documentType": "Select document type."
         },
         "errors": {
           "generic": "Something went wrong. Try again.",
@@ -898,25 +995,69 @@
           "invalidFile": "One of the photos was rejected. Use a clear JPG or PNG.",
           "uploadFailed": "Upload failed. Check your connection and try again.",
           "dbUnavailable": "Service is temporarily unavailable. Try again in a moment.",
-          "noGuests": "Add at least one guest before completing."
+          "noGuests": "Add at least one guest before completing.",
+          "needAdultGuest": "Add at least one adult guest (18+) before completing registration.",
+          "finishDraftFirst": "Finish or clear the unfinished guest draft before completing registration."
+        },
+        "draft": {
+          "finishTitle": "Finish the unfinished guest",
+          "finishBody": "You already started adding a guest. Finish that draft before adding someone else.",
+          "continue": "Continue editing",
+          "dismiss": "Close"
         }
       },
       "entryDate": {
-        "title": "Arrival / entry dates",
-        "description": "Enter the date each guest entered the country (from the passport stamp or entry record).",
+        "title": "Arrival / entry details",
+        "description": "Tell us how and when each guest entered the country. The stamp page helps reception find it quickly in the passport.",
+        "transportLegend": "How did you enter the country?",
+        "transport": {
+          "plane": "Plane",
+          "bus": "Bus",
+          "car": "Car",
+          "train": "Train",
+          "other": "Other"
+        },
+        "entryPointLabel": "Entry point",
+        "entryPointAirportHint": "Choose the airport from the list.",
+        "entryPointPlaceHint": "Type the border crossing, station, or port — suggestions appear as you type.",
+        "entryPointAirportPlaceholder": "Select airport",
+        "entryPointPlacePlaceholder": "e.g. Debeli Brijeg",
         "dateLabel": "Date of entry",
         "modeLegend": "Did everyone arrive on the same day?",
         "modeSame": "Same day for everyone",
         "modeDifferent": "Different dates",
         "hint": "One date is applied to everyone on this booking.",
         "hintDifferent": "Enter the entry date for each guest.",
+        "stampPageLabel": "Passport stamp page (optional)",
+        "stampPageHint": "Open the passport to the entry stamp and note the page number.",
+        "stampPageGuestLabel": "Stamp page — {name}",
+        "stampHelpLink": "How to find?",
+        "stampHelp": {
+          "title": "How to find the entry stamp",
+          "body": "Look through your passport for the ink stamp from border control for this country. The page number is usually printed in a corner of that page.",
+          "imageAlt": "Example of a country entry stamp",
+          "imageMissing": "Reception has not uploaded a sample stamp photo yet. Look for an ink stamp with the country name and entry date.",
+          "dismiss": "Got it"
+        },
+        "skippedHint": "You skipped this step. You can still fill it in now if you have the details.",
         "loading": "Loading guests…",
         "emptyGuests": "Add guests in passport details first.",
         "savedBadge": "Saved",
         "continue": "Continue to contact",
+        "skip": "Skip for now",
+        "skipConfirm": {
+          "title": "Skip entry details?",
+          "body": "Use this if you have not entered the country yet or cannot find the stamp. Reception may ask you later.",
+          "cancel": "Go back",
+          "confirm": "Skip"
+        },
         "saving": "Saving…",
         "errors": {
           "invalidDate": "Choose a valid entry date.",
+          "invalidTransport": "Choose how you entered the country.",
+          "invalidEntryPoint": "Choose or enter a valid entry point.",
+          "invalidStampPage": "Enter a valid stamp page number (1–999).",
+          "noCatalog": "Entry points are not configured for this property.",
           "generic": "Something went wrong. Try again."
         }
       },
@@ -1395,6 +1536,13 @@
           "guest_stay_created": "Guest stay created",
           "guest_stay_updated": "Guest stay updated",
           "guest_stay_revoked": "Guest stay revoked",
+          "guest_stay_archived": "Guest stay archived",
+          "guest_stay_trashed": "Guest stay moved to archive",
+          "guest_stay_cancelled": "Guest stay cancelled",
+          "guest_stay_checked_out": "Guest checked out",
+          "guest_stay_remainder_archived": "Unlived nights moved to archive",
+          "guest_stay_restored": "Guest stay restored",
+          "guest_stay_purged": "Guest stay permanently deleted",
           "guest_stay_reissued": "Guest stay reissued",
           "desk_check_in_completed": "Desk check-in completed",
           "booking_paid_set": "Booking marked paid",
@@ -1560,6 +1708,25 @@
         "empty": "No staff accounts yet. Create the first account.",
         "loading": "Loading staff…",
         "created": "Staff account added.",
+        "permissions": {
+          "title": "Permissions",
+          "helper": "Elevated permissions are not used yet. All staff can open Archive and restore bookings.",
+          "edit": "Edit permissions",
+          "save": "Save permissions",
+          "lineStaff": "Line staff",
+          "archiveRead": "View Archive",
+          "archiveRestore": "Restore from Archive",
+          "archivePurge": "Permanently delete",
+          "badgeArchiveRead": "Archive",
+          "badgeArchiveRestore": "Restore",
+          "badgeArchivePurge": "Purge",
+          "trashRead": "View Archive",
+          "trashRestore": "Restore from Archive",
+          "trashPurge": "Permanently delete",
+          "badgeTrashRead": "Archive",
+          "badgeTrashRestore": "Restore",
+          "badgeTrashPurge": "Purge"
+        },
         "errors": {
           "validation": "Check the fields and try again.",
           "loginRequired": "Login is required.",
@@ -1687,7 +1854,7 @@
       "title": "Your bed",
       "entrance": "Entrance"
     },
-      "findYourBed": {
+    "findYourBed": {
       "title": "Find your bed",
       "bedLabel": "Bed {bed}",
       "roomLabel": "Room {room}",

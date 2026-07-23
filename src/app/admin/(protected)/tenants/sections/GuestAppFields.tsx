@@ -199,6 +199,7 @@ export function GuestAppFields({
         <>
           <GuestTourismRegistrationComplianceField
             mergedSettings={mergedSettings}
+            tenantSlug={tenantSlug}
             disabled={readOnly}
           />
           <PlanStayStatusField mergedSettings={mergedSettings} disabled={readOnly} />

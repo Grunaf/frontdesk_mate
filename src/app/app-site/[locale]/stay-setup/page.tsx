@@ -7,6 +7,10 @@ import {
   resolveSharedEntryStampDate,
 } from '@/entities/guest-tourism-registration';
 import { getTourismRegistrationByStayId } from '@/entities/guest-tourism-registration/server';
+import {
+  mapTourismGuestListItems,
+  type TourismGuestListItem,
+} from '@/features/guest-tourism-registration';
 import { resolveTourismRegistrationRequired } from '@/entities/tenant';
 import { resolveTenantAccess } from '@/entities/tenant/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
@@ -26,6 +30,7 @@ export default async function StaySetupPage({ params }: StaySetupPageProps) {
   let contactComplete = false;
   let passportVerified = false;
   let stayContactWhatsapp: string | null = null;
+  let tourismGuests: TourismGuestListItem[] = [];
 
   const access = await resolveTenantAccess('app');
   if (access.kind === 'active') {
@@ -38,6 +43,7 @@ export default async function StaySetupPage({ params }: StaySetupPageProps) {
         tourismComplete = registration ? isTourismRegistrationComplete(registration) : false;
         entryDateComplete = registration ? isEntryDateComplete(registration) : false;
         entryStampDate = registration ? resolveSharedEntryStampDate(registration) : null;
+        tourismGuests = mapTourismGuestListItems(registration?.guests ?? []);
       }
 
       const admin = getSupabaseAdmin();
@@ -74,6 +80,7 @@ export default async function StaySetupPage({ params }: StaySetupPageProps) {
         contactComplete,
         passportVerified,
         stayContactWhatsapp,
+        tourismGuests,
       }}
     />
   );

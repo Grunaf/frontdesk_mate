@@ -2,7 +2,11 @@ import { isKnownCitizenshipCode } from './citizenshipOptions';
 
 export type TourismGuestGender = 'male' | 'female';
 
-/** Passport numbers: letters and digits only (no spaces or punctuation). */
+export type TourismGuestDocumentType = 'passport' | 'id_card';
+
+const MAX_PLACE_OF_BIRTH_LENGTH = 120;
+
+/** Passport / ID card numbers: letters and digits only (no spaces or punctuation). */
 export const PASSPORT_NUMBER_PATTERN = /^[A-Za-z0-9]+$/;
 
 export function normalizePassportNumber(raw: string): string {
@@ -18,9 +22,26 @@ export function isValidGender(raw: string): raw is TourismGuestGender {
   return raw === 'male' || raw === 'female';
 }
 
+export function isValidDocumentType(raw: string): raw is TourismGuestDocumentType {
+  return raw === 'passport' || raw === 'id_card';
+}
+
 export function isValidCitizenship(raw: string): boolean {
   const code = raw.trim().toUpperCase();
   return code.length === 2 && isKnownCitizenshipCode(code);
+}
+
+export function isValidCountryOfBirth(raw: string): boolean {
+  return isValidCitizenship(raw);
+}
+
+export function isValidPlaceOfBirth(raw: string): boolean {
+  const trimmed = raw.trim();
+  return trimmed.length > 0 && trimmed.length <= MAX_PLACE_OF_BIRTH_LENGTH;
+}
+
+export function normalizePlaceOfBirth(raw: string): string {
+  return raw.trim();
 }
 
 export function isValidDateOfBirth(raw: string): boolean {

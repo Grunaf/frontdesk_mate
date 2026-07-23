@@ -12,6 +12,7 @@ import { cn } from '@/shared/lib/utils';
 import {
   disableReceptionUserAction,
   listReceptionStaffUsersAction,
+  updateReceptionStaffPermissionsAction,
   updateReceptionUserPinAction,
 } from '../actions/receptionStaffActions';
 import {
@@ -26,7 +27,16 @@ import type {
   ReceptionStaffSurface,
   ReceptionStaffUser,
 } from '../model/types';
+import {
+  RECEPTION_STAFF_PERMISSIONS,
+  type ReceptionStaffPermission,
+} from '@/entities/reception-user';
 
+type PermissionLabelMeta = { platform: string; ownerKey: string };
+
+/** Filled when RECEPTION_STAFF_PERMISSIONS gains keys again. */
+const PERMISSION_BADGE_LABELS: Record<string, PermissionLabelMeta> = {};
+const PERMISSION_EDIT_LABELS: Record<string, PermissionLabelMeta> = {};
 export interface ReceptionStaffManagementProps {
   surface: ReceptionStaffSurface;
   tenantSlug: string;
@@ -192,6 +202,138 @@ function PinChangeRow({
   );
 }
 
+function PermissionsEditRow({
+  surface,
+  tenantSlug,
+  locale,
+  user,
+  disabled,
+  onUpdated,
+  onError,
+}: {
+  surface: ReceptionStaffSurface;
+  tenantSlug: string;
+  locale: string;
+  user: ReceptionStaffUser;
+  disabled: boolean;
+  onUpdated: (user: ReceptionStaffUser) => void;
+  onError: (message: string) => void;
+}) {
+  const t = useTranslations('pages.owner.receptionStaff');
+  const [open, setOpen] = useState(false);
+  const [permissions, setPermissions] = useState<ReceptionStaffPermission[]>(user.permissions);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setPermissions(user.permissions);
+  }, [user.permissions]);
+
+  if (user.disabledAt) {
+    return null;
+  }
+
+  if (RECEPTION_STAFF_PERMISSIONS.length === 0) {
+    return null;
+  }
+
+  const togglePermission = (permission: ReceptionStaffPermission) => {
+    setPermissions((current) =>
+      current.includes(permission)
+        ? current.filter((entry) => entry !== permission)
+        : [...current, permission]
+    );
+  };
+
+  const savePermissions = () => {
+    const formData = new FormData();
+    formData.set('surface', surface);
+    formData.set('tenantSlug', tenantSlug);
+    formData.set('locale', locale);
+    formData.set('userId', user.id);
+    for (const permission of permissions) {
+      formData.append('permissions', permission);
+    }
+
+    startTransition(async () => {
+      const result = await updateReceptionStaffPermissionsAction(formData);
+      if (!result.ok) {
+        onError(
+          surface === 'owner'
+            ? t(`errors.${result.error}` as 'errors.validation')
+            : platformMutateErrorMessage(result.error)
+        );
+        return;
+      }
+      setOpen(false);
+      onUpdated(result.user);
+    });
+  };
+
+  const editLabel = surface === 'owner' ? t('permissions.edit') : 'Edit permissions';
+  const saveLabel = surface === 'owner' ? t('permissions.save') : 'Save permissions';
+
+  return (
+    <div className="mt-2 border-t border-border/60 pt-2">
+      {!open ? (
+        <button
+          type="button"
+          disabled={disabled || isPending}
+          onClick={() => setOpen(true)}
+          className="text-xs font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
+        >
+          {editLabel}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            {surface === 'owner' ? t('permissions.title') : 'Permissions'}
+          </p>
+            {RECEPTION_STAFF_PERMISSIONS.map((permission) => {
+              const meta = PERMISSION_EDIT_LABELS[permission];
+              const label =
+                surface === 'owner' && meta
+                  ? t(meta.ownerKey as 'permissions.lineStaff')
+                  : (meta?.platform ?? permission);
+              return (
+                <label key={permission} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    disabled={disabled || isPending}
+                    checked={permissions.includes(permission)}
+                    onChange={() => togglePermission(permission)}
+                  />
+                  <span>{label}</span>
+                </label>
+              );
+            })}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={disabled || isPending}
+              onClick={savePermissions}
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            >
+              {isPending ? '…' : saveLabel}
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                setOpen(false);
+                setPermissions(user.permissions);
+              }}
+              className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+            >
+              {surface === 'owner' ? t('cancel') : 'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StaffRow({
   surface,
   tenantSlug,
@@ -266,6 +408,27 @@ function StaffRow({
             <span className="font-normal text-muted-foreground">({user.login})</span>
           </p>
           <p className="text-xs text-muted-foreground">{statusLabel}</p>
+          {user.permissions.length > 0 ? (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {user.permissions.map((permission) => {
+                const badge = PERMISSION_BADGE_LABELS[permission];
+                return (
+                  <span
+                    key={permission}
+                    className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                  >
+                    {surface === 'owner' && badge
+                      ? t(badge.ownerKey as 'permissions.lineStaff')
+                      : (badge?.platform ?? permission)}
+                  </span>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {surface === 'owner' ? t('permissions.lineStaff') : 'Line staff'}
+            </p>
+          )}
         </div>
         {!isDisabled ? (
           <button
@@ -278,6 +441,15 @@ function StaffRow({
           </button>
         ) : null}
       </div>
+      <PermissionsEditRow
+        surface={surface}
+        tenantSlug={tenantSlug}
+        locale={locale}
+        user={user}
+        disabled={disabled}
+        onUpdated={onUpdated}
+        onError={onError}
+      />
       <PinChangeRow
         surface={surface}
         tenantSlug={tenantSlug}

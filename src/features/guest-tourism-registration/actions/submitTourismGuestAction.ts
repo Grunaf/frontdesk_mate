@@ -9,10 +9,14 @@ import { getTenantRecord } from '@/entities/tenant/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import {
   isValidCitizenship,
+  isValidCountryOfBirth,
   isValidDateOfBirth,
+  isValidDocumentType,
   isValidGender,
   isValidPassportNumber,
+  isValidPlaceOfBirth,
   normalizePassportNumber,
+  normalizePlaceOfBirth,
 } from '../lib/validateTourismGuestIdentity';
 
 const MAX_NAME_LENGTH = 120;
@@ -67,7 +71,10 @@ export async function submitTourismGuestAction(
   const citizenshipRaw = String(formData.get('citizenship') ?? '').trim().toUpperCase();
   const passportNumberRaw = String(formData.get('passportNumber') ?? '');
   const dateOfBirth = String(formData.get('dateOfBirth') ?? '').trim();
+  const countryOfBirthRaw = String(formData.get('countryOfBirth') ?? '').trim().toUpperCase();
+  const placeOfBirthRaw = String(formData.get('placeOfBirth') ?? '');
   const genderRaw = String(formData.get('gender') ?? '').trim().toLowerCase();
+  const documentTypeRaw = String(formData.get('documentType') ?? '').trim().toLowerCase();
 
   if (!firstName || !lastName) {
     return { ok: false, error: 'invalid_input' };
@@ -81,7 +88,16 @@ export async function submitTourismGuestAction(
   if (!isValidDateOfBirth(dateOfBirth)) {
     return { ok: false, error: 'invalid_input' };
   }
+  if (!isValidCountryOfBirth(countryOfBirthRaw)) {
+    return { ok: false, error: 'invalid_input' };
+  }
+  if (!isValidPlaceOfBirth(placeOfBirthRaw)) {
+    return { ok: false, error: 'invalid_input' };
+  }
   if (!isValidGender(genderRaw)) {
+    return { ok: false, error: 'invalid_input' };
+  }
+  if (!isValidDocumentType(documentTypeRaw)) {
     return { ok: false, error: 'invalid_input' };
   }
 
@@ -92,6 +108,7 @@ export async function submitTourismGuestAction(
 
   const guestRowId = randomUUID();
   const passportNumber = normalizePassportNumber(passportNumberRaw);
+  const placeOfBirth = normalizePlaceOfBirth(placeOfBirthRaw);
 
   const { data, error } = await admin
     .from('guest_stay_tourism_guests')
@@ -103,7 +120,10 @@ export async function submitTourismGuestAction(
       citizenship: citizenshipRaw,
       passport_number: passportNumber,
       date_of_birth: dateOfBirth,
+      country_of_birth: countryOfBirthRaw,
+      place_of_birth: placeOfBirth,
       gender: genderRaw,
+      document_type: documentTypeRaw,
       passport_storage_path: '',
       entry_stamp_storage_path: '',
     })

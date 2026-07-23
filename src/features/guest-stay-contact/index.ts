@@ -3,9 +3,15 @@ export {
   saveStayContactAction,
   type SaveStayContactActionResult,
 } from './actions/saveStayContactAction';
+export { getStaySetupStatusAction } from './actions/getStaySetupStatusAction';
+export type {
+  StaySetupStatus,
+  ResolveStaySetupStatusResult,
+  ResolveStaySetupStatusResult as GetStaySetupStatusActionResult,
+} from './lib/resolveStaySetupStatus';
 export {
-  getStaySetupStatusAction,
-  type GetStaySetupStatusActionResult,
-  type StaySetupStatus,
-} from './actions/getStaySetupStatusAction';
+  StaySetupStatusProvider,
+  useStaySetupStatus,
+  type StaySetupStatusContextValue,
+} from './ui/StaySetupStatusProvider';
 export { StayContactStepPanel } from './ui/StayContactStepPanel';

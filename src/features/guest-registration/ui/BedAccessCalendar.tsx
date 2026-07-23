@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Check } from 'lucide-react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
   HOUSEKEEPING_BED_STATUSES,
@@ -15,13 +16,17 @@ import {
   shiftCalendarAnchor,
   type BedDayCalendarView,
 } from '../lib/resolveBedDayCalendar';
+import {
+  filterPlanRoomGroupsByFreeTonight,
+  type PlanBedFilter,
+} from '../lib/filterPlanRoomGroupsByFreeTonight';
 import { todayUtcDate } from '../lib/guestAccessDates';
 import {
   planStayLifecycleStatusLabel,
   resolvePlanStayLifecycleStatus,
   type PlanStayLifecycleStatus,
 } from '../lib/resolvePlanStayLifecycleStatus';
-import { Button, SegmentedChipBar } from '@/shared/ui';
+import { Button, Icon, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 
 interface BedAccessCalendarProps {
@@ -39,6 +44,10 @@ interface BedAccessCalendarProps {
   planStayStatusEnabled?: boolean;
   /** Operational / Plan “today” column (YYYY-MM-DD). Defaults to UTC calendar today. */
   planToday?: string;
+  bedFilter?: PlanBedFilter;
+  onBedFilterChange?: (filter: PlanBedFilter) => void;
+  /** Increment to snap the calendar anchor to plan today (e.g. Desk → Free). */
+  focusToken?: number;
 }
 
 const VIEW_ITEMS = [
@@ -70,9 +79,10 @@ function lifecycleChipClass(status: PlanStayLifecycleStatus): string {
   }
 }
 
-function formatDayHeader(nightDate: string): string {
+function formatDayHeader(nightDate: string, isToday: boolean): string {
   const date = new Date(`${nightDate}T00:00:00.000Z`);
-  return date.toLocaleDateString('en', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+  const label = date.toLocaleDateString('en', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+  return isToday ? `${label} · Today` : label;
 }
 
 function useIsMobileCalendar(): boolean {
@@ -160,19 +170,38 @@ export function BedAccessCalendar({
   housekeepingBusy = false,
   planStayStatusEnabled = false,
   planToday,
+  bedFilter = 'all',
+  onBedFilterChange,
+  focusToken,
 }: BedAccessCalendarProps) {
   const isMobile = useIsMobileCalendar();
   const [view, setView] = useState<BedDayCalendarView>('week');
   const [anchorDate, setAnchorDate] = useState(todayUtcDate());
+  const [internalBedFilter, setInternalBedFilter] = useState<PlanBedFilter>('all');
 
   const effectiveView = isMobile && view === 'month' ? 'week' : view;
   const housekeepingEnabled = Boolean(onSetBedStatus || onSetRoomStatus);
   const lifecycleToday = planToday ?? todayUtcDate();
+  const effectiveBedFilter = onBedFilterChange ? bedFilter : internalBedFilter;
+
+  const snapAnchorToPlanToday = () => {
+    setAnchorDate(lifecycleToday);
+  };
+
+  useEffect(() => {
+    if (!focusToken) return;
+    setAnchorDate(lifecycleToday);
+  }, [focusToken, lifecycleToday]);
 
   const snapshot = useMemo(
     () => resolveBedDayCalendar(settings, stays, effectiveView, anchorDate),
     [anchorDate, effectiveView, settings, stays]
   );
+
+  const visibleRoomGroups = useMemo(() => {
+    if (effectiveBedFilter !== 'free_tonight') return snapshot.roomGroups;
+    return filterPlanRoomGroupsByFreeTonight(snapshot.roomGroups, lifecycleToday);
+  }, [effectiveBedFilter, lifecycleToday, snapshot.roomGroups]);
 
   const planBedIds = useMemo(
     () => snapshot.roomGroups.flatMap((group) => group.rows.map((row) => row.bedId)),
@@ -183,6 +212,22 @@ export function BedAccessCalendar({
     housekeepingEnabled &&
     planBedIds.length > 0 &&
     planBedIds.some((bedId) => !bedStatuses?.[bedId]);
+
+  const handleBedFilterChange = (next: PlanBedFilter) => {
+    if (onBedFilterChange) {
+      onBedFilterChange(next);
+    } else {
+      setInternalBedFilter(next);
+    }
+    if (next === 'free_tonight') {
+      snapAnchorToPlanToday();
+    }
+  };
+
+  const freeBedsFilterOn = effectiveBedFilter === 'free_tonight';
+  const toggleFreeBedsFilter = () => {
+    handleBedFilterChange(freeBedsFilterOn ? 'all' : 'free_tonight');
+  };
 
   if (snapshot.roomGroups.length === 0) {
     return <p className="text-xs text-muted-foreground">No beds to show on the calendar.</p>;
@@ -204,6 +249,30 @@ export function BedAccessCalendar({
           }}
           className="min-w-0"
         />
+        <button
+          type="button"
+          aria-pressed={freeBedsFilterOn}
+          onClick={toggleFreeBedsFilter}
+          className={cn(
+            'inline-flex h-auto min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium whitespace-nowrap transition-colors',
+            freeBedsFilterOn
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-border bg-background text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              'inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm border',
+              freeBedsFilterOn
+                ? 'border-primary-foreground/80 bg-primary-foreground text-primary'
+                : 'border-muted-foreground/50 bg-background'
+            )}
+          >
+            {freeBedsFilterOn ? <Icon icon={Check} className="size-2.5" size={10} /> : null}
+          </span>
+          Free beds
+        </button>
         <Button
           type="button"
           size="sm"
@@ -212,7 +281,7 @@ export function BedAccessCalendar({
         >
           Prev
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={() => setAnchorDate(todayUtcDate())}>
+        <Button type="button" size="sm" variant="outline" onClick={snapAnchorToPlanToday}>
           Today
         </Button>
         <Button
@@ -239,6 +308,9 @@ export function BedAccessCalendar({
         </p>
       ) : null}
 
+      {effectiveBedFilter === 'free_tonight' && visibleRoomGroups.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No free beds for this night.</p>
+      ) : (
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-xs">
           <thead>
@@ -246,25 +318,34 @@ export function BedAccessCalendar({
               <th className="sticky left-0 z-10 border bg-background px-2 py-1.5 text-left font-medium">
                 Bed
               </th>
-              {snapshot.days.map((nightDate) => (
-                <th key={nightDate} className="min-w-16 border px-1.5 py-1.5 text-left font-medium">
-                  {formatDayHeader(nightDate)}
-                </th>
-              ))}
+              {snapshot.days.map((nightDate) => {
+                const isTodayColumn = nightDate === lifecycleToday;
+                return (
+                  <th
+                    key={nightDate}
+                    className={cn(
+                      'min-w-16 border px-1.5 py-1.5 text-left font-medium',
+                      isTodayColumn && 'bg-primary/5 font-semibold text-foreground'
+                    )}
+                  >
+                    {formatDayHeader(nightDate, isTodayColumn)}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {snapshot.roomGroups.map((group) => {
+            {visibleRoomGroups.map((group) => {
               const roomStatus = roomStatuses?.[group.roomId];
               const showRoomChip =
                 housekeepingEnabled && onSetRoomStatus && !isSyntheticRoomId(group.roomId);
 
               return (
                 <Fragment key={group.roomId}>
-                  <tr>
-                    <td className="sticky left-0 z-10 border bg-muted/20 px-2 py-1">
+                  <tr className="border-t-2 border-border">
+                    <td className="sticky left-0 z-10 border bg-muted px-2 py-1.5">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
                           {group.roomLabel}
                         </span>
                         {showRoomChip ? (
@@ -280,7 +361,7 @@ export function BedAccessCalendar({
                     </td>
                     <td
                       colSpan={snapshot.days.length}
-                      className="border bg-muted/20 px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                      className="border bg-muted px-2 py-1.5"
                     />
                   </tr>
                   {group.rows.map((row) => {
@@ -289,9 +370,9 @@ export function BedAccessCalendar({
 
                     return (
                       <tr key={row.bedId}>
-                        <td className="sticky left-0 z-10 border bg-background px-2 py-1.5">
+                        <td className="sticky left-0 z-10 border bg-background px-2 py-1.5 pl-4">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-medium">{row.displayLabel}</span>
+                            <span className="font-medium text-foreground">{row.displayLabel}</span>
                             {showBedChip ? (
                               <HousekeepingChip
                                 label={bedStatus ? BED_STATUS_LABELS[bedStatus] : 'Set…'}
@@ -312,9 +393,16 @@ export function BedAccessCalendar({
                                   nightDate: cell.nightDate,
                                 })
                               : null;
+                          const isTodayColumn = cell.nightDate === lifecycleToday;
 
                           return (
-                            <td key={`${row.bedId}-${cell.nightDate}`} className="border p-0.5 align-top">
+                            <td
+                              key={`${row.bedId}-${cell.nightDate}`}
+                              className={cn(
+                                'border p-0.5 align-top',
+                                isTodayColumn && 'bg-primary/5'
+                              )}
+                            >
                               {cell.status === 'free' ? (
                                 <button
                                   type="button"
@@ -362,6 +450,7 @@ export function BedAccessCalendar({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
