@@ -4,8 +4,10 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Check } from 'lucide-react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
-  HOUSEKEEPING_BED_STATUSES,
+  HOUSEKEEPING_BED_STATUS_LABELS,
   HOUSEKEEPING_ROOM_STATUSES,
+  isHousekeepingBedNeedsWork,
+  resolveHousekeepingBedPrimaryAction,
   type HousekeepingBedStatus,
   type HousekeepingRoomStatus,
 } from '@/entities/housekeeping';
@@ -55,12 +57,6 @@ const VIEW_ITEMS = [
   { id: 'month', label: 'Month' },
 ] as const;
 
-const BED_STATUS_LABELS: Record<HousekeepingBedStatus, string> = {
-  ready: 'Ready',
-  waiting_linen: 'Waiting linen',
-  no_linen: 'No linen',
-};
-
 const ROOM_STATUS_LABELS: Record<HousekeepingRoomStatus, string> = {
   cleaned: 'Cleaned',
   not_cleaned: 'Not cleaned',
@@ -99,12 +95,6 @@ function useIsMobileCalendar(): boolean {
   return isMobile;
 }
 
-function nextBedStatus(current: HousekeepingBedStatus | undefined): HousekeepingBedStatus {
-  if (!current) return HOUSEKEEPING_BED_STATUSES[0];
-  const index = HOUSEKEEPING_BED_STATUSES.indexOf(current);
-  return HOUSEKEEPING_BED_STATUSES[(index + 1) % HOUSEKEEPING_BED_STATUSES.length];
-}
-
 function nextRoomStatus(current: HousekeepingRoomStatus | undefined): HousekeepingRoomStatus {
   if (!current) return HOUSEKEEPING_ROOM_STATUSES[0];
   const index = HOUSEKEEPING_ROOM_STATUSES.indexOf(current);
@@ -113,10 +103,6 @@ function nextRoomStatus(current: HousekeepingRoomStatus | undefined): Housekeepi
 
 function isSyntheticRoomId(roomId: string): boolean {
   return roomId.startsWith('__');
-}
-
-function bedStatusNeedsWork(status: HousekeepingBedStatus): boolean {
-  return status === 'waiting_linen' || status === 'no_linen';
 }
 
 function roomStatusNeedsWork(status: HousekeepingRoomStatus): boolean {
@@ -298,7 +284,7 @@ export function BedAccessCalendar({
       {showHousekeepingBanner ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
           <p className="text-xs text-foreground">Set cleaning status for all beds</p>
-          <span className="text-[11px] text-muted-foreground">Tap Set… on each bed</span>
+          <span className="text-[11px] text-muted-foreground">Tap Strip / Make on each bed</span>
         </div>
       ) : null}
 
@@ -367,6 +353,10 @@ export function BedAccessCalendar({
                   {group.rows.map((row) => {
                     const bedStatus = bedStatuses?.[row.bedId];
                     const showBedChip = housekeepingEnabled && onSetBedStatus;
+                    const primary = resolveHousekeepingBedPrimaryAction(bedStatus);
+                    const bedChipLabel =
+                      primary?.label ??
+                      (bedStatus ? HOUSEKEEPING_BED_STATUS_LABELS[bedStatus] : 'Strip');
 
                     return (
                       <tr key={row.bedId}>
@@ -375,11 +365,14 @@ export function BedAccessCalendar({
                             <span className="font-medium text-foreground">{row.displayLabel}</span>
                             {showBedChip ? (
                               <HousekeepingChip
-                                label={bedStatus ? BED_STATUS_LABELS[bedStatus] : 'Set…'}
-                                needsWork={bedStatus ? bedStatusNeedsWork(bedStatus) : false}
+                                label={bedChipLabel}
+                                needsWork={isHousekeepingBedNeedsWork(bedStatus)}
                                 unset={!bedStatus}
-                                disabled={housekeepingBusy}
-                                onClick={() => onSetBedStatus(row.bedId, nextBedStatus(bedStatus))}
+                                disabled={housekeepingBusy || !primary}
+                                onClick={() => {
+                                  if (!primary) return;
+                                  onSetBedStatus(row.bedId, primary.nextStatus);
+                                }}
                               />
                             ) : null}
                           </div>

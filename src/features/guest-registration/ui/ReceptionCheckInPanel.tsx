@@ -1,19 +1,25 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
 import {
+  listLaundryMachines,
+  listReceptionBookingPlatforms,
   resolveGuestAccessMessageTemplate,
   resolveGuestAccessPinMissingText,
   resolvePlanStayStatusEnabled,
   resolveTourismRegistrationRequired,
-  listReceptionBookingPlatforms,
 } from '@/entities/tenant';
 import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
+import {
+  listReceptionStayOfferOptions,
+  pickAvailableBedForStayOffer,
+  resolveOfferIdForBed,
+} from '../lib/pickAvailableBedForStayOffer';
 import {
   reservationBookingSourceErrorMessage,
   validateReservationBookingSource,
@@ -28,7 +34,12 @@ import {
   getCurrencyDefinition,
   isCurrencyCode,
 } from '@/shared/lib/currency';
-import type { HousekeepingBedStatus, HousekeepingRoomStatus } from '@/entities/housekeeping';
+import type {
+  HousekeepingBedStatus,
+  HousekeepingLaundryProgram,
+  HousekeepingLaundryRunRecord,
+  HousekeepingRoomStatus,
+} from '@/entities/housekeeping';
 import {
   createGuestStayAction,
   cancelGuestReservationAction,
@@ -41,6 +52,22 @@ import {
   upsertHousekeepingBedStatusAction,
   upsertHousekeepingRoomStatusAction,
 } from '../actions/housekeepingActions';
+import {
+  cancelLaundryRunAction,
+  completeLaundryRunAction,
+  startLaundryRunAction,
+} from '../actions/laundryActions';
+import {
+  receptionStaffCanCheckIn,
+  receptionStaffCanClean,
+} from '@/entities/reception-user';
+import { ReceptionCleaningPanel } from '@/features/reception-cleaning';
+import {
+  coerceDeskTab,
+  resolveAllowedDeskTabs,
+  resolveDefaultDeskTab,
+  type DeskTab,
+} from '../lib/receptionDeskAccess';
 import {
   addNights,
   defaultWalkInDates,
@@ -95,8 +122,6 @@ interface EditReservationDraft {
   intent: 'changeDates' | 'moveBed';
 }
 
-type DeskTab = 'desk' | 'plan' | 'access' | 'cash' | 'issues' | 'transfers' | 'archive';
-
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
 }
@@ -125,21 +150,9 @@ export function ReceptionCheckInPanel({
   const walkInDefaults = defaultWalkInDates();
 
   const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (
-      tab === 'desk' ||
-      tab === 'plan' ||
-      tab === 'access' ||
-      tab === 'cash' ||
-      tab === 'issues' ||
-      tab === 'transfers' ||
-      tab === 'archive'
-    ) {
-      setDeskTab(tab);
-    }
-  }, [searchParams]);
+  const router = useRouter();
+  const tabParam = searchParams.get('tab');
+  const stayIdParam = searchParams.get('stayId')?.trim() ?? '';
 
   const { context, refresh } = useReceptionOperationalSync(initialContext, tenantSlug);
   const deskContext = context as ReceptionOperationalContext;
@@ -147,6 +160,15 @@ export function ReceptionCheckInPanel({
     deskContext;
   const planStays = planStaysFromContext ?? stays;
   const signedInAsLabel = deskContext.actorDisplayName ?? FALLBACK_RECEPTION_ACTOR_LABEL;
+  const staffPermissions = deskContext.staffPermissions ?? [];
+  const staffPermissionsKey = staffPermissions.join(',');
+  const canCheckIn = receptionStaffCanCheckIn(staffPermissions);
+  const canClean = receptionStaffCanClean(staffPermissions);
+  const allowedDeskTabs = useMemo(
+    () => resolveAllowedDeskTabs(staffPermissions),
+    [staffPermissions]
+  );
+
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
 
   useEffect(() => {
@@ -180,7 +202,9 @@ export function ReceptionCheckInPanel({
   }, [operationalDayUpdatedNotice]);
 
   const [issueOverlayOpen, setIssueOverlayOpen] = useState(false);
-  const [deskTab, setDeskTab] = useState<DeskTab>('desk');
+  const [deskTab, setDeskTab] = useState<DeskTab>(() =>
+    resolveDefaultDeskTab(initialContext.staffPermissions)
+  );
   const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
   const [planFocusToken, setPlanFocusToken] = useState(0);
   const [mode, setMode] = useState<GuestAccessFormMode>('custom');
@@ -208,6 +232,18 @@ export function ReceptionCheckInPanel({
   const [housekeepingBusy, startHousekeepingTransition] = useTransition();
   const [bedStatuses, setBedStatuses] = useState<Record<string, HousekeepingBedStatus>>({});
   const [roomStatuses, setRoomStatuses] = useState<Record<string, HousekeepingRoomStatus>>({});
+  const [activeLaundryRuns, setActiveLaundryRuns] = useState<HousekeepingLaundryRunRecord[]>([]);
+
+  useEffect(() => {
+    setDeskTab(coerceDeskTab(tabParam, staffPermissions));
+
+    if (!stayIdParam || !canCheckIn) return;
+    setDeskTab('plan');
+    setSelectedStayOverride(null);
+    setSelectedStayId(stayIdParam);
+    // staffPermissions read for coerce; key tracks membership changes without array identity churn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- staffPermissions via staffPermissionsKey
+  }, [tabParam, stayIdParam, staffPermissionsKey, canCheckIn]);
 
   const rangeValid = isValidAccessRange(checkInDate, checkOutDate);
 
@@ -215,18 +251,56 @@ export function ReceptionCheckInPanel({
     const maps = await listHousekeepingStatusesAction(tenantSlug);
     setBedStatuses(maps.beds);
     setRoomStatuses(maps.rooms);
+    setActiveLaundryRuns(maps.activeLaundryRuns);
   }, [tenantSlug]);
 
   useEffect(() => {
-    if (deskTab !== 'plan') return;
+    if (deskTab !== 'plan' && deskTab !== 'cleaning') return;
     void loadHousekeepingStatuses();
   }, [deskTab, loadHousekeepingStatuses]);
 
+  const navigateDeskTab = useCallback(
+    (value: string, options?: { clearStayId?: boolean }) => {
+      const next = coerceDeskTab(value, staffPermissions);
+      setDeskTab(next);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', next);
+      if (options?.clearStayId) {
+        params.delete('stayId');
+      }
+      const qs = params.toString();
+      router.replace(qs ? `?${qs}` : '?', { scroll: false });
+    },
+    [router, searchParams, staffPermissions]
+  );
+
   const openPlanFreeBeds = useCallback(() => {
+    if (!canCheckIn) return;
     setPlanBedFilter('free_tonight');
     setPlanFocusToken((token) => token + 1);
-    setDeskTab('plan');
-  }, []);
+    navigateDeskTab('plan');
+  }, [canCheckIn, navigateDeskTab]);
+
+  const cleaningRoomGroups = useMemo(() => {
+    const inventory = resolveBedInventory(tenantSettings, [], {
+      nightDate: operational.operationalDate,
+    });
+    return inventory.roomGroups.map((group) => ({
+      roomId: group.roomId,
+      roomLabel: group.roomLabel,
+      beds: group.beds.map((bed) => ({
+        bedId: bed.bedId,
+        displayLabel: bed.displayLabel,
+      })),
+    }));
+  }, [tenantSettings, operational.operationalDate]);
+
+  const handleDeskTabChange = useCallback(
+    (value: string) => {
+      navigateDeskTab(value, { clearStayId: true });
+    },
+    [navigateDeskTab]
+  );
 
   const handleSetBedStatus = useCallback(
     (bedId: string, status: HousekeepingBedStatus) => {
@@ -264,6 +338,62 @@ export function ReceptionCheckInPanel({
       });
     },
     [roomStatuses, tenantSlug]
+  );
+
+  const laundryMachines = useMemo(
+    () => listLaundryMachines(tenantSettings),
+    [tenantSettings]
+  );
+
+  const handleStartLaundry = useCallback(
+    (machineId: string, program: HousekeepingLaundryProgram) => {
+      startHousekeepingTransition(async () => {
+        const result = await startLaundryRunAction({
+          tenantSlug,
+          machineId,
+          program,
+        });
+        if (result.ok) {
+          setActiveLaundryRuns((current) => {
+            const withoutMachine = current.filter((run) => run.machine_id !== result.run.machine_id);
+            return [...withoutMachine, result.run];
+          });
+          return;
+        }
+        if (result.error === 'already_running') {
+          await loadHousekeepingStatuses();
+        }
+      });
+    },
+    [loadHousekeepingStatuses, tenantSlug]
+  );
+
+  const handleCompleteLaundry = useCallback(
+    (runId: string) => {
+      const previous = activeLaundryRuns.find((run) => run.id === runId) ?? null;
+      setActiveLaundryRuns((current) => current.filter((run) => run.id !== runId));
+      startHousekeepingTransition(async () => {
+        const result = await completeLaundryRunAction({ tenantSlug, runId });
+        if (!result.ok && previous) {
+          setActiveLaundryRuns((current) => [...current, previous]);
+        }
+      });
+    },
+    [activeLaundryRuns, tenantSlug]
+  );
+
+  const handleCancelLaundry = useCallback(
+    (runId: string) => {
+      const previous = activeLaundryRuns.find((run) => run.id === runId) ?? null;
+      setActiveLaundryRuns((current) => current.filter((run) => run.id !== runId));
+      startHousekeepingTransition(async () => {
+        const result = await cancelLaundryRunAction({ tenantSlug, runId });
+        if (!result.ok && previous) {
+          setActiveLaundryRuns((current) => [...current, previous]);
+        }
+      });
+    },
+    [activeLaundryRuns, tenantSlug]
   );
 
   const accessPeriod = useMemo(
@@ -364,12 +494,63 @@ export function ReceptionCheckInPanel({
     [bedOptions, overlappingBedIds]
   );
 
+  const stayOfferOptions = useMemo(
+    () =>
+      listReceptionStayOfferOptions({
+        settings: tenantSettings,
+        availableBedIds,
+      }),
+    [availableBedIds, tenantSettings]
+  );
+
+  const [offerId, setOfferId] = useState('');
+  const [bedPickMode, setBedPickMode] = useState<'auto' | 'manual'>('auto');
   const [bedId, setBedId] = useState(() => pickDefaultBedId(bedOptions, overlappingBedIds));
 
   useEffect(() => {
+    if (stayOfferOptions.length === 0) return;
+    if (offerId && stayOfferOptions.some((option) => option.id === offerId)) return;
+    setOfferId(stayOfferOptions[0]?.id ?? '');
+  }, [offerId, stayOfferOptions]);
+
+  useEffect(() => {
+    if (editDraft?.intent === 'moveBed' && bedPickMode === 'manual') {
+      if (bedId && !overlappingBedIds.has(bedId)) return;
+    }
+
+    if (stayOfferOptions.length > 0 && bedPickMode === 'auto') {
+      const picked = pickAvailableBedForStayOffer({
+        settings: tenantSettings,
+        offerId,
+        availableBedIds,
+      });
+      setBedId(picked ?? '');
+      return;
+    }
+
     if (bedId && !overlappingBedIds.has(bedId)) return;
     setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
-  }, [bedId, bedOptions, overlappingBedIds]);
+  }, [
+    availableBedIds,
+    bedId,
+    bedOptions,
+    bedPickMode,
+    editDraft?.intent,
+    offerId,
+    overlappingBedIds,
+    stayOfferOptions.length,
+    tenantSettings,
+  ]);
+
+  const handleOfferIdChange = useCallback((nextOfferId: string) => {
+    setOfferId(nextOfferId);
+    setBedPickMode('auto');
+  }, []);
+
+  const handleBedIdChange = useCallback((nextBedId: string) => {
+    setBedId(nextBedId);
+    setBedPickMode('manual');
+  }, []);
 
   const resetCreateIssueForm = useCallback(() => {
     setError(null);
@@ -381,8 +562,20 @@ export function ReceptionCheckInPanel({
     setBookingPlatformId('');
     setBookingExternalId('');
     setBookingAmountDue('');
-    setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
-  }, [bedOptions, overlappingBedIds]);
+    setBedPickMode('auto');
+    setOfferId(stayOfferOptions[0]?.id ?? '');
+    if (stayOfferOptions.length > 0) {
+      setBedId(
+        pickAvailableBedForStayOffer({
+          settings: tenantSettings,
+          offerId: stayOfferOptions[0]?.id,
+          availableBedIds,
+        }) ?? ''
+      );
+    } else {
+      setBedId(pickDefaultBedId(bedOptions, overlappingBedIds));
+    }
+  }, [availableBedIds, bedOptions, overlappingBedIds, stayOfferOptions, tenantSettings]);
 
   const clearEditDraft = useCallback(() => {
     setEditDraft(null);
@@ -469,6 +662,8 @@ export function ReceptionCheckInPanel({
     setCheckInDate(toDateInput(stay.check_in_date || stay.check_in_at));
     setCheckOutDate(toDateInput(stay.check_out_date || stay.check_out_at));
     setBedId(stay.bed_id);
+    setOfferId(resolveOfferIdForBed(tenantSettings, stay.bed_id) ?? '');
+    setBedPickMode('manual');
     setError(null);
   };
 
@@ -486,7 +681,11 @@ export function ReceptionCheckInPanel({
     }
 
     if (!bedId) {
-      setError('Select a bed');
+      setError(
+        stayOfferOptions.length > 0
+          ? 'No free beds in this offer for these dates.'
+          : 'Select a bed'
+      );
       return;
     }
 
@@ -634,6 +833,8 @@ export function ReceptionCheckInPanel({
     setCheckInDate(nightDate);
     setCheckOutDate(addNights(nightDate, 1));
     setBedId(nextBedId);
+    setOfferId(resolveOfferIdForBed(tenantSettings, nextBedId) ?? '');
+    setBedPickMode('manual');
     setIssueOverlayOpen(true);
   };
 
@@ -654,14 +855,16 @@ export function ReceptionCheckInPanel({
           <p className="text-xs text-muted-foreground">Signed in as {signedInAsLabel}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
-          <Button
-            type="button"
-            size="lg"
-            className="hidden lg:inline-flex"
-            onClick={() => setIssueOverlayOpen(true)}
-          >
-            {RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL}
-          </Button>
+          {canCheckIn ? (
+            <Button
+              type="button"
+              size="lg"
+              className="hidden lg:inline-flex"
+              onClick={() => setIssueOverlayOpen(true)}
+            >
+              {RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL}
+            </Button>
+          ) : null}
           <form method="POST" action="/api/reception/logout">
             <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
               Sign out
@@ -672,10 +875,12 @@ export function ReceptionCheckInPanel({
 
       <ReceptionPushOptIn tenantSlug={tenantSlug} />
 
-      <ReceptionIssueAccessFab
-        visible={!(issueOverlayOpen || editDraft !== null)}
-        onPress={() => setIssueOverlayOpen(true)}
-      />
+      {canCheckIn ? (
+        <ReceptionIssueAccessFab
+          visible={!(issueOverlayOpen || editDraft !== null)}
+          onPress={() => setIssueOverlayOpen(true)}
+        />
+      ) : null}
 
       <CancelBookingDialog
         open={pendingArchiveStay !== null}
@@ -738,7 +943,8 @@ export function ReceptionCheckInPanel({
         />
       ) : null}
 
-      <ReceptionIssueAccessOverlay
+      {canCheckIn ? (
+        <ReceptionIssueAccessOverlay
         open={issueOverlayOpen || editDraft !== null}
         onClose={closeIssueOverlay}
         mode={mode}
@@ -755,14 +961,21 @@ export function ReceptionCheckInPanel({
         bookingAmountDue={bookingAmountDue}
         onBookingAmountDueChange={setBookingAmountDue}
         bookingBalanceCurrencySymbol={bookingBalanceCurrencySymbol}
+        stayOfferOptions={stayOfferOptions}
+        offerId={offerId}
+        onOfferIdChange={handleOfferIdChange}
         bedId={bedId}
-        onBedIdChange={setBedId}
+        onBedIdChange={handleBedIdChange}
         bedsByRoom={bedsByRoom}
+        advancedBedOpenDefault={editDraft?.intent === 'moveBed'}
         checkInDate={checkInDate}
         checkOutDate={checkOutDate}
         onDatesChange={({ checkInDate: nextFrom, checkOutDate: nextUntil }) => {
           setCheckInDate(nextFrom);
           setCheckOutDate(nextUntil);
+          if (!editDraft) {
+            setBedPickMode('auto');
+          }
         }}
         reissueGuestLabel={editDraft?.guestName}
         editIntent={editDraft?.intent}
@@ -786,23 +999,37 @@ export function ReceptionCheckInPanel({
         isEditingReservation={Boolean(editDraft)}
         onSubmit={handleSubmit}
       />
+      ) : null}
 
       <section className="min-w-0 rounded-xl border bg-card p-4">
-          <Tabs value={deskTab} onValueChange={(value) => setDeskTab(value as DeskTab)}>
+          <Tabs value={deskTab} onValueChange={handleDeskTabChange}>
             <TabsList variant="line" className="mb-4 w-full justify-start">
-              <TabsTrigger value="desk">Desk</TabsTrigger>
-              <TabsTrigger value="plan">Plan</TabsTrigger>
-              <TabsTrigger value="access">Access</TabsTrigger>
-              <TabsTrigger value="cash">Cash</TabsTrigger>
-              <TabsTrigger value="issues">
-                Issues{openIssues.length > 0 ? ` (${openIssues.length})` : ''}
-              </TabsTrigger>
-              <TabsTrigger value="transfers">
-                Transfers{openTransfers.length > 0 ? ` (${openTransfers.length})` : ''}
-              </TabsTrigger>
-              <TabsTrigger value="archive">Archive</TabsTrigger>
+              {allowedDeskTabs.includes('desk') ? <TabsTrigger value="desk">Desk</TabsTrigger> : null}
+              {allowedDeskTabs.includes('plan') ? <TabsTrigger value="plan">Plan</TabsTrigger> : null}
+              {allowedDeskTabs.includes('access') ? (
+                <TabsTrigger value="access">Access</TabsTrigger>
+              ) : null}
+              {allowedDeskTabs.includes('cash') ? <TabsTrigger value="cash">Cash</TabsTrigger> : null}
+              {allowedDeskTabs.includes('issues') ? (
+                <TabsTrigger value="issues">
+                  Issues{openIssues.length > 0 ? ` (${openIssues.length})` : ''}
+                </TabsTrigger>
+              ) : null}
+              {allowedDeskTabs.includes('transfers') ? (
+                <TabsTrigger value="transfers">
+                  Transfers{openTransfers.length > 0 ? ` (${openTransfers.length})` : ''}
+                </TabsTrigger>
+              ) : null}
+              {allowedDeskTabs.includes('archive') ? (
+                <TabsTrigger value="archive">Archive</TabsTrigger>
+              ) : null}
+              {allowedDeskTabs.includes('cleaning') ? (
+                <TabsTrigger value="cleaning">Cleaning</TabsTrigger>
+              ) : null}
             </TabsList>
 
+            {canCheckIn ? (
+              <>
             <TabsContent value="desk">
               <ReceptionHubView
                 snapshot={hubSnapshot}
@@ -819,7 +1046,7 @@ export function ReceptionCheckInPanel({
                           cashSnapshot.currency,
                           'en'
                         ),
-                        onOpenCash: () => setDeskTab('cash'),
+                        onOpenCash: () => navigateDeskTab('cash', { clearStayId: true }),
                       }
                     : null
                 }
@@ -901,6 +1128,26 @@ export function ReceptionCheckInPanel({
                 }}
               />
             </TabsContent>
+              </>
+            ) : null}
+
+            {canClean ? (
+              <TabsContent value="cleaning">
+                <ReceptionCleaningPanel
+                  roomGroups={cleaningRoomGroups}
+                  bedStatuses={bedStatuses}
+                  roomStatuses={roomStatuses}
+                  laundryMachines={laundryMachines}
+                  activeLaundryRuns={activeLaundryRuns}
+                  onSetBedStatus={handleSetBedStatus}
+                  onSetRoomStatus={handleSetRoomStatus}
+                  onStartLaundry={handleStartLaundry}
+                  onCompleteLaundry={handleCompleteLaundry}
+                  onCancelLaundry={handleCancelLaundry}
+                  busy={housekeepingBusy}
+                />
+              </TabsContent>
+            ) : null}
           </Tabs>
       </section>
     </div>

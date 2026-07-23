@@ -1,13 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import type { GuestAccessFormMode } from '../lib/guestAccessDates';
 import { GuestAccessDateRange } from './GuestAccessDateRange';
-import { Button, Input, Label, SegmentedChipBar } from '@/shared/ui';
+import { Button, Input, Label, SegmentedChipBar, BedRoomGroupedSelect } from '@/shared/ui';
+import type { BedRoomOptionGroup } from '@/shared/ui';
+import { ChevronDown } from 'lucide-react';
+import { cn } from '@/shared/lib/utils';
 
-interface BedOptionGroup {
-  roomId: string;
-  roomLabel: string;
-  beds: Array<{ bedId: string; displayLabel: string }>;
+export interface StayOfferFormOption {
+  id: string;
+  title: string;
+  availableBedCount: number;
 }
 
 const BOOKING_REFERENCE_HIDDEN_PLATFORM_IDS = new Set(['walk-in', 'direct']);
@@ -33,9 +37,15 @@ export interface IssueGuestAccessFormProps {
   bookingAmountDue: string;
   onBookingAmountDueChange: (value: string) => void;
   bookingBalanceCurrencySymbol: string;
+  /** Stay offer selection (default path when offers are configured). */
+  stayOfferOptions?: StayOfferFormOption[];
+  offerId?: string;
+  onOfferIdChange?: (value: string) => void;
   bedId: string;
   onBedIdChange: (value: string) => void;
-  bedsByRoom: BedOptionGroup[];
+  bedsByRoom: BedRoomOptionGroup[];
+  /** When true, Advanced bed picker starts open (move bed / manual). */
+  advancedBedOpenDefault?: boolean;
   checkInDate: string;
   checkOutDate: string;
   onDatesChange: (next: { checkInDate: string; checkOutDate: string }) => void;
@@ -80,9 +90,13 @@ export function IssueGuestAccessFormFields({
   bookingAmountDue,
   onBookingAmountDueChange,
   bookingBalanceCurrencySymbol,
+  stayOfferOptions = [],
+  offerId = '',
+  onOfferIdChange,
   bedId,
   onBedIdChange,
   bedsByRoom,
+  advancedBedOpenDefault = false,
   checkInDate,
   checkOutDate,
   onDatesChange,
@@ -105,9 +119,13 @@ export function IssueGuestAccessFormFields({
   | 'bookingAmountDue'
   | 'onBookingAmountDueChange'
   | 'bookingBalanceCurrencySymbol'
+  | 'stayOfferOptions'
+  | 'offerId'
+  | 'onOfferIdChange'
   | 'bedId'
   | 'onBedIdChange'
   | 'bedsByRoom'
+  | 'advancedBedOpenDefault'
   | 'checkInDate'
   | 'checkOutDate'
   | 'onDatesChange'
@@ -120,6 +138,14 @@ export function IssueGuestAccessFormFields({
   const inShell = layout === 'shell';
   const showEditBanner = isEditingReservation && onCancelReissue && !inShell;
   const showBookingReference = showsBookingReference(bookingPlatformId);
+  const offerFirst = stayOfferOptions.length > 0 && Boolean(onOfferIdChange);
+  const [advancedOpen, setAdvancedOpen] = useState(
+    advancedBedOpenDefault || editIntent === 'moveBed' || !offerFirst
+  );
+
+  const selectedOffer = stayOfferOptions.find((option) => option.id === offerId);
+  const offerHasNoBeds =
+    offerFirst && Boolean(offerId) && (selectedOffer?.availableBedCount ?? 0) === 0;
 
   const handlePlatformChange = (nextPlatformId: string) => {
     onBookingPlatformIdChange(nextPlatformId);
@@ -128,8 +154,28 @@ export function IssueGuestAccessFormFields({
     }
   };
 
+  const bedSelect = (
+    <BedRoomGroupedSelect
+      label={offerFirst ? 'Specific bed' : 'Bed'}
+      hint={
+        offerFirst
+          ? 'Overrides auto-assign for this booking. Leave closed to pick any free bed in the offer.'
+          : null
+      }
+      bedId={bedId}
+      onBedIdChange={onBedIdChange}
+      bedsByRoom={bedsByRoom}
+    />
+  );
+
   const fieldsGrid = (
-    <div className={inShell ? 'space-y-3 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-3 lg:space-y-0' : 'space-y-3'}>
+    <div
+      className={
+        inShell
+          ? 'space-y-3 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-3 lg:space-y-0'
+          : 'space-y-3'
+      }
+    >
       <div className="space-y-1">
         <Label htmlFor="guest-name">Booking name</Label>
         <p className="text-xs text-muted-foreground">The guest will see this name in the app.</p>
@@ -203,29 +249,48 @@ export function IssueGuestAccessFormFields({
         />
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="bed-id">Bed</Label>
-        <select
-          id="bed-id"
-          value={bedId}
-          onChange={(event) => onBedIdChange(event.target.value)}
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        >
-          {bedsByRoom.length === 0 ? (
-            <option value="">No beds for these dates</option>
-          ) : (
-            bedsByRoom.map((group) => (
-              <optgroup key={group.roomId} label={group.roomLabel}>
-                {group.beds.map((entry) => (
-                  <option key={entry.bedId} value={entry.bedId}>
-                    {entry.displayLabel}
-                  </option>
-                ))}
-              </optgroup>
-            ))
-          )}
-        </select>
-      </div>
+      {offerFirst ? (
+        <div className="space-y-1 lg:col-span-2">
+          <Label htmlFor="stay-offer-id">Stay offer</Label>
+          <p className="text-xs text-muted-foreground">
+            A free bed in this group is assigned automatically.
+          </p>
+          <select
+            id="stay-offer-id"
+            value={offerId}
+            onChange={(event) => onOfferIdChange?.(event.target.value)}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          >
+            {stayOfferOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.title}
+                {option.availableBedCount === 0 ? ' (full)' : ` · ${option.availableBedCount} free`}
+              </option>
+            ))}
+          </select>
+          {offerHasNoBeds ? (
+            <p className="text-xs text-destructive">No free beds in this offer for these dates.</p>
+          ) : bedId ? (
+            <p className="text-xs text-muted-foreground">Assigned bed: {bedId}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {offerFirst ? (
+        <div className="space-y-2 lg:col-span-2">
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((open) => !open)}
+            className="flex w-full items-center justify-between rounded-md border bg-muted/20 px-3 py-2 text-left text-sm font-medium hover:bg-muted/40"
+          >
+            Advanced · pick specific bed
+            <ChevronDown className={cn('size-4 transition-transform', advancedOpen && 'rotate-180')} />
+          </button>
+          {advancedOpen ? bedSelect : null}
+        </div>
+      ) : (
+        bedSelect
+      )}
     </div>
   );
 

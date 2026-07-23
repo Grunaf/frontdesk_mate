@@ -834,6 +834,7 @@ function ReceptionGuestStayDetailActions({
     check_out_at: stay.check_out_at,
     operationalDate,
     is_archived: stay.is_archived,
+    stay_kind: stay.stay_kind,
   });
 
   if (endAction !== 'checkout') {
@@ -872,6 +873,7 @@ function ReceptionGuestStayDetailOverflowMenu({
     check_out_at: stay.check_out_at,
     operationalDate,
     is_archived: stay.is_archived,
+    stay_kind: stay.stay_kind,
   });
 
   if (endAction !== 'cancel') {
@@ -975,6 +977,7 @@ export function ReceptionGuestStayDetail({
     check_out_at: stay.check_out_at,
     operationalDate,
     is_archived: stay.is_archived,
+    stay_kind: stay.stay_kind,
   });
   const accessTabTone = resolveAccessTabBadge({
     hasMagicLink: Boolean(stay.magicLinkUrl),
