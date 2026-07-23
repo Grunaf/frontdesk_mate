@@ -1899,13 +1899,13 @@
         "description": "Connect to Wi‑Fi, read the house rules, and find your room on or before check-in day."
       },
       "bridges": {
-        "arrivalGuide": "Arrival guide",
+        "arrivalGuide": "Arrival",
         "staySetup": "Settling in",
         "wifi": "Wi‑Fi",
-        "checkout": "Check-out",
+        "checkout": "Check-out info",
         "nightAccess": "Night access",
-        "reception": "About reception",
-        "contact": "Get in touch"
+        "reception": "Reception",
+        "contact": "Contacts"
       },
       "bridgeAriaLabelUnread": "{title} — not viewed",
       "bridgeAriaLabelRead": "{title} — viewed",

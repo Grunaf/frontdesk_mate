@@ -1905,13 +1905,13 @@
         "description": "Подключитесь к Wi‑Fi, ознакомьтесь с правилами и найдите комнату в день заселения или раньше."
       },
       "bridges": {
-        "arrivalGuide": "Гид по заезду",
+        "arrivalGuide": "Заезд",
         "staySetup": "Заселение",
         "wifi": "Wi‑Fi",
         "checkout": "Выезд",
         "nightAccess": "Ночной доступ",
-        "reception": "О ресепшене",
-        "contact": "Связаться с нами"
+        "reception": "Ресепшен",
+        "contact": "Контакты"
       },
       "bridgeAriaLabelUnread": "{title} — не просмотрено",
       "bridgeAriaLabelRead": "{title} — просмотрено",

@@ -60,7 +60,7 @@ export function ConciergeContent() {
         {!isRegistered ? <CrossHostelStrip /> : null}
 
         {/* Zone: arrival essentials */}
-        <div className="space-y-2">
+        <div className="space-y-4">
           <StayEssentialsConciergeBannerRoot>
             <StayEssentialsPreCheckInBanner />
             <StayEssentialsSettlementBanner />

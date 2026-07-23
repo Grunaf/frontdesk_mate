@@ -1911,13 +1911,13 @@
         "description": "Povežite se na Wi‑Fi, pročitajte kućni red i pronađite sobu na dan ili pre dana prijave."
       },
       "bridges": {
-        "arrivalGuide": "Arrival guide",
+        "arrivalGuide": "Dolazak",
         "wifi": "Wi‑Fi",
-        "checkout": "Check-out",
-        "nightAccess": "Night access",
-        "reception": "About reception",
-        "contact": "Get in touch",
-        "staySetup": "Settling in"
+        "checkout": "Odlazak",
+        "nightAccess": "Noćni pristup",
+        "reception": "Recepcija",
+        "contact": "Kontakti",
+        "staySetup": "Useljenje"
       },
       "bridgeAriaLabelUnread": "{title} — not viewed",
       "bridgeAriaLabelRead": "{title} — viewed",
