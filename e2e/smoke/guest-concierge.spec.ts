@@ -58,6 +58,8 @@ test.describe('guest concierge stay chip', () => {
     await expect(strip).toBeHidden();
   });
 
+  // Requires post–check-in smoke stay (see resolveSmokeCheckInDate in provisionGuestStay).
+  // Before policy check-in time the bed card is locked (no link), not a selector flake.
   test('room map link opens stay-setup registration when prerequisites are incomplete', async ({
     page,
   }) => {
@@ -79,8 +81,8 @@ test.describe('guest concierge stay chip', () => {
     await expect(page.getByLabel('Stay setup steps')).toBeVisible();
   });
 
-  // Default provision uses check-in = today → settlement banner (not pre-check-in registration).
-  // Incomplete contact/tourism still routes settlement CTA into stay-setup registration step.
+  // Provision uses check-in calendar night today (or yesterday before policy hour) → settlement
+  // banner (not pre-check-in registration). Incomplete contact/tourism still routes to registration.
   test('check-in day settlement banner opens stay-setup registration', async ({ page }) => {
     const banner = page.getByTestId('stay-banner-settlement');
     const registrationBanner = page.getByTestId('stay-banner-registration');

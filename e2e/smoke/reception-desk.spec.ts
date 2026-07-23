@@ -28,6 +28,7 @@ test.describe('reception desk smoke', () => {
     await expect(page.getByRole('tab', { name: 'Plan' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Access' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Issues' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Cleaning' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'New booking' })).toBeVisible();
 
     await openIssueGuestAccessOverlay(page);

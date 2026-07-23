@@ -8,12 +8,18 @@ import {
 import { guestAccessBedNightsOverlap } from '../../src/entities/guest-stay/lib/guestAccessIntervals';
 import { generateGuestPin, hashGuestPin } from '../../src/entities/guest-stay/lib/guestPin';
 import {
+  addStayCalendarDays,
   formatPropertyLocalCheckInIso,
+  isStayCheckInStarted,
   listGuestStayBedIds,
+  todayPropertyStayCalendarDay,
 } from '../../src/entities/guest-stay';
 import type { SmokeSessionRuntime } from './smokeRuntime';
 
 export const E2E_SMOKE_GUEST_NAME = '__e2e_smoke__';
+
+/** Fallback when tenant has no check-in time — matches product defaults. */
+const SMOKE_CHECK_IN_TIME_FALLBACK = '14:00';
 
 interface TenantRow {
   id: string;
@@ -35,23 +41,37 @@ function getSupabaseAdmin() {
   });
 }
 
-function addUtcDays(isoDate: string, days: number): string {
-  const date = new Date(`${isoDate}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 function resolveCheckInIso(
   checkInDate: string,
   checkInTime?: string,
   propertyTimeZone?: string | null
 ): string {
-  const time = checkInTime?.trim() || '14:00';
+  const time = checkInTime?.trim() || SMOKE_CHECK_IN_TIME_FALLBACK;
   const [hours, minutes = '00'] = time.split(':');
   return (
     formatPropertyLocalCheckInIso(checkInDate.trim(), time, propertyTimeZone) ??
     `${checkInDate.trim()}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00.000Z`
   );
+}
+
+/**
+ * Calendar night for smoke stays must already be past the bed-map check-in gate.
+ * `isStayCheckInStarted` uses tenant checkInTime in property TZ (ignores ISO time suffix),
+ * so before policy hour we backdate one calendar night — keeps CI deterministic.
+ */
+function resolveSmokeCheckInDate(
+  now: Date,
+  checkInTime: string,
+  propertyTimeZone?: string | null
+): string {
+  const todayLocal = todayPropertyStayCalendarDay(now, propertyTimeZone);
+  const checkInStartedToday = isStayCheckInStarted({
+    checkInDate: todayLocal,
+    propertyTimeZone,
+    checkInTimeFallback: checkInTime,
+    now,
+  });
+  return checkInStartedToday ? todayLocal : addStayCalendarDays(todayLocal, -1);
 }
 
 async function loadTenant(slug: string): Promise<TenantRow | null> {
@@ -181,14 +201,13 @@ export async function provisionGuestStayForSmoke(input: {
     return null;
   }
 
-  const checkInDate = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const propertyTimeZone = tenant.settings.propertyTimeZone;
+  const checkInTime = tenant.settings.checkInTime?.trim() || SMOKE_CHECK_IN_TIME_FALLBACK;
+  const checkInDate = resolveSmokeCheckInDate(now, checkInTime, propertyTimeZone);
   const nights = input.nights ?? 7;
-  const checkOutDate = addUtcDays(checkInDate, nights);
-  const checkInAt = resolveCheckInIso(
-    checkInDate,
-    tenant.settings.checkInTime,
-    tenant.settings.propertyTimeZone
-  );
+  const checkOutDate = addStayCalendarDays(checkInDate, nights);
+  const checkInAt = resolveCheckInIso(checkInDate, checkInTime, propertyTimeZone);
   const checkOutAt = `${checkOutDate}T23:59:59.999Z`;
 
   await revokeSmokeStays(tenant.id);
