@@ -5,13 +5,15 @@ import {
 } from './isHousekeepingStatus';
 
 describe('isHousekeepingBedStatus', () => {
-  it('accepts fixed enum values', () => {
+  it('accepts pipeline enum values', () => {
+    expect(isHousekeepingBedStatus('needs_strip')).toBe(true);
+    expect(isHousekeepingBedStatus('stripped')).toBe(true);
     expect(isHousekeepingBedStatus('ready')).toBe(true);
-    expect(isHousekeepingBedStatus('waiting_linen')).toBe(true);
-    expect(isHousekeepingBedStatus('no_linen')).toBe(true);
   });
 
-  it('rejects unknown values', () => {
+  it('rejects legacy and unknown values', () => {
+    expect(isHousekeepingBedStatus('waiting_linen')).toBe(false);
+    expect(isHousekeepingBedStatus('no_linen')).toBe(false);
     expect(isHousekeepingBedStatus('cleaned')).toBe(false);
     expect(isHousekeepingBedStatus('')).toBe(false);
     expect(isHousekeepingBedStatus(null)).toBe(false);
