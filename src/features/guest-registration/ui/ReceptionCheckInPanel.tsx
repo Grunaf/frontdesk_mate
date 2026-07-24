@@ -39,6 +39,7 @@ import type {
   HousekeepingLaundryProgram,
   HousekeepingLaundryRunRecord,
   HousekeepingRoomStatus,
+  HousekeepingStayPresenceStatus,
 } from '@/entities/housekeeping';
 import {
   createGuestStayAction,
@@ -48,9 +49,11 @@ import {
   updateGuestReservationAction,
 } from '../actions/receptionActions';
 import {
+  clearHousekeepingStayPresenceAction,
   listHousekeepingStatusesAction,
   upsertHousekeepingBedStatusAction,
   upsertHousekeepingRoomStatusAction,
+  upsertHousekeepingStayPresenceAction,
 } from '../actions/housekeepingActions';
 import {
   cancelLaundryRunAction,
@@ -64,9 +67,17 @@ import {
 import { ReceptionCleaningPanel } from '@/features/reception-cleaning';
 import {
   coerceDeskTab,
-  resolveAllowedDeskTabs,
+  isBookingsContextTab,
+  resolveActivePrimaryNav,
+  resolveBottomNavItems,
+  resolveBookingsContextTabs,
   resolveDefaultDeskTab,
+  resolveDeskTabForPrimaryNav,
+  resolveMoreMenuTabs,
+  shouldShowBookingsContextTabs,
+  type BookingsContextTab,
   type DeskTab,
+  type ReceptionPrimaryNav,
 } from '../lib/receptionDeskAccess';
 import {
   addNights,
@@ -76,6 +87,7 @@ import {
   isValidAccessRange,
 } from '../lib/guestAccessDates';
 import { resolveBedInventory, flattenBedInventory } from '../lib/resolveBedInventory';
+import { resolveBedStayPresenceLinks } from '../lib/resolveBedStayPresenceLinks';
 import { resolveReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
 import { resolveReceptionCashSnapshot } from '../lib/resolveReceptionCashSnapshot';
 import type { PlanBedFilter } from '../lib/filterPlanRoomGroupsByFreeTonight';
@@ -83,17 +95,22 @@ import { resolveGuestAccessPeriod } from '../lib/resolveGuestAccessPeriod';
 import { BedAccessCalendar } from './BedAccessCalendar';
 import { ReceptionIssueAccessOverlay } from './ReceptionIssueAccessOverlay';
 import { ReceptionIssueAccessFab } from './ReceptionIssueAccessFab';
-import { RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL } from './receptionIssueAccessCta';
 import { ReceptionHubView } from './ReceptionHubView';
 import { ReceptionCashView } from './ReceptionCashView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReceptionTransfersTab } from './ReceptionTransfersTab';
 import { ReceptionArchiveTab } from './ReceptionArchiveTab';
+import {
+  ReceptionBottomNav,
+  RECEPTION_BOTTOM_NAV_CONTENT_PAD,
+} from './ReceptionBottomNav';
+import { ReceptionMoreMenu } from './ReceptionMoreMenu';
+import { ReceptionDeskHeader } from './ReceptionDeskHeader';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { CancelBookingDialog } from './RevokeAccessDialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from '@/shared/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
 import { FALLBACK_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
@@ -164,10 +181,19 @@ export function ReceptionCheckInPanel({
   const staffPermissionsKey = staffPermissions.join(',');
   const canCheckIn = receptionStaffCanCheckIn(staffPermissions);
   const canClean = receptionStaffCanClean(staffPermissions);
-  const allowedDeskTabs = useMemo(
-    () => resolveAllowedDeskTabs(staffPermissions),
+  const bottomNavItems = useMemo(
+    () => resolveBottomNavItems(staffPermissions),
     [staffPermissions]
   );
+  const bookingsContextTabs = useMemo(
+    () => resolveBookingsContextTabs(staffPermissions),
+    [staffPermissions]
+  );
+  const moreMenuTabs = useMemo(
+    () => resolveMoreMenuTabs(staffPermissions),
+    [staffPermissions]
+  );
+  const moreBadgeCount = openIssues.length + openTransfers.length;
 
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
 
@@ -205,6 +231,8 @@ export function ReceptionCheckInPanel({
   const [deskTab, setDeskTab] = useState<DeskTab>(() =>
     resolveDefaultDeskTab(initialContext.staffPermissions)
   );
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [lastBookingsTab, setLastBookingsTab] = useState<BookingsContextTab>('plan');
   const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
   const [planFocusToken, setPlanFocusToken] = useState(0);
   const [mode, setMode] = useState<GuestAccessFormMode>('custom');
@@ -220,6 +248,7 @@ export function ReceptionCheckInPanel({
   const [selectedStayId, setSelectedStayId] = useState<string | null>(null);
   const [selectedStayOverride, setSelectedStayOverride] =
     useState<GuestStayRecordWithLink | null>(null);
+  const [stayDetailInitialTab, setStayDetailInitialTab] = useState<'access' | 'stay'>('stay');
   const [stayPins, setStayPins] = useState<Record<string, string>>({});
   const [pendingArchiveStay, setPendingArchiveStay] = useState<{
     stayId: string;
@@ -232,13 +261,23 @@ export function ReceptionCheckInPanel({
   const [housekeepingBusy, startHousekeepingTransition] = useTransition();
   const [bedStatuses, setBedStatuses] = useState<Record<string, HousekeepingBedStatus>>({});
   const [roomStatuses, setRoomStatuses] = useState<Record<string, HousekeepingRoomStatus>>({});
+  const [presenceByStayId, setPresenceByStayId] = useState<
+    Record<string, HousekeepingStayPresenceStatus>
+  >({});
   const [activeLaundryRuns, setActiveLaundryRuns] = useState<HousekeepingLaundryRunRecord[]>([]);
 
   useEffect(() => {
-    setDeskTab(coerceDeskTab(tabParam, staffPermissions));
+    const next = coerceDeskTab(tabParam, staffPermissions);
+    setDeskTab(next);
+    setMoreMenuOpen(false);
+    if (isBookingsContextTab(next)) {
+      setLastBookingsTab(next);
+    }
 
     if (!stayIdParam || !canCheckIn) return;
     setDeskTab('plan');
+    setLastBookingsTab('plan');
+    setStayDetailInitialTab('stay');
     setSelectedStayOverride(null);
     setSelectedStayId(stayIdParam);
     // staffPermissions read for coerce; key tracks membership changes without array identity churn.
@@ -252,17 +291,44 @@ export function ReceptionCheckInPanel({
     setBedStatuses(maps.beds);
     setRoomStatuses(maps.rooms);
     setActiveLaundryRuns(maps.activeLaundryRuns);
+    setPresenceByStayId(maps.presenceByStayId);
   }, [tenantSlug]);
 
   useEffect(() => {
-    if (deskTab !== 'plan' && deskTab !== 'cleaning') return;
+    const tracksHousekeeping =
+      deskTab === 'plan' || deskTab === 'cleaning' || deskTab === 'desk';
+    if (!tracksHousekeeping) return;
+
     void loadHousekeepingStatuses();
+
+    const HOUSEKEEPING_POLL_MS = 45_000;
+    const pollId = window.setInterval(() => {
+      void loadHousekeepingStatuses();
+    }, HOUSEKEEPING_POLL_MS);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void loadHousekeepingStatuses();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onVisibility);
+
+    return () => {
+      window.clearInterval(pollId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onVisibility);
+    };
   }, [deskTab, loadHousekeepingStatuses]);
 
   const navigateDeskTab = useCallback(
     (value: string, options?: { clearStayId?: boolean }) => {
       const next = coerceDeskTab(value, staffPermissions);
       setDeskTab(next);
+      setMoreMenuOpen(false);
+      if (isBookingsContextTab(next)) {
+        setLastBookingsTab(next);
+      }
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', next);
       if (options?.clearStayId) {
@@ -295,11 +361,36 @@ export function ReceptionCheckInPanel({
     }));
   }, [tenantSettings, operational.operationalDate]);
 
+  const bedPresenceByBedId = useMemo(
+    () => resolveBedStayPresenceLinks(planStays, operational.operationalDate),
+    [planStays, operational.operationalDate]
+  );
+
   const handleDeskTabChange = useCallback(
     (value: string) => {
       navigateDeskTab(value, { clearStayId: true });
     },
     [navigateDeskTab]
+  );
+
+  const activePrimaryNav = resolveActivePrimaryNav({
+    deskTab,
+    moreMenuOpen,
+    permissions: staffPermissions,
+  });
+
+  const handlePrimaryNavSelect = useCallback(
+    (item: ReceptionPrimaryNav) => {
+      if (item === 'more') {
+        setMoreMenuOpen(true);
+        return;
+      }
+      const next = resolveDeskTabForPrimaryNav(item, staffPermissions, lastBookingsTab);
+      if (next) {
+        navigateDeskTab(next, { clearStayId: true });
+      }
+    },
+    [lastBookingsTab, navigateDeskTab, staffPermissions]
   );
 
   const handleSetBedStatus = useCallback(
@@ -338,6 +429,51 @@ export function ReceptionCheckInPanel({
       });
     },
     [roomStatuses, tenantSlug]
+  );
+
+  const handleSetPresence = useCallback(
+    (stayId: string, bedId: string, status: HousekeepingStayPresenceStatus) => {
+      const previous = presenceByStayId[stayId];
+      setPresenceByStayId((current) => ({ ...current, [stayId]: status }));
+      startHousekeepingTransition(async () => {
+        const result = await upsertHousekeepingStayPresenceAction({
+          tenantSlug,
+          stayId,
+          bedId,
+          status,
+        });
+        if (!result.ok) {
+          setPresenceByStayId((current) => {
+            const next = { ...current };
+            if (previous) next[stayId] = previous;
+            else delete next[stayId];
+            return next;
+          });
+        }
+      });
+    },
+    [presenceByStayId, tenantSlug]
+  );
+
+  const handleClearPresence = useCallback(
+    (stayId: string) => {
+      const previous = presenceByStayId[stayId];
+      setPresenceByStayId((current) => {
+        const next = { ...current };
+        delete next[stayId];
+        return next;
+      });
+      startHousekeepingTransition(async () => {
+        const result = await clearHousekeepingStayPresenceAction({ tenantSlug, stayId });
+        if (!result.ok) {
+          setPresenceByStayId((current) => {
+            if (!previous) return current;
+            return { ...current, [stayId]: previous };
+          });
+        }
+      });
+    },
+    [presenceByStayId, tenantSlug]
   );
 
   const laundryMachines = useMemo(
@@ -448,12 +584,14 @@ export function ReceptionCheckInPanel({
     return null;
   }, [selectedStayId, selectedStayOverride, planStays, stays]);
 
-  const openStayDetail = useCallback((stayId: string) => {
+  const openStayDetail = useCallback((stayId: string, options?: { initialTab?: 'access' | 'stay' }) => {
+    setStayDetailInitialTab(options?.initialTab ?? 'stay');
     setSelectedStayOverride(null);
     setSelectedStayId(stayId);
   }, []);
 
   const openStayDetailRecord = useCallback((stay: GuestStayRecordWithLink) => {
+    setStayDetailInitialTab('stay');
     setSelectedStayOverride(stay);
     setSelectedStayId(stay.id);
   }, []);
@@ -461,6 +599,7 @@ export function ReceptionCheckInPanel({
   const closeStayDetail = useCallback(() => {
     setSelectedStayId(null);
     setSelectedStayOverride(null);
+    setStayDetailInitialTab('stay');
   }, []);
 
   const overlappingBedIds = useMemo(() => {
@@ -763,7 +902,7 @@ export function ReceptionCheckInPanel({
         }
 
         await refresh();
-        openStayDetail(result.stay.id);
+        openStayDetail(result.stay.id, { initialTab: 'access' });
         setStayPins((current) => ({ ...current, [result.stay.id]: result.guestPin }));
         resetCreateIssueForm();
         setIssueOverlayOpen(false);
@@ -847,31 +986,17 @@ export function ReceptionCheckInPanel({
   }
 
   return (
-    <div className="space-y-4">
-      <header className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reception desk</p>
-          <h1 className="truncate text-xl font-semibold">{tenantName}</h1>
-          <p className="text-xs text-muted-foreground">Signed in as {signedInAsLabel}</p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
-          {canCheckIn ? (
-            <Button
-              type="button"
-              size="lg"
-              className="hidden lg:inline-flex"
-              onClick={() => setIssueOverlayOpen(true)}
-            >
-              {RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL}
-            </Button>
-          ) : null}
-          <form method="POST" action="/api/reception/logout">
-            <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
+    <div className={`space-y-4 ${RECEPTION_BOTTOM_NAV_CONTENT_PAD}`}>
+      <ReceptionDeskHeader
+        tenantName={tenantName}
+        accountLabel={signedInAsLabel}
+        showBookingSearch={canCheckIn}
+        showNewBookingCta={canCheckIn}
+        staysForSearch={stays}
+        resolveBedLabel={resolveBedLabel}
+        onFindStayByRef={openStayDetailFromRefSearch}
+        onNewBooking={() => setIssueOverlayOpen(true)}
+      />
 
       <ReceptionPushOptIn tenantSlug={tenantSlug} />
 
@@ -921,6 +1046,7 @@ export function ReceptionCheckInPanel({
           tenantSlug={tenantSlug}
           tenantSettings={tenantSettings}
           operationalDate={hubSnapshot.operational.operationalDate}
+          initialTab={stayDetailInitialTab}
           onTourismExportedAtChange={() => {
             void refresh();
           }}
@@ -1001,32 +1127,29 @@ export function ReceptionCheckInPanel({
       />
       ) : null}
 
-      <section className="min-w-0 rounded-xl border bg-card p-4">
+      <section className="min-w-0">
+        {moreMenuOpen ? (
+          <ReceptionMoreMenu
+            items={moreMenuTabs}
+            openIssuesCount={openIssues.length}
+            openTransfersCount={openTransfers.length}
+            onSelect={(tab) => navigateDeskTab(tab, { clearStayId: true })}
+          />
+        ) : (
           <Tabs value={deskTab} onValueChange={handleDeskTabChange}>
-            <TabsList variant="line" className="mb-4 w-full justify-start">
-              {allowedDeskTabs.includes('desk') ? <TabsTrigger value="desk">Desk</TabsTrigger> : null}
-              {allowedDeskTabs.includes('plan') ? <TabsTrigger value="plan">Plan</TabsTrigger> : null}
-              {allowedDeskTabs.includes('access') ? (
-                <TabsTrigger value="access">Access</TabsTrigger>
-              ) : null}
-              {allowedDeskTabs.includes('cash') ? <TabsTrigger value="cash">Cash</TabsTrigger> : null}
-              {allowedDeskTabs.includes('issues') ? (
-                <TabsTrigger value="issues">
-                  Issues{openIssues.length > 0 ? ` (${openIssues.length})` : ''}
-                </TabsTrigger>
-              ) : null}
-              {allowedDeskTabs.includes('transfers') ? (
-                <TabsTrigger value="transfers">
-                  Transfers{openTransfers.length > 0 ? ` (${openTransfers.length})` : ''}
-                </TabsTrigger>
-              ) : null}
-              {allowedDeskTabs.includes('archive') ? (
-                <TabsTrigger value="archive">Archive</TabsTrigger>
-              ) : null}
-              {allowedDeskTabs.includes('cleaning') ? (
-                <TabsTrigger value="cleaning">Cleaning</TabsTrigger>
-              ) : null}
-            </TabsList>
+            {shouldShowBookingsContextTabs(deskTab) && bookingsContextTabs.length > 0 ? (
+              <TabsList variant="line" className="mb-4 w-full justify-start">
+                {bookingsContextTabs.includes('plan') ? (
+                  <TabsTrigger value="plan">Plan</TabsTrigger>
+                ) : null}
+                {bookingsContextTabs.includes('access') ? (
+                  <TabsTrigger value="access">Access</TabsTrigger>
+                ) : null}
+                {bookingsContextTabs.includes('cash') ? (
+                  <TabsTrigger value="cash">Cash</TabsTrigger>
+                ) : null}
+              </TabsList>
+            ) : null}
 
             {canCheckIn ? (
               <>
@@ -1037,6 +1160,7 @@ export function ReceptionCheckInPanel({
                 onViewStay={openStayDetail}
                 onOpenFreeBeds={openPlanFreeBeds}
                 operationalDayUpdatedNotice={operationalDayUpdatedNotice}
+                presenceByStayId={presenceByStayId}
                 paymentDueCallout={
                   cashSnapshot.unpaidCount > 0
                     ? {
@@ -1046,10 +1170,17 @@ export function ReceptionCheckInPanel({
                           cashSnapshot.currency,
                           'en'
                         ),
+                        leavesTomorrowCount: cashSnapshot.leavesTomorrowCount,
                         onOpenCash: () => navigateDeskTab('cash', { clearStayId: true }),
                       }
                     : null
                 }
+                interruptCallouts={{
+                  openIssuesCount: openIssues.length,
+                  openTransfersCount: openTransfers.length,
+                  onOpenIssues: () => navigateDeskTab('issues', { clearStayId: true }),
+                  onOpenTransfers: () => navigateDeskTab('transfers', { clearStayId: true }),
+                }}
               />
             </TabsContent>
 
@@ -1079,7 +1210,6 @@ export function ReceptionCheckInPanel({
                 filter={issuedAccessFilter}
                 onFilterChange={setIssuedAccessFilter}
                 onOpenStayDetail={openStayDetail}
-                onFindStayByRef={openStayDetailFromRefSearch}
                 revokeError={revokeError}
                 resolveBedLabel={resolveBedLabel}
                 tenantSettings={tenantSettings}
@@ -1139,8 +1269,12 @@ export function ReceptionCheckInPanel({
                   roomStatuses={roomStatuses}
                   laundryMachines={laundryMachines}
                   activeLaundryRuns={activeLaundryRuns}
+                  bedPresenceByBedId={bedPresenceByBedId}
+                  presenceByStayId={presenceByStayId}
                   onSetBedStatus={handleSetBedStatus}
                   onSetRoomStatus={handleSetRoomStatus}
+                  onSetPresence={handleSetPresence}
+                  onClearPresence={handleClearPresence}
                   onStartLaundry={handleStartLaundry}
                   onCompleteLaundry={handleCompleteLaundry}
                   onCancelLaundry={handleCancelLaundry}
@@ -1149,7 +1283,15 @@ export function ReceptionCheckInPanel({
               </TabsContent>
             ) : null}
           </Tabs>
+        )}
       </section>
+
+      <ReceptionBottomNav
+        items={bottomNavItems}
+        active={activePrimaryNav}
+        moreBadgeCount={moreBadgeCount}
+        onSelect={handlePrimaryNavSelect}
+      />
     </div>
   );
 }

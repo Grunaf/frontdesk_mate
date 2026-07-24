@@ -118,7 +118,7 @@ export function ReceptionArrivalDatesBlock({
         );
 
   return (
-    <div className="space-y-3 rounded-md border border-border/70 bg-background/80 px-3 py-2.5">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Arrival / entry dates

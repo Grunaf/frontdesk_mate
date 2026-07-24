@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { stayRecordCheckInDate } from '@/entities/guest-stay';
+import { housekeepingStayPresenceDeskLabel } from '@/entities/housekeeping';
 import { formatDisplayDate } from '../lib/guestAccessDates';
 import type { DepartureSectionPhase } from '../lib/resolveDepartureSectionPhase';
 import type { ReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
@@ -14,11 +15,21 @@ interface ReceptionHubViewProps {
   onViewStay: (stayId: string) => void;
   onOpenFreeBeds?: () => void;
   operationalDayUpdatedNotice?: boolean;
+  /** Cleaning soft presence (Vacant / Still here) by stay id. */
+  presenceByStayId?: Record<string, 'vacant' | 'still_here'>;
   /** When set, Payment due becomes a compact callout into Cash. */
   paymentDueCallout?: {
     unpaidCount: number;
     stillDueLabel: string;
+    leavesTomorrowCount?: number;
     onOpenCash: () => void;
+  } | null;
+  /** Interrupt shortcuts into Issues / Transfers (More children). */
+  interruptCallouts?: {
+    openIssuesCount: number;
+    openTransfersCount: number;
+    onOpenIssues: () => void;
+    onOpenTransfers: () => void;
   } | null;
 }
 
@@ -133,10 +144,12 @@ function DeparturesSection({
   snapshot,
   resolveBedLabel,
   onViewStay,
+  presenceByStayId,
 }: {
   snapshot: ReceptionHubSnapshot;
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
+  presenceByStayId?: Record<string, 'vacant' | 'still_here'>;
 }) {
   const { departures, departurePhase, checkOutTimeLabel } = snapshot;
   if (departures.length === 0) return null;
@@ -147,9 +160,11 @@ function DeparturesSection({
       stays={departures}
       resolveBedLabel={resolveBedLabel}
       onViewStay={onViewStay}
-      resolveSecondary={(_stay, bedLabel) =>
-        checkOutTimeLabel ? `${bedLabel} · by ${checkOutTimeLabel}` : bedLabel
-      }
+      resolveSecondary={(stay, bedLabel) => {
+        const base = checkOutTimeLabel ? `${bedLabel} · by ${checkOutTimeLabel}` : bedLabel;
+        const presence = housekeepingStayPresenceDeskLabel(presenceByStayId?.[stay.id]);
+        return presence ? `${base} · ${presence}` : base;
+      }}
     />
   );
 
@@ -192,8 +207,12 @@ export function ReceptionHubView({
   onViewStay,
   onOpenFreeBeds,
   operationalDayUpdatedNotice = false,
+  presenceByStayId,
   paymentDueCallout = null,
+  interruptCallouts = null,
 }: ReceptionHubViewProps) {
+  const showInterruptRow = interruptCallouts !== null;
+
   return (
     <div className="space-y-5">
       {operationalDayUpdatedNotice ? (
@@ -215,10 +234,45 @@ export function ReceptionHubView({
         <OccupancyStatBlock label="Occupied" value={snapshot.occupiedBedCount} />
       </div>
 
+      <div className="grid grid-cols-2 gap-2">
+        <OccupancyStatBlock label="Checked in" value={snapshot.checkedInTodayCount} />
+        <OccupancyStatBlock label="Remaining" value={snapshot.remainingArrivalsCount} />
+      </div>
+
+      {showInterruptRow && interruptCallouts ? (
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={interruptCallouts.onOpenIssues}
+            className="rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+          >
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Issues
+            </p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
+              {interruptCallouts.openIssuesCount}
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={interruptCallouts.onOpenTransfers}
+            className="rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+          >
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Transfers
+            </p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
+              {interruptCallouts.openTransfersCount}
+            </p>
+          </button>
+        </div>
+      ) : null}
+
       <DeparturesSection
         snapshot={snapshot}
         resolveBedLabel={resolveBedLabel}
         onViewStay={onViewStay}
+        presenceByStayId={presenceByStayId}
       />
 
       <HubSection title="Expected arrivals">
@@ -255,6 +309,10 @@ export function ReceptionHubView({
             </span>
             <span className="mt-0.5 block text-sm font-medium">
               {paymentDueCallout.unpaidCount} unpaid · {paymentDueCallout.stillDueLabel} still
+              {paymentDueCallout.leavesTomorrowCount &&
+              paymentDueCallout.leavesTomorrowCount > 0
+                ? ` · ${paymentDueCallout.leavesTomorrowCount} leave tomorrow`
+                : ''}
             </span>
           </span>
           <span className="shrink-0 text-xs font-medium text-amber-900">Open cash</span>

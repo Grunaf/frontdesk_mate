@@ -26,6 +26,8 @@ export type LaundryMachinesPanelProps = {
   machines: LaundryMachine[];
   activeRuns: HousekeepingLaundryRunRecord[];
   busy?: boolean;
+  /** When true, omit the section "Wash" heading (parent provides summary). */
+  hideHeading?: boolean;
   onStart: (machineId: string, program: HousekeepingLaundryProgram) => void;
   onComplete: (runId: string) => void;
   onCancel: (runId: string) => void;
@@ -163,6 +165,7 @@ export function LaundryMachinesPanel({
   machines,
   activeRuns,
   busy = false,
+  hideHeading = false,
   onStart,
   onComplete,
   onCancel,
@@ -185,7 +188,9 @@ export function LaundryMachinesPanel({
   return (
     <>
       <section className="space-y-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Wash</h3>
+        {hideHeading ? null : (
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Wash</h3>
+        )}
         <ul className="space-y-2">
           {machines.map((machine) => {
             const run = runsByMachine[machine.id];

@@ -96,11 +96,10 @@ test.describe('guest concierge stay chip', () => {
       timeout: config.navTimeoutMs,
     });
     await expect(page.getByLabel('Stay setup steps')).toBeVisible();
-    // Wizard has no standalone "Guest registration" heading. Tourism tenants show both
-    // Passport details + Contact triggers — use .first() to avoid strict-mode dual match.
+    // Registration wizard exposes sections as tabs (not buttons).
     await expect(
       page
-        .getByRole('button', {
+        .getByRole('tab', {
           name: /Passport details|Паспортные данные|Podaci iz pasoša|Contact|Контакт/i,
         })
         .first()

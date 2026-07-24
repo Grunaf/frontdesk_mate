@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { GuestTourismGuest, GuestTourismRegistrationSummary } from '@/entities/guest-tourism-registration';
 import type { TenantSettings } from '@/entities/tenant';
@@ -79,7 +79,7 @@ function StayDetailTabToneDot({ tone }: { tone: StayDetailTabBadgeTone }) {
   );
 }
 
-function StayAdmitToCheckInBlock({
+function useStayAdmitControls({
   stay,
   tenantSlug,
   tourismRegistrationRequired,
@@ -99,9 +99,14 @@ function StayAdmitToCheckInBlock({
   useEffect(() => {
     setPassportCheckedAt(stay.passport_checked_at);
     setKeyIssued(false);
+    setActionError(null);
   }, [stay.passport_checked_at, stay.id]);
 
   const handleSetChecked = (checked: boolean) => {
+    if (!tenantSlug) {
+      setActionError('Stay actions unavailable.');
+      return;
+    }
     startAction(async () => {
       setActionError(null);
       const result = await setPassportCheckedAction({
@@ -128,7 +133,7 @@ function StayAdmitToCheckInBlock({
     });
   };
 
-  return (
+  const stayTab = (
     <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Check-in admit
@@ -138,8 +143,8 @@ function StayAdmitToCheckInBlock({
       ) : (
         <p className="text-xs text-muted-foreground">
           {tourismRegistrationRequired
-            ? 'Confirm original passport was checked in person.'
-            : 'Admit guest to unlock bed selection in the guest app.'}
+            ? 'Confirm original passport was checked in person, then use Check in below.'
+            : 'Use Check in below to unlock bed selection in the guest app.'}
         </p>
       )}
       {actionError ? <p className="text-xs text-destructive">{actionError}</p> : null}
@@ -155,30 +160,27 @@ function StayAdmitToCheckInBlock({
           Undo admit
         </Button>
       ) : (
-        <div className="space-y-2">
-          <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              className="mt-0.5"
-              checked={keyIssued}
-              disabled={isPending}
-              onChange={(event) => setKeyIssued(event.target.checked)}
-            />
-            <span>Room key issued</span>
-          </label>
-          <Button
-            type="button"
-            size="sm"
-            className="h-8"
+        <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={keyIssued}
             disabled={isPending}
-            onClick={() => handleSetChecked(true)}
-          >
-            Admit to check-in
-          </Button>
-        </div>
+            onChange={(event) => setKeyIssued(event.target.checked)}
+          />
+          <span>Room key issued</span>
+        </label>
       )}
     </div>
   );
+
+  return {
+    admitted,
+    actionError,
+    isPending,
+    admit: () => handleSetChecked(true),
+    stayTab,
+  };
 }
 
 function useIsBelowLg(): boolean {
@@ -200,11 +202,15 @@ function StayTourismRegistrationBlock({
   tenantSlug,
   onTourismExportedAtChange,
   onTourismStatusChange,
+  onAddGuestControlsChange,
 }: {
   stay: GuestStayRecordWithLink;
   tenantSlug: string;
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
   onTourismStatusChange?: (status: TourismStatusBadge) => void;
+  onAddGuestControlsChange?: (
+    controls: { openAddGuest: () => void; canAddGuest: boolean } | null
+  ) => void;
 }) {
   const isBelowLg = useIsBelowLg();
   const [registration, setRegistration] = useState<GuestTourismRegistrationSummary | null>(null);
@@ -220,6 +226,24 @@ function StayTourismRegistrationBlock({
   const checkInDate = stayRecordCheckInDate(stay);
   const registrationComplete = Boolean(registration?.tourism_registration_completed_at);
   const hasGuests = Boolean(registration && registration.guests.length > 0);
+  const canAddGuest =
+    !registrationComplete && !(isBelowLg ? addGuestSheetOpen : showAddForm) && !isPending && !isLoading;
+
+  const openAddGuest = () => {
+    setEditingGuestId(null);
+    if (isBelowLg) {
+      setAddGuestSheetOpen(true);
+    } else {
+      setShowAddForm(true);
+    }
+  };
+
+  useEffect(() => {
+    onAddGuestControlsChange?.({ openAddGuest, canAddGuest });
+    return () => onAddGuestControlsChange?.(null);
+    // openAddGuest recreated each render; canAddGuest is the meaningful dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync footer controls
+  }, [canAddGuest, isBelowLg, onAddGuestControlsChange]);
 
   useEffect(() => {
     startLoad(async () => {
@@ -459,7 +483,7 @@ function StayTourismRegistrationBlock({
   };
 
   return (
-    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Tourism registration
@@ -608,25 +632,6 @@ function StayTourismRegistrationBlock({
           ) : null}
 
           <div className="flex flex-wrap gap-1.5">
-            {!registrationComplete && !(isBelowLg ? addGuestSheetOpen : showAddForm) ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-7 text-[11px]"
-                disabled={isPending || isLoading}
-                onClick={() => {
-                  setEditingGuestId(null);
-                  if (isBelowLg) {
-                    setAddGuestSheetOpen(true);
-                  } else {
-                    setShowAddForm(true);
-                  }
-                }}
-              >
-                Add guest
-              </Button>
-            ) : null}
             {hasGuests && !registrationComplete ? (
               <Button
                 type="button"
@@ -816,17 +821,37 @@ export interface ReceptionGuestStayDetailProps {
   tenantSettings?: TenantSettings;
   /** Current operational calendar day — gates Check out vs ended stays. */
   operationalDate: string;
+  /** Tab on open: after create → access; otherwise stay. */
+  initialTab?: StayDetailTabId;
 }
 
 function ReceptionGuestStayDetailActions({
   stay,
   isPending,
   onCancelOrCheckout,
+  onReissueAccess,
   operationalDate,
+  showReissue,
+  showAddTourismGuest,
+  onAddTourismGuest,
+  addTourismGuestDisabled,
+  showCheckIn,
+  onCheckIn,
+  checkInPending,
+  checkInError,
 }: Pick<
   ReceptionGuestStayDetailProps,
-  'stay' | 'isPending' | 'onCancelOrCheckout' | 'operationalDate'
->) {
+  'stay' | 'isPending' | 'onCancelOrCheckout' | 'onReissueAccess' | 'operationalDate'
+> & {
+  showReissue: boolean;
+  showAddTourismGuest: boolean;
+  onAddTourismGuest: () => void;
+  addTourismGuestDisabled: boolean;
+  showCheckIn: boolean;
+  onCheckIn: () => void;
+  checkInPending: boolean;
+  checkInError: string | null;
+}) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
     desk_checked_in_at: stay.desk_checked_in_at,
@@ -837,22 +862,64 @@ function ReceptionGuestStayDetailActions({
     stay_kind: stay.stay_kind,
   });
 
-  if (endAction !== 'checkout') {
-    return null;
-  }
+  const showCheckout = endAction === 'checkout';
+  const busy = isPending || checkInPending;
 
   return (
-    <div className="flex flex-col gap-2 lg:flex-row">
-      <Button
-        type="button"
-        variant="destructive"
-        size="default"
-        className="w-full"
-        disabled={isPending}
-        onClick={() => onCancelOrCheckout(stay.id, 'checkout')}
-      >
-        Check out
-      </Button>
+    <div className="flex flex-col gap-2">
+      {showReissue ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="w-full"
+          disabled={busy}
+          onClick={() => onReissueAccess(stay)}
+        >
+          Reissue access
+        </Button>
+      ) : null}
+
+      {showAddTourismGuest ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="w-full"
+          disabled={busy || addTourismGuestDisabled}
+          onClick={onAddTourismGuest}
+        >
+          Add guest
+        </Button>
+      ) : null}
+
+      {showCheckIn ? (
+        <>
+          {checkInError ? <p className="text-xs text-destructive">{checkInError}</p> : null}
+          <Button
+            type="button"
+            size="default"
+            className="w-full"
+            disabled={busy}
+            onClick={onCheckIn}
+          >
+            Check in
+          </Button>
+        </>
+      ) : null}
+
+      {showCheckout ? (
+        <Button
+          type="button"
+          variant="destructive"
+          size="default"
+          className="w-full"
+          disabled={busy}
+          onClick={() => onCancelOrCheckout(stay.id, 'checkout')}
+        >
+          Check out
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -921,15 +988,37 @@ export function ReceptionGuestStayDetail({
   onReissueAccess,
   tenantSettings,
   operationalDate,
+  initialTab = 'stay',
 }: ReceptionGuestStayDetailProps) {
-  const [activeTab, setActiveTab] = useState<StayDetailTabId>('access');
+  const [activeTab, setActiveTab] = useState<StayDetailTabId>(initialTab);
   const [tourismStatus, setTourismStatus] = useState<TourismStatusBadge | null>(null);
+  const [canAddTourismGuest, setCanAddTourismGuest] = useState(false);
+  const tourismAddGuestRef = useRef<(() => void) | null>(null);
   const showTourismTab = tourismRegistrationRequired && Boolean(tenantSlug);
 
+  const handleTourismAddGuestControlsChange = useCallback(
+    (controls: { openAddGuest: () => void; canAddGuest: boolean } | null) => {
+      tourismAddGuestRef.current = controls?.openAddGuest ?? null;
+      setCanAddTourismGuest(Boolean(controls?.canAddGuest));
+    },
+    []
+  );
+
+  const admit = useStayAdmitControls({
+    stay,
+    tenantSlug: tenantSlug ?? '',
+    tourismRegistrationRequired,
+    onStayUpdated: onPassportCheckedAtChange,
+  });
+
   useEffect(() => {
-    setActiveTab('access');
+    setActiveTab(initialTab);
     setTourismStatus(showTourismTab ? 'not_started' : null);
-  }, [stay.id, showTourismTab]);
+    if (!showTourismTab) {
+      setCanAddTourismGuest(false);
+      tourismAddGuestRef.current = null;
+    }
+  }, [stay.id, showTourismTab, initialTab]);
 
   useEffect(() => {
     if (!showTourismTab || !tenantSlug) {
@@ -1018,16 +1107,21 @@ export function ReceptionGuestStayDetail({
       stay={stay}
       isPending={isPending}
       onCancelOrCheckout={onCancelOrCheckout}
+      onReissueAccess={onReissueAccess}
       operationalDate={operationalDate}
+      showReissue={activeTab === 'access'}
+      showAddTourismGuest={activeTab === 'tourism' && showTourismTab}
+      onAddTourismGuest={() => tourismAddGuestRef.current?.()}
+      addTourismGuestDisabled={!canAddTourismGuest}
+      showCheckIn={Boolean(tenantSlug) && !admit.admitted && endAction !== 'checkout'}
+      onCheckIn={admit.admit}
+      checkInPending={admit.isPending}
+      checkInError={admit.actionError}
     />
   );
 
   const tabsList = (
     <TabsList variant="line" className="w-full justify-start">
-      <TabsTrigger value="access" className="inline-flex items-center gap-1.5">
-        Access
-        <StayDetailTabToneDot tone={accessTabTone} />
-      </TabsTrigger>
       <TabsTrigger value="stay">Stay</TabsTrigger>
       {showTourismTab ? (
         <TabsTrigger value="tourism" className="inline-flex items-center gap-1.5">
@@ -1035,46 +1129,18 @@ export function ReceptionGuestStayDetail({
           <StayDetailTabToneDot tone={tourismTabTone} />
         </TabsTrigger>
       ) : null}
+      <TabsTrigger value="access" className="inline-flex items-center gap-1.5">
+        Access
+        <StayDetailTabToneDot tone={accessTabTone} />
+      </TabsTrigger>
     </TabsList>
   );
 
   const tabsBody = (
     <>
-      <TabsContent value="access" className="mt-0 space-y-4 outline-none">
-        {!stay.magicLinkUrl ? (
-          <p className="text-xs text-muted-foreground">Link unavailable — re-issue access.</p>
-        ) : (
-          <MagicLinkCard
-            magicLinkUrl={stay.magicLinkUrl}
-            bedId={stay.bed_id}
-            bedLabel={bedLabel}
-            guestName={stay.guest_name ?? undefined}
-            guestPin={stayPins[stay.id]}
-            hostelName={hostelName}
-            guestAccessMessageTemplate={guestAccessMessageTemplate}
-            guestAccessPinMissingText={guestAccessPinMissingText}
-          />
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          className="w-full"
-          disabled={isPending}
-          onClick={() => onReissueAccess(stay)}
-        >
-          Reissue access
-        </Button>
-      </TabsContent>
-
       <TabsContent value="stay" className="mt-0 space-y-4 outline-none">
         {tenantSlug ? (
-          <StayAdmitToCheckInBlock
-            stay={stay}
-            tenantSlug={tenantSlug}
-            tourismRegistrationRequired={tourismRegistrationRequired}
-            onStayUpdated={onPassportCheckedAtChange}
-          />
+          admit.stayTab
         ) : (
           <p className="text-xs text-muted-foreground">Stay actions unavailable.</p>
         )}
@@ -1095,10 +1161,28 @@ export function ReceptionGuestStayDetail({
               tenantSlug={tenantSlug}
               onTourismExportedAtChange={onTourismExportedAtChange}
               onTourismStatusChange={setTourismStatus}
+              onAddGuestControlsChange={handleTourismAddGuestControlsChange}
             />
           ) : null}
         </TabsContent>
       ) : null}
+
+      <TabsContent value="access" className="mt-0 space-y-4 outline-none">
+        {!stay.magicLinkUrl ? (
+          <p className="text-xs text-muted-foreground">Link unavailable — re-issue access.</p>
+        ) : (
+          <MagicLinkCard
+            magicLinkUrl={stay.magicLinkUrl}
+            bedId={stay.bed_id}
+            bedLabel={bedLabel}
+            guestName={stay.guest_name ?? undefined}
+            guestPin={stayPins[stay.id]}
+            hostelName={hostelName}
+            guestAccessMessageTemplate={guestAccessMessageTemplate}
+            guestAccessPinMissingText={guestAccessPinMissingText}
+          />
+        )}
+      </TabsContent>
     </>
   );
 

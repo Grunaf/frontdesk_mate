@@ -1,8 +1,5 @@
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
-import {
-  addStayCalendarDays,
-  stayRecordCheckOutDate,
-} from '@/entities/guest-stay';
+import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
 import {
   guestAccessCheckInPolicyFromSettings,
   guestStayCoversNight,
@@ -39,7 +36,7 @@ export interface ReceptionHubSnapshot {
   /** Admitted stays covering the operational night without `key_issued_at`. */
   keyNotIssued: GuestStayRecordWithLink[];
   /**
-   * Admitted stays departing this operational day (last night or check-out calendar day).
+   * Admitted stays whose exclusive check-out calendar day is this operational day.
    */
   departures: GuestStayRecordWithLink[];
   /** Most urgent phase among `departures` (no checkOutTime → always ahead). */
@@ -48,6 +45,13 @@ export interface ReceptionHubSnapshot {
   checkOutTimeLabel: string | null;
   freeBedEntries: BedInventoryEntry[];
   occupiedBedCount: number;
+  /**
+   * Admitted stays whose check-in calendar day is this operational day
+   * (not archived / revoked).
+   */
+  checkedInTodayCount: number;
+  /** Awaiting arrival today: `expectedToday` + `stillExpected`. */
+  remainingArrivalsCount: number;
   orphanStays: GuestStayRecordWithLink[];
 }
 
@@ -77,7 +81,17 @@ function isAwaitingArrival(
 }
 
 function checkInDateSlice(stay: GuestStayRecordWithLink): string {
-  return stay.check_in_date?.slice(0, 10) || stay.check_in_at.slice(0, 10);
+  return stayRecordCheckInDate(stay);
+}
+
+/** Admitted on this operational day's check-in calendar day. */
+export function isCheckedInTodayDeskStay(
+  stay: GuestStayRecordWithLink,
+  operationalDate: string
+): boolean {
+  if (stay.is_archived || stay.revoked_at) return false;
+  if (!hasGuestArrivedAtReception(stay)) return false;
+  return checkInDateSlice(stay) === operationalDate;
 }
 
 /** Stays on the current operational night desk shift (not archived / revoked). */
@@ -89,7 +103,7 @@ function isOperationalNightDeskStay(
   return guestStayCoversNight(stay, operationalDate);
 }
 
-/** Last occupied night or exclusive check-out morning for this operational day. */
+/** Exclusive check-out morning for this operational day. */
 export function isDepartureDeskStay(
   stay: GuestStayRecordWithLink,
   operationalDate: string
@@ -97,9 +111,7 @@ export function isDepartureDeskStay(
   if (stay.is_archived || stay.revoked_at) return false;
   if (!hasGuestArrivedAtReception(stay)) return false;
 
-  const checkOutDate = stayRecordCheckOutDate(stay);
-  const lastNight = addStayCalendarDays(checkOutDate, -1);
-  return operationalDate === lastNight || operationalDate === checkOutDate;
+  return stayRecordCheckOutDate(stay) === operationalDate;
 }
 
 export type ReceptionHubStayBucket = 'expectedToday' | 'stillExpected' | 'noShow' | null;
@@ -166,6 +178,7 @@ export function resolveReceptionHubSnapshot(
   const unpaid: GuestStayRecordWithLink[] = [];
   const keyNotIssued: GuestStayRecordWithLink[] = [];
   const departures: GuestStayRecordWithLink[] = [];
+  let checkedInTodayCount = 0;
 
   for (const stay of stays) {
     const bucket = classifyReceptionHubStay(stay, {
@@ -180,6 +193,10 @@ export function resolveReceptionHubSnapshot(
 
     if (isDepartureDeskStay(stay, operationalDate)) {
       departures.push(stay);
+    }
+
+    if (isCheckedInTodayDeskStay(stay, operationalDate)) {
+      checkedInTodayCount += 1;
     }
 
     if (!isOperationalNightDeskStay(stay, operationalDate)) continue;
@@ -216,6 +233,8 @@ export function resolveReceptionHubSnapshot(
     checkOutTimeLabel,
     freeBedEntries,
     occupiedBedCount,
+    checkedInTodayCount,
+    remainingArrivalsCount: expectedToday.length + stillExpected.length,
     orphanStays: sortByCheckIn(inventory.orphanStays),
   };
 }

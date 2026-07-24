@@ -122,4 +122,37 @@ describe('resolveReceptionCashSnapshot', () => {
       'waiting',
     ]);
   });
+
+  it('flags and prioritizes unpaid leaving tomorrow over other unpaid', () => {
+    const now = new Date('2026-07-09T12:00:00.000Z');
+    // Checkout 10 → last night 09 = leaves tomorrow on operational 09
+    const leavingTomorrow = makeStay({
+      id: 'leaving-tomorrow',
+      guest_name: 'Zoe',
+      booking_paid_at: null,
+      check_out_date: '2026-07-10',
+      check_out_at: '2026-07-10T10:00:00.000Z',
+    });
+    // Longer stay — still covers night 09, checkout later
+    const staying = makeStay({
+      id: 'staying',
+      guest_name: 'Ann',
+      bed_id: 'bed-1',
+      passport_checked_at: '2026-07-08T15:00:00.000Z',
+      booking_paid_at: null,
+      check_out_date: '2026-07-12',
+      check_out_at: '2026-07-12T10:00:00.000Z',
+    });
+
+    const snapshot = resolveReceptionCashSnapshot(settings, [staying, leavingTomorrow], now);
+
+    expect(snapshot.operational.operationalDate).toBe('2026-07-09');
+    expect(snapshot.leavesTomorrowCount).toBe(1);
+    expect(snapshot.stillToCollect.map((item) => item.stay.id)).toEqual([
+      'leaving-tomorrow',
+      'staying',
+    ]);
+    expect(snapshot.stillToCollect[0]?.leavesTomorrow).toBe(true);
+    expect(snapshot.stillToCollect[1]?.leavesTomorrow).toBe(false);
+  });
 });

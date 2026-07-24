@@ -21,15 +21,20 @@ test.describe('reception desk smoke', () => {
 
   test('signs in and shows issue access form', async ({ page }) => {
     await loginToReceptionDesk(page, config);
-    await expect(page.getByRole('tab', { name: 'Desk' })).toBeVisible();
+
+    const primaryNav = page.getByRole('navigation', { name: 'Reception primary' });
+    await expect(primaryNav.getByRole('button', { name: 'Today' })).toBeVisible();
+    await expect(primaryNav.getByRole('button', { name: 'Bookings' })).toBeVisible();
+    await expect(primaryNav.getByRole('button', { name: /More/ })).toBeVisible();
     await expect(page.getByText('Operational day ·')).toBeVisible();
-    await expect(page.getByText('Free beds', { exact: true })).toBeVisible();
-    await expect(page.getByRole('tab', { name: /Today ·/ })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Plan' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Issues' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'New booking' })).toBeVisible();
+
+    await primaryNav.getByRole('button', { name: 'Bookings' }).click();
     await expect(page.getByRole('tab', { name: 'Plan' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Access' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Issues' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Cleaning' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'New booking' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Cash' })).toBeVisible();
 
     await openIssueGuestAccessOverlay(page);
   });
@@ -56,14 +61,17 @@ test.describe('reception desk smoke', () => {
     await issueButton.click();
     await expect(page.getByText('Paper PIN')).toBeVisible({ timeout: config.navTimeoutMs });
 
+    await page.getByRole('navigation', { name: 'Reception primary' }).getByRole('button', { name: 'Bookings' }).click();
     await page.getByRole('tab', { name: 'Access' }).click();
     const refLine = page.locator('li[id^="stay-"]').first().getByText(/#\w{6}/);
     await expect(refLine).toBeVisible({ timeout: config.navTimeoutMs });
     const refText = (await refLine.textContent())?.match(/#([A-Z0-9]{6})/)?.[1];
     expect(refText).toBeTruthy();
 
-    await page.getByRole('textbox', { name: 'Find stay by ref' }).fill(refText!);
-    await page.getByRole('button', { name: 'Find' }).click();
+    await page.getByRole('textbox', { name: 'Search bookings' }).fill(refText!);
+    const option = page.getByRole('option').filter({ hasText: `#${refText}` }).first();
+    await expect(option).toBeVisible({ timeout: config.navTimeoutMs });
+    await option.click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
     await expect(page.getByText('Paper PIN')).toBeVisible();
   });
@@ -76,7 +84,9 @@ test.describe('reception desk smoke', () => {
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
     await issueButton.click();
 
-    await expect(page.getByRole('tab', { name: 'Desk' })).toHaveAttribute('data-active', '');
+    await expect(
+      page.getByRole('navigation', { name: 'Reception primary' }).getByRole('button', { name: 'Today' })
+    ).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
     await expect(page.getByText('Paper PIN')).toBeVisible();
   });
@@ -90,9 +100,9 @@ test.describe('reception desk smoke', () => {
     await issueButton.click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
 
-    await page.getByRole('button', { name: 'Admit to check-in' }).click();
+    await page.getByRole('button', { name: 'Check in' }).click();
     await expect(page.getByText(/^Admitted · /)).toBeVisible({ timeout: config.navTimeoutMs });
-    await expect(page.getByRole('button', { name: 'Admit to check-in' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Check in' })).toHaveCount(0);
   });
 
   test('moves guest to another bed in place', async ({ page }) => {

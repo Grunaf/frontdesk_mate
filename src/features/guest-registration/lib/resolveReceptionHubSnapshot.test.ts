@@ -182,9 +182,9 @@ describe('resolveReceptionHubSnapshot', () => {
     expect(snapshot.keyNotIssued).toEqual([]);
   });
 
-  it('lists admitted departures on last night and check-out morning', () => {
+  it('lists admitted departures only on check-out morning', () => {
     const lastNightNow = new Date('2026-07-09T10:00:00.000Z');
-    // Nights 08–09 → last night 09, checkout exclusive 10
+    // Nights 08–09 → last night 09, exclusive checkout 10
     const departing = makeStay({
       id: 'leaving',
       check_in_at: '2026-07-08T14:00:00.000Z',
@@ -201,9 +201,7 @@ describe('resolveReceptionHubSnapshot', () => {
 
     const onLastNight = resolveReceptionHubSnapshot(settings, [departing, midStay], lastNightNow);
     expect(onLastNight.operational.operationalDate).toBe('2026-07-09');
-    expect(onLastNight.departures.map((entry) => entry.id)).toEqual(['leaving']);
-    expect(onLastNight.departurePhase).toBe('ahead');
-    expect(onLastNight.checkOutTimeLabel).toBeNull();
+    expect(onLastNight.departures).toEqual([]);
 
     const checkoutMorning = new Date('2026-07-10T10:00:00.000Z');
     const onCheckoutDay = resolveReceptionHubSnapshot(
@@ -215,6 +213,29 @@ describe('resolveReceptionHubSnapshot', () => {
     expect(onCheckoutDay.departures.map((entry) => entry.id)).toEqual(['leaving']);
     expect(onCheckoutDay.departurePhase).toBe('due_soon');
     expect(onCheckoutDay.checkOutTimeLabel).toBe('11:00');
+  });
+
+  it('counts checked-in today and remaining arrivals', () => {
+    const now = new Date('2026-07-09T10:00:00.000Z');
+    const admittedToday = makeStay({
+      id: 'in',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      check_in_date: '2026-07-09',
+      passport_checked_at: '2026-07-09T09:00:00.000Z',
+    });
+    const expected = makeStay({
+      id: 'expected',
+      bed_id: 'bed-2',
+      check_in_at: '2026-07-09T14:00:00.000Z',
+      check_in_date: '2026-07-09',
+    });
+
+    const snapshot = resolveReceptionHubSnapshot(settings, [admittedToday, expected], now);
+
+    expect(snapshot.operational.operationalDate).toBe('2026-07-09');
+    expect(snapshot.checkedInTodayCount).toBe(1);
+    expect(snapshot.remainingArrivalsCount).toBe(1);
+    expect(snapshot.expectedToday.map((entry) => entry.id)).toEqual(['expected']);
   });
 
   it('omits non-admitted stays from departures', () => {

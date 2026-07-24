@@ -4,16 +4,21 @@ import { bedExistsInGuestStay } from '@/entities/guest-stay';
 import {
   isHousekeepingBedStatus,
   isHousekeepingRoomStatus,
+  isHousekeepingStayPresenceStatus,
   type HousekeepingBedStatus,
   type HousekeepingLaundryRunRecord,
   type HousekeepingRoomStatus,
+  type HousekeepingStayPresenceStatus,
 } from '@/entities/housekeeping';
 import {
+  clearHousekeepingStayPresence,
   listActiveLaundryRuns,
   listHousekeepingBedStatuses,
   listHousekeepingRoomStatuses,
+  listHousekeepingStayPresence,
   upsertHousekeepingBedStatus,
   upsertHousekeepingRoomStatus,
+  upsertHousekeepingStayPresence,
 } from '@/entities/housekeeping/server';
 import { getTenantRecord } from '@/entities/tenant/server';
 import type { TenantSettings } from '@/entities/tenant';
@@ -27,13 +32,21 @@ export type HousekeepingStatusMaps = {
   beds: Record<string, HousekeepingBedStatus>;
   rooms: Record<string, HousekeepingRoomStatus>;
   activeLaundryRuns: HousekeepingLaundryRunRecord[];
+  /** stay_id → presence status */
+  presenceByStayId: Record<string, HousekeepingStayPresenceStatus>;
 };
 
 export type HousekeepingActionResult =
   | { ok: true }
   | {
       ok: false;
-      error: 'unauthorized' | 'forbidden' | 'not_found' | 'invalid_status' | 'db_unavailable' | 'unknown';
+      error:
+        | 'unauthorized'
+        | 'forbidden'
+        | 'not_found'
+        | 'invalid_status'
+        | 'db_unavailable'
+        | 'unknown';
     };
 
 function roomExistsInGuestStay(settings: TenantSettings, roomId: string): boolean {
@@ -59,7 +72,7 @@ async function resolveHousekeepingTenant(tenantSlug: string) {
     return { ok: false as const, error: 'not_found' as const };
   }
 
-  return { ok: true as const, tenant };
+  return { ok: true as const, tenant, staffId: staff.ctx.id };
 }
 
 export async function listHousekeepingStatusesAction(
@@ -67,13 +80,14 @@ export async function listHousekeepingStatusesAction(
 ): Promise<HousekeepingStatusMaps> {
   const resolved = await resolveHousekeepingTenant(tenantSlug);
   if (!resolved.ok) {
-    return { beds: {}, rooms: {}, activeLaundryRuns: [] };
+    return { beds: {}, rooms: {}, activeLaundryRuns: [], presenceByStayId: {} };
   }
 
-  const [bedRows, roomRows, activeLaundryRuns] = await Promise.all([
+  const [bedRows, roomRows, activeLaundryRuns, presenceRows] = await Promise.all([
     listHousekeepingBedStatuses(resolved.tenant.id),
     listHousekeepingRoomStatuses(resolved.tenant.id),
     listActiveLaundryRuns(resolved.tenant.id),
+    listHousekeepingStayPresence(resolved.tenant.id),
   ]);
 
   const beds: Record<string, HousekeepingBedStatus> = {};
@@ -86,7 +100,12 @@ export async function listHousekeepingStatusesAction(
     rooms[row.room_id] = row.status;
   }
 
-  return { beds, rooms, activeLaundryRuns };
+  const presenceByStayId: Record<string, HousekeepingStayPresenceStatus> = {};
+  for (const row of presenceRows) {
+    presenceByStayId[row.stay_id] = row.status;
+  }
+
+  return { beds, rooms, activeLaundryRuns, presenceByStayId };
 }
 
 export async function upsertHousekeepingBedStatusAction(input: {
@@ -145,6 +164,59 @@ export async function upsertHousekeepingRoomStatusAction(input: {
     return { ok: true };
   } catch (error) {
     console.error('upsertHousekeepingRoomStatusAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export async function upsertHousekeepingStayPresenceAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  bedId: string;
+  status: HousekeepingStayPresenceStatus;
+}): Promise<HousekeepingActionResult> {
+  const resolved = await resolveHousekeepingTenant(input.tenantSlug);
+  if (!resolved.ok) return resolved;
+
+  if (!isHousekeepingStayPresenceStatus(input.status)) {
+    return { ok: false, error: 'invalid_status' };
+  }
+
+  if (!bedExistsInGuestStay(resolved.tenant.settings, input.bedId)) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  try {
+    const result = await upsertHousekeepingStayPresence({
+      tenantId: resolved.tenant.id,
+      stayId: input.stayId,
+      bedId: input.bedId,
+      status: input.status,
+      setByReceptionUserId: resolved.staffId,
+    });
+    if (!result.ok) return result;
+    return { ok: true };
+  } catch (error) {
+    console.error('upsertHousekeepingStayPresenceAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export async function clearHousekeepingStayPresenceAction(input: {
+  tenantSlug: string;
+  stayId: string;
+}): Promise<HousekeepingActionResult> {
+  const resolved = await resolveHousekeepingTenant(input.tenantSlug);
+  if (!resolved.ok) return resolved;
+
+  try {
+    const result = await clearHousekeepingStayPresence({
+      tenantId: resolved.tenant.id,
+      stayId: input.stayId,
+    });
+    if (!result.ok) return result;
+    return { ok: true };
+  } catch (error) {
+    console.error('clearHousekeepingStayPresenceAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

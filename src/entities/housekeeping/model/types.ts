@@ -86,3 +86,31 @@ export type FinishLaundryRunInput = {
 export type FinishLaundryRunResult =
   | { ok: true; run: HousekeepingLaundryRunRecord }
   | { ok: false; error: 'not_found' | 'not_running' | 'db_unavailable' };
+
+/** Soft Cleaning → desk signal. Not checkout. Absence of row = unset. */
+export const HOUSEKEEPING_STAY_PRESENCE_STATUSES = ['vacant', 'still_here'] as const;
+
+export type HousekeepingStayPresenceStatus =
+  (typeof HOUSEKEEPING_STAY_PRESENCE_STATUSES)[number];
+
+export interface HousekeepingStayPresenceRecord {
+  tenant_id: string;
+  stay_id: string;
+  bed_id: string;
+  status: HousekeepingStayPresenceStatus;
+  set_by_reception_user_id: string | null;
+  set_at: string;
+}
+
+export type UpsertHousekeepingStayPresenceInput = {
+  tenantId: string;
+  stayId: string;
+  bedId: string;
+  status: HousekeepingStayPresenceStatus;
+  setByReceptionUserId?: string | null;
+};
+
+export type ClearHousekeepingStayPresenceInput = {
+  tenantId: string;
+  stayId: string;
+};

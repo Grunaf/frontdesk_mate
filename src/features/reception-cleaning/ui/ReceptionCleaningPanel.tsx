@@ -5,12 +5,14 @@ import { useMemo, useState } from 'react';
 import {
   HOUSEKEEPING_BED_STATUS_LABELS,
   HOUSEKEEPING_ROOM_STATUSES,
+  HOUSEKEEPING_STAY_PRESENCE_LABELS,
   listHousekeepingBedStatusChoices,
   resolveHousekeepingBedPrimaryAction,
   type HousekeepingBedStatus,
   type HousekeepingLaundryProgram,
   type HousekeepingLaundryRunRecord,
   type HousekeepingRoomStatus,
+  type HousekeepingStayPresenceStatus,
 } from '@/entities/housekeeping';
 import type { LaundryMachine } from '@/entities/tenant';
 import { cn } from '@/shared/lib/utils';
@@ -21,12 +23,22 @@ import {
   type CleaningRoomBucket,
   type CleaningRoomGroup,
 } from '../lib/resolveCleaningHubSnapshot';
+import {
+  countLaundryUnloadDue,
+  resolveCleaningWashSummaryLabel,
+  shouldShowCleaningWashSection,
+} from '../lib/resolveCleaningWashVisibility';
 import { LaundryMachinesPanel } from './LaundryMachinesPanel';
 export type { CleaningRoomGroup };
 
 const ROOM_STATUS_LABELS: Record<HousekeepingRoomStatus, string> = {
   cleaned: 'Cleaned',
   not_cleaned: 'Not cleaned',
+};
+
+export type CleaningBedPresenceLink = {
+  stayId: string;
+  guestName: string;
 };
 
 function nextRoomStatus(current: HousekeepingRoomStatus | undefined): HousekeepingRoomStatus {
@@ -83,21 +95,63 @@ function RoomStatusChip({
   );
 }
 
+function PresenceChip({
+  label,
+  active,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'rounded-md border px-2 py-1 text-xs font-medium transition-colors',
+        active
+          ? 'border-primary/40 bg-primary/10 text-foreground'
+          : 'border-border bg-background text-muted-foreground hover:bg-muted/40',
+        disabled && 'pointer-events-none opacity-60'
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
 function BedRow({
   bed,
   busy,
   showPrimaryCta,
+  presenceLink,
+  presenceStatus,
   onSetBedStatus,
+  onSetPresence,
+  onClearPresence,
 }: {
   bed: CleaningBedEntry;
   busy: boolean;
   showPrimaryCta: boolean;
+  presenceLink?: CleaningBedPresenceLink;
+  presenceStatus?: HousekeepingStayPresenceStatus;
   onSetBedStatus: (bedId: string, status: HousekeepingBedStatus) => void;
+  onSetPresence?: (
+    stayId: string,
+    bedId: string,
+    status: HousekeepingStayPresenceStatus
+  ) => void;
+  onClearPresence?: (stayId: string) => void;
 }) {
   const [changeOpen, setChangeOpen] = useState(false);
   const status = bed.status;
   const primary = resolveHousekeepingBedPrimaryAction(status);
   const statusLabel = status ? HOUSEKEEPING_BED_STATUS_LABELS[status] : 'Unset';
+  const showPresence = Boolean(presenceLink && onSetPresence && onClearPresence);
 
   return (
     <li className="space-y-1.5">
@@ -105,6 +159,9 @@ function BedRow({
         <div className="min-w-0">
           <span className="text-sm text-foreground">{bed.displayLabel}</span>
           <span className="ml-2 text-xs text-muted-foreground">{statusLabel}</span>
+          {presenceLink ? (
+            <span className="ml-2 text-xs text-muted-foreground">{presenceLink.guestName}</span>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {showPrimaryCta && primary ? (
@@ -127,6 +184,37 @@ function BedRow({
           </button>
         </div>
       </div>
+      {showPresence && presenceLink ? (
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <PresenceChip
+              label={HOUSEKEEPING_STAY_PRESENCE_LABELS.vacant}
+              active={presenceStatus === 'vacant'}
+              disabled={busy}
+              onClick={() => onSetPresence?.(presenceLink.stayId, bed.bedId, 'vacant')}
+            />
+            <PresenceChip
+              label={HOUSEKEEPING_STAY_PRESENCE_LABELS.still_here}
+              active={presenceStatus === 'still_here'}
+              disabled={busy}
+              onClick={() => onSetPresence?.(presenceLink.stayId, bed.bedId, 'still_here')}
+            />
+            {presenceStatus ? (
+              <PresenceChip
+                label="Clear"
+                active={false}
+                disabled={busy}
+                onClick={() => onClearPresence?.(presenceLink.stayId)}
+              />
+            ) : null}
+          </div>
+          {presenceStatus === 'still_here' ? (
+            <p className="text-xs text-muted-foreground">
+              Linen change — guest may still be here. Use Strip; this is not checkout.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {changeOpen ? (
         <div className="flex flex-wrap gap-1.5 rounded-md border border-dashed bg-muted/20 px-2 py-2">
           {listHousekeepingBedStatusChoices().map((choice) => (
@@ -159,14 +247,26 @@ function RoomBucketCard({
   room,
   busy,
   showPrimaryCta,
+  bedPresenceByBedId,
+  presenceByStayId,
   onSetBedStatus,
   onSetRoomStatus,
+  onSetPresence,
+  onClearPresence,
 }: {
   room: CleaningRoomBucket;
   busy: boolean;
   showPrimaryCta: boolean;
+  bedPresenceByBedId?: Record<string, CleaningBedPresenceLink>;
+  presenceByStayId?: Record<string, HousekeepingStayPresenceStatus>;
   onSetBedStatus: (bedId: string, status: HousekeepingBedStatus) => void;
   onSetRoomStatus: (roomId: string, status: HousekeepingRoomStatus) => void;
+  onSetPresence?: (
+    stayId: string,
+    bedId: string,
+    status: HousekeepingStayPresenceStatus
+  ) => void;
+  onClearPresence?: (stayId: string) => void;
 }) {
   const canSetRoom = !isSyntheticRoomId(room.roomId);
   const roomStatus = room.roomStatus;
@@ -186,15 +286,22 @@ function RoomBucketCard({
         ) : null}
       </div>
       <ul className="mt-3 space-y-3 border-t border-border/60 pt-2">
-        {room.beds.map((bed) => (
-          <BedRow
-            key={bed.bedId}
-            bed={bed}
-            busy={busy}
-            showPrimaryCta={showPrimaryCta}
-            onSetBedStatus={onSetBedStatus}
-          />
-        ))}
+        {room.beds.map((bed) => {
+          const link = bedPresenceByBedId?.[bed.bedId];
+          return (
+            <BedRow
+              key={bed.bedId}
+              bed={bed}
+              busy={busy}
+              showPrimaryCta={showPrimaryCta}
+              presenceLink={link}
+              presenceStatus={link ? presenceByStayId?.[link.stayId] : undefined}
+              onSetBedStatus={onSetBedStatus}
+              onSetPresence={onSetPresence}
+              onClearPresence={onClearPresence}
+            />
+          );
+        })}
       </ul>
     </li>
   );
@@ -206,8 +313,16 @@ export type ReceptionCleaningPanelProps = {
   roomStatuses: Record<string, HousekeepingRoomStatus>;
   laundryMachines: LaundryMachine[];
   activeLaundryRuns: HousekeepingLaundryRunRecord[];
+  bedPresenceByBedId?: Record<string, CleaningBedPresenceLink>;
+  presenceByStayId?: Record<string, HousekeepingStayPresenceStatus>;
   onSetBedStatus: (bedId: string, status: HousekeepingBedStatus) => void;
   onSetRoomStatus: (roomId: string, status: HousekeepingRoomStatus) => void;
+  onSetPresence?: (
+    stayId: string,
+    bedId: string,
+    status: HousekeepingStayPresenceStatus
+  ) => void;
+  onClearPresence?: (stayId: string) => void;
   onStartLaundry: (machineId: string, program: HousekeepingLaundryProgram) => void;
   onCompleteLaundry: (runId: string) => void;
   onCancelLaundry: (runId: string) => void;
@@ -220,8 +335,12 @@ export function ReceptionCleaningPanel({
   roomStatuses,
   laundryMachines,
   activeLaundryRuns,
+  bedPresenceByBedId,
+  presenceByStayId,
   onSetBedStatus,
   onSetRoomStatus,
+  onSetPresence,
+  onClearPresence,
   onStartLaundry,
   onCompleteLaundry,
   onCancelLaundry,
@@ -231,6 +350,19 @@ export function ReceptionCleaningPanel({
     () => resolveCleaningHubSnapshot(roomGroups, bedStatuses, roomStatuses),
     [roomGroups, bedStatuses, roomStatuses]
   );
+
+  const showWashSection = shouldShowCleaningWashSection({
+    makeCount: snapshot.makeCount,
+    activeRuns: activeLaundryRuns,
+    machineCount: laundryMachines.length,
+  });
+  const unloadDueCount = countLaundryUnloadDue(activeLaundryRuns);
+  const runningCount = activeLaundryRuns.filter((run) => run.status === 'running').length;
+  const washSummary = resolveCleaningWashSummaryLabel({
+    makeCount: snapshot.makeCount,
+    unloadDueCount,
+    runningCount,
+  });
 
   if (roomGroups.length === 0) {
     return (
@@ -250,15 +382,6 @@ export function ReceptionCleaningPanel({
         <HubStat label="Done" value={snapshot.doneCount} />
       </div>
 
-      <LaundryMachinesPanel
-        machines={laundryMachines}
-        activeRuns={activeLaundryRuns}
-        busy={busy}
-        onStart={onStartLaundry}
-        onComplete={onCompleteLaundry}
-        onCancel={onCancelLaundry}
-      />
-
       <section className="space-y-2">
         <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">To do</h3>
         {snapshot.todoRooms.length === 0 ? (
@@ -271,8 +394,12 @@ export function ReceptionCleaningPanel({
                 room={room}
                 busy={busy}
                 showPrimaryCta
+                bedPresenceByBedId={bedPresenceByBedId}
+                presenceByStayId={presenceByStayId}
                 onSetBedStatus={onSetBedStatus}
                 onSetRoomStatus={onSetRoomStatus}
+                onSetPresence={onSetPresence}
+                onClearPresence={onClearPresence}
               />
             ))}
           </ul>
@@ -291,11 +418,46 @@ export function ReceptionCleaningPanel({
                 room={room}
                 busy={busy}
                 showPrimaryCta={false}
+                bedPresenceByBedId={bedPresenceByBedId}
+                presenceByStayId={presenceByStayId}
                 onSetBedStatus={onSetBedStatus}
                 onSetRoomStatus={onSetRoomStatus}
+                onSetPresence={onSetPresence}
+                onClearPresence={onClearPresence}
               />
             ))}
           </ul>
+        </details>
+      ) : null}
+
+      {showWashSection ? (
+        <details
+          className={cn(
+            'group rounded-lg border px-3 py-2',
+            unloadDueCount > 0
+              ? 'border-amber-200 bg-amber-50'
+              : 'border-dashed border-muted-foreground/30'
+          )}
+        >
+          <summary
+            className={cn(
+              'cursor-pointer text-xs font-medium uppercase tracking-wide',
+              unloadDueCount > 0 ? 'text-amber-900/80' : 'text-muted-foreground'
+            )}
+          >
+            {washSummary}
+          </summary>
+          <div className="mt-3">
+            <LaundryMachinesPanel
+              machines={laundryMachines}
+              activeRuns={activeLaundryRuns}
+              busy={busy}
+              hideHeading
+              onStart={onStartLaundry}
+              onComplete={onCompleteLaundry}
+              onCancel={onCancelLaundry}
+            />
+          </div>
         </details>
       ) : null}
     </div>

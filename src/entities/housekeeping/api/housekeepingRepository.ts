@@ -149,3 +149,56 @@ export async function upsertHousekeepingRoomStatus(
 
   return { ok: true };
 }
+
+/** True when rollover already recorded for this tenant + operational calendar day. */
+export async function hasHousekeepingBedRolloverRun(
+  tenantId: string,
+  operationalDate: string
+): Promise<boolean> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return false;
+
+  const { data, error } = await admin
+    .from('housekeeping_bed_rollover_runs')
+    .select('tenant_id')
+    .eq('tenant_id', tenantId)
+    .eq('operational_date', operationalDate.slice(0, 10))
+    .maybeSingle();
+
+  if (error) {
+    console.error('hasHousekeepingBedRolloverRun:', error.message);
+    return false;
+  }
+
+  return Boolean(data);
+}
+
+/**
+ * Records that rollover ran for this operational day.
+ * Returns false on conflict (another worker already recorded) or DB error.
+ */
+export async function recordHousekeepingBedRolloverRun(
+  tenantId: string,
+  operationalDate: string
+): Promise<{ ok: true } | { ok: false; error: 'db_unavailable' | 'already_recorded' }> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const { error } = await admin.from('housekeeping_bed_rollover_runs').insert({
+    tenant_id: tenantId,
+    operational_date: operationalDate.slice(0, 10),
+    ran_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    if (error.code === '23505') {
+      return { ok: false, error: 'already_recorded' };
+    }
+    console.error('recordHousekeepingBedRolloverRun:', error.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  return { ok: true };
+}

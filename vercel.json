@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/tourism-document-purge",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/housekeeping-bed-rollover",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

@@ -22,7 +22,19 @@ export async function checkInWithPin(page: Page, config: E2eConfig): Promise<voi
 
   await page.goto(e2eGuestCheckInUrl(config));
   await page.getByLabel('Check-in PIN').fill(config.guestPin);
-  await page.waitForURL(/\/(check-in\/intent|welcome)/, { timeout: config.navTimeoutMs * 2 });
+
+  const pinError = page.getByText(/PIN not recognized|Access revoked|Too many tries/i);
+  const navigated = page.waitForURL(/\/(check-in\/intent|welcome)/, {
+    timeout: config.navTimeoutMs * 2,
+  });
+  const rejected = pinError.waitFor({ state: 'visible', timeout: config.navTimeoutMs * 2 }).then(
+    async () => {
+      const message = (await pinError.first().textContent())?.trim() || 'PIN check-in rejected';
+      throw new Error(`Guest PIN check-in failed: ${message}`);
+    }
+  );
+  await Promise.race([navigated, rejected]);
+
   await completeGuestIntentIfShown(page, config);
   await page.waitForURL(/\/welcome\?.*step=info/, { timeout: config.navTimeoutMs * 2 });
 }

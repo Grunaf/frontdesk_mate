@@ -75,7 +75,8 @@ test.describe('reception issues tab', () => {
     await expect(guestPage.getByText(/Sent to reception|Отправлено ресепшену/i)).toBeVisible();
 
     await loginToReceptionDesk(page, config);
-    await page.getByRole('tab', { name: /Issues/i }).click();
+    await page.getByRole('navigation', { name: 'Reception primary' }).getByRole('button', { name: /More/ }).click();
+    await page.getByRole('button', { name: /^Issues/ }).click();
     const issueRow = page.getByRole('listitem').filter({ hasText: /Toilet ·/ });
     await expect(issueRow).toBeVisible({ timeout: config.navTimeoutMs });
     await issueRow.getByRole('button', { name: 'Mark done' }).click();

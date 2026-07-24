@@ -1,9 +1,7 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
-import { findStayByReference } from '@/entities/guest-stay/lib/findStayByReference';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
 import type { TenantSettings } from '@/entities/tenant';
 import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
@@ -25,7 +23,6 @@ import {
   AccordionItem,
   AccordionTrigger,
   Button,
-  Input,
   SegmentedChipBar,
 } from '@/shared/ui';
 
@@ -34,7 +31,6 @@ interface IssuedAccessListProps {
   filter: IssuedAccessFilter;
   onFilterChange: (filter: IssuedAccessFilter) => void;
   onOpenStayDetail: (stayId: string) => void;
-  onFindStayByRef: (stayId: string) => void;
   revokeError: string | null;
   resolveBedLabel: (bedId: string) => string;
   tenantSettings?: TenantSettings;
@@ -123,13 +119,10 @@ export function IssuedAccessList({
   filter,
   onFilterChange,
   onOpenStayDetail,
-  onFindStayByRef,
   revokeError,
   resolveBedLabel,
   tenantSettings,
 }: IssuedAccessListProps) {
-  const [refQuery, setRefQuery] = useState('');
-  const [refError, setRefError] = useState<string | null>(null);
   const checkInPolicy = guestAccessCheckInPolicyFromSettings(tenantSettings);
   const filteredStays = filterIssuedAccess(stays, filter, new Date(), checkInPolicy);
   const grouped = groupIssuedAccess(filteredStays, new Date(), checkInPolicy);
@@ -142,40 +135,8 @@ export function IssuedAccessList({
     return <p className="text-xs text-muted-foreground">No issued access yet.</p>;
   }
 
-  const handleRefSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const match = findStayByReference(stays, refQuery);
-
-    if (!match) {
-      setRefError('No stay for this ref.');
-      return;
-    }
-
-    setRefError(null);
-    onFindStayByRef(match.id);
-  };
-
   return (
     <div className="space-y-3">
-      <form className="flex items-center gap-2" onSubmit={handleRefSearch}>
-        <Input
-          aria-label="Find stay by ref"
-          className="h-9 font-mono text-sm"
-          placeholder="Ref #XXXXXX"
-          value={refQuery}
-          onChange={(event) => {
-            setRefQuery(event.target.value);
-            if (refError) {
-              setRefError(null);
-            }
-          }}
-        />
-        <Button type="submit" size="sm" variant="outline" className="shrink-0">
-          Find
-        </Button>
-      </form>
-      {refError ? <p className="text-xs text-destructive">{refError}</p> : null}
-
       <SegmentedChipBar
         ariaLabel="Filter issued access"
         items={[...FILTER_ITEMS]}

@@ -24,19 +24,10 @@ function formatGuestPin(pin: string): string {
   return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
-function resolveSubtitle(guestName: string | undefined, bedLabel: string): string {
-  if (guestName) {
-    return `${guestName} · ${bedLabel}`;
-  }
-  return `${bedLabel} · copy message for Booking chat`;
-}
-
 type CopiedKind = 'message' | 'send' | 'onsite' | null;
 
 export function MagicLinkCard({
   magicLinkUrl,
-  bedId,
-  bedLabel,
   guestName,
   guestPin,
   hostelName,
@@ -46,8 +37,6 @@ export function MagicLinkCard({
 }: MagicLinkCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState<CopiedKind>(null);
-
-  const displayBedLabel = bedLabel?.trim() || bedId;
 
   const sendMagicLinkUrl = useMemo(
     () => appendGuestEntryToMagicLink(magicLinkUrl, 'remote'),
@@ -105,14 +94,7 @@ export function MagicLinkCard({
   };
 
   return (
-    <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
-      <div>
-        <p className="text-sm font-semibold text-foreground">Guest access ready</p>
-        <p className="text-xs text-muted-foreground">
-          {resolveSubtitle(guestName, displayBedLabel)}
-        </p>
-      </div>
-
+    <div className="space-y-4">
       {guestPin ? (
         <div className="rounded-lg border bg-background p-4 text-center">
           <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">

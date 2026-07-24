@@ -83,6 +83,9 @@ export function ReceptionCashView({
                   ? formatMoneyFromMinor(item.amountMinor, item.currency, locale)
                   : 'No price set';
               const statusLabel = item.admitted ? 'In-house' : 'Not admitted';
+              const metaLabel = item.leavesTomorrow
+                ? `${bedLabel} · ${statusLabel} · Leaves tomorrow`
+                : `${bedLabel} · ${statusLabel}`;
 
               return (
                 <li key={item.stay.id}>
@@ -97,7 +100,7 @@ export function ReceptionCashView({
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{guestLabel}</span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {bedLabel} · {statusLabel}
+                        {metaLabel}
                       </span>
                     </span>
                     <span

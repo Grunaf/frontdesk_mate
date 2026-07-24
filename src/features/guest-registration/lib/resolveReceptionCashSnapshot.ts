@@ -1,4 +1,5 @@
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import { addStayCalendarDays, stayRecordCheckOutDate } from '@/entities/guest-stay';
 import { guestStayCoversNight } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { isCurrencyCode, type CurrencyCode } from '@/shared/lib/currency';
 import type { TenantSettings } from '@/entities/tenant';
@@ -16,6 +17,8 @@ export type ReceptionCashStillDueItem = {
   currency: CurrencyCode | null;
   hasPrice: boolean;
   admitted: boolean;
+  /** Last night before exclusive checkout = current operational day. */
+  leavesTomorrow: boolean;
 };
 
 export type ReceptionCashSnapshot = {
@@ -27,6 +30,8 @@ export type ReceptionCashSnapshot = {
   expectedTotalMinor: number;
   paidTodayCount: number;
   unpaidCount: number;
+  /** Unpaid still-due items whose checkout is tomorrow. */
+  leavesTomorrowCount: number;
   stillToCollect: ReceptionCashStillDueItem[];
 };
 
@@ -51,6 +56,15 @@ function isUnpaidOperationalNightStay(
   return !stay.booking_paid_at;
 }
 
+export function isUnpaidLeavesTomorrow(
+  stay: GuestStayRecordWithLink,
+  operationalDate: string
+): boolean {
+  const checkOutDate = stayRecordCheckOutDate(stay);
+  const lastNight = addStayCalendarDays(checkOutDate, -1);
+  return lastNight === operationalDate;
+}
+
 function isPaidInOperationalWindow(
   stay: GuestStayRecordWithLink,
   operational: OperationalDayWindow
@@ -64,6 +78,9 @@ function isPaidInOperationalWindow(
 }
 
 function compareStillDueItems(a: ReceptionCashStillDueItem, b: ReceptionCashStillDueItem): number {
+  if (a.leavesTomorrow !== b.leavesTomorrow) {
+    return a.leavesTomorrow ? -1 : 1;
+  }
   if (a.admitted !== b.admitted) {
     return a.admitted ? -1 : 1;
   }
@@ -116,6 +133,7 @@ export function resolveReceptionCashSnapshot(
       currency: due?.currency ?? null,
       hasPrice: Boolean(due),
       admitted: hasGuestArrivedAtReception(stay),
+      leavesTomorrow: isUnpaidLeavesTomorrow(stay, operationalDate),
     });
   }
 
@@ -136,6 +154,7 @@ export function resolveReceptionCashSnapshot(
     expectedTotalMinor: collectedMinor + stillDueMinor,
     paidTodayCount,
     unpaidCount: stillToCollect.length,
+    leavesTomorrowCount: stillToCollect.filter((item) => item.leavesTomorrow).length,
     stillToCollect,
   };
 }

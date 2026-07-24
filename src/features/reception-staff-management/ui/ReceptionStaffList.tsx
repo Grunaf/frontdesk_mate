@@ -50,7 +50,7 @@ const PERMISSION_BADGE_LABELS: Record<ReceptionStaffPermission, PermissionLabelM
 
 const PERMISSION_EDIT_LABELS: Record<ReceptionStaffPermission, PermissionLabelMeta> = {
   [DESK_CHECK_IN_PERMISSION]: {
-    platform: 'Check-in (Plan, Access, Cash, Issues, Transfers, Archive)',
+    platform: 'Check-in (Today, Bookings: Plan/Access/Cash; More: Issues, Transfers, Archive)',
     ownerKey: 'permissions.checkIn',
   },
   [DESK_CLEANING_PERMISSION]: {

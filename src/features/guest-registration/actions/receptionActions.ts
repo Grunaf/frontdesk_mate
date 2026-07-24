@@ -14,6 +14,8 @@ import {
   updateGuestReservation,
   setGuestReservationBookingPaid,
 } from '@/entities/guest-stay/server';
+import { clearHousekeepingStayPresence } from '@/entities/housekeeping/server';
+import { getTenantRecord } from '@/entities/tenant/server';
 import type {
   CreateGuestStayResult,
   GuestReservationArchiveListItem,
@@ -41,6 +43,12 @@ async function requireCheckInStaff(
   const gate = assertReceptionCheckInAccess(staff.ctx);
   if (!gate.ok) return gate;
   return staff;
+}
+
+async function clearStayPresenceAfterDeskMutation(tenantSlug: string, stayId: string) {
+  const tenant = await getTenantRecord(tenantSlug);
+  if (!tenant) return;
+  await clearHousekeepingStayPresence({ tenantId: tenant.id, stayId });
 }
 
 export type CreateGuestStayActionResult =
@@ -153,6 +161,7 @@ export async function archiveGuestReservationAction(input: {
         mutation: 'cancelGuestReservation',
         subjectId: input.stayId,
       });
+      await clearStayPresenceAfterDeskMutation(input.tenantSlug, input.stayId);
       revalidatePath('/');
       return { ok: true as const, kind: result.kind };
     }
@@ -218,6 +227,7 @@ export async function checkoutGuestReservationAction(input: {
           subjectId: result.archiveStayId,
         });
       }
+      await clearStayPresenceAfterDeskMutation(input.tenantSlug, input.stayId);
       revalidatePath('/');
       return { ok: true as const, kind: result.kind, archiveStayId: result.archiveStayId };
     }

@@ -14,6 +14,30 @@ Policy: **90 days** after `guest_reservations.check_out_at` (Chat A). Requires `
 Manual check: backdate a test stay `check_out_at` → run job → storage objects and
 `guest_stay_tourism_guests` rows gone; reception tourism block shows **Documents purged**.
 
+## Housekeeping bed rollover (ops)
+
+Daily job: `markCheckoutBedsNeedsStrip()` in
+`src/features/guest-registration/jobs/markCheckoutBedsNeedsStrip.ts`.
+Marks admitted **checkout-night** beds as `needs_strip` (skips `stripped` / already
+`needs_strip`) and **all inventory rooms** as `not_cleaned` (skips already
+`not_cleaned`). Runs **after** each tenant's `operationalDayStartTime` (default 08:00 UTC)
+and at most **once per operational day** (ledger `housekeeping_bed_rollover_runs`).
+Requires `SUPABASE_SECRET_KEY` for upserts; apply migration `065_housekeeping_bed_rollover_runs.sql`.
+
+- Staging dry-run: `HOUSEKEEPING_BED_ROLLOVER_DRY_RUN=1` (logs only; no status writes, no ledger).
+- **Vercel:** same `CRON_SECRET`; `vercel.json` runs `GET /api/cron/housekeeping-bed-rollover`
+  every **15 minutes** — job no-ops until day start / if already rolled.
+- Manual trigger: `curl -sS -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/housekeeping-bed-rollover` — logs `[housekeeping-bed-rollover]`.
+
+Manual check: admitted stay with last night = previous operational night → run job after
+day start → Plan / Cleaning show **Needs strip** (open tab updates via poll/focus without reload).
+
+## Cleaning presence (ops)
+
+Soft signal **Vacant / Still here** on Cleaning beds (admitted occupancy only). Not checkout.
+Desk Departures show `Cleaning: vacant`. Cleared on desk checkout/cancel.
+Migration: `066_housekeeping_stay_presence.sql`.
+
 ## Local
 
 ```bash
