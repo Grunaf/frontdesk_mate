@@ -41,22 +41,23 @@ export function normalizeStayOffers(raw: StayOffer[] | undefined): StayOffer[] {
 export function coerceStayOffersForAdminEdit(raw: StayOffer[] | undefined): StayOffer[] {
   if (!Array.isArray(raw) || raw.length === 0) return [];
   return raw
-    .map((offer, index) => {
+    .flatMap((offer, index): StayOffer[] => {
       const id = offer.id?.trim();
-      if (!id) return null;
+      if (!id) return [];
       const engineRoomTypeId = trimOrUndefined(offer.engineRoomTypeId);
       const sortOrder =
         typeof offer.sortOrder === 'number' && Number.isFinite(offer.sortOrder)
           ? offer.sortOrder
           : index;
-      return {
-        id,
-        title: typeof offer.title === 'string' ? offer.title : '',
-        ...(engineRoomTypeId ? { engineRoomTypeId } : {}),
-        sortOrder,
-      };
+      return [
+        {
+          id,
+          title: typeof offer.title === 'string' ? offer.title : '',
+          ...(engineRoomTypeId ? { engineRoomTypeId } : {}),
+          sortOrder,
+        },
+      ];
     })
-    .filter((offer): offer is StayOffer => offer !== null)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
 
