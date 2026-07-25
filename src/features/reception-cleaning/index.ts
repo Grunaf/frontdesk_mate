@@ -8,3 +8,7 @@ export type { LaundryMachinesPanelProps } from './ui/LaundryMachinesPanel';
 export type { CleaningRoomGroup } from './lib/resolveCleaningHubSnapshot';
 export { resolveCleaningHubSnapshot } from './lib/resolveCleaningHubSnapshot';
 export { resolveNextCheckInByBedId } from './lib/resolveCleaningBedPriority';
+export {
+  resolveCleaningGuideQueue,
+  type CleaningGuideQueue,
+} from './lib/resolveCleaningGuideQueue';
