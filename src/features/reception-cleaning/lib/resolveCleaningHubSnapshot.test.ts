@@ -71,4 +71,32 @@ describe('resolveCleaningHubSnapshot', () => {
     expect(snapshot.todoRooms).toHaveLength(2);
     expect(snapshot.doneRooms).toHaveLength(0);
   });
+
+  it('sorts todo rooms by near booking priority and adds arrival hints', () => {
+    const snapshot = resolveCleaningHubSnapshot(
+      rooms,
+      {
+        b1: 'needs_strip',
+        b2: 'needs_strip',
+        b3: 'ready',
+        b4: 'stripped',
+        b5: 'needs_strip',
+      },
+      {},
+      {
+        operationalDate: '2026-07-25',
+        nextCheckInByBedId: {
+          b4: '2026-07-25',
+          b1: '2026-07-26',
+        },
+      }
+    );
+
+    expect(snapshot.todoRooms.map((room) => room.roomId)).toEqual(['r2', 'r1']);
+    expect(snapshot.todoRooms[0]?.todayArrivalCount).toBe(1);
+    expect(snapshot.todoRooms[0]?.beds.map((bed) => bed.bedId)).toEqual(['b4', 'b5']);
+    expect(snapshot.todoRooms[0]?.beds[0]?.arrivalHint).toBe('Today');
+    expect(snapshot.todoRooms[1]?.beds.map((bed) => bed.bedId)).toEqual(['b1', 'b2']);
+    expect(snapshot.todoRooms[1]?.beds[0]?.arrivalHint).toBe('Tomorrow');
+  });
 });

@@ -1,5 +1,11 @@
 import type { HousekeepingBedStatus, HousekeepingRoomStatus } from '@/entities/housekeeping';
 
+import {
+  resolveCleaningArrivalHint,
+  sortCleaningTodoRoomsByBookingPriority,
+  type CleaningArrivalHint,
+} from './resolveCleaningBedPriority';
+
 export type CleaningRoomGroup = {
   roomId: string;
   roomLabel: string;
@@ -10,6 +16,7 @@ export type CleaningBedEntry = {
   bedId: string;
   displayLabel: string;
   status: HousekeepingBedStatus | undefined;
+  arrivalHint?: CleaningArrivalHint;
 };
 
 export type CleaningRoomBucket = {
@@ -17,6 +24,8 @@ export type CleaningRoomBucket = {
   roomLabel: string;
   roomStatus: HousekeepingRoomStatus | undefined;
   beds: CleaningBedEntry[];
+  /** Present when any todo bed in the room has a Today arrival. */
+  todayArrivalCount?: number;
 };
 
 export type CleaningHubSnapshot = {
@@ -27,6 +36,11 @@ export type CleaningHubSnapshot = {
   doneCount: number;
   todoRooms: CleaningRoomBucket[];
   doneRooms: CleaningRoomBucket[];
+};
+
+export type ResolveCleaningHubSnapshotOptions = {
+  nextCheckInByBedId?: Record<string, string>;
+  operationalDate?: string;
 };
 
 /** Hub "Strip": unset or needs_strip */
@@ -76,11 +90,40 @@ function filterRoomsByBedPredicate(
   return result;
 }
 
+function enrichTodoRoomsWithArrivalPriority(
+  rooms: CleaningRoomBucket[],
+  nextCheckInByBedId: Record<string, string>,
+  operationalDate: string
+): CleaningRoomBucket[] {
+  const sorted = sortCleaningTodoRoomsByBookingPriority(
+    rooms,
+    nextCheckInByBedId,
+    operationalDate
+  );
+
+  return sorted.map((room) => {
+    let todayArrivalCount = 0;
+    const beds = room.beds.map((bed) => {
+      const arrivalHint = resolveCleaningArrivalHint(
+        nextCheckInByBedId[bed.bedId],
+        operationalDate
+      );
+      if (arrivalHint === 'Today') todayArrivalCount += 1;
+      return arrivalHint ? { ...bed, arrivalHint } : bed;
+    });
+
+    return todayArrivalCount > 0
+      ? { ...room, beds, todayArrivalCount }
+      : { ...room, beds };
+  });
+}
+
 /** Split inventory into Strip · Make · Done hub counts + todo/done room lists. */
 export function resolveCleaningHubSnapshot(
   roomGroups: readonly CleaningRoomGroup[],
   bedStatuses: Record<string, HousekeepingBedStatus>,
-  roomStatuses: Record<string, HousekeepingRoomStatus> = {}
+  roomStatuses: Record<string, HousekeepingRoomStatus> = {},
+  options: ResolveCleaningHubSnapshotOptions = {}
 ): CleaningHubSnapshot {
   let stripCount = 0;
   let makeCount = 0;
@@ -95,11 +138,23 @@ export function resolveCleaningHubSnapshot(
     }
   }
 
+  const todoRoomsRaw = filterRoomsByBedPredicate(
+    roomGroups,
+    bedStatuses,
+    roomStatuses,
+    isTodoBedStatus
+  );
+  const nextCheckInByBedId = options.nextCheckInByBedId ?? {};
+  const operationalDate = options.operationalDate?.trim();
+  const todoRooms = operationalDate
+    ? enrichTodoRoomsWithArrivalPriority(todoRoomsRaw, nextCheckInByBedId, operationalDate)
+    : todoRoomsRaw;
+
   return {
     stripCount,
     makeCount,
     doneCount,
-    todoRooms: filterRoomsByBedPredicate(roomGroups, bedStatuses, roomStatuses, isTodoBedStatus),
+    todoRooms,
     doneRooms: filterRoomsByBedPredicate(roomGroups, bedStatuses, roomStatuses, isDoneBedStatus),
   };
 }

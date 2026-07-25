@@ -41,7 +41,9 @@ export {
   isHousekeepingBedNeedsWork,
   listHousekeepingBedStatusChoices,
   resolveHousekeepingBedPrimaryAction,
+  resolveRoomBedBatchAction,
 } from './lib/bedPipeline';
+export type { HousekeepingRoomBedBatchAction } from './lib/bedPipeline';
 export {
   computeLaundryEndsAt,
   formatLaundryCountdown,

@@ -38,6 +38,41 @@ export function isHousekeepingBedNeedsWork(
   return status === undefined || status === 'needs_strip' || status === 'stripped';
 }
 
+export type HousekeepingRoomBedBatchAction = {
+  /** Button label without count, e.g. "Strip all". */
+  label: string;
+  nextStatus: HousekeepingBedStatus;
+  /** Bed ids that will receive `nextStatus`. */
+  bedIds: string[];
+};
+
+/**
+ * Room-level primary CTA for batch housekeeping.
+ * Strip eligible beds take priority over Make when both exist in the room.
+ */
+export function resolveRoomBedBatchAction(
+  beds: ReadonlyArray<{ bedId: string; status: HousekeepingBedStatus | undefined }>
+): HousekeepingRoomBedBatchAction | null {
+  const stripIds: string[] = [];
+  const makeIds: string[] = [];
+
+  for (const bed of beds) {
+    if (bed.status === undefined || bed.status === 'needs_strip') {
+      stripIds.push(bed.bedId);
+    } else if (bed.status === 'stripped') {
+      makeIds.push(bed.bedId);
+    }
+  }
+
+  if (stripIds.length > 0) {
+    return { label: 'Strip all', nextStatus: 'stripped', bedIds: stripIds };
+  }
+  if (makeIds.length > 0) {
+    return { label: 'Make all', nextStatus: 'ready', bedIds: makeIds };
+  }
+  return null;
+}
+
 export function listHousekeepingBedStatusChoices(): HousekeepingBedStatus[] {
   return [...HOUSEKEEPING_BED_STATUSES];
 }

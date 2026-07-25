@@ -7,7 +7,7 @@ import {
   HOUSEKEEPING_ROOM_STATUSES,
   HOUSEKEEPING_STAY_PRESENCE_LABELS,
   listHousekeepingBedStatusChoices,
-  resolveHousekeepingBedPrimaryAction,
+  resolveRoomBedBatchAction,
   type HousekeepingBedStatus,
   type HousekeepingLaundryProgram,
   type HousekeepingLaundryRunRecord,
@@ -16,6 +16,7 @@ import {
 } from '@/entities/housekeeping';
 import type { LaundryMachine } from '@/entities/tenant';
 import { cn } from '@/shared/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 
 import {
   resolveCleaningHubSnapshot,
@@ -25,11 +26,14 @@ import {
 } from '../lib/resolveCleaningHubSnapshot';
 import {
   countLaundryUnloadDue,
-  resolveCleaningWashSummaryLabel,
-  shouldShowCleaningWashSection,
+  resolveCleaningWashCalloutLabel,
+  resolveCleaningWashTabBadgeCount,
+  shouldShowCleaningWashTab,
 } from '../lib/resolveCleaningWashVisibility';
 import { LaundryMachinesPanel } from './LaundryMachinesPanel';
 export type { CleaningRoomGroup };
+
+type CleaningContextTab = 'rooms' | 'wash';
 
 const ROOM_STATUS_LABELS: Record<HousekeepingRoomStatus, string> = {
   cleaned: 'Cleaned',
@@ -127,7 +131,6 @@ function PresenceChip({
 function BedRow({
   bed,
   busy,
-  showPrimaryCta,
   presenceLink,
   presenceStatus,
   onSetBedStatus,
@@ -136,7 +139,6 @@ function BedRow({
 }: {
   bed: CleaningBedEntry;
   busy: boolean;
-  showPrimaryCta: boolean;
   presenceLink?: CleaningBedPresenceLink;
   presenceStatus?: HousekeepingStayPresenceStatus;
   onSetBedStatus: (bedId: string, status: HousekeepingBedStatus) => void;
@@ -149,7 +151,6 @@ function BedRow({
 }) {
   const [changeOpen, setChangeOpen] = useState(false);
   const status = bed.status;
-  const primary = resolveHousekeepingBedPrimaryAction(status);
   const statusLabel = status ? HOUSEKEEPING_BED_STATUS_LABELS[status] : 'Unset';
   const showPresence = Boolean(presenceLink && onSetPresence && onClearPresence);
 
@@ -159,30 +160,21 @@ function BedRow({
         <div className="min-w-0">
           <span className="text-sm text-foreground">{bed.displayLabel}</span>
           <span className="ml-2 text-xs text-muted-foreground">{statusLabel}</span>
+          {bed.arrivalHint ? (
+            <span className="ml-2 text-xs text-muted-foreground">{bed.arrivalHint}</span>
+          ) : null}
           {presenceLink ? (
             <span className="ml-2 text-xs text-muted-foreground">{presenceLink.guestName}</span>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {showPrimaryCta && primary ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onSetBedStatus(bed.bedId, primary.nextStatus)}
-              className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground disabled:opacity-60"
-            >
-              {primary.label}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setChangeOpen((open) => !open)}
-            className="shrink-0 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/40 disabled:opacity-60"
-          >
-            Change…
-          </button>
-        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setChangeOpen((open) => !open)}
+          className="shrink-0 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/40 disabled:opacity-60"
+        >
+          Change…
+        </button>
       </div>
       {showPresence && presenceLink ? (
         <div className="space-y-1">
@@ -246,20 +238,20 @@ function BedRow({
 function RoomBucketCard({
   room,
   busy,
-  showPrimaryCta,
   bedPresenceByBedId,
   presenceByStayId,
   onSetBedStatus,
+  onSetBedStatuses,
   onSetRoomStatus,
   onSetPresence,
   onClearPresence,
 }: {
   room: CleaningRoomBucket;
   busy: boolean;
-  showPrimaryCta: boolean;
   bedPresenceByBedId?: Record<string, CleaningBedPresenceLink>;
   presenceByStayId?: Record<string, HousekeepingStayPresenceStatus>;
   onSetBedStatus: (bedId: string, status: HousekeepingBedStatus) => void;
+  onSetBedStatuses: (updates: Record<string, HousekeepingBedStatus>) => void;
   onSetRoomStatus: (roomId: string, status: HousekeepingRoomStatus) => void;
   onSetPresence?: (
     stayId: string,
@@ -270,11 +262,17 @@ function RoomBucketCard({
 }) {
   const canSetRoom = !isSyntheticRoomId(room.roomId);
   const roomStatus = room.roomStatus;
+  const batch = resolveRoomBedBatchAction(room.beds);
 
   return (
     <li className="rounded-lg border bg-background px-3 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium">{room.roomLabel}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{room.roomLabel}</p>
+          {room.todayArrivalCount && room.todayArrivalCount > 0 ? (
+            <p className="text-xs text-muted-foreground">Today · {room.todayArrivalCount}</p>
+          ) : null}
+        </div>
         {canSetRoom ? (
           <RoomStatusChip
             label={roomStatus ? ROOM_STATUS_LABELS[roomStatus] : 'Set room…'}
@@ -285,6 +283,22 @@ function RoomBucketCard({
           />
         ) : null}
       </div>
+      {batch ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            const updates: Record<string, HousekeepingBedStatus> = {};
+            for (const bedId of batch.bedIds) {
+              updates[bedId] = batch.nextStatus;
+            }
+            onSetBedStatuses(updates);
+          }}
+          className="mt-3 w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40 disabled:opacity-60"
+        >
+          {batch.label} ({batch.bedIds.length})
+        </button>
+      ) : null}
       <ul className="mt-3 space-y-3 border-t border-border/60 pt-2">
         {room.beds.map((bed) => {
           const link = bedPresenceByBedId?.[bed.bedId];
@@ -293,7 +307,6 @@ function RoomBucketCard({
               key={bed.bedId}
               bed={bed}
               busy={busy}
-              showPrimaryCta={showPrimaryCta}
               presenceLink={link}
               presenceStatus={link ? presenceByStayId?.[link.stayId] : undefined}
               onSetBedStatus={onSetBedStatus}
@@ -313,9 +326,13 @@ export type ReceptionCleaningPanelProps = {
   roomStatuses: Record<string, HousekeepingRoomStatus>;
   laundryMachines: LaundryMachine[];
   activeLaundryRuns: HousekeepingLaundryRunRecord[];
+  /** Earliest upcoming check-in date (YYYY-MM-DD) per bed — prioritizes To do. */
+  nextCheckInByBedId?: Record<string, string>;
+  operationalDate?: string;
   bedPresenceByBedId?: Record<string, CleaningBedPresenceLink>;
   presenceByStayId?: Record<string, HousekeepingStayPresenceStatus>;
   onSetBedStatus: (bedId: string, status: HousekeepingBedStatus) => void;
+  onSetBedStatuses: (updates: Record<string, HousekeepingBedStatus>) => void;
   onSetRoomStatus: (roomId: string, status: HousekeepingRoomStatus) => void;
   onSetPresence?: (
     stayId: string,
@@ -335,9 +352,12 @@ export function ReceptionCleaningPanel({
   roomStatuses,
   laundryMachines,
   activeLaundryRuns,
+  nextCheckInByBedId,
+  operationalDate,
   bedPresenceByBedId,
   presenceByStayId,
   onSetBedStatus,
+  onSetBedStatuses,
   onSetRoomStatus,
   onSetPresence,
   onClearPresence,
@@ -346,23 +366,32 @@ export function ReceptionCleaningPanel({
   onCancelLaundry,
   busy = false,
 }: ReceptionCleaningPanelProps) {
+  const [contextTab, setContextTab] = useState<CleaningContextTab>('rooms');
+
   const snapshot = useMemo(
-    () => resolveCleaningHubSnapshot(roomGroups, bedStatuses, roomStatuses),
-    [roomGroups, bedStatuses, roomStatuses]
+    () =>
+      resolveCleaningHubSnapshot(roomGroups, bedStatuses, roomStatuses, {
+        nextCheckInByBedId,
+        operationalDate,
+      }),
+    [roomGroups, bedStatuses, roomStatuses, nextCheckInByBedId, operationalDate]
   );
 
-  const showWashSection = shouldShowCleaningWashSection({
-    makeCount: snapshot.makeCount,
-    activeRuns: activeLaundryRuns,
-    machineCount: laundryMachines.length,
-  });
+  const showWashTab = shouldShowCleaningWashTab(laundryMachines.length);
   const unloadDueCount = countLaundryUnloadDue(activeLaundryRuns);
-  const runningCount = activeLaundryRuns.filter((run) => run.status === 'running').length;
-  const washSummary = resolveCleaningWashSummaryLabel({
+  const washTabBadge = resolveCleaningWashTabBadgeCount(unloadDueCount);
+  const washCallout = resolveCleaningWashCalloutLabel({
+    machines: laundryMachines,
+    activeRuns: activeLaundryRuns,
     makeCount: snapshot.makeCount,
-    unloadDueCount,
-    runningCount,
   });
+
+  const activeContextTab: CleaningContextTab =
+    showWashTab && contextTab === 'wash' ? 'wash' : 'rooms';
+
+  const handleContextTabChange = (value: string) => {
+    if (value === 'rooms' || value === 'wash') setContextTab(value);
+  };
 
   if (roomGroups.length === 0) {
     return (
@@ -372,18 +401,36 @@ export function ReceptionCleaningPanel({
     );
   }
 
-  return (
+  const roomsContent = (
     <div className="space-y-5">
-      <h2 className="text-base font-semibold">Cleaning</h2>
-
       <div className="grid grid-cols-3 gap-2">
         <HubStat label="Strip" value={snapshot.stripCount} />
         <HubStat label="Make" value={snapshot.makeCount} />
         <HubStat label="Done" value={snapshot.doneCount} />
       </div>
 
+      {washCallout && showWashTab ? (
+        <button
+          type="button"
+          onClick={() => setContextTab('wash')}
+          className={cn(
+            'flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left',
+            unloadDueCount > 0
+              ? 'border-amber-200 bg-amber-50 text-amber-950'
+              : 'border-border bg-card text-foreground hover:bg-muted/40'
+          )}
+        >
+          <span className="text-sm font-medium">{washCallout}</span>
+          <span className="shrink-0 text-xs text-muted-foreground" aria-hidden>
+            Wash →
+          </span>
+        </button>
+      ) : null}
+
       <section className="space-y-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">To do</h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          To do
+        </h3>
         {snapshot.todoRooms.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing left to do.</p>
         ) : (
@@ -393,10 +440,10 @@ export function ReceptionCleaningPanel({
                 key={room.roomId}
                 room={room}
                 busy={busy}
-                showPrimaryCta
                 bedPresenceByBedId={bedPresenceByBedId}
                 presenceByStayId={presenceByStayId}
                 onSetBedStatus={onSetBedStatus}
+                onSetBedStatuses={onSetBedStatuses}
                 onSetRoomStatus={onSetRoomStatus}
                 onSetPresence={onSetPresence}
                 onClearPresence={onClearPresence}
@@ -417,10 +464,10 @@ export function ReceptionCleaningPanel({
                 key={room.roomId}
                 room={room}
                 busy={busy}
-                showPrimaryCta={false}
                 bedPresenceByBedId={bedPresenceByBedId}
                 presenceByStayId={presenceByStayId}
                 onSetBedStatus={onSetBedStatus}
+                onSetBedStatuses={onSetBedStatuses}
                 onSetRoomStatus={onSetRoomStatus}
                 onSetPresence={onSetPresence}
                 onClearPresence={onClearPresence}
@@ -429,37 +476,37 @@ export function ReceptionCleaningPanel({
           </ul>
         </details>
       ) : null}
+    </div>
+  );
 
-      {showWashSection ? (
-        <details
-          className={cn(
-            'group rounded-lg border px-3 py-2',
-            unloadDueCount > 0
-              ? 'border-amber-200 bg-amber-50'
-              : 'border-dashed border-muted-foreground/30'
-          )}
-        >
-          <summary
-            className={cn(
-              'cursor-pointer text-xs font-medium uppercase tracking-wide',
-              unloadDueCount > 0 ? 'text-amber-900/80' : 'text-muted-foreground'
-            )}
-          >
-            {washSummary}
-          </summary>
-          <div className="mt-3">
+  return (
+    <div className="space-y-5">
+      <h2 className="text-base font-semibold">Cleaning</h2>
+
+      {showWashTab ? (
+        <Tabs value={activeContextTab} onValueChange={handleContextTabChange}>
+          <TabsList variant="line" className="mb-4 w-full justify-start">
+            <TabsTrigger value="rooms">Rooms</TabsTrigger>
+            <TabsTrigger value="wash">
+              {washTabBadge > 0 ? `Wash · ${washTabBadge}` : 'Wash'}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="rooms">{roomsContent}</TabsContent>
+          <TabsContent value="wash">
             <LaundryMachinesPanel
               machines={laundryMachines}
               activeRuns={activeLaundryRuns}
               busy={busy}
-              hideHeading
               onStart={onStartLaundry}
               onComplete={onCompleteLaundry}
               onCancel={onCancelLaundry}
             />
-          </div>
-        </details>
-      ) : null}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        roomsContent
+      )}
     </div>
   );
 }

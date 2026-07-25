@@ -64,7 +64,7 @@ import {
   receptionStaffCanCheckIn,
   receptionStaffCanClean,
 } from '@/entities/reception-user';
-import { ReceptionCleaningPanel } from '@/features/reception-cleaning';
+import { ReceptionCleaningPanel, resolveNextCheckInByBedId } from '@/features/reception-cleaning';
 import {
   coerceDeskTab,
   isBookingsContextTab,
@@ -361,6 +361,11 @@ export function ReceptionCheckInPanel({
     }));
   }, [tenantSettings, operational.operationalDate]);
 
+  const cleaningNextCheckInByBedId = useMemo(
+    () => resolveNextCheckInByBedId(planStays, operational.operationalDate),
+    [planStays, operational.operationalDate]
+  );
+
   const bedPresenceByBedId = useMemo(
     () => resolveBedStayPresenceLinks(planStays, operational.operationalDate),
     [planStays, operational.operationalDate]
@@ -407,6 +412,42 @@ export function ReceptionCheckInPanel({
             return next;
           });
         }
+      });
+    },
+    [bedStatuses, tenantSlug]
+  );
+
+  const handleSetBedStatuses = useCallback(
+    (updates: Record<string, HousekeepingBedStatus>) => {
+      const entries = Object.entries(updates);
+      if (entries.length === 0) return;
+
+      const previousByBedId: Record<string, HousekeepingBedStatus | undefined> = {};
+      for (const [bedId] of entries) {
+        previousByBedId[bedId] = bedStatuses[bedId];
+      }
+
+      setBedStatuses((current) => ({ ...current, ...updates }));
+      startHousekeepingTransition(async () => {
+        const results = await Promise.all(
+          entries.map(async ([bedId, status]) => {
+            const result = await upsertHousekeepingBedStatusAction({ tenantSlug, bedId, status });
+            return { bedId, ok: result.ok };
+          })
+        );
+
+        const failed = results.filter((result) => !result.ok);
+        if (failed.length === 0) return;
+
+        setBedStatuses((current) => {
+          const next = { ...current };
+          for (const { bedId } of failed) {
+            const previous = previousByBedId[bedId];
+            if (previous) next[bedId] = previous;
+            else delete next[bedId];
+          }
+          return next;
+        });
       });
     },
     [bedStatuses, tenantSlug]
@@ -1269,9 +1310,12 @@ export function ReceptionCheckInPanel({
                   roomStatuses={roomStatuses}
                   laundryMachines={laundryMachines}
                   activeLaundryRuns={activeLaundryRuns}
+                  nextCheckInByBedId={cleaningNextCheckInByBedId}
+                  operationalDate={operational.operationalDate}
                   bedPresenceByBedId={bedPresenceByBedId}
                   presenceByStayId={presenceByStayId}
                   onSetBedStatus={handleSetBedStatus}
+                  onSetBedStatuses={handleSetBedStatuses}
                   onSetRoomStatus={handleSetRoomStatus}
                   onSetPresence={handleSetPresence}
                   onClearPresence={handleClearPresence}

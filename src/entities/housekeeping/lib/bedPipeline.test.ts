@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isHousekeepingBedNeedsWork,
   resolveHousekeepingBedPrimaryAction,
+  resolveRoomBedBatchAction,
 } from './bedPipeline';
 
 describe('bedPipeline', () => {
@@ -33,5 +34,58 @@ describe('bedPipeline', () => {
     expect(isHousekeepingBedNeedsWork('needs_strip')).toBe(true);
     expect(isHousekeepingBedNeedsWork('stripped')).toBe(true);
     expect(isHousekeepingBedNeedsWork('ready')).toBe(false);
+  });
+});
+
+describe('resolveRoomBedBatchAction', () => {
+  it('returns Strip all for unset and needs_strip beds', () => {
+    expect(
+      resolveRoomBedBatchAction([
+        { bedId: 'a', status: undefined },
+        { bedId: 'b', status: 'needs_strip' },
+        { bedId: 'c', status: 'ready' },
+      ])
+    ).toEqual({
+      label: 'Strip all',
+      nextStatus: 'stripped',
+      bedIds: ['a', 'b'],
+    });
+  });
+
+  it('returns Make all when only stripped beds remain', () => {
+    expect(
+      resolveRoomBedBatchAction([
+        { bedId: 'a', status: 'stripped' },
+        { bedId: 'b', status: 'stripped' },
+        { bedId: 'c', status: 'ready' },
+      ])
+    ).toEqual({
+      label: 'Make all',
+      nextStatus: 'ready',
+      bedIds: ['a', 'b'],
+    });
+  });
+
+  it('prioritizes Strip over Make when both eligible', () => {
+    expect(
+      resolveRoomBedBatchAction([
+        { bedId: 'a', status: 'needs_strip' },
+        { bedId: 'b', status: 'stripped' },
+      ])
+    ).toEqual({
+      label: 'Strip all',
+      nextStatus: 'stripped',
+      bedIds: ['a'],
+    });
+  });
+
+  it('returns null when nothing to batch', () => {
+    expect(resolveRoomBedBatchAction([])).toBeNull();
+    expect(
+      resolveRoomBedBatchAction([
+        { bedId: 'a', status: 'ready' },
+        { bedId: 'b', status: 'ready' },
+      ])
+    ).toBeNull();
   });
 });
