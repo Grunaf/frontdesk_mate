@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveCleaningHubSnapshot } from './resolveCleaningHubSnapshot';
+import {
+  resolveCleaningHubSnapshot,
+  type CleaningRoomGroup,
+} from './resolveCleaningHubSnapshot';
 
-const rooms = [
+const rooms: CleaningRoomGroup[] = [
   {
     roomId: 'r1',
     roomLabel: 'Dorm A',
@@ -20,7 +23,7 @@ const rooms = [
       { bedId: 'b5', displayLabel: 'B2' },
     ],
   },
-] as const;
+];
 
 describe('resolveCleaningHubSnapshot', () => {
   it('counts strip (unset+needs_strip), make (stripped), and done (ready)', () => {

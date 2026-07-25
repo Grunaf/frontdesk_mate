@@ -86,11 +86,14 @@ type SortableCleaningRoom<TBed extends SortableCleaningBed> = {
 };
 
 /** Sort rooms by most urgent bed, then beds within each room. Stable on inventory labels. */
-export function sortCleaningTodoRoomsByBookingPriority<TBed extends SortableCleaningBed>(
-  rooms: readonly SortableCleaningRoom<TBed>[],
+export function sortCleaningTodoRoomsByBookingPriority<
+  TBed extends SortableCleaningBed,
+  TRoom extends SortableCleaningRoom<TBed>,
+>(
+  rooms: readonly TRoom[],
   nextCheckInByBedId: Record<string, string>,
   operationalDate: string
-): Array<SortableCleaningRoom<TBed> & { beds: TBed[] }> {
+): Array<TRoom & { beds: TBed[] }> {
   const roomRank = (room: SortableCleaningRoom<TBed>) => {
     let bestPriority: CleaningBedBookingPriority = 2;
     let bestCheckIn: string | undefined;

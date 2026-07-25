@@ -9,7 +9,7 @@ import {
 export type CleaningRoomGroup = {
   roomId: string;
   roomLabel: string;
-  beds: Array<{ bedId: string; displayLabel: string }>;
+  beds: ReadonlyArray<{ bedId: string; displayLabel: string }>;
 };
 
 export type CleaningBedEntry = {
