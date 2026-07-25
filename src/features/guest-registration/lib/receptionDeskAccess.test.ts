@@ -9,6 +9,7 @@ import {
   resolveBookingsContextTabs,
   resolveDefaultDeskTab,
   resolveDeskTabForPrimaryNav,
+  resolveMoreBadgeCount,
   resolveMoreMenuTabs,
   resolvePrimaryNavForDeskTab,
   shouldShowBookingsContextTabs,
@@ -24,13 +25,14 @@ describe('receptionDeskAccess', () => {
       'issues',
       'transfers',
       'archive',
+      'schedule',
     ]);
     expect(resolveDefaultDeskTab([])).toBe('desk');
     expect(resolveAllowedDeskTabs(['desk.check_in'])).toEqual(resolveAllowedDeskTabs([]));
   });
 
   it('gives only cleaning for cleaning-only staff', () => {
-    expect(resolveAllowedDeskTabs(['desk.cleaning'])).toEqual(['cleaning']);
+    expect(resolveAllowedDeskTabs(['desk.cleaning'])).toEqual(['cleaning', 'schedule']);
     expect(resolveDefaultDeskTab(['desk.cleaning'])).toBe('cleaning');
   });
 
@@ -44,6 +46,7 @@ describe('receptionDeskAccess', () => {
       'transfers',
       'archive',
       'cleaning',
+      'schedule',
     ]);
   });
 
@@ -57,20 +60,27 @@ describe('receptionDeskAccess', () => {
 
   it('exposes Bookings context and More menu groups for check-in', () => {
     expect(resolveBookingsContextTabs(['desk.check_in'])).toEqual(['plan', 'access', 'cash']);
-    expect(resolveMoreMenuTabs(['desk.check_in'])).toEqual(['issues', 'transfers', 'archive']);
+    expect(resolveMoreMenuTabs(['desk.check_in'])).toEqual([
+      'schedule',
+      'issues',
+      'transfers',
+      'archive',
+    ]);
     expect(resolveMoreMenuTabs(['desk.check_in', 'desk.cleaning'])).toEqual([
+      'schedule',
       'issues',
       'transfers',
       'archive',
       'cleaning',
     ]);
     expect(resolveBookingsContextTabs(['desk.cleaning'])).toEqual([]);
+    // Single More item (schedule) is promoted to bottom nav — More list empty.
     expect(resolveMoreMenuTabs(['desk.cleaning'])).toEqual([]);
   });
 
   it('resolves bottom nav by role', () => {
     expect(resolveBottomNavItems(['desk.check_in'])).toEqual(['today', 'bookings', 'more']);
-    expect(resolveBottomNavItems(['desk.cleaning'])).toEqual(['cleaning']);
+    expect(resolveBottomNavItems(['desk.cleaning'])).toEqual(['cleaning', 'schedule']);
     expect(resolveBottomNavItems(['desk.check_in', 'desk.cleaning'])).toEqual([
       'today',
       'bookings',
@@ -78,10 +88,19 @@ describe('receptionDeskAccess', () => {
     ]);
   });
 
+  it('scopes More badge to visible More tabs only', () => {
+    expect(resolveMoreBadgeCount(['desk.check_in'], 2, 1)).toBe(3);
+    expect(resolveMoreBadgeCount(['desk.check_in', 'desk.cleaning'], 2, 1)).toBe(3);
+    // Cleaning-only: Issues/Transfers not in More (promoted schedule) → no badge.
+    expect(resolveMoreBadgeCount(['desk.cleaning'], 5, 3)).toBe(0);
+  });
+
   it('maps desk tabs to primary nav and bookings context visibility', () => {
     expect(resolvePrimaryNavForDeskTab('desk', ['desk.check_in'])).toBe('today');
     expect(resolvePrimaryNavForDeskTab('plan', ['desk.check_in'])).toBe('bookings');
     expect(resolvePrimaryNavForDeskTab('issues', ['desk.check_in'])).toBe('more');
+    expect(resolvePrimaryNavForDeskTab('schedule', ['desk.check_in'])).toBe('more');
+    expect(resolvePrimaryNavForDeskTab('schedule', ['desk.cleaning'])).toBe('schedule');
     expect(resolvePrimaryNavForDeskTab('cleaning', ['desk.cleaning'])).toBe('cleaning');
     expect(shouldShowBookingsContextTabs('plan')).toBe(true);
     expect(shouldShowBookingsContextTabs('desk')).toBe(false);
@@ -94,6 +113,7 @@ describe('receptionDeskAccess', () => {
     expect(resolveDeskTabForPrimaryNav('bookings', ['desk.check_in'], null)).toBe('plan');
     expect(resolveDeskTabForPrimaryNav('more', ['desk.check_in'])).toBeNull();
     expect(resolveDeskTabForPrimaryNav('cleaning', ['desk.cleaning'])).toBe('cleaning');
+    expect(resolveDeskTabForPrimaryNav('schedule', ['desk.cleaning'])).toBe('schedule');
   });
 
   it('keeps More selected while the menu is open', () => {

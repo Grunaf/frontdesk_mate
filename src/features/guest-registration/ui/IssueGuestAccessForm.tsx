@@ -209,13 +209,14 @@ export function IssueGuestAccessFormFields({
           {showBookingReference ? (
             <div className="space-y-1">
               <Label htmlFor="booking-external-id">Booking reference</Label>
-              <p className="text-xs text-muted-foreground">OTA confirmation number (optional).</p>
+              <p className="text-xs text-muted-foreground">OTA confirmation number.</p>
               <Input
                 id="booking-external-id"
                 value={bookingExternalId}
                 onChange={(event) => onBookingExternalIdChange(event.target.value)}
                 placeholder="e.g. 1234567890"
                 autoComplete="off"
+                required
               />
             </div>
           ) : null}
@@ -224,11 +225,7 @@ export function IssueGuestAccessFormFields({
 
       <div className="space-y-1">
         <Label htmlFor="booking-balance-due">Balance due</Label>
-        <p className="text-xs text-muted-foreground">
-          {isEditingReservation
-            ? 'Remaining stay balance (optional). Not city tax.'
-            : 'Remaining stay balance. Not city tax.'}
-        </p>
+        <p className="text-xs text-muted-foreground">Remaining stay balance. Not city tax.</p>
         <Input
           id="booking-balance-due"
           value={bookingAmountDue}
@@ -236,7 +233,7 @@ export function IssueGuestAccessFormFields({
           placeholder={`e.g. 24.00 ${bookingBalanceCurrencySymbol}`.trim()}
           inputMode="decimal"
           autoComplete="off"
-          required={!isEditingReservation}
+          required
         />
       </div>
 
@@ -281,10 +278,10 @@ export function IssueGuestAccessFormFields({
           <button
             type="button"
             onClick={() => setAdvancedOpen((open) => !open)}
-            className="flex w-full items-center justify-between rounded-md border bg-muted/20 px-3 py-2 text-left text-sm font-medium hover:bg-muted/40"
+            className="flex w-full items-center justify-between gap-2 py-1 text-left text-sm text-muted-foreground hover:text-foreground"
           >
             Advanced · pick specific bed
-            <ChevronDown className={cn('size-4 transition-transform', advancedOpen && 'rotate-180')} />
+            <ChevronDown className={cn('size-4 shrink-0 transition-transform', advancedOpen && 'rotate-180')} />
           </button>
           {advancedOpen ? bedSelect : null}
         </div>

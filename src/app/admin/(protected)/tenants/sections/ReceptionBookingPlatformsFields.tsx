@@ -22,11 +22,26 @@ export function ReceptionBookingPlatformsFields({ settings }: ReceptionBookingPl
     () => settings?.receptionBooking?.platforms ?? [],
     [settings?.receptionBooking?.platforms]
   );
+  const bookingComHotelId = settings?.receptionBooking?.bookingComHotelId ?? '';
+
+  const patchReceptionBooking = (next: {
+    platforms?: BookingPlatformOption[];
+    bookingComHotelId?: string;
+  }) => {
+    const nextPlatforms = next.platforms ?? platforms;
+    const nextHotelId =
+      next.bookingComHotelId !== undefined ? next.bookingComHotelId : bookingComHotelId;
+
+    updateDraft({
+      receptionBooking: {
+        platforms: nextPlatforms,
+        ...(nextHotelId.trim() ? { bookingComHotelId: nextHotelId } : {}),
+      },
+    });
+  };
 
   const setPlatforms = (next: BookingPlatformOption[]) => {
-    updateDraft({
-      receptionBooking: next.length > 0 ? { platforms: next } : { platforms: [] },
-    });
+    patchReceptionBooking({ platforms: next });
   };
 
   const updatePlatform = (index: number, patch: Partial<BookingPlatformOption>) => {
@@ -62,6 +77,21 @@ export function ReceptionBookingPlatformsFields({ settings }: ReceptionBookingPl
           <span className="font-medium text-foreground">Booking engine</span> in Guest app settings).
         </p>
       </div>
+
+      <label className="block space-y-1">
+        <span className="text-sm font-medium">Booking.com hotel ID</span>
+        <p className="text-xs text-muted-foreground">
+          Used by reception to open reservations in Booking.com extranet.
+        </p>
+        <input
+          value={bookingComHotelId}
+          onChange={(event) => patchReceptionBooking({ bookingComHotelId: event.target.value })}
+          placeholder="e.g. 123456"
+          inputMode="numeric"
+          autoComplete="off"
+          className="w-full max-w-xs rounded-md border px-2.5 py-1.5 font-mono text-sm"
+        />
+      </label>
 
       {platforms.length === 0 ? (
         <p className="text-xs text-muted-foreground">No platforms — reception hides booking source fields.</p>

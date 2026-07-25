@@ -1,7 +1,4 @@
-import {
-  listReceptionBookingPlatforms,
-  RECEPTION_BOOKING_EXTERNAL_ID_MAX,
-} from '@/entities/tenant/lib/normalizeReceptionBookingSettings';
+import { RECEPTION_BOOKING_EXTERNAL_ID_MAX } from '@/entities/tenant/lib/normalizeReceptionBookingSettings';
 import type { TenantSettings } from '@/entities/tenant';
 
 export type ReservationBookingSourceError =
@@ -26,10 +23,8 @@ export function validateReservationBookingSource(input: {
   }
 
   if (platformId) {
-    const platform = listReceptionBookingPlatforms(input.settings).find(
-      (entry) => entry.id === platformId
-    );
-    if (platform?.requiresExternalId && !externalId) {
+    const hideReference = platformId === 'walk-in' || platformId === 'direct';
+    if (!hideReference && !externalId) {
       return 'external_id_required';
     }
   }

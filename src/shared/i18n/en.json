@@ -1354,7 +1354,9 @@
         "settings": "Settings",
         "knowledge": "Staff knowledge",
         "activity": "Activity",
-        "signOut": "Sign out"
+        "signOut": "Sign out",
+        "volunteers": "Volunteers",
+        "schedule": "Schedule"
       },
       "lifecycle": {
         "expired": {
@@ -1710,10 +1712,14 @@
         "created": "Staff account added.",
         "permissions": {
           "title": "Permissions",
-          "helper": "Elevated permissions are not used yet. All staff can open Archive and restore bookings.",
+          "helper": "Choose desk access: Check-in desk, Cleaning, or both.",
           "edit": "Edit permissions",
           "save": "Save permissions",
           "lineStaff": "Line staff",
+          "checkIn": "Check-in (Today, Bookings: Plan/Access/Cash; More: Issues, Transfers, Archive)",
+          "cleaning": "Cleaning (housekeeping statuses)",
+          "badgeCheckIn": "Check-in",
+          "badgeCleaning": "Cleaning",
           "archiveRead": "View Archive",
           "archiveRestore": "Restore from Archive",
           "archivePurge": "Permanently delete",
@@ -1794,6 +1800,114 @@
         "backToOnboarding": "Back to hostel setup",
         "backToSetup": "Back to launch setup",
         "backToSettings": "Back to settings"
+      },
+      "schedule": {
+        "title": "Volunteer schedule",
+        "subtitle": "Week calendar of exact shifts and weekly hour load against each volunteer’s target (default 25h).",
+        "emptyVolunteers": "No active volunteers yet — add them under Volunteers first.",
+        "weekLabel": "Week",
+        "prevWeek": "Previous",
+        "nextWeek": "Next",
+        "thisWeek": "This week",
+        "loadLabel": "Load",
+        "targetLabel": "Weekly targets",
+        "saveTarget": "Save target",
+        "emptyCell": "—",
+        "repeatDay": "Repeat day",
+        "periodHours": "Hours this week",
+        "volunteer": "Volunteer",
+        "date": "Date",
+        "start": "Start",
+        "end": "End",
+        "removeShift": "Remove",
+        "removeConfirm": "Remove this shift from the schedule?",
+        "hoursUnit": "h",
+        "day": {
+          "titleEdit": "Edit shift",
+          "titleCreate": "Add shift",
+          "description": "Change only this day — other days stay as they are.",
+          "save": "Save",
+          "create": "Add shift"
+        },
+        "repeat": {
+          "title": "Repeat day",
+          "description": "Set a day template and apply it to selected dates. Existing days are skipped by default.",
+          "from": "From",
+          "until": "Until",
+          "weekdays": "Repeat on",
+          "presetMonFri": "Mon–Fri",
+          "presetAllWeek": "All week",
+          "presetCustom": "Custom",
+          "weekdayLabels": {
+            "1": "Mon",
+            "2": "Tue",
+            "3": "Wed",
+            "4": "Thu",
+            "5": "Fri",
+            "6": "Sat",
+            "7": "Sun"
+          },
+          "apply": "Apply",
+          "overwrite": "Overwrite existing",
+          "overwriteConfirm": "Overwrite shifts on days that already have a plan?",
+          "skipHint": "{count} days will be created (existing days skipped).",
+          "skippedMessage": "Skipped {count} days (already planned).",
+          "createdMessage": "Created {count} shifts."
+        },
+        "errors": {
+          "unauthorized": "Sign in again to continue.",
+          "forbidden": "Editing is not available for this hostel right now.",
+          "tenant_not_found": "Hostel not found.",
+          "not_found": "Could not find that volunteer or shift.",
+          "archived": "This volunteer is archived.",
+          "invalid_range": "End time must be after start time on the same day.",
+          "invalid_target": "Weekly target must be between 0 and 168 hours.",
+          "db_unavailable": "Could not save. Try again later.",
+          "unknown": "Something went wrong. Try again."
+        }
+      },
+      "volunteers": {
+        "title": "Volunteers",
+        "subtitle": "Create volunteer stays with a bed, dates, and desk staff login.",
+        "empty": "No active volunteers yet.",
+        "addTitle": "Add volunteer",
+        "fields": {
+          "name": "Name",
+          "source": "Source",
+          "checkIn": "Check-in",
+          "checkOut": "Check-out",
+          "bed": "Bed"
+        },
+        "sources": {
+          "direct": "Direct",
+          "worldpacker": "Worldpackers"
+        },
+        "bedUnavailable": "No free beds for these dates.",
+        "submit": "Create volunteer stay",
+        "archive": "Archive",
+        "archiveConfirm": "Archive this volunteer stay? Desk access will be disabled.",
+        "listTitle": "Active volunteers",
+        "openInPlan": "Open in Plan",
+        "staffAccess": "Staff access",
+        "setupAccessHint": "Manage desk logins in Settings → Reception staff.",
+        "instructionsCopied": "Login instructions copied.",
+        "instructionsCopyFailed": "Could not copy. Try again.",
+        "errors": {
+          "unauthorized": "Sign in again to continue.",
+          "forbidden": "Editing is not available for this hostel right now.",
+          "invalid_name": "Enter a volunteer name.",
+          "invalid_source": "Choose a valid source.",
+          "bed_not_found": "Choose an available bed.",
+          "access_overlap": "That bed is not free for these dates.",
+          "tenant_not_found": "Hostel not found.",
+          "db_unavailable": "Could not save. Try again later.",
+          "not_found": "Volunteer stay not found.",
+          "already_archived": "This volunteer is already archived.",
+          "invalid_operational_day": "Invalid operational day.",
+          "staff_limit_reached": "Staff account limit reached.",
+          "login_taken": "Could not create a unique staff login. Try again.",
+          "unknown": "Something went wrong. Try again."
+        }
       }
     }
   },

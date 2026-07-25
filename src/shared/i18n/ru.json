@@ -1360,7 +1360,9 @@
         "settings": "Параметры",
         "knowledge": "База знаний",
         "activity": "Активность",
-        "signOut": "Выйти"
+        "signOut": "Выйти",
+        "volunteers": "Волонтёры",
+        "schedule": "График"
       },
       "lifecycle": {
         "expired": {
@@ -1716,10 +1718,14 @@
         "created": "Учётка добавлена.",
         "permissions": {
           "title": "Права",
-          "helper": "Дополнительные права пока не используются. Archive и восстановление доступны всем сотрудникам.",
+          "helper": "Выберите доступ: стойка Check-in, Cleaning или оба.",
           "edit": "Изменить права",
           "save": "Сохранить права",
           "lineStaff": "Линейный сотрудник",
+          "checkIn": "Check-in (Today, Bookings: Plan/Access/Cash; More: Issues, Transfers, Archive)",
+          "cleaning": "Cleaning (статусы housekeeping)",
+          "badgeCheckIn": "Check-in",
+          "badgeCleaning": "Cleaning",
           "archiveRead": "Смотреть Archive",
           "archiveRestore": "Восстанавливать из Archive",
           "archivePurge": "Удалять навсегда",
@@ -1800,6 +1806,114 @@
         "backToOnboarding": "Back to hostel setup",
         "backToSetup": "Back to launch setup",
         "backToSettings": "Back to settings"
+      },
+      "schedule": {
+        "title": "График волонтёров",
+        "subtitle": "Недельный календарь точных смен и нагрузка относительно нормы (по умолчанию 25 ч).",
+        "emptyVolunteers": "Нет активных волонтёров — сначала добавьте их в Volunteers.",
+        "weekLabel": "Неделя",
+        "prevWeek": "Назад",
+        "nextWeek": "Вперёд",
+        "thisWeek": "Эта неделя",
+        "loadLabel": "Нагрузка",
+        "targetLabel": "Недельные нормы",
+        "saveTarget": "Сохранить норму",
+        "emptyCell": "—",
+        "repeatDay": "Повторить день",
+        "periodHours": "Часов за неделю",
+        "volunteer": "Волонтёр",
+        "date": "Дата",
+        "start": "Начало",
+        "end": "Конец",
+        "removeShift": "Удалить",
+        "removeConfirm": "Удалить эту смену из графика?",
+        "hoursUnit": "ч",
+        "day": {
+          "titleEdit": "Изменить смену",
+          "titleCreate": "Добавить смену",
+          "description": "Меняется только этот день — остальные не затрагиваются.",
+          "save": "Сохранить",
+          "create": "Добавить смену"
+        },
+        "repeat": {
+          "title": "Повторить день",
+          "description": "Задайте шаблон дня и примените к выбранным датам. Дни с уже существующей сменой по умолчанию пропускаются.",
+          "from": "С",
+          "until": "По",
+          "weekdays": "Повторять в",
+          "presetMonFri": "Пн–Пт",
+          "presetAllWeek": "Вся неделя",
+          "presetCustom": "Свой набор",
+          "weekdayLabels": {
+            "1": "Пн",
+            "2": "Вт",
+            "3": "Ср",
+            "4": "Чт",
+            "5": "Пт",
+            "6": "Сб",
+            "7": "Вс"
+          },
+          "apply": "Применить",
+          "overwrite": "Перезаписать существующие",
+          "overwriteConfirm": "Перезаписать смены в дни, где план уже есть?",
+          "skipHint": "Будет создано {count} дней (существующие пропускаются).",
+          "skippedMessage": "Пропущено {count} дней (уже запланированы).",
+          "createdMessage": "Создано смен: {count}."
+        },
+        "errors": {
+          "unauthorized": "Войдите снова.",
+          "forbidden": "Редактирование сейчас недоступно.",
+          "tenant_not_found": "Хостел не найден.",
+          "not_found": "Волонтёр или смена не найдены.",
+          "archived": "Волонтёр в архиве.",
+          "invalid_range": "Время окончания должно быть позже начала в тот же день.",
+          "invalid_target": "Норма должна быть от 0 до 168 часов.",
+          "db_unavailable": "Не удалось сохранить. Попробуйте позже.",
+          "unknown": "Что-то пошло не так. Попробуйте ещё раз."
+        }
+      },
+      "volunteers": {
+        "title": "Волонтёры",
+        "subtitle": "Создание волонтёрского проживания: кровать, даты и логин для стойки.",
+        "empty": "Активных волонтёров пока нет.",
+        "addTitle": "Добавить волонтёра",
+        "fields": {
+          "name": "Имя",
+          "source": "Источник",
+          "checkIn": "Заезд",
+          "checkOut": "Выезд",
+          "bed": "Кровать"
+        },
+        "sources": {
+          "direct": "Напрямую",
+          "worldpacker": "Worldpackers"
+        },
+        "bedUnavailable": "На эти даты нет свободных кроватей.",
+        "submit": "Создать проживание",
+        "archive": "В архив",
+        "archiveConfirm": "Архивировать это проживание? Доступ на стойке будет отключён.",
+        "listTitle": "Активные волонтёры",
+        "openInPlan": "Открыть в Plan",
+        "staffAccess": "Доступ staff",
+        "setupAccessHint": "Логины стойки: Settings → Reception staff.",
+        "instructionsCopied": "Инструкция скопирована.",
+        "instructionsCopyFailed": "Не удалось скопировать. Попробуйте ещё раз.",
+        "errors": {
+          "unauthorized": "Войдите снова.",
+          "forbidden": "Редактирование сейчас недоступно.",
+          "invalid_name": "Укажите имя волонтёра.",
+          "invalid_source": "Выберите источник.",
+          "bed_not_found": "Выберите свободную кровать.",
+          "access_overlap": "Кровать занята на эти даты.",
+          "tenant_not_found": "Хостел не найден.",
+          "db_unavailable": "Не удалось сохранить. Попробуйте позже.",
+          "not_found": "Проживание не найдено.",
+          "already_archived": "Уже в архиве.",
+          "invalid_operational_day": "Некорректный операционный день.",
+          "staff_limit_reached": "Достигнут лимит staff-аккаунтов.",
+          "login_taken": "Не удалось создать уникальный логин. Попробуйте ещё раз.",
+          "unknown": "Что-то пошло не так. Попробуйте ещё раз."
+        }
       }
     }
   },

@@ -1,10 +1,12 @@
 'use client';
 
 import QRCode from 'qrcode';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { appendGuestEntryToMagicLink } from '@/entities/guest-stay/lib/buildMagicLinkUrl';
 import { renderGuestAccessMessage } from '../lib/renderGuestAccessMessage';
 import { Button } from '@/shared/ui';
+
+export const RECEPTION_DESK_GUEST_QR_ID = 'reception-desk-guest-qr';
 
 interface MagicLinkCardProps {
   magicLinkUrl: string;
@@ -16,6 +18,8 @@ interface MagicLinkCardProps {
   guestAccessMessageTemplate: string;
   guestAccessPinMissingText: string;
   onDismiss?: () => void;
+  /** Increment to open the on-site desk QR details and scroll into view. */
+  deskQrFocusKey?: number;
 }
 
 function formatGuestPin(pin: string): string {
@@ -34,9 +38,11 @@ export function MagicLinkCard({
   guestAccessMessageTemplate,
   guestAccessPinMissingText,
   onDismiss,
+  deskQrFocusKey = 0,
 }: MagicLinkCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState<CopiedKind>(null);
+  const deskQrDetailsRef = useRef<HTMLDetailsElement>(null);
 
   const sendMagicLinkUrl = useMemo(
     () => appendGuestEntryToMagicLink(magicLinkUrl, 'remote'),
@@ -82,6 +88,17 @@ export function MagicLinkCard({
       cancelled = true;
     };
   }, [onsiteMagicLinkUrl]);
+
+  useEffect(() => {
+    if (!deskQrFocusKey) return;
+    const details = deskQrDetailsRef.current;
+    if (!details) return;
+    details.open = true;
+    const frame = requestAnimationFrame(() => {
+      details.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [deskQrFocusKey]);
 
   const copyText = async (value: string, kind: Exclude<CopiedKind, null>) => {
     try {
@@ -136,7 +153,11 @@ export function MagicLinkCard({
         </div>
       </div>
 
-      <details className="rounded-lg border bg-background px-3 py-2">
+      <details
+        ref={deskQrDetailsRef}
+        id={RECEPTION_DESK_GUEST_QR_ID}
+        className="rounded-lg border bg-background px-3 py-2"
+      >
         <summary className="cursor-pointer text-sm font-medium text-foreground">
           At reception (on-site)
         </summary>

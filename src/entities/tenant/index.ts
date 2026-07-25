@@ -119,6 +119,7 @@ export {
   normalizeReceptionBookingForSave,
   normalizeReceptionBookingOnRead,
   listReceptionBookingPlatforms,
+  resolveBookingComHotelId,
   resolveReceptionBookingPlatformLabel,
   formatReceptionBookingSourceSummary,
   slugifyBookingPlatformId,

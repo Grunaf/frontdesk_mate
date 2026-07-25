@@ -4,6 +4,7 @@ import { cn } from '@/shared/lib/utils';
 import type { MoreMenuTab } from '../lib/receptionDeskAccess';
 
 const MORE_LABELS: Record<MoreMenuTab, string> = {
+  schedule: 'My schedule',
   issues: 'Issues',
   transfers: 'Transfers',
   archive: 'Archive',
@@ -31,7 +32,7 @@ export function ReceptionMoreMenu({
     <div className="space-y-3">
       <div>
         <h2 className="text-sm font-semibold text-foreground">More</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">Issues, transfers, and utilities.</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">Schedule, issues, transfers, and utilities.</p>
       </div>
       <ul className="divide-y divide-border/80 overflow-hidden rounded-lg border bg-card">
         {items.map((item) => {

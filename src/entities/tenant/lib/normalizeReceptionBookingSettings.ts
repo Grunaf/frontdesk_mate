@@ -2,7 +2,9 @@ import type { TenantSettings } from '../model/settings';
 import type { BookingPlatformOption, ReceptionBookingSettings } from '../model/receptionBooking';
 
 const PLATFORM_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+const BOOKING_COM_HOTEL_ID_PATTERN = /^[0-9]+$/;
 export const RECEPTION_BOOKING_EXTERNAL_ID_MAX = 128;
+export const RECEPTION_BOOKING_COM_HOTEL_ID_MAX = 32;
 
 export function slugifyBookingPlatformId(label: string): string {
   const slug = label
@@ -28,18 +30,24 @@ function normalizePlatformEntry(entry: BookingPlatformOption): BookingPlatformOp
   };
 }
 
-export function normalizeReceptionBookingForSave(
-  receptionBooking: ReceptionBookingSettings | undefined
-): ReceptionBookingSettings | undefined {
-  if (!receptionBooking?.platforms?.length) {
+export function normalizeBookingComHotelId(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed) {
     return undefined;
+  }
+  return trimmed.slice(0, RECEPTION_BOOKING_COM_HOTEL_ID_MAX);
+}
+
+function normalizePlatforms(raw: BookingPlatformOption[] | undefined): BookingPlatformOption[] {
+  if (!raw?.length) {
+    return [];
   }
 
   const seen = new Set<string>();
   const platforms: BookingPlatformOption[] = [];
 
-  for (const raw of receptionBooking.platforms) {
-    const normalized = normalizePlatformEntry(raw);
+  for (const entry of raw) {
+    const normalized = normalizePlatformEntry(entry);
     if (!normalized || seen.has(normalized.id)) {
       continue;
     }
@@ -47,24 +55,45 @@ export function normalizeReceptionBookingForSave(
     platforms.push(normalized);
   }
 
-  return platforms.length > 0 ? { platforms } : undefined;
+  return platforms;
+}
+
+export function normalizeReceptionBookingForSave(
+  receptionBooking: ReceptionBookingSettings | undefined
+): ReceptionBookingSettings | undefined {
+  if (!receptionBooking) {
+    return undefined;
+  }
+
+  const platforms = normalizePlatforms(receptionBooking.platforms);
+  const bookingComHotelId = normalizeBookingComHotelId(receptionBooking.bookingComHotelId);
+
+  if (platforms.length === 0 && !bookingComHotelId) {
+    return undefined;
+  }
+
+  return {
+    platforms,
+    ...(bookingComHotelId ? { bookingComHotelId } : {}),
+  };
 }
 
 export function normalizeReceptionBookingOnRead(
   settings: TenantSettings | undefined
 ): TenantSettings['receptionBooking'] {
-  const raw = settings?.receptionBooking;
-  if (!raw?.platforms?.length) {
-    return undefined;
-  }
-
-  return normalizeReceptionBookingForSave(raw);
+  return normalizeReceptionBookingForSave(settings?.receptionBooking);
 }
 
 export function listReceptionBookingPlatforms(
   settings: TenantSettings | undefined
 ): BookingPlatformOption[] {
   return settings?.receptionBooking?.platforms ?? [];
+}
+
+export function resolveBookingComHotelId(
+  settings: TenantSettings | undefined
+): string | null {
+  return normalizeBookingComHotelId(settings?.receptionBooking?.bookingComHotelId) ?? null;
 }
 
 export function resolveReceptionBookingPlatformLabel(
@@ -122,6 +151,16 @@ export function validateReceptionBookingPlatformsForAdmin(
       return 'Duplicate platform ids are not allowed.';
     }
     seen.add(id);
+  }
+
+  const hotelId = settings.receptionBooking?.bookingComHotelId?.trim() ?? '';
+  if (hotelId) {
+    if (hotelId.length > RECEPTION_BOOKING_COM_HOTEL_ID_MAX) {
+      return `Booking.com hotel ID must be at most ${RECEPTION_BOOKING_COM_HOTEL_ID_MAX} characters.`;
+    }
+    if (!BOOKING_COM_HOTEL_ID_PATTERN.test(hotelId)) {
+      return 'Booking.com hotel ID must be digits only.';
+    }
   }
 
   return null;

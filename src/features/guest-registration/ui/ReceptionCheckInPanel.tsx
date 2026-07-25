@@ -73,6 +73,7 @@ import {
   resolveBookingsContextTabs,
   resolveDefaultDeskTab,
   resolveDeskTabForPrimaryNav,
+  resolveMoreBadgeCount,
   resolveMoreMenuTabs,
   shouldShowBookingsContextTabs,
   type BookingsContextTab,
@@ -106,7 +107,9 @@ import {
   RECEPTION_BOTTOM_NAV_CONTENT_PAD,
 } from './ReceptionBottomNav';
 import { ReceptionMoreMenu } from './ReceptionMoreMenu';
+import { ReceptionMySchedulePanel } from './ReceptionMySchedulePanel';
 import { ReceptionDeskHeader } from './ReceptionDeskHeader';
+import { prefetchMyReceptionSchedule } from '../lib/myReceptionScheduleCache';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { CancelBookingDialog } from './RevokeAccessDialog';
@@ -193,7 +196,11 @@ export function ReceptionCheckInPanel({
     () => resolveMoreMenuTabs(staffPermissions),
     [staffPermissions]
   );
-  const moreBadgeCount = openIssues.length + openTransfers.length;
+  const moreBadgeCount = resolveMoreBadgeCount(
+    staffPermissions,
+    openIssues.length,
+    openTransfers.length
+  );
 
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
 
@@ -232,6 +239,13 @@ export function ReceptionCheckInPanel({
     resolveDefaultDeskTab(initialContext.staffPermissions)
   );
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!(canCheckIn || canClean)) return;
+    if (!moreMenuOpen && deskTab !== 'schedule') return;
+    prefetchMyReceptionSchedule(tenantSlug);
+  }, [moreMenuOpen, deskTab, tenantSlug, canCheckIn, canClean]);
+
   const [lastBookingsTab, setLastBookingsTab] = useState<BookingsContextTab>('plan');
   const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
   const [planFocusToken, setPlanFocusToken] = useState(0);
@@ -882,7 +896,7 @@ export function ReceptionCheckInPanel({
     const balanceValidation = resolveReservationBookingBalance({
       settings: tenantSettings,
       bookingAmountDue,
-      required: !editDraft,
+      required: true,
     });
     if (!balanceValidation.ok) {
       setError(reservationBookingBalanceErrorMessage(balanceValidation.error));
@@ -1155,12 +1169,16 @@ export function ReceptionCheckInPanel({
           availableBedIds.length > 0 &&
           Boolean(bedId) &&
           Boolean(guestName.trim()) &&
-          (Boolean(editDraft) ||
-            resolveReservationBookingBalance({
-              settings: tenantSettings,
-              bookingAmountDue,
-              required: true,
-            }).ok)
+          resolveReservationBookingBalance({
+            settings: tenantSettings,
+            bookingAmountDue,
+            required: true,
+          }).ok &&
+          !validateReservationBookingSource({
+            settings: tenantSettings,
+            bookingPlatformId,
+            bookingExternalId,
+          })
         }
         isReissue={false}
         isEditingReservation={Boolean(editDraft)}
@@ -1300,6 +1318,15 @@ export function ReceptionCheckInPanel({
               />
             </TabsContent>
               </>
+            ) : null}
+
+            {canCheckIn || canClean ? (
+              <TabsContent value="schedule">
+                <ReceptionMySchedulePanel
+                  tenantSlug={tenantSlug}
+                  isActive={deskTab === 'schedule'}
+                />
+              </TabsContent>
             ) : null}
 
             {canClean ? (

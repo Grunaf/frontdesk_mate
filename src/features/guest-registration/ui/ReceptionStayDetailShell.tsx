@@ -57,7 +57,9 @@ export interface ReceptionStayDetailShellProps {
    */
   onEdit?: () => void;
   editDisabled?: boolean;
-  /** Rendered to the right of the pencil (e.g. vertical ⋮ overflow menu). */
+  /** Between pencil and overflow (e.g. desk QR shortcut). */
+  headerExtra?: ReactNode;
+  /** Rendered to the right of the pencil / headerExtra (e.g. vertical ⋮ overflow menu). */
   headerOverflow?: ReactNode;
 }
 
@@ -75,10 +77,31 @@ function useCloseOnEscape(open: boolean, onClose: () => void) {
   }, [open, onClose]);
 }
 
-function headerActionsPaddingClass(hasEdit: boolean, hasOverflow: boolean): string {
-  if (hasEdit && hasOverflow) return 'pr-32';
-  if (hasEdit || hasOverflow) return 'pr-24';
+/** Desktop: close is always present; `leadingCount` = edit + extra + overflow. */
+function desktopHeaderActionsPaddingClass(leadingCount: number): string {
+  if (leadingCount >= 3) return 'pr-40';
+  if (leadingCount === 2) return 'pr-32';
+  if (leadingCount === 1) return 'pr-24';
   return 'pr-14';
+}
+
+function mobileHeaderPaddingClass(leadingCount: number): string {
+  if (leadingCount >= 3) return 'space-y-1 px-14 pb-3 pt-10 pr-36';
+  if (leadingCount === 2) return 'space-y-1 px-14 pb-3 pt-10 pr-28';
+  if (leadingCount === 1) return 'space-y-1 px-14 pb-3 pt-10';
+  return 'space-y-1 px-6 pb-3';
+}
+
+function countLeadingHeaderActions(input: {
+  onEdit?: () => void;
+  headerExtra?: ReactNode;
+  headerOverflow?: ReactNode;
+}): number {
+  return (
+    (input.onEdit ? 1 : 0) +
+    (input.headerExtra ? 1 : 0) +
+    (input.headerOverflow ? 1 : 0)
+  );
 }
 
 function DesktopStayDetailDialog({
@@ -93,12 +116,12 @@ function DesktopStayDetailDialog({
   titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
   onEdit,
   editDisabled = false,
+  headerExtra,
   headerOverflow,
 }: ReceptionStayDetailShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const labelledBy = titleId;
-  const hasEdit = Boolean(onEdit);
-  const hasOverflow = Boolean(headerOverflow);
+  const leadingCount = countLeadingHeaderActions({ onEdit, headerExtra, headerOverflow });
 
   useCloseOnEscape(open, onClose);
 
@@ -130,7 +153,7 @@ function DesktopStayDetailDialog({
         onClick={(event) => event.stopPropagation()}
       >
         <div
-          className={`relative shrink-0 border-b border-border/60 px-6 py-4 ${headerActionsPaddingClass(hasEdit, hasOverflow)}`}
+          className={`relative shrink-0 border-b border-border/60 px-6 py-4 ${desktopHeaderActionsPaddingClass(leadingCount)}`}
         >
           <div className="absolute top-3 right-3 flex items-center gap-1">
             {onEdit ? (
@@ -145,6 +168,7 @@ function DesktopStayDetailDialog({
                 <span className="sr-only">Edit</span>
               </Button>
             ) : null}
+            {headerExtra}
             {headerOverflow}
             <Button type="button" variant="ghost" size="icon" onClick={onClose}>
               <X />
@@ -189,11 +213,12 @@ function MobileStayDetailSheet({
   titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
   onEdit,
   editDisabled = false,
+  headerExtra,
   headerOverflow,
 }: ReceptionStayDetailShellProps) {
   const labelledBy = titleId;
-  const hasEditChrome = Boolean(onEdit) || Boolean(headerOverflow);
-  const hasOverflow = Boolean(headerOverflow);
+  const leadingCount = countLeadingHeaderActions({ onEdit, headerExtra, headerOverflow });
+  const hasEditChrome = leadingCount > 0;
 
   return (
     <BottomSheet
@@ -230,19 +255,12 @@ function MobileStayDetailSheet({
                   <span className="sr-only">Edit</span>
                 </Button>
               ) : null}
+              {headerExtra}
               {headerOverflow}
             </div>
           </>
         ) : null}
-        <BottomSheetHeader
-          className={
-            hasEditChrome
-              ? hasOverflow && onEdit
-                ? 'space-y-1 px-14 pb-3 pt-10 pr-28'
-                : 'space-y-1 px-14 pb-3 pt-10'
-              : 'space-y-1 px-6 pb-3'
-          }
-        >
+        <BottomSheetHeader className={mobileHeaderPaddingClass(leadingCount)}>
           <BottomSheetTitle
             id={labelledBy}
             className={RECEPTION_SHELL_TITLE_CLASS}
@@ -278,6 +296,7 @@ export function ReceptionStayDetailShell({
   titleId,
   onEdit,
   editDisabled,
+  headerExtra,
   headerOverflow,
 }: ReceptionStayDetailShellProps) {
   const isBelowLg = useIsBelowLg();
@@ -300,6 +319,7 @@ export function ReceptionStayDetailShell({
         titleId={titleId}
         onEdit={onEdit}
         editDisabled={editDisabled}
+        headerExtra={headerExtra}
         headerOverflow={headerOverflow}
       />
     );
@@ -318,6 +338,7 @@ export function ReceptionStayDetailShell({
       titleId={titleId}
       onEdit={onEdit}
       editDisabled={editDisabled}
+      headerExtra={headerExtra}
       headerOverflow={headerOverflow}
     />
   );

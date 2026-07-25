@@ -27,7 +27,7 @@ import type {
 /** Keep in sync with reception-staff-management MAX_ACTIVE_RECEPTION_STAFF. */
 const MAX_ACTIVE_RECEPTION_STAFF = 20;
 const VOLUNTEER_COLUMNS =
-  'id, tenant_id, reservation_id, reception_user_id, display_name, source, is_archived, archived_at, archived_by_owner_user_id, created_at, updated_at';
+  'id, tenant_id, reservation_id, reception_user_id, display_name, source, weekly_hours_target, is_archived, archived_at, archived_by_owner_user_id, created_at, updated_at';
 
 function isVolunteerSource(value: string): value is VolunteerSource {
   return value === 'direct' || value === 'worldpacker';
@@ -43,6 +43,7 @@ function mapVolunteerRow(row: Record<string, unknown>): VolunteerRecord | null {
     reception_user_id: row.reception_user_id ? String(row.reception_user_id) : null,
     display_name: String(row.display_name),
     source,
+    weekly_hours_target: Number(row.weekly_hours_target ?? 25),
     is_archived: Boolean(row.is_archived),
     archived_at: row.archived_at ? String(row.archived_at) : null,
     archived_by_owner_user_id: row.archived_by_owner_user_id

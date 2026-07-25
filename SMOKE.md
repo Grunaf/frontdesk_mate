@@ -26,7 +26,8 @@ Requires `SUPABASE_SECRET_KEY` for upserts; apply migration `065_housekeeping_be
 
 - Staging dry-run: `HOUSEKEEPING_BED_ROLLOVER_DRY_RUN=1` (logs only; no status writes, no ledger).
 - **Vercel:** same `CRON_SECRET`; `vercel.json` runs `GET /api/cron/housekeeping-bed-rollover`
-  every **15 minutes** — job no-ops until day start / if already rolled.
+  daily at **08:15 UTC** (Hobby allows one run/day; Pro could poll more often) — job no-ops
+  until day start / if already rolled.
 - Manual trigger: `curl -sS -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/housekeeping-bed-rollover` — logs `[housekeeping-bed-rollover]`.
 
 Manual check: admitted stay with last night = previous operational night → run job after

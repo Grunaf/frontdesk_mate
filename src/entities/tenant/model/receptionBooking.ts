@@ -6,6 +6,8 @@ export type BookingPlatformOption = {
 
 export type ReceptionBookingSettings = {
   platforms: BookingPlatformOption[];
+  /** Booking.com property id for reception extranet deep links. */
+  bookingComHotelId?: string;
 };
 
 export const SUGGESTED_RECEPTION_BOOKING_PLATFORMS: BookingPlatformOption[] = [

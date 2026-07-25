@@ -1087,7 +1087,9 @@
         "settings": "Postavke",
         "knowledge": "Baza znanja",
         "activity": "Aktivnost",
-        "signOut": "Odjava"
+        "signOut": "Odjava",
+        "volunteers": "Volonteri",
+        "schedule": "Raspored"
       },
       "lifecycle": {
         "expired": {
@@ -1443,10 +1445,14 @@
         "created": "Nalog je dodat.",
         "permissions": {
           "title": "Dozvole",
-          "helper": "Dodatne dozvole se još ne koriste. Archive i vraćanje dostupni su svom osoblju.",
+          "helper": "Izaberite pristup: Check-in desk, Cleaning ili oba.",
           "edit": "Izmeni dozvole",
           "save": "Sačuvaj dozvole",
           "lineStaff": "Linijsko osoblje",
+          "checkIn": "Check-in (Today, Bookings: Plan/Access/Cash; More: Issues, Transfers, Archive)",
+          "cleaning": "Cleaning (statusi housekeeping)",
+          "badgeCheckIn": "Check-in",
+          "badgeCleaning": "Cleaning",
           "archiveRead": "Pregled Archive",
           "archiveRestore": "Vraćanje iz Archive",
           "archivePurge": "Trajno brisanje",
@@ -1527,6 +1533,114 @@
         "backToOnboarding": "Nazad na kreiranje hostela",
         "backToSetup": "Nazad na launch setup",
         "backToSettings": "Nazad na podešavanja"
+      },
+      "schedule": {
+        "title": "Raspored volontera",
+        "subtitle": "Nedeljni kalendar tačnih smena i opterećenje u odnosu na nedeljni cilj (podrazumevano 25h).",
+        "emptyVolunteers": "Nema aktivnih volontera — prvo ih dodajte pod Volunteers.",
+        "weekLabel": "Nedelja",
+        "prevWeek": "Prethodna",
+        "nextWeek": "Sledeća",
+        "thisWeek": "Ova nedelja",
+        "loadLabel": "Opterećenje",
+        "targetLabel": "Nedeljni ciljevi",
+        "saveTarget": "Sačuvaj cilj",
+        "emptyCell": "—",
+        "repeatDay": "Ponovi dan",
+        "periodHours": "Sati ove nedelje",
+        "volunteer": "Volonter",
+        "date": "Datum",
+        "start": "Početak",
+        "end": "Kraj",
+        "removeShift": "Ukloni",
+        "removeConfirm": "Ukloniti ovu smenu iz rasporeda?",
+        "hoursUnit": "h",
+        "day": {
+          "titleEdit": "Izmeni smenu",
+          "titleCreate": "Dodaj smenu",
+          "description": "Menja se samo ovaj dan — ostali ostaju isti.",
+          "save": "Sačuvaj",
+          "create": "Dodaj smenu"
+        },
+        "repeat": {
+          "title": "Ponovi dan",
+          "description": "Zadaj šablon dana i primeni na izabrane datume. Dani sa postojećom smenom se podrazumevano preskaču.",
+          "from": "Od",
+          "until": "Do",
+          "weekdays": "Ponavljaj",
+          "presetMonFri": "Pon–Pet",
+          "presetAllWeek": "Cela nedelja",
+          "presetCustom": "Prilagođeno",
+          "weekdayLabels": {
+            "1": "Pon",
+            "2": "Uto",
+            "3": "Sre",
+            "4": "Čet",
+            "5": "Pet",
+            "6": "Sub",
+            "7": "Ned"
+          },
+          "apply": "Primeni",
+          "overwrite": "Pregazi postojeće",
+          "overwriteConfirm": "Pregaziti smene na danima koji već imaju plan?",
+          "skipHint": "Biće kreirano {count} dana (postojeći se preskaču).",
+          "skippedMessage": "Preskočeno {count} dana (već planirano).",
+          "createdMessage": "Kreirano smena: {count}."
+        },
+        "errors": {
+          "unauthorized": "Prijavite se ponovo.",
+          "forbidden": "Izmena trenutno nije dostupna.",
+          "tenant_not_found": "Hostel nije pronađen.",
+          "not_found": "Volonter ili smena nisu pronađeni.",
+          "archived": "Volonter je arhiviran.",
+          "invalid_range": "Vreme završetka mora biti posle početka istog dana.",
+          "invalid_target": "Cilj mora biti između 0 i 168 sati.",
+          "db_unavailable": "Nije sačuvano. Pokušajte kasnije.",
+          "unknown": "Nešto nije u redu. Pokušajte ponovo."
+        }
+      },
+      "volunteers": {
+        "title": "Volonteri",
+        "subtitle": "Kreirajte volonterski boravak: krevet, datumi i desk login.",
+        "empty": "Još nema aktivnih volontera.",
+        "addTitle": "Dodaj volontera",
+        "fields": {
+          "name": "Ime",
+          "source": "Izvor",
+          "checkIn": "Prijava",
+          "checkOut": "Odjava",
+          "bed": "Krevet"
+        },
+        "sources": {
+          "direct": "Direktno",
+          "worldpacker": "Worldpackers"
+        },
+        "bedUnavailable": "Nema slobodnih kreveta za ove datume.",
+        "submit": "Kreiraj boravak",
+        "archive": "Arhiviraj",
+        "archiveConfirm": "Arhivirati ovaj boravak? Desk pristup će biti isključen.",
+        "listTitle": "Aktivni volonteri",
+        "openInPlan": "Otvori u Plan",
+        "staffAccess": "Staff pristup",
+        "setupAccessHint": "Desk login: Settings → Reception staff.",
+        "instructionsCopied": "Uputstvo kopirano.",
+        "instructionsCopyFailed": "Kopiranje nije uspelo. Pokušajte ponovo.",
+        "errors": {
+          "unauthorized": "Prijavite se ponovo.",
+          "forbidden": "Izmena trenutno nije dostupna.",
+          "invalid_name": "Unesite ime volontera.",
+          "invalid_source": "Izaberite izvor.",
+          "bed_not_found": "Izaberite slobodan krevet.",
+          "access_overlap": "Krevet nije slobodan za ove datume.",
+          "tenant_not_found": "Hostel nije pronađen.",
+          "db_unavailable": "Nije sačuvano. Pokušajte kasnije.",
+          "not_found": "Boravak nije pronađen.",
+          "already_archived": "Već je arhiviran.",
+          "invalid_operational_day": "Neispravan operativni dan.",
+          "staff_limit_reached": "Dostignut je limit staff naloga.",
+          "login_taken": "Nije moguće kreirati jedinstveni login. Pokušajte ponovo.",
+          "unknown": "Nešto nije u redu. Pokušajte ponovo."
+        }
       }
     },
     "staySetup": {

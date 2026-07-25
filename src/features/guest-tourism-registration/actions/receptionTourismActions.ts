@@ -22,7 +22,7 @@ import {
   updateTourismGuestPassportPath,
   type TourismReceptionDocumentKind,
 } from '@/entities/guest-tourism-registration/server';
-import { setPassportCheckedAt } from '@/entities/guest-stay/server';
+import { getGuestReservationForDesk, setPassportCheckedAt } from '@/entities/guest-stay/server';
 import type { GuestStayRecord } from '@/entities/guest-stay/server';
 import {
   resolveTourismRegistrationProfile,
@@ -171,14 +171,49 @@ export type SetPassportCheckedActionResult =
   | { ok: true; stay: GuestStayRecord }
   | {
       ok: false;
-      error: 'unauthorized' | 'not_found' | 'db_unavailable' | 'unknown';
+      error:
+        | 'unauthorized'
+        | 'not_found'
+        | 'db_unavailable'
+        | 'tourism_incomplete'
+        | 'missing_documents'
+        | 'unknown';
     };
+
+async function assertTourismReadyForAccessGrant(
+  tenantSlug: string,
+  stayId: string
+): Promise<'ok' | 'tourism_incomplete' | 'missing_documents' | 'feature_off'> {
+  const tenant = await getTenantRecord(tenantSlug);
+  if (!tenant || !resolveTourismRegistrationRequired(tenant.settings)) {
+    return 'feature_off';
+  }
+
+  const registration = await getTourismRegistrationByStayId(stayId);
+  if (!registration || !isTourismRegistrationComplete(registration)) {
+    return 'tourism_incomplete';
+  }
+
+  const guests = registration.guests.length
+    ? registration.guests
+    : await listTourismGuestsByStayId(stayId);
+  if (
+    guests.length < 1 ||
+    guests.some((guest) => !String(guest.passport_storage_path ?? '').trim())
+  ) {
+    return 'missing_documents';
+  }
+
+  return 'ok';
+}
 
 export async function setPassportCheckedAction(input: {
   tenantSlug: string;
   stayId: string;
   checked: boolean;
   keyIssued?: boolean;
+  /** Override desk path — skips tourism/photo gate when granting access. */
+  bypassAccessGate?: boolean;
 }): Promise<SetPassportCheckedActionResult> {
   try {
     await assertReceptionAuthenticated(input.tenantSlug);
@@ -187,6 +222,13 @@ export async function setPassportCheckedAction(input: {
   }
 
   try {
+    if (input.checked && !input.bypassAccessGate) {
+      const gate = await assertTourismReadyForAccessGrant(input.tenantSlug, input.stayId);
+      if (gate === 'tourism_incomplete' || gate === 'missing_documents') {
+        return { ok: false, error: gate };
+      }
+    }
+
     const result = await setPassportCheckedAt({
       tenantSlug: input.tenantSlug,
       stayId: input.stayId,
@@ -208,6 +250,78 @@ export async function setPassportCheckedAction(input: {
     return { ok: true, stay: result.stay };
   } catch (error) {
     console.error('setPassportCheckedAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type SetKeyIssuedForReceptionActionResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'unauthorized' | 'not_found' | 'db_unavailable' | 'unknown';
+    };
+
+export async function setKeyIssuedForReceptionAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  keyIssued: boolean;
+}): Promise<SetKeyIssuedForReceptionActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const ownership = await assertStayOwnedByTenant(input.tenantSlug, input.stayId);
+    if (ownership !== 'ok') {
+      return {
+        ok: false,
+        error: ownership === 'unauthorized' ? 'unauthorized' : ownership,
+      };
+    }
+
+    const tenant = await getTenantRecord(input.tenantSlug);
+    if (!tenant) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    const admin = getSupabaseAdmin();
+    if (!admin) {
+      return { ok: false, error: 'db_unavailable' };
+    }
+
+    const nowIso = new Date().toISOString();
+    const { data, error } = await admin
+      .from('guest_reservations')
+      .update({
+        key_issued_at: input.keyIssued ? nowIso : null,
+        updated_at: nowIso,
+      })
+      .eq('id', input.stayId)
+      .eq('tenant_id', tenant.id)
+      .eq('status', 'planned')
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      console.error('setKeyIssuedForReceptionAction:', error.message);
+      return { ok: false, error: 'db_unavailable' };
+    }
+    if (!data) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    const stay = await getGuestReservationForDesk(input.tenantSlug, input.stayId);
+    if (!stay) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    revalidatePath('/');
+    const { magicLinkUrl: _magicLinkUrl, ...record } = stay;
+    return { ok: true, stay: record };
+  } catch (error) {
+    console.error('setKeyIssuedForReceptionAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }
@@ -377,6 +491,7 @@ export type UploadTourismDocumentForReceptionActionResult =
         | 'unauthorized'
         | 'not_found'
         | 'invalid_file'
+        | 'registration_closed'
         | 'db_unavailable'
         | 'upload_failed'
         | 'unknown';
@@ -406,6 +521,11 @@ export async function uploadTourismDocumentForReceptionAction(input: {
     const tenant = await getTenantRecord(input.tenantSlug);
     if (!tenant) {
       return { ok: false, error: 'not_found' };
+    }
+
+    const registration = await getTourismRegistrationByStayId(input.stayId);
+    if (registration?.tourism_registration_completed_at) {
+      return { ok: false, error: 'registration_closed' };
     }
 
     const file = input.formData.get('file');
@@ -675,6 +795,7 @@ export type CompleteTourismRegistrationForReceptionActionResult =
         | 'not_found'
         | 'feature_disabled'
         | 'no_guests'
+        | 'missing_documents'
         | 'db_unavailable'
         | 'unknown';
     };
@@ -715,6 +836,9 @@ export async function completeTourismRegistrationForReceptionAction(input: {
     const guests = await listTourismGuestsByStayId(input.stayId);
     if (guests.length < 1) {
       return { ok: false, error: 'no_guests' };
+    }
+    if (guests.some((guest) => !String(guest.passport_storage_path ?? '').trim())) {
+      return { ok: false, error: 'missing_documents' };
     }
 
     const admin = getSupabaseAdmin();

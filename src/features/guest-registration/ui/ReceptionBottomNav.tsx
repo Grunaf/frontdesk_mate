@@ -8,6 +8,7 @@ const PRIMARY_LABELS: Record<ReceptionPrimaryNav, string> = {
   bookings: 'Bookings',
   more: 'More',
   cleaning: 'Cleaning',
+  schedule: 'My schedule',
 };
 
 interface ReceptionBottomNavProps {

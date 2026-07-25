@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { GuestTourismGuest, GuestTourismRegistrationSummary } from '@/entities/guest-tourism-registration';
 import type { TenantSettings } from '@/entities/tenant';
-import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
+import {
+  formatReceptionBookingSourceSummary,
+  resolveBookingComHotelId,
+} from '@/entities/tenant';
 import {
   compressImageForUpload,
   CompressImageForUploadError,
@@ -14,6 +17,7 @@ import {
   loadTourismRegistrationForReceptionAction,
   ReceptionTourismGuestIdentityForm,
   ReceptionAddTourismGuestSheet,
+  setKeyIssuedForReceptionAction,
   setPassportCheckedAction,
   setTourismExportedAction,
   updateTourismGuestIdentityForReceptionAction,
@@ -28,6 +32,7 @@ import {
   guestAccessStatusLabel,
   resolveGuestAccessStatus,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
+import { buildBookingComReservationUrl } from '../lib/buildBookingComReservationUrl';
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
 import { resolveStayCancelCheckoutAction } from '../lib/resolveStayCancelCheckoutAction';
 import {
@@ -54,7 +59,7 @@ import {
   TabsTrigger,
 } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
-import { EllipsisVertical } from 'lucide-react';
+import { EllipsisVertical, QrCode } from 'lucide-react';
 import { setGuestReservationBookingPaidAction } from '../actions/receptionActions';
 
 export { RECEPTION_STAY_DETAIL_TITLE_ID };
@@ -79,30 +84,64 @@ function StayDetailTabToneDot({ tone }: { tone: StayDetailTabBadgeTone }) {
   );
 }
 
-function useStayAdmitControls({
+function allTourismGuestsHavePassportPhoto(guests: GuestTourismGuest[]): boolean {
+  return guests.length > 0 && guests.every((guest) => guest.passport_storage_path.trim().length > 0);
+}
+
+function isTourismReadyForAccess(registration: GuestTourismRegistrationSummary | null): boolean {
+  if (!registration?.tourism_registration_completed_at) return false;
+  return allTourismGuestsHavePassportPhoto(registration.guests);
+}
+
+function mapAccessActionError(error: string): string {
+  switch (error) {
+    case 'unauthorized':
+      return 'Sign in again at reception desk.';
+    case 'tourism_incomplete':
+      return 'Complete tourism registration and upload passport photos before granting access.';
+    case 'missing_documents':
+      return 'Upload a passport photo for each guest before granting access.';
+    default:
+      return 'Could not update access status.';
+  }
+}
+
+function useStayAccessControls({
   stay,
   tenantSlug,
-  tourismRegistrationRequired,
   onStayUpdated,
 }: {
   stay: GuestStayRecordWithLink;
   tenantSlug: string;
-  tourismRegistrationRequired: boolean;
   onStayUpdated?: (stay: GuestStayRecordWithLink) => void;
 }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startAction] = useTransition();
   const [passportCheckedAt, setPassportCheckedAt] = useState(stay.passport_checked_at);
-  const [keyIssued, setKeyIssued] = useState(false);
-  const admitted = Boolean(passportCheckedAt);
+  const [keyIssued, setKeyIssued] = useState(Boolean(stay.key_issued_at));
+  const accessGranted = Boolean(passportCheckedAt);
 
   useEffect(() => {
     setPassportCheckedAt(stay.passport_checked_at);
-    setKeyIssued(false);
+    setKeyIssued(Boolean(stay.key_issued_at));
     setActionError(null);
-  }, [stay.passport_checked_at, stay.id]);
+  }, [stay.passport_checked_at, stay.key_issued_at, stay.id]);
 
-  const handleSetChecked = (checked: boolean) => {
+  const applyStayUpdate = (next: {
+    passport_checked_at: string | null;
+    key_issued_at: string | null;
+    desk_checked_in_at?: string | null;
+  } & Partial<GuestStayRecordWithLink>) => {
+    setPassportCheckedAt(next.passport_checked_at);
+    setKeyIssued(Boolean(next.key_issued_at));
+    onStayUpdated?.({
+      ...stay,
+      ...next,
+      magicLinkUrl: stay.magicLinkUrl,
+    });
+  };
+
+  const setAccess = (checked: boolean, options?: { bypassAccessGate?: boolean }) => {
     if (!tenantSlug) {
       setActionError('Stay actions unavailable.');
       return;
@@ -114,72 +153,48 @@ function useStayAdmitControls({
         stayId: stay.id,
         checked,
         keyIssued: checked ? keyIssued : undefined,
+        bypassAccessGate: options?.bypassAccessGate,
       });
       if (!result.ok) {
-        setActionError(
-          result.error === 'unauthorized'
-            ? 'Sign in again at reception desk.'
-            : 'Could not update admit status.'
-        );
+        setActionError(mapAccessActionError(result.error));
         return;
       }
-
-      setPassportCheckedAt(result.stay.passport_checked_at);
-      onStayUpdated?.({
-        ...stay,
-        ...result.stay,
-        magicLinkUrl: stay.magicLinkUrl,
-      });
+      applyStayUpdate(result.stay);
     });
   };
 
-  const stayTab = (
-    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Check-in admit
-      </p>
-      {admitted ? (
-        <p className="text-sm font-medium text-emerald-800">Admitted</p>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          {tourismRegistrationRequired
-            ? 'Confirm original passport was checked in person, then use Check in below.'
-            : 'Use Check in below to unlock bed selection in the guest app.'}
-        </p>
-      )}
-      {actionError ? <p className="text-xs text-destructive">{actionError}</p> : null}
-      {admitted ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8"
-          disabled={isPending}
-          onClick={() => handleSetChecked(false)}
-        >
-          Undo admit
-        </Button>
-      ) : (
-        <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            className="mt-0.5"
-            checked={keyIssued}
-            disabled={isPending}
-            onChange={(event) => setKeyIssued(event.target.checked)}
-          />
-          <span>Room key issued</span>
-        </label>
-      )}
-    </div>
-  );
+  const setKeyIssuedChecked = (nextKeyIssued: boolean) => {
+    if (!accessGranted) {
+      setKeyIssued(nextKeyIssued);
+      return;
+    }
+    if (!tenantSlug) {
+      setActionError('Stay actions unavailable.');
+      return;
+    }
+    startAction(async () => {
+      setActionError(null);
+      const result = await setKeyIssuedForReceptionAction({
+        tenantSlug,
+        stayId: stay.id,
+        keyIssued: nextKeyIssued,
+      });
+      if (!result.ok) {
+        setActionError(mapAccessActionError(result.error));
+        return;
+      }
+      applyStayUpdate(result.stay);
+    });
+  };
 
   return {
-    admitted,
+    accessGranted,
+    keyIssued,
     actionError,
     isPending,
-    admit: () => handleSetChecked(true),
-    stayTab,
+    setKeyIssuedChecked,
+    grantAccess: (options?: { bypassAccessGate?: boolean }) => setAccess(true, options),
+    revokeAccess: () => setAccess(false),
   };
 }
 
@@ -202,12 +217,14 @@ function StayTourismRegistrationBlock({
   tenantSlug,
   onTourismExportedAtChange,
   onTourismStatusChange,
+  onTourismAccessReadyChange,
   onAddGuestControlsChange,
 }: {
   stay: GuestStayRecordWithLink;
   tenantSlug: string;
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
   onTourismStatusChange?: (status: TourismStatusBadge) => void;
+  onTourismAccessReadyChange?: (ready: boolean) => void;
   onAddGuestControlsChange?: (
     controls: { openAddGuest: () => void; canAddGuest: boolean } | null
   ) => void;
@@ -224,8 +241,12 @@ function StayTourismRegistrationBlock({
 
   const exportedAt = registration?.tourism_exported_at ?? stay.tourism_exported_at ?? null;
   const checkInDate = stayRecordCheckInDate(stay);
-  const registrationComplete = Boolean(registration?.tourism_registration_completed_at);
+  const registrationComplete = Boolean(
+    registration?.tourism_registration_completed_at ?? stay.tourism_registration_completed_at
+  );
   const hasGuests = Boolean(registration && registration.guests.length > 0);
+  const allPassportsUploaded = allTourismGuestsHavePassportPhoto(registration?.guests ?? []);
+  const canCompleteRegistration = hasGuests && allPassportsUploaded && !registrationComplete;
   const canAddGuest =
     !registrationComplete && !(isBelowLg ? addGuestSheetOpen : showAddForm) && !isPending && !isLoading;
 
@@ -266,10 +287,15 @@ function StayTourismRegistrationBlock({
   }, [stay.id, tenantSlug]);
 
   const status = resolveTourismStatusBadge(registration);
+  const tourismAccessReady = isTourismReadyForAccess(registration);
 
   useEffect(() => {
     onTourismStatusChange?.(status);
   }, [status, onTourismStatusChange]);
+
+  useEffect(() => {
+    onTourismAccessReadyChange?.(tourismAccessReady);
+  }, [tourismAccessReady, onTourismAccessReadyChange]);
 
   const showWhatsapp =
     registration?.tourism_registration_completed_at != null && registration.tourism_contact_whatsapp;
@@ -347,7 +373,9 @@ function StayTourismRegistrationBlock({
               ? 'Sign in again at reception desk.'
               : result.error === 'invalid_file'
                 ? 'Invalid image file.'
-                : 'Could not upload passport photo.'
+                : result.error === 'registration_closed'
+                  ? 'Registration is already complete — passport upload is closed.'
+                  : 'Could not upload passport photo.'
           );
           return;
         }
@@ -399,6 +427,8 @@ function StayTourismRegistrationBlock({
         return 'Tourist registration is not enabled for this hostel.';
       case 'no_guests':
         return 'Add at least one guest before completing registration.';
+      case 'missing_documents':
+        return 'Upload a passport photo for each guest before completing registration.';
       default:
         return 'Could not save guest identity.';
     }
@@ -484,10 +514,7 @@ function StayTourismRegistrationBlock({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Tourism registration
-        </p>
+      <div className="flex flex-wrap items-center gap-2">
         <span
           className={
             status === 'complete'
@@ -503,12 +530,8 @@ function StayTourismRegistrationBlock({
         </span>
       </div>
 
-      <dl className="grid gap-1 text-xs">
-        <div className="flex gap-2">
-          <dt className="shrink-0 text-muted-foreground">Name on reservation</dt>
-          <dd className="min-w-0 truncate font-medium">{stay.guest_name?.trim() || '—'}</dd>
-        </div>
-        {showWhatsapp ? (
+      {showWhatsapp ? (
+        <dl className="grid gap-1 text-xs">
           <div className="flex gap-2">
             <dt className="shrink-0 text-muted-foreground">Contact WhatsApp</dt>
             <dd>
@@ -522,8 +545,8 @@ function StayTourismRegistrationBlock({
               </a>
             </dd>
           </div>
-        ) : null}
-      </dl>
+        </dl>
+      ) : null}
 
       {loadError ? <p className="text-xs text-destructive">{loadError}</p> : null}
       {actionError ? <p className="text-xs text-destructive">{actionError}</p> : null}
@@ -603,7 +626,8 @@ function StayTourismRegistrationBlock({
                         </div>
                         <ReceptionTourismGuestDocuments
                           guest={guest}
-                          disabled={isPending}
+                          uploadDisabled={isPending || registrationComplete}
+                          viewDisabled={isPending}
                           onUploadPassport={(file) => handleUploadPassport(guest.id, file)}
                           onViewPassport={() => handleViewPassport(guest.id)}
                         />
@@ -633,30 +657,34 @@ function StayTourismRegistrationBlock({
 
           <div className="flex flex-wrap gap-1.5">
             {hasGuests && !registrationComplete ? (
-              <Button
-                type="button"
-                size="sm"
-                className="h-7 text-[11px]"
-                disabled={isPending || isLoading}
-                onClick={handleCompleteRegistration}
-              >
-                Complete registration
-              </Button>
+              <div className="space-y-1">
+                {!allPassportsUploaded ? (
+                  <p className="text-xs text-muted-foreground">
+                    Upload a passport photo for each guest before completing registration.
+                  </p>
+                ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  disabled={isPending || isLoading || !canCompleteRegistration}
+                  onClick={handleCompleteRegistration}
+                >
+                  Complete registration
+                </Button>
+              </div>
             ) : null}
           </div>
         </div>
       )}
 
-      <label className="flex cursor-pointer items-start gap-2 text-xs">
-        <input
-          type="checkbox"
-          className="mt-0.5"
-          checked={exportedAt != null}
-          disabled={isPending || isLoading}
-          onChange={(event) => handleExportedChange(event.target.checked)}
-        />
-        <span>Submitted to tourism organization</span>
-      </label>
+      <StayTourismFilingBlock
+        registrationComplete={registrationComplete}
+        exportedAt={exportedAt}
+        isPending={isPending || isLoading}
+        onMarkSubmitted={() => handleExportedChange(true)}
+        onClearSubmission={() => handleExportedChange(false)}
+      />
 
       <ReceptionAddTourismGuestSheet
         open={addGuestSheetOpen}
@@ -672,12 +700,14 @@ function StayTourismRegistrationBlock({
 
 function ReceptionTourismGuestDocuments({
   guest,
-  disabled,
+  uploadDisabled,
+  viewDisabled,
   onUploadPassport,
   onViewPassport,
 }: {
   guest: GuestTourismGuest;
-  disabled: boolean;
+  uploadDisabled: boolean;
+  viewDisabled: boolean;
   onUploadPassport: (file: File) => void;
   onViewPassport: () => void;
 }) {
@@ -692,7 +722,7 @@ function ReceptionTourismGuestDocuments({
           type="file"
           accept="image/jpeg,image/webp,image/png,image/heic,image/heif,.jpg,.jpeg,.webp,.png,.heic,.heif"
           className="sr-only"
-          disabled={disabled}
+          disabled={uploadDisabled}
           onChange={(event) => {
             const file = event.target.files?.[0];
             event.target.value = '';
@@ -706,7 +736,7 @@ function ReceptionTourismGuestDocuments({
           size="sm"
           variant="outline"
           className="h-7 text-[11px]"
-          disabled={disabled}
+          disabled={uploadDisabled}
           onClick={() => fileInputRef.current?.click()}
         >
           {hasPassport ? 'Replace passport' : 'Upload passport'}
@@ -717,13 +747,182 @@ function ReceptionTourismGuestDocuments({
             size="sm"
             variant="outline"
             className="h-7 text-[11px]"
-            disabled={disabled}
+            disabled={viewDisabled}
             onClick={onViewPassport}
           >
             View passport
           </Button>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function StayBookingComOpenBlock({
+  stay,
+  tenantSettings,
+}: {
+  stay: GuestStayRecordWithLink;
+  tenantSettings?: TenantSettings;
+}) {
+  const hotelId = resolveBookingComHotelId(tenantSettings);
+  const reservationId = stay.booking_external_id?.trim() ?? '';
+  const openUrl = buildBookingComReservationUrl({
+    reservationId,
+    hotelId: hotelId ?? '',
+  });
+  const canOpen = Boolean(openUrl);
+
+  const handleOpen = () => {
+    if (!openUrl) return;
+    window.open(openUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Booking.com
+      </p>
+      {reservationId ? (
+        <p className="text-sm font-mono">#{reservationId}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">No booking reference</p>
+      )}
+      {!hotelId ? (
+        <p className="text-xs text-muted-foreground">
+          Set Booking.com hotel ID in admin to open reservations.
+        </p>
+      ) : null}
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-8"
+        disabled={!canOpen}
+        onClick={handleOpen}
+      >
+        Open in Booking
+      </Button>
+    </div>
+  );
+}
+
+function StayTourismFilingBlock({
+  registrationComplete,
+  exportedAt,
+  isPending,
+  onMarkSubmitted,
+  onClearSubmission,
+}: {
+  registrationComplete: boolean;
+  exportedAt: string | null;
+  isPending: boolean;
+  onMarkSubmitted: () => void;
+  onClearSubmission: () => void;
+}) {
+  const submitted = exportedAt != null;
+
+  const handleClear = () => {
+    if (
+      !window.confirm(
+        'Remove the submission mark? This does not undo filing in the external portal.'
+      )
+    ) {
+      return;
+    }
+    onClearSubmission();
+  };
+
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Tourism filing
+      </p>
+      {!registrationComplete ? (
+        <p className="text-xs text-muted-foreground">Available after registration is complete</p>
+      ) : submitted ? (
+        <>
+          <p className="text-sm">
+            Submitted
+            {exportedAt ? ` · ${formatReceptionDateTime(exportedAt)}` : ''}
+          </p>
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+            disabled={isPending}
+            onClick={handleClear}
+          >
+            Clear submission
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">
+            Confirm after filing in the tourism portal.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8"
+            disabled={isPending}
+            onClick={onMarkSubmitted}
+          >
+            Mark as submitted
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StayRoomKeyBlock({
+  accessGranted,
+  keyIssued,
+  keyIssuedAt,
+  isPending,
+  actionError,
+  onToggle,
+}: {
+  accessGranted: boolean;
+  keyIssued: boolean;
+  keyIssuedAt: string | null;
+  isPending: boolean;
+  actionError: string | null;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Room key
+      </p>
+      {!accessGranted ? (
+        <p className="text-xs text-muted-foreground">Available after check-in</p>
+      ) : keyIssued ? (
+        <p className="text-sm">
+          Key issued
+          {keyIssuedAt ? ` · ${formatReceptionDateTime(keyIssuedAt)}` : ''}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Physical key / card not handed over yet.
+        </p>
+      )}
+      {accessGranted && actionError ? (
+        <p className="text-xs text-destructive">{actionError}</p>
+      ) : null}
+      {accessGranted ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8"
+          disabled={isPending}
+          onClick={() => onToggle(!keyIssued)}
+        >
+          {keyIssued ? 'Mark not issued' : 'Mark key issued'}
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -829,28 +1028,31 @@ function ReceptionGuestStayDetailActions({
   stay,
   isPending,
   onCancelOrCheckout,
-  onReissueAccess,
   operationalDate,
-  showReissue,
   showAddTourismGuest,
   onAddTourismGuest,
   addTourismGuestDisabled,
   showCheckIn,
   onCheckIn,
-  checkInPending,
+  checkInDisabled,
+  checkInHint,
   checkInError,
+  showGrantAccess,
+  onGrantAccess,
 }: Pick<
   ReceptionGuestStayDetailProps,
-  'stay' | 'isPending' | 'onCancelOrCheckout' | 'onReissueAccess' | 'operationalDate'
+  'stay' | 'isPending' | 'onCancelOrCheckout' | 'operationalDate'
 > & {
-  showReissue: boolean;
   showAddTourismGuest: boolean;
   onAddTourismGuest: () => void;
   addTourismGuestDisabled: boolean;
   showCheckIn: boolean;
   onCheckIn: () => void;
-  checkInPending: boolean;
+  checkInDisabled: boolean;
+  checkInHint: string | null;
   checkInError: string | null;
+  showGrantAccess: boolean;
+  onGrantAccess: () => void;
 }) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -863,20 +1065,20 @@ function ReceptionGuestStayDetailActions({
   });
 
   const showCheckout = endAction === 'checkout';
-  const busy = isPending || checkInPending;
+  const busy = isPending;
 
   return (
     <div className="flex flex-col gap-2">
-      {showReissue ? (
+      {showGrantAccess ? (
         <Button
           type="button"
           variant="outline"
           size="default"
           className="w-full"
           disabled={busy}
-          onClick={() => onReissueAccess(stay)}
+          onClick={onGrantAccess}
         >
-          Reissue access
+          Grant access
         </Button>
       ) : null}
 
@@ -895,12 +1097,13 @@ function ReceptionGuestStayDetailActions({
 
       {showCheckIn ? (
         <>
+          {checkInHint ? <p className="text-xs text-muted-foreground">{checkInHint}</p> : null}
           {checkInError ? <p className="text-xs text-destructive">{checkInError}</p> : null}
           <Button
             type="button"
             size="default"
             className="w-full"
-            disabled={busy}
+            disabled={busy || checkInDisabled}
             onClick={onCheckIn}
           >
             Check in
@@ -928,11 +1131,19 @@ function ReceptionGuestStayDetailOverflowMenu({
   stay,
   isPending,
   onCancelOrCheckout,
+  onReissueAccess,
   operationalDate,
+  accessGranted,
+  accessPending,
+  onRevokeAccess,
 }: Pick<
   ReceptionGuestStayDetailProps,
-  'stay' | 'isPending' | 'onCancelOrCheckout' | 'operationalDate'
->) {
+  'stay' | 'isPending' | 'onCancelOrCheckout' | 'onReissueAccess' | 'operationalDate'
+> & {
+  accessGranted: boolean;
+  accessPending: boolean;
+  onRevokeAccess: () => void;
+}) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
     desk_checked_in_at: stay.desk_checked_in_at,
@@ -943,26 +1154,36 @@ function ReceptionGuestStayDetailOverflowMenu({
     stay_kind: stay.stay_kind,
   });
 
-  if (endAction !== 'cancel') {
-    return null;
-  }
+  const showCancel = endAction === 'cancel';
+  const showRevoke = accessGranted;
+  const busy = isPending || accessPending;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="icon" disabled={isPending}>
+        <Button type="button" variant="ghost" size="icon" disabled={busy}>
           <EllipsisVertical />
           <span className="sr-only">More actions</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          variant="destructive"
-          disabled={isPending}
-          onSelect={() => onCancelOrCheckout(stay.id, 'cancel')}
-        >
-          Cancel booking
+        <DropdownMenuItem disabled={busy} onSelect={() => onReissueAccess(stay)}>
+          Reissue access
         </DropdownMenuItem>
+        {showRevoke ? (
+          <DropdownMenuItem disabled={busy} onSelect={onRevokeAccess}>
+            Revoke access
+          </DropdownMenuItem>
+        ) : null}
+        {showCancel ? (
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={busy}
+            onSelect={() => onCancelOrCheckout(stay.id, 'cancel')}
+          >
+            Cancel booking
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -991,10 +1212,17 @@ export function ReceptionGuestStayDetail({
   initialTab = 'stay',
 }: ReceptionGuestStayDetailProps) {
   const [activeTab, setActiveTab] = useState<StayDetailTabId>(initialTab);
+  const [deskQrFocusKey, setDeskQrFocusKey] = useState(0);
   const [tourismStatus, setTourismStatus] = useState<TourismStatusBadge | null>(null);
+  const [tourismAccessReady, setTourismAccessReady] = useState(false);
   const [canAddTourismGuest, setCanAddTourismGuest] = useState(false);
   const tourismAddGuestRef = useRef<(() => void) | null>(null);
   const showTourismTab = tourismRegistrationRequired && Boolean(tenantSlug);
+
+  const openDeskQr = () => {
+    setActiveTab('access');
+    setDeskQrFocusKey((key) => key + 1);
+  };
 
   const handleTourismAddGuestControlsChange = useCallback(
     (controls: { openAddGuest: () => void; canAddGuest: boolean } | null) => {
@@ -1004,16 +1232,20 @@ export function ReceptionGuestStayDetail({
     []
   );
 
-  const admit = useStayAdmitControls({
+  const access = useStayAccessControls({
     stay,
     tenantSlug: tenantSlug ?? '',
-    tourismRegistrationRequired,
     onStayUpdated: onPassportCheckedAtChange,
   });
 
+  const primaryGrantBlocked =
+    showTourismTab && !tourismAccessReady && !access.accessGranted;
+
   useEffect(() => {
     setActiveTab(initialTab);
+    setDeskQrFocusKey(0);
     setTourismStatus(showTourismTab ? 'not_started' : null);
+    setTourismAccessReady(false);
     if (!showTourismTab) {
       setCanAddTourismGuest(false);
       tourismAddGuestRef.current = null;
@@ -1033,9 +1265,11 @@ export function ReceptionGuestStayDetail({
       if (cancelled) return;
       if (result.ok) {
         setTourismStatus(resolveTourismStatusBadge(result.registration));
+        setTourismAccessReady(isTourismReadyForAccess(result.registration));
         return;
       }
       setTourismStatus('not_started');
+      setTourismAccessReady(false);
     });
 
     return () => {
@@ -1058,16 +1292,10 @@ export function ReceptionGuestStayDetail({
     stay.booking_platform_id,
     stay.booking_external_id
   );
-  const admittedAt = stay.passport_checked_at ?? stay.desk_checked_in_at;
-  const endAction = resolveStayCancelCheckoutAction({
-    passport_checked_at: stay.passport_checked_at,
-    desk_checked_in_at: stay.desk_checked_in_at,
-    check_out_date: stay.check_out_date,
-    check_out_at: stay.check_out_at,
-    operationalDate,
-    is_archived: stay.is_archived,
-    stay_kind: stay.stay_kind,
-  });
+  const accessGrantedAt =
+    access.accessGranted
+      ? (stay.passport_checked_at ?? stay.desk_checked_in_at)
+      : null;
   const accessTabTone = resolveAccessTabBadge({
     hasMagicLink: Boolean(stay.magicLinkUrl),
     hasPinInSession: Boolean(stayPins[stay.id]),
@@ -1091,9 +1319,9 @@ export function ReceptionGuestStayDetail({
         {formatDisplayDate(checkInDay)} → {formatDisplayDate(checkOutDay)} ·{' '}
         {guestAccessStatusLabel(status)}
       </p>
-      {admittedAt ? (
+      {accessGrantedAt ? (
         <p className="text-xs font-medium text-emerald-800">
-          Admitted · {formatReceptionDateTime(admittedAt)}
+          Access granted · {formatReceptionDateTime(accessGrantedAt)}
         </p>
       ) : null}
       {bookingSourceLine ? (
@@ -1105,18 +1333,32 @@ export function ReceptionGuestStayDetail({
   const footer = (
     <ReceptionGuestStayDetailActions
       stay={stay}
-      isPending={isPending}
+      isPending={isPending || access.isPending}
       onCancelOrCheckout={onCancelOrCheckout}
-      onReissueAccess={onReissueAccess}
       operationalDate={operationalDate}
-      showReissue={activeTab === 'access'}
       showAddTourismGuest={activeTab === 'tourism' && showTourismTab}
       onAddTourismGuest={() => tourismAddGuestRef.current?.()}
       addTourismGuestDisabled={!canAddTourismGuest}
-      showCheckIn={Boolean(tenantSlug) && !admit.admitted && endAction !== 'checkout'}
-      onCheckIn={admit.admit}
-      checkInPending={admit.isPending}
-      checkInError={admit.actionError}
+      showCheckIn={Boolean(tenantSlug) && !access.accessGranted}
+      onCheckIn={() => access.grantAccess()}
+      checkInDisabled={primaryGrantBlocked}
+      checkInHint={
+        primaryGrantBlocked
+          ? 'Complete tourism registration and upload passport photos before check-in.'
+          : null
+      }
+      checkInError={access.actionError}
+      showGrantAccess={activeTab === 'access' && Boolean(tenantSlug) && !access.accessGranted}
+      onGrantAccess={() => {
+        if (
+          showTourismTab &&
+          !tourismAccessReady &&
+          !window.confirm('Tourism registration is incomplete. Grant access anyway?')
+        ) {
+          return;
+        }
+        access.grantAccess({ bypassAccessGate: true });
+      }}
     />
   );
 
@@ -1139,16 +1381,24 @@ export function ReceptionGuestStayDetail({
   const tabsBody = (
     <>
       <TabsContent value="stay" className="mt-0 space-y-4 outline-none">
-        {tenantSlug ? (
-          admit.stayTab
-        ) : (
-          <p className="text-xs text-muted-foreground">Stay actions unavailable.</p>
-        )}
+        <StayBookingComOpenBlock stay={stay} tenantSettings={tenantSettings} />
         {tenantSlug ? (
           <StayBookingBalanceBlock
             stay={stay}
             tenantSlug={tenantSlug}
             onStayUpdated={onStayBookingBalanceChange}
+          />
+        ) : (
+          <p className="text-xs text-muted-foreground">Stay actions unavailable.</p>
+        )}
+        {tenantSlug ? (
+          <StayRoomKeyBlock
+            accessGranted={access.accessGranted}
+            keyIssued={access.keyIssued}
+            keyIssuedAt={stay.key_issued_at}
+            isPending={access.isPending}
+            actionError={access.actionError}
+            onToggle={access.setKeyIssuedChecked}
           />
         ) : null}
       </TabsContent>
@@ -1161,6 +1411,7 @@ export function ReceptionGuestStayDetail({
               tenantSlug={tenantSlug}
               onTourismExportedAtChange={onTourismExportedAtChange}
               onTourismStatusChange={setTourismStatus}
+              onTourismAccessReadyChange={setTourismAccessReady}
               onAddGuestControlsChange={handleTourismAddGuestControlsChange}
             />
           ) : null}
@@ -1168,6 +1419,14 @@ export function ReceptionGuestStayDetail({
       ) : null}
 
       <TabsContent value="access" className="mt-0 space-y-4 outline-none">
+        {tenantSlug ? (
+          access.accessGranted ? (
+            <p className="text-sm font-medium text-emerald-800">Access granted</p>
+          ) : null
+        ) : (
+          <p className="text-xs text-muted-foreground">Access actions unavailable.</p>
+        )}
+
         {!stay.magicLinkUrl ? (
           <p className="text-xs text-muted-foreground">Link unavailable — re-issue access.</p>
         ) : (
@@ -1180,6 +1439,7 @@ export function ReceptionGuestStayDetail({
             hostelName={hostelName}
             guestAccessMessageTemplate={guestAccessMessageTemplate}
             guestAccessPinMissingText={guestAccessPinMissingText}
+            deskQrFocusKey={deskQrFocusKey}
           />
         )}
       </TabsContent>
@@ -1202,13 +1462,29 @@ export function ReceptionGuestStayDetail({
         footer={footer}
         onEdit={() => onEditStay(stay)}
         editDisabled={isPending}
+        headerExtra={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={!stay.magicLinkUrl || isPending}
+            onClick={openDeskQr}
+          >
+            <QrCode />
+            <span className="sr-only">Show desk QR code</span>
+          </Button>
+        }
         headerOverflow={
-          endAction === 'cancel' ? (
+          tenantSlug ? (
             <ReceptionGuestStayDetailOverflowMenu
               stay={stay}
               isPending={isPending}
               onCancelOrCheckout={onCancelOrCheckout}
+              onReissueAccess={onReissueAccess}
               operationalDate={operationalDate}
+              accessGranted={access.accessGranted}
+              accessPending={access.isPending}
+              onRevokeAccess={access.revokeAccess}
             />
           ) : undefined
         }

@@ -707,7 +707,7 @@ export async function activateGuestStay(input: {
   const { data, error } = await admin
     .from('guest_access_grants')
     .select(
-      `${GUEST_ACCESS_GRANT_COLUMNS}, guest_reservations!inner (${GUEST_RESERVATION_COLUMNS}, tenants!inner(slug))`
+      `${GUEST_ACCESS_GRANT_COLUMNS}, guest_reservations!inner (${GUEST_RESERVATION_COLUMNS}, tenants!guest_reservations_tenant_id_fkey!inner(slug))`
     )
     .eq('access_token_hash', tokenHash)
     .is('revoked_at', null)
@@ -891,7 +891,7 @@ export async function previewGuestStayByToken(input: {
   const { data, error } = await admin
     .from('guest_access_grants')
     .select(
-      `${GUEST_ACCESS_GRANT_COLUMNS}, guest_reservations!inner (${GUEST_RESERVATION_COLUMNS}, tenants!inner(slug))`
+      `${GUEST_ACCESS_GRANT_COLUMNS}, guest_reservations!inner (${GUEST_RESERVATION_COLUMNS}, tenants!guest_reservations_tenant_id_fkey!inner(slug))`
     )
     .eq('access_token_hash', tokenHash)
     .is('revoked_at', null)

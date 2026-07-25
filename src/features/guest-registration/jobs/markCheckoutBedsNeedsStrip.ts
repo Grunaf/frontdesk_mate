@@ -14,8 +14,8 @@ import 'server-only';
  *
  * ## Ops / cron
  *
- * Vercel Cron every 15 minutes: `GET /api/cron/housekeeping-bed-rollover`
- * (`CRON_SECRET`). Job no-ops until each tenant's `operationalDayStartTime`
+ * Vercel Cron daily (Hobby: once/day): `GET /api/cron/housekeeping-bed-rollover`
+ * (`CRON_SECRET`, schedule `15 8 * * *` UTC). Job no-ops until each tenant's `operationalDayStartTime`
  * window and skips if already rolled that operational day.
  * Optional: `HOUSEKEEPING_BED_ROLLOVER_DRY_RUN=1` — log only; no upserts, no ledger.
  */
