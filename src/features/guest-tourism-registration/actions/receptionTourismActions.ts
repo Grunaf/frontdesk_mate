@@ -3,7 +3,10 @@
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 
-import { assertReceptionAuthenticated } from '@/app/reception/lib/receptionSession';
+import {
+  assertReceptionAuthenticated,
+  readReceptionSessionFromCookies,
+} from '@/app/reception/lib/receptionSession';
 import type {
   GuestTourismGuest,
   GuestTourismRegistrationSummary,
@@ -17,6 +20,8 @@ import {
   getStayTourismCompletionTimestamp,
   getTourismRegistrationByStayId,
   listTourismGuestsByStayId,
+  purgePassportPhotosForGuestProfile,
+  removeGuestDocumentObjectsFromStorage,
   setTourismExportedAt,
   setTourismGuestEntryStampDate,
   updateTourismGuestPassportPath,
@@ -24,6 +29,11 @@ import {
 } from '@/entities/guest-tourism-registration/server';
 import { getGuestReservationForDesk, setPassportCheckedAt } from '@/entities/guest-stay/server';
 import type { GuestStayRecord } from '@/entities/guest-stay/server';
+import { resolveGuestIdForBooking, updateGuestIdentity } from '@/entities/guest/server';
+import {
+  findReceptionUserById,
+  receptionStaffCanSkipTourismGate,
+} from '@/entities/reception-user/server';
 import {
   resolveTourismRegistrationProfile,
   resolveTourismRegistrationRequired,
@@ -111,6 +121,7 @@ function mapTourismGuestRow(row: Record<string, unknown>): GuestTourismGuest {
   return {
     id: String(row.id),
     stay_id: String(row.stay_id),
+    guest_id: row.guest_id ? String(row.guest_id) : null,
     first_name: String(row.first_name),
     last_name: String(row.last_name),
     citizenship,
@@ -132,7 +143,75 @@ function mapTourismGuestRow(row: Record<string, unknown>): GuestTourismGuest {
 }
 
 const TOURISM_GUEST_SELECT_COLUMNS =
-  'id, stay_id, first_name, last_name, citizenship, passport_number, date_of_birth, country_of_birth, place_of_birth, gender, document_type, passport_storage_path, entry_stamp_storage_path, entry_stamp_date, entry_stamp_page, created_at';
+  'id, stay_id, guest_id, first_name, last_name, citizenship, passport_number, date_of_birth, country_of_birth, place_of_birth, gender, document_type, passport_storage_path, entry_stamp_storage_path, entry_stamp_date, entry_stamp_page, created_at';
+
+async function loadStayGuestIdForTenant(
+  tenantId: string,
+  stayId: string
+): Promise<string | null | 'db_unavailable'> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return 'db_unavailable';
+
+  const { data, error } = await admin
+    .from('guest_reservations')
+    .select('guest_id')
+    .eq('id', stayId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('loadStayGuestIdForTenant:', error.message);
+    return 'db_unavailable';
+  }
+
+  return data?.guest_id ? String(data.guest_id) : null;
+}
+
+/** Sync A: tourism identity writes update the reusable guests profile. */
+async function syncGuestProfileFromTourismIdentity(input: {
+  tenantId: string;
+  guestId: string | null;
+  identity: ParsedTourismGuestIdentity;
+}): Promise<string | null> {
+  if (!input.guestId) return null;
+
+  const result = await updateGuestIdentity({
+    tenantId: input.tenantId,
+    guestId: input.guestId,
+    identity: {
+      firstName: input.identity.firstName,
+      lastName: input.identity.lastName,
+      citizenship: input.identity.citizenship,
+      passportNumber: input.identity.passportNumber,
+      dateOfBirth: input.identity.dateOfBirth,
+      countryOfBirth: input.identity.countryOfBirth,
+      placeOfBirth: input.identity.placeOfBirth,
+      gender: input.identity.gender,
+      documentType: input.identity.documentType,
+    },
+  });
+
+  if (!result.ok) {
+    console.error('syncGuestProfileFromTourismIdentity:', result.error);
+    return null;
+  }
+
+  // Keep reservation display name in sync with identity.
+  const admin = getSupabaseAdmin();
+  if (admin) {
+    await admin
+      .from('guest_reservations')
+      .update({
+        guest_name: result.guest.display_name,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('guest_id', input.guestId)
+      .eq('tenant_id', input.tenantId)
+      .eq('is_archived', false);
+  }
+
+  return result.guest.id;
+}
 
 async function assertStayOwnedByTenant(
   tenantSlug: string,
@@ -173,6 +252,7 @@ export type SetPassportCheckedActionResult =
       ok: false;
       error:
         | 'unauthorized'
+        | 'forbidden'
         | 'not_found'
         | 'db_unavailable'
         | 'tourism_incomplete'
@@ -207,6 +287,26 @@ async function assertTourismReadyForAccessGrant(
   return 'ok';
 }
 
+async function assertCanBypassTourismAccessGate(
+  tenantSlug: string
+): Promise<'ok' | 'unauthorized' | 'forbidden'> {
+  const session = await readReceptionSessionFromCookies();
+  if (!session || session.tenantSlug !== tenantSlug) {
+    return 'unauthorized';
+  }
+
+  const user = await findReceptionUserById(tenantSlug, session.receptionUserId);
+  if (!user || user.disabled_at) {
+    return 'unauthorized';
+  }
+
+  if (!receptionStaffCanSkipTourismGate(user.permissions)) {
+    return 'forbidden';
+  }
+
+  return 'ok';
+}
+
 export async function setPassportCheckedAction(input: {
   tenantSlug: string;
   stayId: string;
@@ -222,7 +322,12 @@ export async function setPassportCheckedAction(input: {
   }
 
   try {
-    if (input.checked && !input.bypassAccessGate) {
+    if (input.checked && input.bypassAccessGate) {
+      const bypass = await assertCanBypassTourismAccessGate(input.tenantSlug);
+      if (bypass !== 'ok') {
+        return { ok: false, error: bypass };
+      }
+    } else if (input.checked) {
       const gate = await assertTourismReadyForAccessGrant(input.tenantSlug, input.stayId);
       if (gate === 'tourism_incomplete' || gate === 'missing_documents') {
         return { ok: false, error: gate };
@@ -533,6 +638,33 @@ export async function uploadTourismDocumentForReceptionAction(input: {
       return { ok: false, error: 'invalid_file' };
     }
 
+    const admin = getSupabaseAdmin();
+    if (!admin) {
+      return { ok: false, error: 'db_unavailable' };
+    }
+
+    const { data: existingGuest, error: existingError } = await admin
+      .from('guest_stay_tourism_guests')
+      .select('passport_storage_path, guest_id')
+      .eq('id', input.guestId)
+      .eq('stay_id', input.stayId)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error('uploadTourismDocumentForReceptionAction load:', existingError.message);
+      return { ok: false, error: 'db_unavailable' };
+    }
+    if (!existingGuest) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    const previousPath = String(
+      (existingGuest as Record<string, unknown>).passport_storage_path ?? ''
+    ).trim();
+    const profileGuestId = (existingGuest as Record<string, unknown>).guest_id
+      ? String((existingGuest as Record<string, unknown>).guest_id)
+      : null;
+
     const uploaded = await uploadGuestTourismDocument({
       tenantId: tenant.id,
       stayId: input.stayId,
@@ -552,6 +684,16 @@ export async function uploadTourismDocumentForReceptionAction(input: {
     );
     if (!pathUpdate.ok) {
       return { ok: false, error: pathUpdate.error };
+    }
+
+    // Fresh photo wins: drop previous object on this stay and any other stays for the profile.
+    if (previousPath && previousPath !== uploaded.storagePath) {
+      await removeGuestDocumentObjectsFromStorage([previousPath]);
+    }
+    if (profileGuestId) {
+      await purgePassportPhotosForGuestProfile(profileGuestId, {
+        exceptStayId: input.stayId,
+      });
     }
 
     revalidatePath('/');
@@ -662,12 +804,45 @@ export async function createTourismGuestForReceptionAction(input: {
       return { ok: false, error: 'db_unavailable' };
     }
 
+    const stayGuestId = await loadStayGuestIdForTenant(tenant.id, input.stayId);
+    if (stayGuestId === 'db_unavailable') {
+      return { ok: false, error: 'db_unavailable' };
+    }
+
+    let profileGuestId = stayGuestId;
+    if (!profileGuestId) {
+      const ensured = await resolveGuestIdForBooking({
+        tenantId: tenant.id,
+        guestName: `${identity.firstName} ${identity.lastName}`.trim(),
+      });
+      if (!ensured.ok) {
+        return { ok: false, error: 'db_unavailable' };
+      }
+      profileGuestId = ensured.guestId;
+      await admin
+        .from('guest_reservations')
+        .update({
+          guest_id: profileGuestId,
+          guest_name: ensured.displayName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.stayId)
+        .eq('tenant_id', tenant.id);
+    }
+
+    await syncGuestProfileFromTourismIdentity({
+      tenantId: tenant.id,
+      guestId: profileGuestId,
+      identity,
+    });
+
     const guestRowId = randomUUID();
     const { data, error } = await admin
       .from('guest_stay_tourism_guests')
       .insert({
         id: guestRowId,
         stay_id: input.stayId,
+        guest_id: profileGuestId,
         first_name: identity.firstName,
         last_name: identity.lastName,
         citizenship: identity.citizenship,
@@ -748,9 +923,59 @@ export async function updateTourismGuestIdentityForReceptionAction(input: {
       return { ok: false, error: 'db_unavailable' };
     }
 
+    const { data: existingTourism, error: loadError } = await admin
+      .from('guest_stay_tourism_guests')
+      .select('id, guest_id')
+      .eq('id', input.guestId)
+      .eq('stay_id', input.stayId)
+      .maybeSingle();
+
+    if (loadError) {
+      console.error('updateTourismGuestIdentityForReceptionAction load:', loadError.message);
+      return { ok: false, error: 'db_unavailable' };
+    }
+    if (!existingTourism) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    let profileGuestId = existingTourism.guest_id ? String(existingTourism.guest_id) : null;
+    if (!profileGuestId) {
+      const stayGuestId = await loadStayGuestIdForTenant(tenant.id, input.stayId);
+      if (stayGuestId === 'db_unavailable') {
+        return { ok: false, error: 'db_unavailable' };
+      }
+      profileGuestId = stayGuestId;
+    }
+    if (!profileGuestId) {
+      const ensured = await resolveGuestIdForBooking({
+        tenantId: tenant.id,
+        guestName: `${identity.firstName} ${identity.lastName}`.trim(),
+      });
+      if (!ensured.ok) {
+        return { ok: false, error: 'db_unavailable' };
+      }
+      profileGuestId = ensured.guestId;
+      await admin
+        .from('guest_reservations')
+        .update({
+          guest_id: profileGuestId,
+          guest_name: ensured.displayName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.stayId)
+        .eq('tenant_id', tenant.id);
+    }
+
+    await syncGuestProfileFromTourismIdentity({
+      tenantId: tenant.id,
+      guestId: profileGuestId,
+      identity,
+    });
+
     const { data, error } = await admin
       .from('guest_stay_tourism_guests')
       .update({
+        guest_id: profileGuestId,
         first_name: identity.firstName,
         last_name: identity.lastName,
         citizenship: identity.citizenship,

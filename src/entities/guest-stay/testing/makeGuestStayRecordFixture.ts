@@ -23,6 +23,7 @@ export function makeGuestStayRecordFixture(
     tenant_id: 'tenant-1',
     tenant_slug: 'demo',
     bed_id: 'bed-1',
+    guest_id: null,
     guest_name: 'Alex',
     activated_at: null,
     desk_checked_in_at: null,

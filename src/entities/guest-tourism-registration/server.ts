@@ -15,6 +15,11 @@ export {
   setTourismGuestEntryStampDate,
   updateTourismGuestPassportPath,
 } from './api/guestTourismRegistrationRepository';
+export {
+  purgePassportPhotosForGuestProfile,
+  seedTourismGuestFromGuestProfile,
+} from './api/seedTourismGuestFromGuestProfile';
+export type { SeedTourismGuestFromGuestProfileResult } from './api/seedTourismGuestFromGuestProfile';
 export type {
   CreateTourismDocumentSignedUrlResult,
   SetStayEntryDetailsResult,

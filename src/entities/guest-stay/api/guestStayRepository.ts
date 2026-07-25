@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import { getTenantRecord } from '@/entities/tenant/server';
+import { resolveGuestIdForBooking } from '@/entities/guest/server';
 import type { TenantSettings } from '@/entities/tenant';
 import {
   encryptAccessToken,
@@ -337,12 +338,25 @@ export async function createGuestStay(
     return { ok: false, error: 'invalid_booking_balance' };
   }
 
+  const guestLink = await resolveGuestIdForBooking({
+    tenantId: tenant.id,
+    guestId: input.guestId,
+    guestName: input.guestName,
+  });
+  if (!guestLink.ok) {
+    return {
+      ok: false,
+      error: guestLink.error === 'not_found' ? 'guest_not_found' : 'db_unavailable',
+    };
+  }
+
   const nowIso = new Date().toISOString();
   const { data: reservation, error: reservationError } = await admin
     .from('guest_reservations')
     .insert({
       tenant_id: tenant.id,
-      guest_name: input.guestName?.trim() || null,
+      guest_id: guestLink.guestId,
+      guest_name: guestLink.displayName,
       bed_id: bedId,
       check_in_date: period.checkInDate,
       check_out_date: period.checkOutDate,
@@ -402,7 +416,7 @@ export async function createGuestStay(
       notifyReceptionDesk({
         tenantSlug: tenant.slug,
         payload: buildGuestStayPushPayload({
-          guestName: input.guestName?.trim() || stay.guest_name,
+          guestName: guestLink.displayName || stay.guest_name,
           kind: pushKind,
         }),
       })
@@ -498,11 +512,27 @@ export async function updateGuestReservation(
           : null
       : balanceFields.paidAt;
 
+  const existingGuestId = (existing as Record<string, unknown>).guest_id
+    ? String((existing as Record<string, unknown>).guest_id)
+    : null;
+  const guestLink = await resolveGuestIdForBooking({
+    tenantId: tenant.id,
+    guestId: input.guestId ?? existingGuestId,
+    guestName: input.guestName,
+  });
+  if (!guestLink.ok) {
+    return {
+      ok: false,
+      error: guestLink.error === 'not_found' ? 'guest_not_found' : 'db_unavailable',
+    };
+  }
+
   const { data: updated, error: updateError } = await admin
     .from('guest_reservations')
     .update({
       bed_id: bedId,
-      guest_name: input.guestName?.trim() || null,
+      guest_id: guestLink.guestId,
+      guest_name: guestLink.displayName,
       check_in_date: period.checkInDate,
       check_out_date: period.checkOutDate,
       check_in_at: period.checkInAt,

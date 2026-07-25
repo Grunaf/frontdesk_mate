@@ -22,7 +22,7 @@ const STAY_TOURISM_COLUMNS =
   'tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, entry_transport_type, entry_point_code, entry_point_label, entry_details_status';
 
 const GUEST_TOURISM_COLUMNS =
-  'id, stay_id, first_name, last_name, citizenship, passport_number, date_of_birth, country_of_birth, place_of_birth, gender, document_type, passport_storage_path, entry_stamp_storage_path, entry_stamp_date, entry_stamp_page, created_at';
+  'id, stay_id, guest_id, first_name, last_name, citizenship, passport_number, date_of_birth, country_of_birth, place_of_birth, gender, document_type, passport_storage_path, entry_stamp_storage_path, entry_stamp_date, entry_stamp_page, created_at';
 
 function mapEntryTransportType(value: unknown): EntryTransportType | null {
   if (typeof value !== 'string') return null;
@@ -43,6 +43,7 @@ function mapGuestRow(row: Record<string, unknown>): GuestTourismGuest {
   return {
     id: String(row.id),
     stay_id: String(row.stay_id),
+    guest_id: row.guest_id ? String(row.guest_id) : null,
     first_name: String(row.first_name),
     last_name: String(row.last_name),
     citizenship,

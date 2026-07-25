@@ -11,6 +11,7 @@ import type { GuestTourismGuest, GuestTourismRegistrationSummary } from '../mode
 function guest(partial: Partial<GuestTourismGuest> & Pick<GuestTourismGuest, 'id'>): GuestTourismGuest {
   return {
     stay_id: 'stay-1',
+    guest_id: null,
     first_name: 'A',
     last_name: 'B',
     citizenship: 'RU',

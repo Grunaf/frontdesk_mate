@@ -6,6 +6,7 @@ import type { GuestTourismGuest, GuestTourismRegistrationSummary } from '@/entit
 const sampleGuest: GuestTourismGuest = {
   id: 'g1',
   stay_id: 'stay-1',
+  guest_id: null,
   first_name: 'A',
   last_name: 'B',
   citizenship: 'ME',

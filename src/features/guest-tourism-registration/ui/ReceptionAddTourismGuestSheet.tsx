@@ -19,6 +19,7 @@ type ReceptionAddTourismGuestSheetProps = {
   checkInDate: string;
   isPending?: boolean;
   error?: string | null;
+  initialValues?: Partial<ReceptionTourismGuestIdentityValues>;
   onSubmit: (values: ReceptionTourismGuestIdentityValues) => void;
 };
 
@@ -28,6 +29,7 @@ export function ReceptionAddTourismGuestSheet({
   checkInDate,
   isPending = false,
   error = null,
+  initialValues,
   onSubmit,
 }: ReceptionAddTourismGuestSheetProps) {
   const handleOpenChange = (nextOpen: boolean) => {
@@ -47,8 +49,9 @@ export function ReceptionAddTourismGuestSheet({
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
           {open ? (
             <ReceptionTourismGuestIdentityForm
-              key="reception-add-tourism-guest"
+              key={`reception-add-tourism-guest-${initialValues?.passportNumber ?? 'new'}`}
               checkInDate={checkInDate}
+              initialValues={initialValues}
               submitLabel="Add guest"
               pendingLabel="Adding…"
               disabled={isPending}

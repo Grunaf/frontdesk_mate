@@ -15,6 +15,8 @@ import {
   setGuestReservationBookingPaid,
 } from '@/entities/guest-stay/server';
 import { clearHousekeepingStayPresence } from '@/entities/housekeeping/server';
+import { getGuestById, searchGuests, type GuestProfile } from '@/entities/guest/server';
+import { seedTourismGuestFromGuestProfile } from '@/entities/guest-tourism-registration/server';
 import { getTenantRecord } from '@/entities/tenant/server';
 import type {
   CreateGuestStayResult,
@@ -59,6 +61,7 @@ export async function createGuestStayAction(input: {
   tenantSlug: string;
   bedId: string;
   guestName?: string;
+  guestId?: string;
   checkInDate: string;
   checkOutDate: string;
   bookingPlatformId?: string;
@@ -77,6 +80,7 @@ export async function createGuestStayAction(input: {
         tenantSlug: input.tenantSlug,
         bedId: input.bedId,
         guestName: input.guestName,
+        guestId: input.guestId,
         checkInDate: input.checkInDate,
         checkOutDate: input.checkOutDate,
         bookingPlatformId: input.bookingPlatformId,
@@ -87,6 +91,16 @@ export async function createGuestStayAction(input: {
     );
 
     if (result.ok) {
+      if (result.stay.guest_id) {
+        const seeded = await seedTourismGuestFromGuestProfile({
+          tenantId: result.stay.tenant_id,
+          stayId: result.stay.id,
+          guestId: result.stay.guest_id,
+        });
+        if (!seeded.ok) {
+          console.error('createGuestStayAction seed tourism:', seeded.error);
+        }
+      }
       await recordReceptionDeskAuditEvent({
         tenantSlug: input.tenantSlug,
         mutation: 'createGuestStay',
@@ -404,6 +418,7 @@ export async function updateGuestReservationAction(input: {
   stayId: string;
   bedId: string;
   guestName?: string;
+  guestId?: string;
   checkInDate: string;
   checkOutDate: string;
   bookingPlatformId?: string;
@@ -421,6 +436,7 @@ export async function updateGuestReservationAction(input: {
       stayId: input.stayId,
       bedId: input.bedId,
       guestName: input.guestName,
+      guestId: input.guestId,
       checkInDate: input.checkInDate,
       checkOutDate: input.checkOutDate,
       bookingPlatformId: input.bookingPlatformId,
@@ -516,6 +532,67 @@ export async function completeDeskCheckInAction(input: {
     return result;
   } catch (error) {
     console.error('completeDeskCheckInAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type SearchGuestProfilesActionResult =
+  | { ok: true; items: GuestProfile[] }
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'db_unavailable' | 'unknown' };
+
+export async function searchGuestProfilesAction(input: {
+  tenantSlug: string;
+  query: string;
+}): Promise<SearchGuestProfilesActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  try {
+    const tenant = await getTenantRecord(input.tenantSlug);
+    if (!tenant) {
+      return { ok: false, error: 'db_unavailable' };
+    }
+    const result = await searchGuests({
+      tenantId: tenant.id,
+      query: input.query,
+    });
+    if (!result.ok) {
+      return { ok: false, error: 'db_unavailable' };
+    }
+    return { ok: true, items: result.items };
+  } catch (error) {
+    console.error('searchGuestProfilesAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type GetGuestProfileActionResult =
+  | { ok: true; guest: GuestProfile }
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'not_found' | 'db_unavailable' | 'unknown' };
+
+export async function getGuestProfileAction(input: {
+  tenantSlug: string;
+  guestId: string;
+}): Promise<GetGuestProfileActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  try {
+    const tenant = await getTenantRecord(input.tenantSlug);
+    if (!tenant) {
+      return { ok: false, error: 'db_unavailable' };
+    }
+    const guest = await getGuestById(tenant.id, input.guestId);
+    if (!guest) {
+      return { ok: false, error: 'not_found' };
+    }
+    return { ok: true, guest };
+  } catch (error) {
+    console.error('getGuestProfileAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

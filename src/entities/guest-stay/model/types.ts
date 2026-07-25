@@ -6,6 +6,8 @@ export interface GuestStayRecord {
   tenant_id: string;
   tenant_slug: string;
   bed_id: string;
+  /** Linked reusable guest profile (`guests.id`), when present. */
+  guest_id?: string | null;
   guest_name: string | null;
   check_in_at: string;
   check_out_at: string;
@@ -65,6 +67,8 @@ export type CreateGuestStayInput = {
   tenantSlug: string;
   bedId: string;
   guestName?: string;
+  /** Existing `guests.id` for this tenant; creates a new profile when omitted. */
+  guestId?: string;
   /** Calendar stay night from reception form — source of truth. */
   checkInDate: string;
   /** Checkout calendar day (exclusive end for bed-night overlap). */
@@ -89,7 +93,8 @@ export type CreateGuestStayResult =
         | 'access_overlap'
         | 'db_unavailable'
         | 'invalid_booking_source'
-        | 'invalid_booking_balance';
+        | 'invalid_booking_balance'
+        | 'guest_not_found';
     };
 
 export type ReissueGuestStayInput = {
@@ -102,6 +107,8 @@ export type UpdateGuestReservationInput = {
   stayId: string;
   bedId: string;
   guestName?: string;
+  /** Existing `guests.id` for this tenant; creates/keeps profile when omitted. */
+  guestId?: string;
   /** Calendar stay night from reception form — source of truth. */
   checkInDate: string;
   /** Checkout calendar day (exclusive end for bed-night overlap). */
@@ -122,7 +129,8 @@ export type UpdateGuestReservationResult =
         | 'access_overlap'
         | 'db_unavailable'
         | 'invalid_booking_source'
-        | 'invalid_booking_balance';
+        | 'invalid_booking_balance'
+        | 'guest_not_found';
     };
 
 export type SetGuestReservationBookingPaidInput = {

@@ -26,6 +26,7 @@ import {
 } from '@/features/guest-tourism-registration';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
 import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
+import { guestProfileToIdentityPrefill } from '@/entities/guest';
 import { formatReservationBookingBalanceSummary } from '@/entities/guest-stay/lib/formatReservationBookingBalance';
 import {
   guestAccessCheckInPolicyFromSettings,
@@ -34,6 +35,7 @@ import {
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { buildBookingComReservationUrl } from '../lib/buildBookingComReservationUrl';
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
+import { getGuestProfileAction } from '../actions/receptionActions';
 import { resolveStayCancelCheckoutAction } from '../lib/resolveStayCancelCheckoutAction';
 import {
   resolveAccessTabBadge,
@@ -49,15 +51,18 @@ import { ReceptionArrivalDatesBlock } from './ReceptionArrivalDatesBlock';
 import { ReceptionStayDetailShell, RECEPTION_STAY_DETAIL_TITLE_ID } from './ReceptionStayDetailShell';
 import {
   Button,
+  ConfirmDialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  FieldLabelHelp,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '@/shared/ui';
+import { receptionStaffCanSkipTourismGate } from '@/entities/reception-user';
 import { cn } from '@/shared/lib/utils';
 import { EllipsisVertical, QrCode } from 'lucide-react';
 import { setGuestReservationBookingPaidAction } from '../actions/receptionActions';
@@ -97,6 +102,8 @@ function mapAccessActionError(error: string): string {
   switch (error) {
     case 'unauthorized':
       return 'Sign in again at reception desk.';
+    case 'forbidden':
+      return 'You do not have permission to skip the tourism gate.';
     case 'tourism_incomplete':
       return 'Complete tourism registration and upload passport photos before granting access.';
     case 'missing_documents':
@@ -238,6 +245,8 @@ function StayTourismRegistrationBlock({
   const [showAddForm, setShowAddForm] = useState(false);
   const [addGuestSheetOpen, setAddGuestSheetOpen] = useState(false);
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
+  const [addGuestPrefill, setAddGuestPrefill] =
+    useState<Partial<ReceptionTourismGuestIdentityValues> | null>(null);
 
   const exportedAt = registration?.tourism_exported_at ?? stay.tourism_exported_at ?? null;
   const checkInDate = stayRecordCheckInDate(stay);
@@ -252,6 +261,24 @@ function StayTourismRegistrationBlock({
 
   const openAddGuest = () => {
     setEditingGuestId(null);
+    setAddGuestPrefill(null);
+    if (stay.guest_id) {
+      void getGuestProfileAction({ tenantSlug, guestId: stay.guest_id }).then((result) => {
+        if (!result.ok) return;
+        const identity = guestProfileToIdentityPrefill(result.guest);
+        if (!identity) {
+          if (result.guest.display_name.trim()) {
+            const parts = result.guest.display_name.trim().split(/\s+/);
+            setAddGuestPrefill({
+              firstName: parts[0] ?? '',
+              lastName: parts.slice(1).join(' '),
+            });
+          }
+          return;
+        }
+        setAddGuestPrefill(identity);
+      });
+    }
     if (isBelowLg) {
       setAddGuestSheetOpen(true);
     } else {
@@ -645,7 +672,9 @@ function StayTourismRegistrationBlock({
 
           {!isBelowLg && showAddForm && !registrationComplete ? (
             <ReceptionTourismGuestIdentityForm
+              key={`reception-add-tourism-guest-desktop-${addGuestPrefill?.passportNumber ?? 'new'}`}
               checkInDate={checkInDate}
+              initialValues={addGuestPrefill ?? undefined}
               submitLabel="Add guest"
               pendingLabel="Adding…"
               disabled={isPending}
@@ -692,6 +721,7 @@ function StayTourismRegistrationBlock({
         checkInDate={checkInDate}
         isPending={isPending}
         error={addGuestSheetOpen ? actionError : null}
+        initialValues={addGuestPrefill ?? undefined}
         onSubmit={handleAddGuest}
       />
     </div>
@@ -716,6 +746,20 @@ function ReceptionTourismGuestDocuments({
 
   return (
     <div className="space-y-2">
+      <div className="flex items-center gap-1.5">
+        <p className="text-xs font-medium text-foreground">Passport photo</p>
+        <FieldLabelHelp fieldLabel="Passport photo">
+          <p>
+            Photograph the lower part of the passport so the machine-readable zone (the two lines
+            of characters) is sharp and fully visible.
+          </p>
+          <p>
+            Even if a photo already exists, take a new one for this stay — passports can be
+            confiscated or altered, and the hostel must verify the physical document to avoid
+            liability.
+          </p>
+        </FieldLabelHelp>
+      </div>
       <div className="flex flex-wrap items-center gap-1">
         <input
           ref={fileInputRef}
@@ -820,18 +864,8 @@ function StayTourismFilingBlock({
   onMarkSubmitted: () => void;
   onClearSubmission: () => void;
 }) {
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const submitted = exportedAt != null;
-
-  const handleClear = () => {
-    if (
-      !window.confirm(
-        'Remove the submission mark? This does not undo filing in the external portal.'
-      )
-    ) {
-      return;
-    }
-    onClearSubmission();
-  };
 
   return (
     <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
@@ -850,7 +884,7 @@ function StayTourismFilingBlock({
             type="button"
             className="text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
             disabled={isPending}
-            onClick={handleClear}
+            onClick={() => setClearConfirmOpen(true)}
           >
             Clear submission
           </button>
@@ -872,6 +906,19 @@ function StayTourismFilingBlock({
           </Button>
         </>
       )}
+      <ConfirmDialog
+        open={clearConfirmOpen}
+        title="Clear tourism submission?"
+        description="Remove the submission mark? This does not undo filing in the external portal."
+        cancelLabel="Cancel"
+        confirmLabel="Clear submission"
+        confirmVariant="destructive"
+        onCancel={() => setClearConfirmOpen(false)}
+        onConfirm={() => {
+          setClearConfirmOpen(false);
+          onClearSubmission();
+        }}
+      />
     </div>
   );
 }
@@ -1009,6 +1056,8 @@ export interface ReceptionGuestStayDetailProps {
   resolveBedLabel: (bedId: string) => string;
   tourismRegistrationRequired?: boolean;
   tenantSlug?: string;
+  /** Effective desk permissions for the signed-in staff member. */
+  staffPermissions?: readonly string[];
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
   onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
   onPassportCheckedAtChange?: (stay: GuestStayRecordWithLink) => void;
@@ -1039,6 +1088,7 @@ function ReceptionGuestStayDetailActions({
   checkInError,
   showGrantAccess,
   onGrantAccess,
+  grantAccessDisabled,
 }: Pick<
   ReceptionGuestStayDetailProps,
   'stay' | 'isPending' | 'onCancelOrCheckout' | 'operationalDate'
@@ -1053,6 +1103,7 @@ function ReceptionGuestStayDetailActions({
   checkInError: string | null;
   showGrantAccess: boolean;
   onGrantAccess: () => void;
+  grantAccessDisabled: boolean;
 }) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -1075,7 +1126,7 @@ function ReceptionGuestStayDetailActions({
           variant="outline"
           size="default"
           className="w-full"
-          disabled={busy}
+          disabled={busy || grantAccessDisabled}
           onClick={onGrantAccess}
         >
           Grant access
@@ -1201,6 +1252,7 @@ export function ReceptionGuestStayDetail({
   resolveBedLabel,
   tourismRegistrationRequired = false,
   tenantSlug,
+  staffPermissions = [],
   onTourismExportedAtChange,
   onStayBookingBalanceChange,
   onPassportCheckedAtChange,
@@ -1216,8 +1268,10 @@ export function ReceptionGuestStayDetail({
   const [tourismStatus, setTourismStatus] = useState<TourismStatusBadge | null>(null);
   const [tourismAccessReady, setTourismAccessReady] = useState(false);
   const [canAddTourismGuest, setCanAddTourismGuest] = useState(false);
+  const [skipTourismConfirmOpen, setSkipTourismConfirmOpen] = useState(false);
   const tourismAddGuestRef = useRef<(() => void) | null>(null);
   const showTourismTab = tourismRegistrationRequired && Boolean(tenantSlug);
+  const canSkipTourismGate = receptionStaffCanSkipTourismGate(staffPermissions);
 
   const openDeskQr = () => {
     setActiveTab('access');
@@ -1238,14 +1292,30 @@ export function ReceptionGuestStayDetail({
     onStayUpdated: onPassportCheckedAtChange,
   });
 
-  const primaryGrantBlocked =
+  const tourismIncomplete =
     showTourismTab && !tourismAccessReady && !access.accessGranted;
+  const primaryGrantBlocked = tourismIncomplete && !canSkipTourismGate;
+
+  const requestGrantAccess = () => {
+    if (tourismIncomplete) {
+      if (!canSkipTourismGate) return;
+      setSkipTourismConfirmOpen(true);
+      return;
+    }
+    access.grantAccess();
+  };
+
+  const confirmSkipTourismGrant = () => {
+    setSkipTourismConfirmOpen(false);
+    access.grantAccess({ bypassAccessGate: true });
+  };
 
   useEffect(() => {
     setActiveTab(initialTab);
     setDeskQrFocusKey(0);
     setTourismStatus(showTourismTab ? 'not_started' : null);
     setTourismAccessReady(false);
+    setSkipTourismConfirmOpen(false);
     if (!showTourismTab) {
       setCanAddTourismGuest(false);
       tourismAddGuestRef.current = null;
@@ -1340,7 +1410,7 @@ export function ReceptionGuestStayDetail({
       onAddTourismGuest={() => tourismAddGuestRef.current?.()}
       addTourismGuestDisabled={!canAddTourismGuest}
       showCheckIn={Boolean(tenantSlug) && !access.accessGranted}
-      onCheckIn={() => access.grantAccess()}
+      onCheckIn={requestGrantAccess}
       checkInDisabled={primaryGrantBlocked}
       checkInHint={
         primaryGrantBlocked
@@ -1349,16 +1419,8 @@ export function ReceptionGuestStayDetail({
       }
       checkInError={access.actionError}
       showGrantAccess={activeTab === 'access' && Boolean(tenantSlug) && !access.accessGranted}
-      onGrantAccess={() => {
-        if (
-          showTourismTab &&
-          !tourismAccessReady &&
-          !window.confirm('Tourism registration is incomplete. Grant access anyway?')
-        ) {
-          return;
-        }
-        access.grantAccess({ bypassAccessGate: true });
-      }}
+      onGrantAccess={requestGrantAccess}
+      grantAccessDisabled={primaryGrantBlocked}
     />
   );
 
@@ -1488,6 +1550,16 @@ export function ReceptionGuestStayDetail({
             />
           ) : undefined
         }
+      />
+      <ConfirmDialog
+        open={skipTourismConfirmOpen}
+        title="Tourism registration incomplete"
+        description="Guest tourism registration / passport photos are incomplete. Check in / grant access anyway?"
+        cancelLabel="Cancel"
+        confirmLabel="Continue anyway"
+        confirmVariant="destructive"
+        onCancel={() => setSkipTourismConfirmOpen(false)}
+        onConfirm={confirmSkipTourismGrant}
       />
     </Tabs>
   );

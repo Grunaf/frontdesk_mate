@@ -21,6 +21,7 @@ import type {
 import {
   DESK_CHECK_IN_PERMISSION,
   DESK_CLEANING_PERMISSION,
+  DESK_SKIP_TOURISM_GATE_PERMISSION,
   RECEPTION_STAFF_PERMISSIONS,
   type ReceptionStaffPermission,
 } from '@/entities/reception-user';
@@ -35,6 +36,11 @@ const PERMISSION_LABELS: Record<ReceptionStaffPermission, PermissionLabelMeta> =
   [DESK_CLEANING_PERMISSION]: {
     platform: 'Cleaning (housekeeping statuses)',
     ownerKey: 'permissions.cleaning',
+  },
+  [DESK_SKIP_TOURISM_GATE_PERMISSION]: {
+    platform:
+      'Skip tourism gate (check-in / grant with warning when registration incomplete)',
+    ownerKey: 'permissions.skipTourismGate',
   },
 };
 

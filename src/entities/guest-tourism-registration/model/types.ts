@@ -9,6 +9,8 @@ export type EntryDetailsStatus = 'incomplete' | 'complete' | 'skipped';
 export interface GuestTourismGuest {
   id: string;
   stay_id: string;
+  /** Linked reusable guest profile (`guests.id`), when present. */
+  guest_id: string | null;
   first_name: string;
   last_name: string;
   citizenship: string;

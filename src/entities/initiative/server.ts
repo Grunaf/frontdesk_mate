@@ -198,6 +198,58 @@ Acceptance:
       staleReason: [],
     },
   ],
+  [
+    'guest-entity-separation',
+    {
+      id: 'guest-entity-separation',
+      title: 'Guest entity separation: reusable guest profiles on bookings',
+      priority: 'P1',
+      status: 'in_progress',
+      summary:
+        'Вынести гостя в отдельную сущность и давать reception выбирать уже известного гостя (с паспортными данными) при создании брони. Sync A: правки паспорта на stay обновляют профиль.',
+      spec: `Проблема:
+Таблица guests уже есть (guest_reservations.guest_id), но не используется. Имя живёт на stay (guest_name), паспортные данные — в guest_stay_tourism_guests на stay. Повторного выбора «того же» гостя нет.
+
+Цель:
+1) Живой профиль гостя (имя + паспортные поля) в guests / entity.
+2) При создании/редактировании брони — поиск и выбор существующего → подтянуть данные в tourism/stay.
+3) Новый гость — создать профиль (как сейчас, но с записью в guests).
+4) Sync A: правки identity на stay обновляют guests profile.
+
+Scope:
+- entity guests (API/model) поверх public.guests
+- guest_reservations.guest_id wiring в create/update stay
+- reception UI: search/select existing guest + passport prefill
+- миграция/расширение guests под identity fields
+- синхронизация с guest_stay_tourism_guests при выборе/правке профиля
+
+Out of scope:
+- Отдельный CRM-экран гостей
+- Merge дублей
+- Guest app login по профилю
+
+Acceptance:
+- Можно выбрать существующего гостя на новой брони и увидеть подтянутые паспортные данные.
+- Новый гость создаёт запись в guests и связывает reservation.guest_id.
+- Повторный визит не требует заново вбивать паспорт с нуля.
+- Правка passport identity на stay обновляет guests.`,
+      trackedPaths: [
+        'src/entities/guest',
+        'src/entities/guest-stay',
+        'src/entities/guest-tourism-registration',
+        'src/features/guest-registration',
+        'supabase/migrations',
+      ],
+      relatedFiles: [],
+      tags: ['reception', 'guest-stay', 'tourism', 'data-model'],
+      lastReviewedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      staleScore: 0,
+      isStale: false,
+      staleReason: [],
+    },
+  ],
 ]);
 
 let initiativeIdCounter = 0;

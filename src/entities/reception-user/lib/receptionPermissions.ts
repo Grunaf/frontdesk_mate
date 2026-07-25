@@ -2,13 +2,20 @@
  * Reception desk function permissions (whitelist).
  * Legacy empty `permissions: []` is treated as check-in at the capability layer
  * (`resolveEffectiveReceptionStaffPermissions` / `receptionStaffCanCheckIn`).
+ * Skip-tourism is never implied by empty legacy — must be granted explicitly.
  */
-export const RECEPTION_STAFF_PERMISSIONS = ['desk.check_in', 'desk.cleaning'] as const;
+export const RECEPTION_STAFF_PERMISSIONS = [
+  'desk.check_in',
+  'desk.cleaning',
+  'desk.skip_tourism_gate',
+] as const;
 
 export type ReceptionStaffPermission = (typeof RECEPTION_STAFF_PERMISSIONS)[number];
 
 export const DESK_CHECK_IN_PERMISSION = 'desk.check_in' satisfies ReceptionStaffPermission;
 export const DESK_CLEANING_PERMISSION = 'desk.cleaning' satisfies ReceptionStaffPermission;
+export const DESK_SKIP_TOURISM_GATE_PERMISSION =
+  'desk.skip_tourism_gate' satisfies ReceptionStaffPermission;
 
 /** Legacy keys from trash/archive experiments — always dropped on sanitize. */
 const LEGACY_DROPPED_PERMISSIONS = new Set([
@@ -43,6 +50,7 @@ export function sanitizeReceptionStaffPermissions(
 /**
  * Effective desk functions after sanitize.
  * Empty / legacy-only → check-in (compat for existing staff + new volunteers).
+ * Does not add `desk.skip_tourism_gate`.
  */
 export function resolveEffectiveReceptionStaffPermissions(
   values: readonly string[] | null | undefined
@@ -69,6 +77,13 @@ export function receptionStaffCanClean(
   permissions: readonly string[] | null | undefined
 ): boolean {
   return receptionStaffHasPermission(permissions, DESK_CLEANING_PERMISSION);
+}
+
+/** Check-in / grant while tourism registration is incomplete (client confirm + server gate). */
+export function receptionStaffCanSkipTourismGate(
+  permissions: readonly string[] | null | undefined
+): boolean {
+  return receptionStaffHasPermission(permissions, DESK_SKIP_TOURISM_GATE_PERMISSION);
 }
 
 /** Housekeeping status updates: Plan (check-in) or Cleaning desk. */

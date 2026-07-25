@@ -5,6 +5,11 @@ export {
   TouchLink,
 } from './external-service';
 export { Button, buttonVariants } from './button';
+export {
+  ConfirmDialog,
+  type ConfirmDialogActionVariant,
+  type ConfirmDialogProps,
+} from './ConfirmDialog';
 export { Spinner, type SpinnerSize } from './spinner';
 export { useActionFeedback, useLinkPressFeedback } from './action-feedback';
 export { AppLink, RoutePendingProvider, useAppNavigation, useRoutePending } from './navigation';

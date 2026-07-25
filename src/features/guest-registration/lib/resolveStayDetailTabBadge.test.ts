@@ -59,6 +59,7 @@ describe('resolveTourismStatusBadge / resolveTourismTabBadge', () => {
           {
             id: 'g1',
             stay_id: 'stay-1',
+            guest_id: null,
             first_name: 'A',
             last_name: 'B',
             date_of_birth: '1990-01-01',

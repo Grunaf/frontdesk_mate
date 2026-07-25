@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { GuestAccessFormMode } from '../lib/guestAccessDates';
 import { GuestAccessDateRange } from './GuestAccessDateRange';
+import { GuestProfilePicker } from './GuestProfilePicker';
 import { Button, Input, Label, SegmentedChipBar, BedRoomGroupedSelect } from '@/shared/ui';
 import type { BedRoomOptionGroup } from '@/shared/ui';
 import { ChevronDown } from 'lucide-react';
@@ -26,8 +27,15 @@ export interface IssueGuestAccessFormProps {
   mode: GuestAccessFormMode;
   onModeChange: (mode: GuestAccessFormMode) => void;
   modeLocked: boolean;
+  tenantSlug?: string;
   guestName: string;
   onGuestNameChange: (value: string) => void;
+  selectedGuestId?: string | null;
+  onSelectGuestProfile?: (guest: {
+    id: string;
+    display_name: string;
+  }) => void;
+  onClearGuestProfile?: () => void;
   bookingPlatformId: string;
   onBookingPlatformIdChange: (value: string) => void;
   bookingExternalId: string;
@@ -79,8 +87,12 @@ export function resolveIssueGuestAccessSubmitLabel(props: {
 
 export function IssueGuestAccessFormFields({
   layout = 'standalone',
+  tenantSlug,
   guestName,
   onGuestNameChange,
+  selectedGuestId = null,
+  onSelectGuestProfile,
+  onClearGuestProfile,
   bookingPlatformId,
   onBookingPlatformIdChange,
   bookingExternalId,
@@ -108,8 +120,12 @@ export function IssueGuestAccessFormFields({
 }: Pick<
   IssueGuestAccessFormProps,
   | 'layout'
+  | 'tenantSlug'
   | 'guestName'
   | 'onGuestNameChange'
+  | 'selectedGuestId'
+  | 'onSelectGuestProfile'
+  | 'onClearGuestProfile'
   | 'bookingPlatformId'
   | 'onBookingPlatformIdChange'
   | 'bookingExternalId'
@@ -177,16 +193,29 @@ export function IssueGuestAccessFormFields({
       }
     >
       <div className="space-y-1">
-        <Label htmlFor="guest-name">Booking name</Label>
-        <p className="text-xs text-muted-foreground">The guest will see this name in the app.</p>
-        <Input
-          id="guest-name"
-          value={guestName}
-          onChange={(event) => onGuestNameChange(event.target.value)}
-          placeholder="Alex"
-          autoComplete="off"
-          required
-        />
+        {tenantSlug && onSelectGuestProfile && onClearGuestProfile ? (
+          <GuestProfilePicker
+            tenantSlug={tenantSlug}
+            guestName={guestName}
+            onGuestNameChange={onGuestNameChange}
+            selectedGuestId={selectedGuestId}
+            onSelectGuest={onSelectGuestProfile}
+            onClearGuest={onClearGuestProfile}
+          />
+        ) : (
+          <>
+            <Label htmlFor="guest-name">Booking name</Label>
+            <p className="text-xs text-muted-foreground">The guest will see this name in the app.</p>
+            <Input
+              id="guest-name"
+              value={guestName}
+              onChange={(event) => onGuestNameChange(event.target.value)}
+              placeholder="Alex"
+              autoComplete="off"
+              required
+            />
+          </>
+        )}
       </div>
 
       {showBookingSourceFields ? (

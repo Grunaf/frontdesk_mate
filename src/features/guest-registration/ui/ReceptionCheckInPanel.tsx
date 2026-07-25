@@ -251,6 +251,7 @@ export function ReceptionCheckInPanel({
   const [planFocusToken, setPlanFocusToken] = useState(0);
   const [mode, setMode] = useState<GuestAccessFormMode>('custom');
   const [guestName, setGuestName] = useState('');
+  const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const [bookingPlatformId, setBookingPlatformId] = useState('');
   const [bookingExternalId, setBookingExternalId] = useState('');
   const [bookingAmountDue, setBookingAmountDue] = useState('');
@@ -753,6 +754,7 @@ export function ReceptionCheckInPanel({
     setCheckInDate(nextDates.checkInDate);
     setCheckOutDate(nextDates.checkOutDate);
     setGuestName('');
+    setSelectedGuestId(null);
     setBookingPlatformId('');
     setBookingExternalId('');
     setBookingAmountDue('');
@@ -816,6 +818,8 @@ export function ReceptionCheckInPanel({
         return 'Enter a valid stay balance amount (0 or greater).';
       case 'no_balance_recorded':
         return 'No stay balance recorded for this reservation.';
+      case 'guest_not_found':
+        return 'Selected guest was not found — pick again or create a new booking name.';
       case 'db_unavailable':
         return 'Database unavailable. Run migrations and check SUPABASE_SECRET_KEY.';
       case 'unknown':
@@ -850,6 +854,7 @@ export function ReceptionCheckInPanel({
     });
     setMode('custom');
     setGuestName(stay.guest_name ?? '');
+    setSelectedGuestId(stay.guest_id ?? null);
     setBookingPlatformId(platformId);
     setBookingExternalId(externalId);
     setBookingAmountDue(balanceDue);
@@ -916,6 +921,7 @@ export function ReceptionCheckInPanel({
             stayId: editDraft.stayId,
             bedId,
             guestName: guestName.trim(),
+            guestId: selectedGuestId ?? undefined,
             checkInDate,
             checkOutDate,
             bookingPlatformId: bookingPlatformId || undefined,
@@ -941,6 +947,7 @@ export function ReceptionCheckInPanel({
           tenantSlug,
           bedId,
           guestName: guestName.trim(),
+          guestId: selectedGuestId ?? undefined,
           checkInDate,
           checkOutDate,
           bookingPlatformId: bookingPlatformId || undefined,
@@ -1099,6 +1106,7 @@ export function ReceptionCheckInPanel({
           resolveBedLabel={resolveBedLabel}
           tourismRegistrationRequired={tourismRegistrationRequired}
           tenantSlug={tenantSlug}
+          staffPermissions={staffPermissions}
           tenantSettings={tenantSettings}
           operationalDate={hubSnapshot.operational.operationalDate}
           initialTab={stayDetailInitialTab}
@@ -1131,8 +1139,15 @@ export function ReceptionCheckInPanel({
         mode={mode}
         onModeChange={handleModeChange}
         modeLocked={Boolean(editDraft)}
+        tenantSlug={tenantSlug}
         guestName={guestName}
         onGuestNameChange={setGuestName}
+        selectedGuestId={selectedGuestId}
+        onSelectGuestProfile={(guest) => {
+          setSelectedGuestId(guest.id);
+          setGuestName(guest.display_name);
+        }}
+        onClearGuestProfile={() => setSelectedGuestId(null)}
         bookingPlatformId={bookingPlatformId}
         onBookingPlatformIdChange={setBookingPlatformId}
         bookingExternalId={bookingExternalId}

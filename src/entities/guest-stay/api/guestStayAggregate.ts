@@ -29,6 +29,7 @@ export function mapReservationGrantToStayRecord(
     tenant_id: String(reservation.tenant_id),
     tenant_slug: tenantSlug,
     bed_id: String(reservation.bed_id),
+    guest_id: reservation.guest_id ? String(reservation.guest_id) : null,
     guest_name: reservation.guest_name ? String(reservation.guest_name) : null,
     check_in_at: String(reservation.check_in_at),
     check_out_at: String(reservation.check_out_at),

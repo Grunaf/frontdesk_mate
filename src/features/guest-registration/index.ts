@@ -13,6 +13,8 @@ export {
   getGuestReservationForDeskAction,
   updateGuestReservationAction,
   completeDeskCheckInAction,
+  searchGuestProfilesAction,
+  getGuestProfileAction,
 } from './actions/receptionActions';
 export {
   countOpenGuestHubTransfersAction,
