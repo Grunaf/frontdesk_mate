@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { clampBedToRoom, clampRoomSize, getBedRenderHeight, getBedRenderWidth, getRoomCenteringOffset, normalizeBedRotation, resolveEntranceLayout, resolveEntranceSideFromPoint, resolveRoomBounds, ROOM_LAYOUT_VIEW_TARGET } from './room-layout';
+import {
+  bedBoundsOverlap,
+  bedOverlapsAny,
+  clampBedToRoom,
+  clampRoomSize,
+  getBedAxisAlignedBounds,
+  getBedRenderHeight,
+  getBedRenderWidth,
+  getRoomCenteringOffset,
+  normalizeBedRotation,
+  resolveEntranceLayout,
+  resolveEntranceSideFromPoint,
+  resolveRoomBounds,
+  ROOM_LAYOUT_VIEW_TARGET,
+} from './room-layout';
 
 describe('normalizeBedRotation', () => {
   it('snaps to 90° steps', () => {
@@ -117,5 +131,37 @@ describe('clampBedToRoom', () => {
     const next = clampBedToRoom({ x: 500, y: 500, bedType: 'single' }, bounds);
     expect(next.x).toBeLessThanOrEqual(bounds.x + bounds.width - 70);
     expect(next.y).toBeLessThanOrEqual(bounds.y + bounds.height - 45);
+  });
+});
+
+describe('getBedAxisAlignedBounds', () => {
+  it('keeps footprint at 0°', () => {
+    expect(getBedAxisAlignedBounds({ x: 20, y: 30, bedType: 'single', rotation: 0 })).toEqual({
+      x: 20,
+      y: 30,
+      width: 70,
+      height: 45,
+    });
+  });
+
+  it('swaps width/height around center at 90°', () => {
+    const bounds = getBedAxisAlignedBounds({ x: 20, y: 30, bedType: 'single', rotation: 90 });
+    expect(bounds.width).toBe(45);
+    expect(bounds.height).toBe(70);
+    expect(bounds.x).toBe(20 + 70 / 2 - 45 / 2);
+    expect(bounds.y).toBe(30 + 45 / 2 - 70 / 2);
+  });
+});
+
+describe('bedOverlapsAny', () => {
+  it('detects overlap and allows edge touch', () => {
+    const a = { id: 'a', x: 10, y: 10, bedType: 'single' as const, rotation: 0 };
+    const touching = { id: 'b', x: 80, y: 10, bedType: 'single' as const, rotation: 0 };
+    const overlapping = { id: 'c', x: 70, y: 10, bedType: 'single' as const, rotation: 0 };
+
+    expect(bedBoundsOverlap(getBedAxisAlignedBounds(a), getBedAxisAlignedBounds(touching))).toBe(false);
+    expect(bedOverlapsAny(overlapping, [a])).toBe(true);
+    expect(bedOverlapsAny(touching, [a])).toBe(false);
+    expect(bedOverlapsAny(a, [a], 'a')).toBe(false);
   });
 });

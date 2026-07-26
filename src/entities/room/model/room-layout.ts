@@ -264,3 +264,57 @@ export function clampBedToRoom(
     y: clamp(bed.y, bounds.y, maxY),
   };
 }
+
+export interface BedAxisAlignedBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+type BedGeometry = {
+  id?: string;
+  x: number;
+  y: number;
+  bedType?: BedUnitType;
+  rotation?: number;
+};
+
+/** Axis-aligned footprint after rotation around bed center (matches SVG Bed pivot). */
+export function getBedAxisAlignedBounds(bed: BedGeometry): BedAxisAlignedBounds {
+  const bedType = resolveBedUnitType(bed);
+  const width = getBedRenderWidth({ bedType });
+  const height = getBedRenderHeight({ bedType });
+  const rotation = normalizeBedRotation(bed.rotation);
+  const swapped = rotation === 90 || rotation === 270;
+  const aabbWidth = swapped ? height : width;
+  const aabbHeight = swapped ? width : height;
+  const cx = bed.x + width / 2;
+  const cy = bed.y + height / 2;
+
+  return {
+    x: cx - aabbWidth / 2,
+    y: cy - aabbHeight / 2,
+    width: aabbWidth,
+    height: aabbHeight,
+  };
+}
+
+export function bedBoundsOverlap(a: BedAxisAlignedBounds, b: BedAxisAlignedBounds): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
+/** True when candidate footprint intersects any other bed (edge-touch is allowed). */
+export function bedOverlapsAny(
+  candidate: BedGeometry,
+  others: BedGeometry[],
+  excludeId?: string
+): boolean {
+  const skipId = excludeId ?? candidate.id;
+  const candidateBounds = getBedAxisAlignedBounds(candidate);
+
+  return others.some((other) => {
+    if (skipId && other.id === skipId) return false;
+    return bedBoundsOverlap(candidateBounds, getBedAxisAlignedBounds(other));
+  });
+}

@@ -341,17 +341,41 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
             <div className="space-y-4">
               {rooms.map((room, index) => (
                 <RoomSetupCard
-                  key={`room-${index}`}
+                  key={room.id}
                   room={room}
                   tenantSlug={tenantSlug}
                   floors={floors}
                   beds={beds}
                   guestStay={guestStay}
                   stayOffers={stayOffers}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < rooms.length - 1}
+                  onMoveUp={() =>
+                    applyGuestStayState((current) => {
+                      const from = current.rooms.findIndex((item) => item.id === room.id);
+                      if (from <= 0) return current;
+                      const nextRooms = [...current.rooms];
+                      const prev = nextRooms[from - 1];
+                      nextRooms[from - 1] = nextRooms[from];
+                      nextRooms[from] = prev;
+                      return { ...current, rooms: nextRooms };
+                    })
+                  }
+                  onMoveDown={() =>
+                    applyGuestStayState((current) => {
+                      const from = current.rooms.findIndex((item) => item.id === room.id);
+                      if (from < 0 || from >= current.rooms.length - 1) return current;
+                      const nextRooms = [...current.rooms];
+                      const next = nextRooms[from + 1];
+                      nextRooms[from + 1] = nextRooms[from];
+                      nextRooms[from] = next;
+                      return { ...current, rooms: nextRooms };
+                    })
+                  }
                   onRoomChange={(next) =>
                     applyGuestStayState((current) => ({
                       ...current,
-                      rooms: current.rooms.map((item, i) => (i === index ? next : item)),
+                      rooms: current.rooms.map((item) => (item.id === room.id ? next : item)),
                     }))
                   }
                   onBedsChange={(nextBeds) =>
@@ -363,7 +387,7 @@ export function GuestStayFields({ tenantSlug, settings, readinessInput }: GuestS
                       rooms:
                         current.rooms.length <= 1
                           ? current.rooms
-                          : current.rooms.filter((_, i) => i !== index),
+                          : current.rooms.filter((item) => item.id !== room.id),
                       beds: current.beds.filter((bed) => bed.roomId !== room.id),
                     }))
                   }

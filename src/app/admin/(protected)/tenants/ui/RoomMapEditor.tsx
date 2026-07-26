@@ -10,6 +10,7 @@ import {
   type BedUnitType,
 } from '@/entities/room/model/bed-type';
 import {
+  bedOverlapsAny,
   clampBedToRoom,
   clampRoomSize,
   getBedRenderHeight,
@@ -27,7 +28,7 @@ import {
 import type { GuestStayConfig, StayBed, StayRoom } from '@/entities/tenant';
 import { resolveBedMapDisplayLabel } from '@/entities/tenant/lib/resolveBedDisplay';
 import { cn } from '@/shared/lib/utils';
-import { ChevronDown, RotateCw, Trash2 } from 'lucide-react';
+import { RotateCw, Trash2 } from 'lucide-react';
 
 type DragMode =
   | { kind: 'bed'; index: number; offsetX: number; offsetY: number }
@@ -86,7 +87,6 @@ export function RoomMapEditor({
 
   const [placementType, setPlacementType] = useState<BedUnitType>('single');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
 
   const roomBounds = resolveRoomBounds(room);
   const entranceSide = normalizeEntranceSide(room.entranceSide);
@@ -95,6 +95,14 @@ export function RoomMapEditor({
     .filter(({ bed }) => bed.roomId === room.id && stayBedHasLayout(bed));
 
   const selectedBed = selectedIndex !== null ? beds[selectedIndex] : null;
+
+  const layoutBedsForRoom = roomBedIndices.map(({ bed }) => ({
+    id: bed.id,
+    x: bed.x,
+    y: bed.y,
+    bedType: resolveBedUnitType(bed),
+    rotation: bed.rotation,
+  }));
 
   const updateBed = useCallback(
     (index: number, patch: Partial<StayBed>) => {
@@ -126,13 +134,25 @@ export function RoomMapEditor({
 
   const rotateBed = (index: number) => {
     const bed = beds[index];
-    if (!bed) return;
-    updateBed(index, { rotation: normalizeBedRotation((bed.rotation ?? 0) + 90) });
+    if (!bed || !stayBedHasLayout(bed)) return;
+    const nextRotation = normalizeBedRotation((bed.rotation ?? 0) + 90);
+    const candidate = {
+      id: bed.id,
+      x: bed.x,
+      y: bed.y,
+      bedType: resolveBedUnitType(bed),
+      rotation: nextRotation,
+    };
+    if (bedOverlapsAny(candidate, layoutBedsForRoom, bed.id)) return;
+    updateBed(index, { rotation: nextRotation });
   };
 
   const addBedAt = (rawX: number, rawY: number) => {
     const bedType = placementType;
     const next = clampBedToRoom({ x: rawX, y: rawY, bedType }, roomBounds);
+    const candidate = { x: next.x, y: next.y, bedType, rotation: 0 };
+    if (bedOverlapsAny(candidate, layoutBedsForRoom)) return;
+
     const id = nextBedId(beds, room.id);
     const typeFields = applyBedUnitType({ id }, bedType);
 
@@ -222,6 +242,14 @@ export function RoomMapEditor({
       { x: coords.x - drag.offsetX, y: coords.y - drag.offsetY, bedType },
       roomBounds
     );
+    const candidate = {
+      id: bed.id,
+      x: next.x,
+      y: next.y,
+      bedType,
+      rotation: bed.rotation,
+    };
+    if (bedOverlapsAny(candidate, layoutBedsForRoom, bed.id)) return;
     updateBed(drag.index, next);
   };
 
@@ -243,172 +271,164 @@ export function RoomMapEditor({
   };
 
   return (
-    <div className="rounded-lg border border-dashed border-primary/25 bg-muted/5">
-      <button
-        type="button"
-        onClick={() => setEditorOpen((open) => !open)}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
-      >
-        <div>
-          <p className="text-xs font-medium">Bed map</p>
-          <p className="text-[11px] text-muted-foreground">
-            {editorOpen
-              ? `${roomBounds.width}×${roomBounds.height} — drag corner to resize room`
-              : roomBedIndices.length > 0
-                ? `${roomBedIndices.length} bed(s) — open to edit`
-                : 'Open to place beds'}
-          </p>
-        </div>
-        <ChevronDown
-          className={cn('size-4 shrink-0 text-muted-foreground transition-transform', editorOpen && 'rotate-180')}
-        />
-      </button>
+    <div className="space-y-3 overflow-hidden">
+      <p className="text-[11px] text-muted-foreground">
+        {roomBounds.width}×{roomBounds.height} — drag corner to resize room
+      </p>
 
-      {editorOpen && (
-        <div className="space-y-3 border-t border-dashed px-3 pb-3 pt-3">
-          <div className="flex flex-wrap gap-1.5">
-            {BED_UNIT_TYPES.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setPlacementType(option.value)}
-                className={cn(
-                  'rounded-md border px-2.5 py-1.5 text-left text-[11px] transition-colors',
-                  placementType === option.value
-                    ? 'border-primary bg-primary/10'
-                    : 'bg-background hover:bg-muted/50'
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium text-muted-foreground">Entrance wall</span>
-            {ROOM_ENTRANCE_SIDES.map((side) => (
-              <button
-                key={side}
-                type="button"
-                onClick={() => onRoomChange({ entranceSide: side })}
-                className={cn(
-                  'rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
-                  entranceSide === side
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'bg-background hover:bg-muted/50'
-                )}
-              >
-                {ENTRANCE_SIDE_LABELS[side]}
-              </button>
-            ))}
-          </div>
-
-          <RoomLayoutCanvas
-            svgRef={svgRef}
-            roomBounds={roomBounds}
-            entranceLabel="Entrance"
-            entranceSide={entranceSide}
-            interactive
-            allowRoomResize
-            allowEntranceMove
-            onEntrancePointerDown={handleEntrancePointerDown}
-            onCanvasClick={handleCanvasClick}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onRoomResizeStart={handleRoomResizeStart}
+      <div className="flex flex-wrap gap-1.5">
+        {BED_UNIT_TYPES.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setPlacementType(option.value)}
+            className={cn(
+              'rounded-md border px-2.5 py-1.5 text-left text-[11px] transition-colors',
+              placementType === option.value
+                ? 'border-primary bg-primary/10'
+                : 'bg-background hover:bg-muted/50'
+            )}
           >
-            {roomBedIndices.map(({ bed, index }) => {
-              if (!stayBedHasLayout(bed)) return null;
+            {option.label}
+          </button>
+        ))}
+      </div>
 
-              const layoutBed = toRoomLayoutBed(bed);
-              const width = getBedRenderWidth(layoutBed);
-              const height = getBedRenderHeight(layoutBed);
-              const bedType = resolveBedUnitType(bed);
-              const bottomLabel = resolveBedMapDisplayLabel(guestStay, bed, 'bottom');
-              const topLabel =
-                bedType === 'bunk' ? resolveBedMapDisplayLabel(guestStay, bed, 'top') : undefined;
-              const unitLabel =
-                bedType === 'bunk' ? undefined : resolveBedMapDisplayLabel(guestStay, bed);
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-medium text-muted-foreground">Entrance wall</span>
+        {ROOM_ENTRANCE_SIDES.map((side) => (
+          <button
+            key={side}
+            type="button"
+            onClick={() => onRoomChange({ entranceSide: side })}
+            className={cn(
+              'rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
+              entranceSide === side
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'bg-background hover:bg-muted/50'
+            )}
+          >
+            {ENTRANCE_SIDE_LABELS[side]}
+          </button>
+        ))}
+      </div>
 
-              return (
-                <g
-                  key={`${bed.id}-${index}`}
-                  data-bed-interactive=""
-                  className="cursor-grab active:cursor-grabbing"
-                  onPointerDown={(event) => handleBedPointerDown(index, event)}
-                >
-                  <rect x={bed.x} y={bed.y} width={width} height={height} fill="transparent" />
-                  <Bed
-                    id={bed.id}
-                    x={bed.x}
-                    y={bed.y}
-                    rotation={layoutBed.rotation}
-                    isNightMode={false}
-                    isHighlighted={false}
-                    editorMode
-                    bedType={layoutBed.bedType}
-                    topId={bed.topId}
-                    bottomId={bed.bottomId}
-                    bottomLabel={bottomLabel}
-                    topLabel={topLabel}
-                    unitLabel={unitLabel}
-                    selected={selectedIndex === index}
-                  />
-                </g>
-              );
-            })}
-          </RoomLayoutCanvas>
+      <div className="overflow-hidden touch-none rounded-lg border bg-muted/5">
+        <RoomLayoutCanvas
+          svgRef={svgRef}
+          roomBounds={roomBounds}
+          entranceLabel="Entrance"
+          entranceSide={entranceSide}
+          interactive
+          allowRoomResize
+          allowEntranceMove
+          onEntrancePointerDown={handleEntrancePointerDown}
+          onCanvasClick={handleCanvasClick}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onRoomResizeStart={handleRoomResizeStart}
+        >
+          {roomBedIndices.map(({ bed, index }) => {
+            if (!stayBedHasLayout(bed)) return null;
 
-          {selectedBed && selectedIndex !== null && (
-            <div className="space-y-3 rounded-lg border bg-background p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-medium">
-                  Bed {resolveBedMapDisplayLabel(guestStay, selectedBed)}
-                  {resolveBedUnitType(selectedBed) === 'bunk' ? ' (bunk)' : ''}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => rotateBed(selectedIndex)}
-                    className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] hover:bg-muted"
-                  >
-                    <RotateCw className="size-3" />
-                    Rotate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeBed(selectedIndex)}
-                    className="inline-flex items-center gap-1 text-[11px] text-destructive hover:underline"
-                  >
-                    <Trash2 className="size-3" />
-                    Remove
-                  </button>
-                </div>
-              </div>
+            const layoutBed = toRoomLayoutBed(bed);
+            const width = getBedRenderWidth(layoutBed);
+            const height = getBedRenderHeight(layoutBed);
+            const bedType = resolveBedUnitType(bed);
+            const bottomLabel = resolveBedMapDisplayLabel(guestStay, bed, 'bottom');
+            const topLabel =
+              bedType === 'bunk' ? resolveBedMapDisplayLabel(guestStay, bed, 'top') : undefined;
+            const unitLabel =
+              bedType === 'bunk' ? undefined : resolveBedMapDisplayLabel(guestStay, bed);
 
-              <select
-                value={resolveBedUnitType(selectedBed)}
-                onChange={(event) => {
-                  const type = event.target.value as BedUnitType;
-                  updateBed(selectedIndex, applyBedUnitType(selectedBed, type));
-                }}
-                className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
+            return (
+              <g
+                key={`${bed.id}-${index}`}
+                data-bed-interactive=""
+                className="cursor-grab active:cursor-grabbing"
+                onPointerDown={(event) => handleBedPointerDown(index, event)}
               >
-                {BED_UNIT_TYPES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+                <rect x={bed.x} y={bed.y} width={width} height={height} fill="transparent" />
+                <Bed
+                  id={bed.id}
+                  x={bed.x}
+                  y={bed.y}
+                  rotation={layoutBed.rotation}
+                  isNightMode={false}
+                  isHighlighted={false}
+                  editorMode
+                  bedType={layoutBed.bedType}
+                  topId={bed.topId}
+                  bottomId={bed.bottomId}
+                  bottomLabel={bottomLabel}
+                  topLabel={topLabel}
+                  unitLabel={unitLabel}
+                  selected={selectedIndex === index}
+                />
+              </g>
+            );
+          })}
+        </RoomLayoutCanvas>
+      </div>
 
-          {roomBedIndices.length === 0 && (
-            <p className="text-[11px] text-muted-foreground">
-              Click the floor to add a bed. Drag the entrance marker or pick a wall above.
+      {selectedBed && selectedIndex !== null && (
+        <div className="space-y-3 rounded-lg border bg-background p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium">
+              Bed {resolveBedMapDisplayLabel(guestStay, selectedBed)}
+              {resolveBedUnitType(selectedBed) === 'bunk' ? ' (bunk)' : ''}
             </p>
-          )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => rotateBed(selectedIndex)}
+                className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] hover:bg-muted"
+              >
+                <RotateCw className="size-3" />
+                Rotate
+              </button>
+              <button
+                type="button"
+                onClick={() => removeBed(selectedIndex)}
+                className="inline-flex items-center gap-1 text-[11px] text-destructive hover:underline"
+              >
+                <Trash2 className="size-3" />
+                Remove
+              </button>
+            </div>
+          </div>
+
+          <select
+            value={resolveBedUnitType(selectedBed)}
+            onChange={(event) => {
+              const type = event.target.value as BedUnitType;
+              if (!stayBedHasLayout(selectedBed)) return;
+              const patched = applyBedUnitType(selectedBed, type);
+              const candidate = {
+                id: selectedBed.id,
+                x: selectedBed.x,
+                y: selectedBed.y,
+                bedType: type,
+                rotation: selectedBed.rotation,
+              };
+              if (bedOverlapsAny(candidate, layoutBedsForRoom, selectedBed.id)) return;
+              updateBed(selectedIndex, patched);
+            }}
+            className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
+          >
+            {BED_UNIT_TYPES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
+      )}
+
+      {roomBedIndices.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          Click the floor to add a bed. Drag the entrance marker or pick a wall above.
+        </p>
       )}
     </div>
   );
