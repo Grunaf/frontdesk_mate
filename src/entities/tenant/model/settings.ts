@@ -133,6 +133,11 @@ export interface TenantSettings {
    */
   stayOffers?: StayOffer[];
   /**
+   * Percent off StayOffer base price for website / direct web bookings (0–100).
+   * Applied to landing price badges and web booking unit price.
+   */
+  siteBookingDiscountPercent?: number;
+  /**
    * Cleaning hub washers (machines + program durations).
    * Not guestStay — ops config for reception Cleaning.
    */

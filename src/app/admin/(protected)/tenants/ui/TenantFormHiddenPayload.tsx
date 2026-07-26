@@ -182,6 +182,15 @@ export function TenantFormHiddenPayload({
       />
       <input
         type="hidden"
+        name="siteBookingDiscountPercent"
+        value={
+          normalizedSettings.siteBookingDiscountPercent !== undefined
+            ? String(normalizedSettings.siteBookingDiscountPercent)
+            : ''
+        }
+      />
+      <input
+        type="hidden"
         name="laundryJson"
         value={JSON.stringify(normalizedSettings.laundry ?? { machines: [] })}
       />

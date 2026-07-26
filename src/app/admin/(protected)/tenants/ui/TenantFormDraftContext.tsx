@@ -36,6 +36,8 @@ export interface TenantFormDraft {
   cityPackNeedNowPlaceIds?: string[];
   landing?: TenantLandingSettings;
   stayOffers?: StayOffer[];
+  /** `null` clears a previously saved discount in mergeDraftSettings. */
+  siteBookingDiscountPercent?: number | null;
   laundry?: LaundrySettings;
   hostel?: TenantHostelSettings;
   roomMapEnabled?: boolean;
@@ -105,6 +107,14 @@ export function mergeDraftSettings(base: TenantSettings, draft: TenantFormDraft)
         }
       : {}),
     ...(draft.stayOffers !== undefined ? { stayOffers: draft.stayOffers } : {}),
+    ...(draft.siteBookingDiscountPercent !== undefined
+      ? {
+          siteBookingDiscountPercent:
+            draft.siteBookingDiscountPercent === null
+              ? undefined
+              : draft.siteBookingDiscountPercent,
+        }
+      : {}),
     ...(draft.laundry !== undefined ? { laundry: draft.laundry } : {}),
     ...(draft.hostel !== undefined
       ? {

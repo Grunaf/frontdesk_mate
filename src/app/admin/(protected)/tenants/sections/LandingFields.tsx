@@ -14,12 +14,10 @@ import {
   normalizeStayOffersOnRead,
 } from '@/entities/tenant/lib/normalizeStayOffers';
 import { needsLandingBookingEngine } from '@/entities/tenant/lib/resolveLandingBookingGap';
+import { resolveSiteBookingUnitPrice } from '@/entities/tenant/lib/resolveSiteBookingPrice';
 import { isTenantFieldMissing, type TenantReadinessInput } from '@/entities/tenant/lib/resolveTenantReadiness';
-import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
-import type { CurrencyCode } from '@/shared/lib/currency';
 import type { AdminSectionId } from '../lib/adminSections';
-import { AdminField, AdminFieldRow } from '../ui/AdminField';
-import { AdminMoneyField } from '../ui/AdminField';
+import { AdminField } from '../ui/AdminField';
 import { AdminImageField } from '../ui/AdminImageField';
 import { AdminSectionAlert } from '../ui/AdminSectionAlert';
 import { LandingRoomCardPreview } from '../ui/LandingRoomCardPreview';
@@ -66,7 +64,6 @@ function RoomCardEditor({
   onRemove,
   showDescription = true,
   settings,
-  primaryCurrency,
   tenantSlug,
 }: {
   card: LandingRoomCard;
@@ -77,20 +74,25 @@ function RoomCardEditor({
   onRemove: () => void;
   showDescription?: boolean;
   settings?: TenantSettings;
-  primaryCurrency: CurrencyCode;
   tenantSlug: string;
 }) {
-  const previewRoom: LandingRoomType = offer
+  const mergedPreview = offer
     ? mergeOfferIntoLandingRoomType(offer, card)
     : {
         id: card.offerId || `card-${index + 1}`,
         engineRoomTypeId: '',
         title: card.title?.trim() || '',
         description: card.description?.trim() || '',
-        priceFromEur: card.priceFromEur,
+        priceFromEur: undefined as number | undefined,
         imageUrl: card.imageUrl?.trim() || '',
         requiresChatUpgrade: card.requiresChatUpgrade === true,
       };
+  const previewRoom: LandingRoomType = {
+    ...mergedPreview,
+    priceFromEur: settings
+      ? resolveSiteBookingUnitPrice(settings, mergedPreview.priceFromEur)
+      : mergedPreview.priceFromEur,
+  };
 
   return (
     <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
@@ -122,7 +124,7 @@ function RoomCardEditor({
             ))}
           </select>
           <span className="block text-xs text-muted-foreground">
-            Offers are managed in Guest app → Stay offers.
+            Price badge comes from the offer base price (Guest app → Stay offers).
           </span>
         </label>
         <label className="block space-y-1.5 sm:col-span-2">
@@ -151,29 +153,15 @@ function RoomCardEditor({
           </label>
         ) : null}
         <div className="sm:col-span-2">
-          <AdminFieldRow>
-            <AdminMoneyField
-              label="Price from (per night)"
-              value={card.priceFromEur ?? ''}
-              onChange={(value) =>
-                onChange({
-                  ...card,
-                  priceFromEur: value ? Number(value) : undefined,
-                })
-              }
-              currencyCode={primaryCurrency}
-              amountHint="Shown on the room card price badge."
-            />
-            <AdminImageField
-              label="Room photo"
-              tenantSlug={tenantSlug}
-              kind="misc"
-              value={card.imageUrl ?? ''}
-              onChange={(imageUrl) => onChange({ ...card, imageUrl })}
-              placeholder="/images/rooms/single-dorm.jpg"
-              previewAlt={previewRoom.title || `Room ${index + 1}`}
-            />
-          </AdminFieldRow>
+          <AdminImageField
+            label="Room photo"
+            tenantSlug={tenantSlug}
+            kind="misc"
+            value={card.imageUrl ?? ''}
+            onChange={(imageUrl) => onChange({ ...card, imageUrl })}
+            placeholder="/images/rooms/single-dorm.jpg"
+            previewAlt={previewRoom.title || `Room ${index + 1}`}
+          />
         </div>
         {showDescription ? (
           <label className="flex items-center gap-2 sm:col-span-2">
@@ -265,10 +253,6 @@ export function LandingFields({
     />
   );
 
-  const primaryCurrency = useMemo(
-    () => resolveTenantCurrency(mergedSettings).primary,
-    [mergedSettings]
-  );
   const showBookingGap = needsLandingBookingEngine(mergedSettings);
   const offerById = useMemo(() => new Map(offers.map((offer) => [offer.id, offer])), [offers]);
 
@@ -298,7 +282,6 @@ export function LandingFields({
           offers={offers}
           index={index}
           settings={mergedSettings}
-          primaryCurrency={primaryCurrency}
           showDescription={scope === 'full'}
           tenantSlug={tenantSlug}
           onChange={(next) => syncCards(roomCards.map((item, i) => (i === index ? next : item)))}

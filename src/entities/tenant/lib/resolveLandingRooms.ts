@@ -7,6 +7,7 @@ import {
   normalizeLandingRoomCards,
   normalizeStayOffersOnRead,
 } from './normalizeStayOffers';
+import { resolveSiteBookingUnitPrice } from './resolveSiteBookingPrice';
 
 export interface ResolvedLandingRooms {
   sectionTitle?: string;
@@ -57,14 +58,29 @@ export function resolveLandingRooms(settings: TenantSettings): ResolvedLandingRo
       .map((card) => {
         const offer = offerById.get(card.offerId);
         if (!offer) return null;
-        return isCompleteLandingRoom(mergeOfferIntoLandingRoomType(offer, card), bookingEnabled);
+        const merged = mergeOfferIntoLandingRoomType(offer, card);
+        return isCompleteLandingRoom(
+          {
+            ...merged,
+            priceFromEur: resolveSiteBookingUnitPrice(settings, merged.priceFromEur),
+          },
+          bookingEnabled
+        );
       })
       .filter((room): room is LandingRoomType => room !== null);
   } else if (landing?.roomTypes?.length) {
     // Compat path if migrate did not run (empty titles etc.) — rare.
     roomTypes =
       landing.roomTypes
-        .map((room) => isCompleteLandingRoom(room, bookingEnabled))
+        .map((room) =>
+          isCompleteLandingRoom(
+            {
+              ...room,
+              priceFromEur: resolveSiteBookingUnitPrice(settings, room.priceFromEur),
+            },
+            bookingEnabled
+          )
+        )
         .filter((room): room is LandingRoomType => room !== null) ?? [];
   }
 

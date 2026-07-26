@@ -22,6 +22,7 @@ import {
 import { normalizeLaundrySettings } from '@/entities/tenant/lib/normalizeLaundrySettings';
 import { normalizeReceptionBookingForSave } from '@/entities/tenant/lib/normalizeReceptionBookingSettings';
 import { normalizeHubTransferForSave } from '@/entities/tenant/lib/normalizeHubTransferSettings';
+import { normalizeSiteBookingDiscountPercent } from '@/entities/tenant/lib/resolveSiteBookingPrice';
 import type { StayOffer } from '@/entities/tenant/model/stayOffers';
 import type { LaundrySettings } from '@/entities/tenant/model/laundry';
 import {
@@ -451,6 +452,9 @@ export function parseTenantSettingsFormData(formData: FormData): TenantSettings 
     logoUrl: String(formData.get('logoUrl') || '') || undefined,
     landing: parseLanding(formData),
     stayOffers: parseStayOffers(formData),
+    siteBookingDiscountPercent: normalizeSiteBookingDiscountPercent(
+      Number(String(formData.get('siteBookingDiscountPercent') || '').trim())
+    ),
     laundry: parseLaundrySettings(formData),
     hostel,
     guestStay,

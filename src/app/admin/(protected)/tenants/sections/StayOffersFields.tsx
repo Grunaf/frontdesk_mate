@@ -3,7 +3,9 @@
 import { useMemo } from 'react';
 import type { StayOffer, TenantSettings } from '@/entities/tenant';
 import { listStayOffersForAdmin } from '@/entities/tenant';
+import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
 import { shouldShowEngineRoomTypeId } from '../lib/tenantAdminFieldSpecs';
+import { AdminField, AdminMoneyField } from '../ui/AdminField';
 import { mergeDraftSettings, useTenantFormDraft } from '../ui/TenantFormDraftContext';
 
 function slugifyOfferId(title: string, index: number, existingIds: Set<string>): string {
@@ -40,6 +42,10 @@ export function StayOffersFields({ settings }: StayOffersFieldsProps) {
   );
   const offers = listStayOffersForAdmin(mergedSettings);
   const showEngineId = shouldShowEngineRoomTypeId(mergedSettings);
+  const primaryCurrency = useMemo(
+    () => resolveTenantCurrency(mergedSettings).primary,
+    [mergedSettings]
+  );
 
   const syncOffers = (next: StayOffer[]) => {
     updateDraft({
@@ -49,6 +55,30 @@ export function StayOffersFields({ settings }: StayOffersFieldsProps) {
 
   return (
     <div className="space-y-3">
+      <AdminField
+        label="Site booking discount (%)"
+        value={
+          mergedSettings.siteBookingDiscountPercent !== undefined
+            ? String(mergedSettings.siteBookingDiscountPercent)
+            : ''
+        }
+        onChange={(value) => {
+          const trimmed = value.trim();
+          if (!trimmed) {
+            updateDraft({ siteBookingDiscountPercent: null });
+            return;
+          }
+          const parsed = Number(trimmed);
+          updateDraft({
+            siteBookingDiscountPercent: Number.isFinite(parsed) ? parsed : null,
+          });
+        }}
+        type="number"
+        placeholder="0"
+        width="sm"
+        hint="Percent off offer base price on the landing badge and web bookings. One value for all offers."
+      />
+
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-medium">Stay offers</p>
@@ -104,6 +134,26 @@ export function StayOffersFields({ settings }: StayOffersFieldsProps) {
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               />
             </label>
+            <div className="sm:col-span-2">
+              <AdminMoneyField
+                label="Base price (per night)"
+                value={offer.basePriceEur ?? ''}
+                onChange={(value) => {
+                  syncOffers(
+                    offers.map((item, i) =>
+                      i === index
+                        ? {
+                            ...item,
+                            basePriceEur: value ? Number(value) : undefined,
+                          }
+                        : item
+                    )
+                  );
+                }}
+                currencyCode={primaryCurrency}
+                amountHint="Landing price badge and web booking base."
+              />
+            </div>
             {showEngineId ? (
               <label className="block space-y-1.5 sm:col-span-2">
                 <span className="text-sm font-medium">Booking engine room type ID</span>

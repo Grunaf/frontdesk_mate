@@ -32,6 +32,7 @@ describe('normalizeStayOffers', () => {
       {
         id: 'female',
         title: 'Bed in female dorm',
+        basePriceEur: 18,
         engineRoomTypeId: 'FEM8',
         sortOrder: 0,
       },
@@ -40,8 +41,8 @@ describe('normalizeStayOffers', () => {
       offerId: 'female',
       title: 'Bed in female dorm',
       imageUrl: '/img/female.jpg',
-      priceFromEur: 18,
     });
+    expect(migrated.roomCards[0]?.priceFromEur).toBeUndefined();
   });
 
   it('does not re-migrate when stayOffers already exist', () => {
@@ -100,7 +101,9 @@ describe('normalizeStayOffers', () => {
   it('resolveLandingRooms merges offer + card overrides', () => {
     const settings: TenantSettings = {
       booking: { provider: 'none' },
-      stayOffers: [{ id: 'female', title: 'Female dorm', engineRoomTypeId: 'FEM' }],
+      stayOffers: [
+        { id: 'female', title: 'Female dorm', engineRoomTypeId: 'FEM', basePriceEur: 20 },
+      ],
       landing: {
         roomsSectionTitle: 'Rooms',
         roomCards: [
@@ -109,7 +112,6 @@ describe('normalizeStayOffers', () => {
             title: 'Bed in female dorm',
             description: 'Quiet floor',
             imageUrl: '/f.jpg',
-            priceFromEur: 20,
           },
         ],
       },
@@ -126,6 +128,32 @@ describe('normalizeStayOffers', () => {
       imageUrl: '/f.jpg',
       priceFromEur: 20,
     });
+  });
+
+  it('resolveLandingRooms applies tenant site booking discount', () => {
+    const settings: TenantSettings = {
+      booking: { provider: 'none' },
+      siteBookingDiscountPercent: 10,
+      stayOffers: [
+        { id: 'female', title: 'Female dorm', engineRoomTypeId: 'FEM', basePriceEur: 20 },
+      ],
+      landing: {
+        roomCards: [{ offerId: 'female', imageUrl: '/f.jpg' }],
+      },
+    };
+
+    expect(resolveLandingRooms(settings).roomTypes[0]?.priceFromEur).toBe(18);
+  });
+
+  it('lifts legacy card price onto offer basePriceEur on read', () => {
+    const settings: TenantSettings = {
+      stayOffers: [{ id: 'female', title: 'Female dorm' }],
+      landing: {
+        roomCards: [{ offerId: 'female', imageUrl: '/f.jpg', priceFromEur: 22 }],
+      },
+    };
+
+    expect(normalizeStayOffersOnRead(settings).stayOffers?.[0]?.basePriceEur).toBe(22);
   });
 
   it('synthesizes stayOffers when only roomCards exist', () => {

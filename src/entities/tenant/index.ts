@@ -37,6 +37,11 @@ export {
   type ResolvedLandingRooms,
 } from './lib/resolveLandingRooms';
 export {
+  applySiteBookingDiscount,
+  normalizeSiteBookingDiscountPercent,
+  resolveSiteBookingUnitPrice,
+} from './lib/resolveSiteBookingPrice';
+export {
   resolveGuestBedId,
 } from './lib/resolveGuestBedId';
 export type { LandingRoomType, LandingRoomCard, TenantLandingSettings } from './model/landing';

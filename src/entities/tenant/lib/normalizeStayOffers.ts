@@ -7,12 +7,17 @@ function trimOrUndefined(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function normalizeBasePriceEur(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
 export function normalizeStayOffer(raw: StayOffer, index: number): StayOffer | null {
   const id = raw.id?.trim();
   const title = raw.title?.trim();
   if (!id || !title) return null;
 
   const engineRoomTypeId = trimOrUndefined(raw.engineRoomTypeId);
+  const basePriceEur = normalizeBasePriceEur(raw.basePriceEur);
   const sortOrder = typeof raw.sortOrder === 'number' && Number.isFinite(raw.sortOrder)
     ? raw.sortOrder
     : index;
@@ -20,6 +25,7 @@ export function normalizeStayOffer(raw: StayOffer, index: number): StayOffer | n
   return {
     id,
     title,
+    ...(basePriceEur !== undefined ? { basePriceEur } : {}),
     ...(engineRoomTypeId ? { engineRoomTypeId } : {}),
     sortOrder,
   };
@@ -45,6 +51,7 @@ export function coerceStayOffersForAdminEdit(raw: StayOffer[] | undefined): Stay
       const id = offer.id?.trim();
       if (!id) return [];
       const engineRoomTypeId = trimOrUndefined(offer.engineRoomTypeId);
+      const basePriceEur = normalizeBasePriceEur(offer.basePriceEur);
       const sortOrder =
         typeof offer.sortOrder === 'number' && Number.isFinite(offer.sortOrder)
           ? offer.sortOrder
@@ -53,6 +60,7 @@ export function coerceStayOffersForAdminEdit(raw: StayOffer[] | undefined): Stay
         {
           id,
           title: typeof offer.title === 'string' ? offer.title : '',
+          ...(basePriceEur !== undefined ? { basePriceEur } : {}),
           ...(engineRoomTypeId ? { engineRoomTypeId } : {}),
           sortOrder,
         },
@@ -119,9 +127,13 @@ export function migrateLegacyLandingRoomTypes(settings: TenantSettings): {
       const title =
         card.title?.trim() || legacyRoom?.title?.trim() || card.offerId;
       const engineRoomTypeId = trimOrUndefined(legacyRoom?.engineRoomTypeId);
+      const basePriceEur =
+        normalizeBasePriceEur(card.priceFromEur) ??
+        normalizeBasePriceEur(legacyRoom?.priceFromEur);
       return {
         id: card.offerId,
         title,
+        ...(basePriceEur !== undefined ? { basePriceEur } : {}),
         ...(engineRoomTypeId ? { engineRoomTypeId } : {}),
         sortOrder: index,
       };
@@ -142,9 +154,11 @@ export function migrateLegacyLandingRoomTypes(settings: TenantSettings): {
     if (!id || !title) return;
 
     const engineRoomTypeId = trimOrUndefined(room.engineRoomTypeId);
+    const basePriceEur = normalizeBasePriceEur(room.priceFromEur);
     stayOffers.push({
       id,
       title,
+      ...(basePriceEur !== undefined ? { basePriceEur } : {}),
       ...(engineRoomTypeId ? { engineRoomTypeId } : {}),
       sortOrder: index,
     });
@@ -153,7 +167,6 @@ export function migrateLegacyLandingRoomTypes(settings: TenantSettings): {
       offerId: id,
       title,
       description: room.description?.trim() || '',
-      priceFromEur: typeof room.priceFromEur === 'number' ? room.priceFromEur : undefined,
       imageUrl: trimOrUndefined(room.imageUrl),
       requiresChatUpgrade: room.requiresChatUpgrade === true ? true : undefined,
     });
@@ -162,14 +175,47 @@ export function migrateLegacyLandingRoomTypes(settings: TenantSettings): {
   return { stayOffers, roomCards, didMigrate: stayOffers.length > 0 };
 }
 
+/** Prefer offer.basePriceEur; lift legacy card.priceFromEur onto offers missing a price. */
+function liftCardPricesOntoOffers(
+  offers: StayOffer[],
+  cards: LandingRoomCard[]
+): StayOffer[] {
+  if (offers.length === 0 || cards.length === 0) return offers;
+  const priceByOfferId = new Map<string, number>();
+  for (const card of cards) {
+    const price = normalizeBasePriceEur(card.priceFromEur);
+    if (price === undefined) continue;
+    if (!priceByOfferId.has(card.offerId)) {
+      priceByOfferId.set(card.offerId, price);
+    }
+  }
+  if (priceByOfferId.size === 0) return offers;
+
+  return offers.map((offer) => {
+    if (normalizeBasePriceEur(offer.basePriceEur) !== undefined) return offer;
+    const lifted = priceByOfferId.get(offer.id);
+    return lifted !== undefined ? { ...offer, basePriceEur: lifted } : offer;
+  });
+}
+
+/** Strip legacy per-card price once offer owns basePriceEur (kept on LandingRoomType resolve only). */
+function stripCardPrices(cards: LandingRoomCard[]): LandingRoomCard[] {
+  return cards.map((card) => {
+    if (card.priceFromEur === undefined) return card;
+    const { priceFromEur: _removed, ...rest } = card;
+    return rest;
+  });
+}
+
 /**
  * Ensure settings expose stayOffers + roomCards (migrating legacy roomTypes in memory).
  * Does not strip roomTypes — callers that persist should use finalizeStayOffersForSave.
  */
 export function normalizeStayOffersOnRead(settings: TenantSettings): TenantSettings {
   const { stayOffers, roomCards, didMigrate } = migrateLegacyLandingRoomTypes(settings);
+  const liftedOffers = liftCardPricesOntoOffers(stayOffers, roomCards);
 
-  if (!didMigrate && stayOffers.length === 0 && roomCards.length === 0) {
+  if (!didMigrate && liftedOffers.length === 0 && roomCards.length === 0) {
     if (!settings.stayOffers?.length && !settings.landing?.roomCards?.length) {
       return settings;
     }
@@ -182,17 +228,19 @@ export function normalizeStayOffersOnRead(settings: TenantSettings): TenantSetti
 
   return {
     ...settings,
-    stayOffers,
+    stayOffers: liftedOffers,
     landing: nextLanding,
   };
 }
 
-/** Persist shape: stayOffers + roomCards; drop legacy roomTypes. */
+/** Persist shape: stayOffers + roomCards; drop legacy roomTypes and card prices. */
 export function finalizeStayOffersForSave(settings: TenantSettings): TenantSettings {
   const normalized = normalizeStayOffersOnRead(settings);
   const stayOffers = normalizeStayOffers(normalized.stayOffers);
-  const roomCards = normalizeLandingRoomCards(normalized.landing?.roomCards).filter((card) =>
-    stayOffers.some((offer) => offer.id === card.offerId)
+  const roomCards = stripCardPrices(
+    normalizeLandingRoomCards(normalized.landing?.roomCards).filter((card) =>
+      stayOffers.some((offer) => offer.id === card.offerId)
+    )
   );
 
   const { roomTypes: _legacy, ...landingRest } = normalized.landing ?? {};
@@ -229,13 +277,16 @@ export function mergeOfferIntoLandingRoomType(
   const description = card?.description?.trim() || '';
   const imageUrl = card?.imageUrl?.trim() || '';
   const engineRoomTypeId = offer.engineRoomTypeId?.trim() || '';
+  const priceFromEur =
+    normalizeBasePriceEur(offer.basePriceEur) ??
+    normalizeBasePriceEur(card?.priceFromEur);
 
   return {
     id: offer.id,
     engineRoomTypeId,
     title,
     description,
-    priceFromEur: typeof card?.priceFromEur === 'number' ? card.priceFromEur : undefined,
+    priceFromEur,
     imageUrl,
     requiresChatUpgrade: card?.requiresChatUpgrade === true,
   };
