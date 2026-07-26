@@ -162,7 +162,7 @@ export function BedAccessCalendar({
 }: BedAccessCalendarProps) {
   const isMobile = useIsMobileCalendar();
   const [view, setView] = useState<BedDayCalendarView>('week');
-  const [anchorDate, setAnchorDate] = useState(todayUtcDate());
+  const [anchorDate, setAnchorDate] = useState(() => planToday ?? todayUtcDate());
   const [internalBedFilter, setInternalBedFilter] = useState<PlanBedFilter>('all');
 
   const effectiveView = isMobile && view === 'month' ? 'week' : view;

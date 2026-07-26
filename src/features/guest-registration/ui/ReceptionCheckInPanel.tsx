@@ -34,6 +34,7 @@ import {
   getCurrencyDefinition,
   isCurrencyCode,
 } from '@/shared/lib/currency';
+import { runWithPreservedWindowScroll } from '@/shared/lib/preserveWindowScroll';
 import type {
   HousekeepingBedStatus,
   HousekeepingLaundryProgram,
@@ -303,10 +304,12 @@ export function ReceptionCheckInPanel({
 
   const loadHousekeepingStatuses = useCallback(async () => {
     const maps = await listHousekeepingStatusesAction(tenantSlug);
-    setBedStatuses(maps.beds);
-    setRoomStatuses(maps.rooms);
-    setActiveLaundryRuns(maps.activeLaundryRuns);
-    setPresenceByStayId(maps.presenceByStayId);
+    runWithPreservedWindowScroll(() => {
+      setBedStatuses(maps.beds);
+      setRoomStatuses(maps.rooms);
+      setActiveLaundryRuns(maps.activeLaundryRuns);
+      setPresenceByStayId(maps.presenceByStayId);
+    });
   }, [tenantSlug]);
 
   useEffect(() => {

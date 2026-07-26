@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { runWithPreservedWindowScroll } from '@/shared/lib/preserveWindowScroll';
 import type { ReceptionOperationalContext } from '../model/receptionOperationalContext';
 import { fetchReceptionOperationalContext } from './fetchReceptionOperationalContext';
 
@@ -24,13 +25,14 @@ export function useReceptionOperationalSync(
         return null;
       }
 
-      setContext(result.context);
+      runWithPreservedWindowScroll(() => {
+        setContext(result.context);
+      });
       return result.context;
     } finally {
       setIsRefreshing(false);
     }
   }, []);
-
   return {
     context,
     refresh,

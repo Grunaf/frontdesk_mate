@@ -47,6 +47,7 @@ function formatUtcDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** @deprecated Plan Week uses rolling yesterday…+5; kept for callers that still need ISO Monday. */
 export function getWeekRangeStart(date: string): string {
   const parsed = parseUtcDate(date);
   const day = parsed.getUTCDay();
@@ -67,7 +68,7 @@ export function resolveCalendarRange(
   view: BedDayCalendarView,
   anchorDate: string
 ): { rangeStart: string; rangeEnd: string; days: string[] } {
-  const rangeStart = view === 'week' ? getWeekRangeStart(anchorDate) : `${anchorDate.slice(0, 8)}01`;
+  const rangeStart = view === 'week' ? addNights(anchorDate, -1) : `${anchorDate.slice(0, 8)}01`;
   const dayCount = view === 'week' ? 7 : daysInMonth(rangeStart);
   const days = listCalendarDays(rangeStart, dayCount);
   return {
@@ -172,7 +173,7 @@ export function shiftCalendarAnchor(
   }
 
   if (view === 'week') {
-    return addNights(getWeekRangeStart(anchorDate), direction * 7);
+    return addNights(anchorDate, direction * 7);
   }
 
   const date = parseUtcDate(`${anchorDate.slice(0, 8)}01`);

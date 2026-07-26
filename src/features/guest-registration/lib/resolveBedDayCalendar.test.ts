@@ -3,10 +3,10 @@ import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { makeGuestStayRecordFixture } from '@/entities/guest-stay/testing/makeGuestStayRecordFixture';
 import type { TenantSettings } from '@/entities/tenant';
 import {
-  getWeekRangeStart,
   listCalendarDays,
   resolveBedDayCalendar,
   resolveCalendarRange,
+  shiftCalendarAnchor,
 } from './resolveBedDayCalendar';
 
 const settings: TenantSettings = {
@@ -25,21 +25,32 @@ function makeStay(overrides: Partial<GuestStayRecordWithLink> = {}): GuestStayRe
 }
 
 describe('resolveBedDayCalendar', () => {
-  it('builds a 7-day week range from Monday', () => {
-    expect(getWeekRangeStart('2026-06-22')).toBe('2026-06-22');
-    expect(listCalendarDays('2026-06-22', 7)).toEqual([
-      '2026-06-22',
-      '2026-06-23',
-      '2026-06-24',
-      '2026-06-25',
-      '2026-06-26',
-      '2026-06-27',
-      '2026-06-28',
+  it('rolling week starts yesterday relative to anchor', () => {
+    const range = resolveCalendarRange('week', '2026-07-26');
+    expect(range.rangeStart).toBe('2026-07-25');
+    expect(range.rangeEnd).toBe('2026-07-31');
+    expect(range.days).toEqual([
+      '2026-07-25',
+      '2026-07-26',
+      '2026-07-27',
+      '2026-07-28',
+      '2026-07-29',
+      '2026-07-30',
+      '2026-07-31',
     ]);
+    expect(listCalendarDays('2026-07-25', 7)).toEqual(range.days);
+  });
+
+  it('shifts week anchor by ±7 days without aligning to Monday', () => {
+    expect(shiftCalendarAnchor('2026-07-26', 'week', -1)).toBe('2026-07-19');
+    expect(shiftCalendarAnchor('2026-07-26', 'week', 1)).toBe('2026-08-02');
+    expect(resolveCalendarRange('week', '2026-07-19').rangeStart).toBe('2026-07-18');
+    expect(resolveCalendarRange('week', '2026-08-02').rangeStart).toBe('2026-08-01');
   });
 
   it('marks occupied and scheduled nights on the grid', () => {
     const now = new Date('2026-06-23T12:00:00.000Z');
+    // Rolling week for anchor 2026-06-24: 23 … 29
     const snapshot = resolveBedDayCalendar(
       settings,
       [
@@ -54,20 +65,24 @@ describe('resolveBedDayCalendar', () => {
         }),
       ],
       'week',
-      '2026-06-22',
+      '2026-06-24',
       now
     );
 
-    const bed1Wednesday = snapshot.roomGroups[0]?.rows[0]?.cells[1];
-    const bed2Saturday = snapshot.roomGroups[0]?.rows[1]?.cells[6];
+    const bed1Occupied = snapshot.roomGroups[0]?.rows[0]?.cells.find(
+      (cell) => cell.nightDate === '2026-06-23'
+    );
+    const bed2Scheduled = snapshot.roomGroups[0]?.rows[1]?.cells.find(
+      (cell) => cell.nightDate === '2026-06-28'
+    );
 
-    expect(bed1Wednesday).toEqual(
+    expect(bed1Occupied).toEqual(
       expect.objectContaining({
         nightDate: '2026-06-23',
         status: 'occupied',
       })
     );
-    expect(bed2Saturday).toEqual(
+    expect(bed2Scheduled).toEqual(
       expect.objectContaining({
         nightDate: '2026-06-28',
         status: 'scheduled',
