@@ -96,13 +96,18 @@ export function RoomMapEditor({
 
   const selectedBed = selectedIndex !== null ? beds[selectedIndex] : null;
 
-  const layoutBedsForRoom = roomBedIndices.map(({ bed }) => ({
-    id: bed.id,
-    x: bed.x,
-    y: bed.y,
-    bedType: resolveBedUnitType(bed),
-    rotation: bed.rotation,
-  }));
+  const layoutBedsForRoom = beds
+    .filter(
+      (bed): bed is StayBed & { x: number; y: number } =>
+        bed.roomId === room.id && stayBedHasLayout(bed)
+    )
+    .map((bed) => ({
+      id: bed.id,
+      x: bed.x,
+      y: bed.y,
+      bedType: resolveBedUnitType(bed),
+      rotation: bed.rotation,
+    }));
 
   const updateBed = useCallback(
     (index: number, patch: Partial<StayBed>) => {
@@ -271,49 +276,51 @@ export function RoomMapEditor({
   };
 
   return (
-    <div className="space-y-3 overflow-hidden">
-      <p className="text-[11px] text-muted-foreground">
-        {roomBounds.width}×{roomBounds.height} — drag corner to resize room
-      </p>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+      <div className="shrink-0 space-y-3">
+        <p className="text-[11px] text-muted-foreground">
+          {roomBounds.width}×{roomBounds.height} — drag corner to resize room
+        </p>
 
-      <div className="flex flex-wrap gap-1.5">
-        {BED_UNIT_TYPES.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => setPlacementType(option.value)}
-            className={cn(
-              'rounded-md border px-2.5 py-1.5 text-left text-[11px] transition-colors',
-              placementType === option.value
-                ? 'border-primary bg-primary/10'
-                : 'bg-background hover:bg-muted/50'
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
+        <div className="flex flex-wrap gap-1.5">
+          {BED_UNIT_TYPES.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setPlacementType(option.value)}
+              className={cn(
+                'rounded-md border px-2.5 py-1.5 text-left text-[11px] transition-colors',
+                placementType === option.value
+                  ? 'border-primary bg-primary/10'
+                  : 'bg-background hover:bg-muted/50'
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium text-muted-foreground">Entrance wall</span>
+          {ROOM_ENTRANCE_SIDES.map((side) => (
+            <button
+              key={side}
+              type="button"
+              onClick={() => onRoomChange({ entranceSide: side })}
+              className={cn(
+                'rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
+                entranceSide === side
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'bg-background hover:bg-muted/50'
+              )}
+            >
+              {ENTRANCE_SIDE_LABELS[side]}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-medium text-muted-foreground">Entrance wall</span>
-        {ROOM_ENTRANCE_SIDES.map((side) => (
-          <button
-            key={side}
-            type="button"
-            onClick={() => onRoomChange({ entranceSide: side })}
-            className={cn(
-              'rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
-              entranceSide === side
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'bg-background hover:bg-muted/50'
-            )}
-          >
-            {ENTRANCE_SIDE_LABELS[side]}
-          </button>
-        ))}
-      </div>
-
-      <div className="overflow-hidden touch-none rounded-lg border bg-muted/5">
+      <div className="min-h-0 flex-1 overflow-hidden touch-none rounded-lg border bg-muted/5">
         <RoomLayoutCanvas
           svgRef={svgRef}
           roomBounds={roomBounds}
@@ -371,8 +378,8 @@ export function RoomMapEditor({
         </RoomLayoutCanvas>
       </div>
 
-      {selectedBed && selectedIndex !== null && (
-        <div className="space-y-3 rounded-lg border bg-background p-3">
+      {selectedBed && selectedIndex !== null ? (
+        <div className="shrink-0 space-y-3 rounded-lg border bg-background p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-medium">
               Bed {resolveBedMapDisplayLabel(guestStay, selectedBed)}
@@ -423,13 +430,11 @@ export function RoomMapEditor({
             ))}
           </select>
         </div>
-      )}
-
-      {roomBedIndices.length === 0 && (
-        <p className="text-[11px] text-muted-foreground">
+      ) : roomBedIndices.length === 0 ? (
+        <p className="shrink-0 text-[11px] text-muted-foreground">
           Click the floor to add a bed. Drag the entrance marker or pick a wall above.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }
