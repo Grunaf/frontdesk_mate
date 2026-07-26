@@ -1,7 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
   HOUSEKEEPING_BED_STATUS_LABELS,
@@ -22,13 +21,22 @@ import {
   filterPlanRoomGroupsByFreeTonight,
   type PlanBedFilter,
 } from '../lib/filterPlanRoomGroupsByFreeTonight';
+import {
+  DEFAULT_PLAN_QUICK_FILTERS,
+  filterPlanRoomGroupsByQuickFilters,
+  isPlanQuickFiltersActive,
+  sanitizePlanQuickFilters,
+  type PlanQuickFiltersState,
+} from '../lib/filterPlanRoomGroupsByQuickFilters';
+import { readPlanQuickFilters, writePlanQuickFilters } from '../lib/planQuickFiltersStorage';
 import { todayUtcDate } from '../lib/guestAccessDates';
 import {
   planStayLifecycleStatusLabel,
   resolvePlanStayLifecycleStatus,
   type PlanStayLifecycleStatus,
 } from '../lib/resolvePlanStayLifecycleStatus';
-import { Button, Icon, SegmentedChipBar } from '@/shared/ui';
+import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
+import { Button, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 
 interface BedAccessCalendarProps {
@@ -37,6 +45,8 @@ interface BedAccessCalendarProps {
   onViewStay: (stayId: string) => void;
   onSelectFreeNight: (bedId: string, nightDate: string) => void;
   embedded?: boolean;
+  /** Used for plan quick-filter localStorage key. */
+  tenantSlug?: string;
   bedStatuses?: Record<string, HousekeepingBedStatus>;
   roomStatuses?: Record<string, HousekeepingRoomStatus>;
   onSetBedStatus?: (bedId: string, status: HousekeepingBedStatus) => void;
@@ -149,6 +159,7 @@ export function BedAccessCalendar({
   onViewStay,
   onSelectFreeNight,
   embedded = false,
+  tenantSlug,
   bedStatuses,
   roomStatuses,
   onSetBedStatus,
@@ -164,6 +175,9 @@ export function BedAccessCalendar({
   const [view, setView] = useState<BedDayCalendarView>('week');
   const [anchorDate, setAnchorDate] = useState(() => planToday ?? todayUtcDate());
   const [internalBedFilter, setInternalBedFilter] = useState<PlanBedFilter>('all');
+  const [quickFilters, setQuickFilters] = useState<PlanQuickFiltersState>(DEFAULT_PLAN_QUICK_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const quickFiltersSlugRef = useRef<string | null>(null);
 
   const effectiveView = isMobile && view === 'month' ? 'week' : view;
   const housekeepingEnabled = Boolean(onSetBedStatus || onSetRoomStatus);
@@ -179,15 +193,46 @@ export function BedAccessCalendar({
     setAnchorDate(lifecycleToday);
   }, [focusToken, lifecycleToday]);
 
+  useEffect(() => {
+    const slug = tenantSlug?.trim() ?? '';
+    if (!slug) {
+      quickFiltersSlugRef.current = null;
+      setQuickFilters(DEFAULT_PLAN_QUICK_FILTERS);
+      return;
+    }
+
+    if (quickFiltersSlugRef.current !== slug) {
+      quickFiltersSlugRef.current = slug;
+      setQuickFilters(sanitizePlanQuickFilters(readPlanQuickFilters(slug), settings));
+      return;
+    }
+
+    setQuickFilters((current) => sanitizePlanQuickFilters(current, settings));
+  }, [settings, tenantSlug]);
+
+  const handleQuickFiltersChange = (next: PlanQuickFiltersState) => {
+    const sanitized = sanitizePlanQuickFilters(next, settings);
+    setQuickFilters(sanitized);
+    const slug = tenantSlug?.trim() ?? '';
+    if (slug) {
+      writePlanQuickFilters(slug, sanitized);
+    }
+  };
+
   const snapshot = useMemo(
     () => resolveBedDayCalendar(settings, stays, effectiveView, anchorDate),
     [anchorDate, effectiveView, settings, stays]
   );
 
+  const quickFilteredRoomGroups = useMemo(
+    () => filterPlanRoomGroupsByQuickFilters(snapshot.roomGroups, settings, quickFilters),
+    [quickFilters, settings, snapshot.roomGroups]
+  );
+
   const visibleRoomGroups = useMemo(() => {
-    if (effectiveBedFilter !== 'free_tonight') return snapshot.roomGroups;
-    return filterPlanRoomGroupsByFreeTonight(snapshot.roomGroups, lifecycleToday);
-  }, [effectiveBedFilter, lifecycleToday, snapshot.roomGroups]);
+    if (effectiveBedFilter !== 'free_tonight') return quickFilteredRoomGroups;
+    return filterPlanRoomGroupsByFreeTonight(quickFilteredRoomGroups, lifecycleToday);
+  }, [effectiveBedFilter, lifecycleToday, quickFilteredRoomGroups]);
 
   const planBedIds = useMemo(
     () => snapshot.roomGroups.flatMap((group) => group.rows.map((row) => row.bedId)),
@@ -214,6 +259,7 @@ export function BedAccessCalendar({
   const toggleFreeBedsFilter = () => {
     handleBedFilterChange(freeBedsFilterOn ? 'all' : 'free_tonight');
   };
+  const anyFiltersActive = freeBedsFilterOn || isPlanQuickFiltersActive(quickFilters);
 
   if (snapshot.roomGroups.length === 0) {
     return <p className="text-xs text-muted-foreground">No beds to show on the calendar.</p>;
@@ -221,6 +267,7 @@ export function BedAccessCalendar({
 
   const rangeLabel = formatCalendarRangeLabel(snapshot.rangeStart, snapshot.rangeEnd);
   const viewItems = isMobile ? VIEW_ITEMS.filter((item) => item.id === 'week') : [...VIEW_ITEMS];
+  const quickFiltersHideAll = quickFilteredRoomGroups.length === 0;
 
   return (
     <div className="space-y-3">
@@ -231,34 +278,26 @@ export function BedAccessCalendar({
           value={effectiveView}
           onValueChange={(id) => {
             setView(id as BedDayCalendarView);
-            setAnchorDate(todayUtcDate());
+            setAnchorDate(lifecycleToday);
           }}
           className="min-w-0"
         />
-        <button
+        <Button
           type="button"
-          aria-pressed={freeBedsFilterOn}
-          onClick={toggleFreeBedsFilter}
-          className={cn(
-            'inline-flex h-auto min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium whitespace-nowrap transition-colors',
-            freeBedsFilterOn
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border bg-background text-muted-foreground hover:bg-muted/40 hover:text-foreground'
-          )}
+          size="sm"
+          variant={filtersOpen || anyFiltersActive ? 'default' : 'outline'}
+          aria-expanded={filtersOpen}
+          aria-controls="plan-filters-panel"
+          onClick={() => setFiltersOpen((open) => !open)}
         >
-          <span
-            aria-hidden
-            className={cn(
-              'inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm border',
-              freeBedsFilterOn
-                ? 'border-primary-foreground/80 bg-primary-foreground text-primary'
-                : 'border-muted-foreground/50 bg-background'
-            )}
-          >
-            {freeBedsFilterOn ? <Icon icon={Check} className="size-2.5" size={10} /> : null}
-          </span>
-          Free beds
-        </button>
+          Filters
+          {anyFiltersActive && !filtersOpen ? (
+            <span
+              aria-hidden
+              className="ml-1.5 inline-block size-1.5 rounded-full bg-primary-foreground"
+            />
+          ) : null}
+        </Button>
         <Button
           type="button"
           size="sm"
@@ -281,6 +320,20 @@ export function BedAccessCalendar({
         <span className="text-xs text-muted-foreground">{rangeLabel}</span>
       </div>
 
+      {filtersOpen ? (
+        <div id="plan-filters-panel">
+          <PlanQuickFiltersBar
+            settings={settings}
+            filters={quickFilters}
+            onFiltersChange={handleQuickFiltersChange}
+            totalRoomCount={snapshot.roomGroups.length}
+            visibleRoomCount={quickFilteredRoomGroups.length}
+            freeBedsFilterOn={freeBedsFilterOn}
+            onToggleFreeBeds={toggleFreeBedsFilter}
+          />
+        </div>
+      ) : null}
+
       {showHousekeepingBanner ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
           <p className="text-xs text-foreground">Set cleaning status for all beds</p>
@@ -294,7 +347,9 @@ export function BedAccessCalendar({
         </p>
       ) : null}
 
-      {effectiveBedFilter === 'free_tonight' && visibleRoomGroups.length === 0 ? (
+      {quickFiltersHideAll ? (
+        <p className="text-xs text-muted-foreground">No rooms match these filters.</p>
+      ) : effectiveBedFilter === 'free_tonight' && visibleRoomGroups.length === 0 ? (
         <p className="text-xs text-muted-foreground">No free beds for this night.</p>
       ) : (
       <div className="overflow-x-auto">

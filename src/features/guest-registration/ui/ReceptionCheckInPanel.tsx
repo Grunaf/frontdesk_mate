@@ -1300,6 +1300,7 @@ export function ReceptionCheckInPanel({
             <TabsContent value="plan">
               <BedAccessCalendar
                 embedded
+                tenantSlug={tenantSlug}
                 settings={tenantSettings}
                 stays={planStays}
                 onViewStay={openStayDetail}
