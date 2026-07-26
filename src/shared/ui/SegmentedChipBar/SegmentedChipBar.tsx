@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '../icon';
+import { scrollChipHorizontallyIntoView } from './scrollChipHorizontallyIntoView';
 
 export interface SegmentedChipItem {
   id: string;
@@ -36,6 +37,7 @@ export function SegmentedChipBar({
   wrap = false,
   className,
 }: SegmentedChipBarProps) {
+  const listRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef(new Map<string, HTMLButtonElement>());
 
   useEffect(() => {
@@ -43,24 +45,22 @@ export function SegmentedChipBar({
       return;
     }
 
+    const container = listRef.current;
     const activeTab = tabRefs.current.get(value);
-    if (!activeTab) {
+    if (!container || !activeTab) {
       return;
     }
 
     const frame = requestAnimationFrame(() => {
-      activeTab.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
-      });
+      scrollChipHorizontallyIntoView(container, activeTab);
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [value, items, wrap]);
+  }, [value, wrap]);
 
   return (
     <div
+      ref={listRef}
       role="tablist"
       aria-label={ariaLabel}
       className={cn(

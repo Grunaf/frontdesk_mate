@@ -21,6 +21,7 @@ export {
   trashGuestReservation,
   updateGuestReservation,
   setGuestReservationBookingPaid,
+  setGuestReservationReceptionNote,
   setPassportCheckedAt,
 } from './api/guestStayRepository';
 export {
@@ -47,5 +48,6 @@ export type {
   CompleteDeskCheckInResult,
   UpdateGuestReservationResult,
   SetGuestReservationBookingPaidResult,
+  SetGuestReservationReceptionNoteResult,
   SetPassportCheckedAtResult,
 } from './model/types';

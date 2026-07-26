@@ -13,6 +13,7 @@ import {
   revokeGuestStay,
   updateGuestReservation,
   setGuestReservationBookingPaid,
+  setGuestReservationReceptionNote,
 } from '@/entities/guest-stay/server';
 import { clearHousekeepingStayPresence } from '@/entities/housekeeping/server';
 import { getGuestById, searchGuests, type GuestProfile } from '@/entities/guest/server';
@@ -26,6 +27,7 @@ import type {
   CompleteDeskCheckInResult,
   UpdateGuestReservationResult,
   SetGuestReservationBookingPaidResult,
+  SetGuestReservationReceptionNoteResult,
 } from '@/entities/guest-stay/server';
 import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEvent';
 import {
@@ -495,6 +497,38 @@ export async function setGuestReservationBookingPaidAction(input: {
     return result;
   } catch (error) {
     console.error('setGuestReservationBookingPaidAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type SetGuestReservationReceptionNoteActionResult =
+  | SetGuestReservationReceptionNoteResult
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
+
+export async function setGuestReservationReceptionNoteAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  note: string | null;
+}): Promise<SetGuestReservationReceptionNoteActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  try {
+    const result = await setGuestReservationReceptionNote({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+      note: input.note,
+    });
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('setGuestReservationReceptionNoteAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

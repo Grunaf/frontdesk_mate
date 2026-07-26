@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveStayCancelCheckoutAction } from './resolveStayCancelCheckoutAction';
+import {
+  isStayCheckoutOverdue,
+  resolveStayCancelCheckoutAction,
+} from './resolveStayCancelCheckoutAction';
 
 describe('resolveStayCancelCheckoutAction', () => {
   const base = {
@@ -28,7 +31,7 @@ describe('resolveStayCancelCheckoutAction', () => {
     ).toBe('checkout');
   });
 
-  it('hides checkout when exclusive end is today or earlier (lived shortened stay)', () => {
+  it('offers checkout when exclusive end is today or earlier (overdue until archived)', () => {
     expect(
       resolveStayCancelCheckoutAction({
         ...base,
@@ -36,7 +39,15 @@ describe('resolveStayCancelCheckoutAction', () => {
         check_out_date: '2026-07-21',
         operationalDate: '2026-07-21',
       })
-    ).toBeNull();
+    ).toBe('checkout');
+    expect(
+      resolveStayCancelCheckoutAction({
+        ...base,
+        passport_checked_at: '2026-07-20T12:00:00.000Z',
+        check_out_date: '2026-07-20',
+        operationalDate: '2026-07-21',
+      })
+    ).toBe('checkout');
   });
 
   it('hides actions for archived rows', () => {
@@ -64,5 +75,29 @@ describe('resolveStayCancelCheckoutAction', () => {
         stay_kind: 'volunteer',
       })
     ).toBeNull();
+  });
+});
+
+describe('isStayCheckoutOverdue', () => {
+  const base = {
+    check_out_at: '2026-07-27T23:59:59.999Z',
+    check_out_date: '2026-07-25',
+    operationalDate: '2026-07-25',
+    passport_checked_at: '2026-07-20T12:00:00.000Z' as string | null,
+  };
+
+  it('is true when admitted, not archived, and on/after check-out day', () => {
+    expect(isStayCheckoutOverdue(base)).toBe(true);
+    expect(isStayCheckoutOverdue({ ...base, operationalDate: '2026-07-26' })).toBe(true);
+  });
+
+  it('is false while still before exclusive end', () => {
+    expect(isStayCheckoutOverdue({ ...base, operationalDate: '2026-07-24' })).toBe(false);
+  });
+
+  it('is false when not admitted, archived, or volunteer', () => {
+    expect(isStayCheckoutOverdue({ ...base, passport_checked_at: null })).toBe(false);
+    expect(isStayCheckoutOverdue({ ...base, is_archived: true })).toBe(false);
+    expect(isStayCheckoutOverdue({ ...base, stay_kind: 'volunteer' })).toBe(false);
   });
 });

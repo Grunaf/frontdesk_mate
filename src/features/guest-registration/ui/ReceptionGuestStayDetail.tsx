@@ -36,7 +36,10 @@ import {
 import { buildBookingComReservationUrl } from '../lib/buildBookingComReservationUrl';
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
 import { getGuestProfileAction } from '../actions/receptionActions';
-import { resolveStayCancelCheckoutAction } from '../lib/resolveStayCancelCheckoutAction';
+import {
+  isStayCheckoutOverdue,
+  resolveStayCancelCheckoutAction,
+} from '../lib/resolveStayCancelCheckoutAction';
 import {
   resolveAccessTabBadge,
   resolveTourismStatusBadge,
@@ -65,7 +68,7 @@ import {
 import { receptionStaffCanSkipTourismGate } from '@/entities/reception-user';
 import { cn } from '@/shared/lib/utils';
 import { EllipsisVertical, QrCode } from 'lucide-react';
-import { setGuestReservationBookingPaidAction } from '../actions/receptionActions';
+import { setGuestReservationBookingPaidAction, setGuestReservationReceptionNoteAction } from '../actions/receptionActions';
 
 export { RECEPTION_STAY_DETAIL_TITLE_ID };
 
@@ -111,6 +114,14 @@ function mapAccessActionError(error: string): string {
     default:
       return 'Could not update access status.';
   }
+}
+
+/** Past exclusive check-out day or archived — block live mutate (edit/grant/tourism/reissue). */
+function isReceptionStayPastCheckOut(
+  stay: Pick<GuestStayRecordWithLink, 'is_archived' | 'check_out_date' | 'check_out_at'>,
+  operationalDate: string
+): boolean {
+  return Boolean(stay.is_archived) || operationalDate >= stayRecordCheckOutDate(stay);
 }
 
 function useStayAccessControls({
@@ -222,6 +233,7 @@ function useIsBelowLg(): boolean {
 function StayTourismRegistrationBlock({
   stay,
   tenantSlug,
+  reviewOnly = false,
   onTourismExportedAtChange,
   onTourismStatusChange,
   onTourismAccessReadyChange,
@@ -229,6 +241,8 @@ function StayTourismRegistrationBlock({
 }: {
   stay: GuestStayRecordWithLink;
   tenantSlug: string;
+  /** Ended stay: view + filing only (no identity/document mutate). */
+  reviewOnly?: boolean;
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
   onTourismStatusChange?: (status: TourismStatusBadge) => void;
   onTourismAccessReadyChange?: (ready: boolean) => void;
@@ -255,9 +269,14 @@ function StayTourismRegistrationBlock({
   );
   const hasGuests = Boolean(registration && registration.guests.length > 0);
   const allPassportsUploaded = allTourismGuestsHavePassportPhoto(registration?.guests ?? []);
-  const canCompleteRegistration = hasGuests && allPassportsUploaded && !registrationComplete;
+  const canCompleteRegistration =
+    !reviewOnly && hasGuests && allPassportsUploaded && !registrationComplete;
   const canAddGuest =
-    !registrationComplete && !(isBelowLg ? addGuestSheetOpen : showAddForm) && !isPending && !isLoading;
+    !reviewOnly &&
+    !registrationComplete &&
+    !(isBelowLg ? addGuestSheetOpen : showAddForm) &&
+    !isPending &&
+    !isLoading;
 
   const openAddGuest = () => {
     setEditingGuestId(null);
@@ -291,7 +310,7 @@ function StayTourismRegistrationBlock({
     return () => onAddGuestControlsChange?.(null);
     // openAddGuest recreated each render; canAddGuest is the meaningful dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync footer controls
-  }, [canAddGuest, isBelowLg, onAddGuestControlsChange]);
+  }, [canAddGuest, isBelowLg, onAddGuestControlsChange, reviewOnly]);
 
   useEffect(() => {
     startLoad(async () => {
@@ -593,7 +612,7 @@ function StayTourismRegistrationBlock({
                 tenantSlug={tenantSlug}
                 stayId={stay.id}
                 guests={registration!.guests}
-                disabled={isPending}
+                disabled={isPending || reviewOnly}
                 onError={setActionError}
                 onGuestsPatched={handleSaveEntryStampDates}
               />
@@ -603,7 +622,7 @@ function StayTourismRegistrationBlock({
                     key={guest.id}
                     className="space-y-2 border-t border-border/50 pt-2 first:border-t-0 first:pt-0"
                   >
-                    {editingGuestId === guest.id ? (
+                    {editingGuestId === guest.id && !reviewOnly ? (
                       <ReceptionTourismGuestIdentityForm
                         checkInDate={checkInDate}
                         initialValues={{
@@ -636,24 +655,27 @@ function StayTourismRegistrationBlock({
                               {guest.gender === 'female' ? 'Female' : 'Male'}
                             </p>
                           </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-[11px]"
-                            disabled={isPending}
-                            onClick={() => {
-                              setShowAddForm(false);
-                              setAddGuestSheetOpen(false);
-                              setEditingGuestId(guest.id);
-                            }}
-                          >
-                            Edit identity
-                          </Button>
+                          {!reviewOnly ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px]"
+                              disabled={isPending}
+                              onClick={() => {
+                                setShowAddForm(false);
+                                setAddGuestSheetOpen(false);
+                                setEditingGuestId(guest.id);
+                              }}
+                            >
+                              Edit identity
+                            </Button>
+                          ) : null}
                         </div>
                         <ReceptionTourismGuestDocuments
                           guest={guest}
-                          uploadDisabled={isPending || registrationComplete}
+                          uploadDisabled={isPending || registrationComplete || reviewOnly}
+                          hideUpload={reviewOnly}
                           viewDisabled={isPending}
                           onUploadPassport={(file) => handleUploadPassport(guest.id, file)}
                           onViewPassport={() => handleViewPassport(guest.id)}
@@ -666,11 +688,13 @@ function StayTourismRegistrationBlock({
             </>
           ) : !loadError ? (
             <p className="text-xs text-muted-foreground">
-              No tourism guests yet — add identity details at the desk or wait for the guest app.
+              {reviewOnly
+                ? 'No tourism guests on file for this stay.'
+                : 'No tourism guests yet — add identity details at the desk or wait for the guest app.'}
             </p>
           ) : null}
 
-          {!isBelowLg && showAddForm && !registrationComplete ? (
+          {!isBelowLg && showAddForm && !registrationComplete && !reviewOnly ? (
             <ReceptionTourismGuestIdentityForm
               key={`reception-add-tourism-guest-desktop-${addGuestPrefill?.passportNumber ?? 'new'}`}
               checkInDate={checkInDate}
@@ -685,7 +709,7 @@ function StayTourismRegistrationBlock({
           ) : null}
 
           <div className="flex flex-wrap gap-1.5">
-            {hasGuests && !registrationComplete ? (
+            {hasGuests && !registrationComplete && !reviewOnly ? (
               <div className="space-y-1">
                 {!allPassportsUploaded ? (
                   <p className="text-xs text-muted-foreground">
@@ -731,18 +755,24 @@ function StayTourismRegistrationBlock({
 function ReceptionTourismGuestDocuments({
   guest,
   uploadDisabled,
+  hideUpload = false,
   viewDisabled,
   onUploadPassport,
   onViewPassport,
 }: {
   guest: GuestTourismGuest;
   uploadDisabled: boolean;
+  hideUpload?: boolean;
   viewDisabled: boolean;
   onUploadPassport: (file: File) => void;
   onViewPassport: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasPassport = Boolean(guest.passport_storage_path.trim());
+
+  if (hideUpload && !hasPassport) {
+    return <p className="text-[11px] text-muted-foreground">No passport photo on file.</p>;
+  }
 
   return (
     <div className="space-y-2">
@@ -761,30 +791,34 @@ function ReceptionTourismGuestDocuments({
         </FieldLabelHelp>
       </div>
       <div className="flex flex-wrap items-center gap-1">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/webp,image/png,image/heic,image/heif,.jpg,.jpeg,.webp,.png,.heic,.heif"
-          className="sr-only"
-          disabled={uploadDisabled}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = '';
-            if (file) {
-              onUploadPassport(file);
-            }
-          }}
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 text-[11px]"
-          disabled={uploadDisabled}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {hasPassport ? 'Replace passport' : 'Upload passport'}
-        </Button>
+        {!hideUpload ? (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/webp,image/png,image/heic,image/heif,.jpg,.jpeg,.webp,.png,.heic,.heif"
+              className="sr-only"
+              disabled={uploadDisabled}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file) {
+                  onUploadPassport(file);
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-[11px]"
+              disabled={uploadDisabled}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {hasPassport ? 'Replace passport' : 'Upload passport'}
+            </Button>
+          </>
+        ) : null}
         {hasPassport ? (
           <Button
             type="button"
@@ -929,6 +963,7 @@ function StayRoomKeyBlock({
   keyIssuedAt,
   isPending,
   actionError,
+  readOnly = false,
   onToggle,
 }: {
   accessGranted: boolean;
@@ -936,6 +971,7 @@ function StayRoomKeyBlock({
   keyIssuedAt: string | null;
   isPending: boolean;
   actionError: string | null;
+  readOnly?: boolean;
   onToggle: (next: boolean) => void;
 }) {
   return (
@@ -955,10 +991,10 @@ function StayRoomKeyBlock({
           Physical key / card not handed over yet.
         </p>
       )}
-      {accessGranted && actionError ? (
+      {accessGranted && actionError && !readOnly ? (
         <p className="text-xs text-destructive">{actionError}</p>
       ) : null}
-      {accessGranted ? (
+      {accessGranted && !readOnly ? (
         <Button
           type="button"
           size="sm"
@@ -1044,6 +1080,84 @@ function StayBookingBalanceBlock({
   );
 }
 
+const RECEPTION_NOTE_MAX_LENGTH = 1000;
+
+function StayReceptionNoteBlock({
+  stay,
+  tenantSlug,
+  onStayUpdated,
+}: {
+  stay: GuestStayRecordWithLink;
+  tenantSlug: string;
+  onStayUpdated?: (stay: GuestStayRecordWithLink) => void;
+}) {
+  const [draft, setDraft] = useState(stay.reception_note ?? '');
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isPending, startAction] = useTransition();
+  const savedNote = stay.reception_note ?? '';
+  const dirty = draft !== savedNote;
+
+  useEffect(() => {
+    setDraft(stay.reception_note ?? '');
+    setActionError(null);
+  }, [stay.id, stay.reception_note]);
+
+  const handleSave = () => {
+    startAction(async () => {
+      setActionError(null);
+      const result = await setGuestReservationReceptionNoteAction({
+        tenantSlug,
+        stayId: stay.id,
+        note: draft,
+      });
+      if (!result.ok) {
+        setActionError(
+          result.error === 'invalid_note'
+            ? `Comment must be at most ${RECEPTION_NOTE_MAX_LENGTH} characters.`
+            : result.error === 'unauthorized'
+              ? 'Sign in again at reception desk.'
+              : 'Could not save comment.'
+        );
+        return;
+      }
+      setDraft(result.stay.reception_note ?? '');
+      onStayUpdated?.({
+        ...stay,
+        ...result.stay,
+        magicLinkUrl: stay.magicLinkUrl,
+      });
+    });
+  };
+
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Comment
+      </p>
+      <textarea
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        rows={3}
+        maxLength={RECEPTION_NOTE_MAX_LENGTH}
+        disabled={isPending}
+        placeholder="Desk-only note for this booking…"
+        className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full resize-y rounded-md border px-2.5 py-2 text-sm outline-none focus-visible:ring-[3px] disabled:opacity-50"
+      />
+      {actionError ? <p className="text-xs text-destructive">{actionError}</p> : null}
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-8"
+        disabled={isPending || !dirty}
+        onClick={handleSave}
+      >
+        Save comment
+      </Button>
+    </div>
+  );
+}
+
 export interface ReceptionGuestStayDetailProps {
   open: boolean;
   onClose: () => void;
@@ -1060,12 +1174,15 @@ export interface ReceptionGuestStayDetailProps {
   staffPermissions?: readonly string[];
   onTourismExportedAtChange?: (stayId: string, tourismExportedAt: string | null) => void;
   onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
+  onReceptionNoteChange?: (stay: GuestStayRecordWithLink) => void;
   onPassportCheckedAtChange?: (stay: GuestStayRecordWithLink) => void;
   /** Cancel (not admitted) or check out (admitted, still in-house) → Archive. */
   onCancelOrCheckout: (stayId: string, intent: 'cancel' | 'checkout') => void;
   /** Opens unified edit (bed + dates). */
   onEditStay: (stay: GuestStayRecordWithLink) => void;
   onReissueAccess: (stay: GuestStayRecordWithLink) => void;
+  /** Prefill new booking from this stay (extend). */
+  onExtendStay: (stay: GuestStayRecordWithLink) => void;
   tenantSettings?: TenantSettings;
   /** Current operational calendar day — gates Check out vs ended stays. */
   operationalDate: string;
@@ -1115,6 +1232,15 @@ function ReceptionGuestStayDetailActions({
     stay_kind: stay.stay_kind,
   });
 
+  const overdueCheckout = isStayCheckoutOverdue({
+    passport_checked_at: stay.passport_checked_at,
+    desk_checked_in_at: stay.desk_checked_in_at,
+    check_out_date: stay.check_out_date,
+    check_out_at: stay.check_out_at,
+    operationalDate,
+    is_archived: stay.is_archived,
+    stay_kind: stay.stay_kind,
+  });
   const showCheckout = endAction === 'checkout';
   const busy = isPending;
 
@@ -1171,7 +1297,7 @@ function ReceptionGuestStayDetailActions({
           disabled={busy}
           onClick={() => onCancelOrCheckout(stay.id, 'checkout')}
         >
-          Check out
+          {overdueCheckout ? 'Confirm checkout' : 'Check out'}
         </Button>
       ) : null}
     </div>
@@ -1183,13 +1309,19 @@ function ReceptionGuestStayDetailOverflowMenu({
   isPending,
   onCancelOrCheckout,
   onReissueAccess,
+  onExtendStay,
   operationalDate,
   accessGranted,
   accessPending,
   onRevokeAccess,
 }: Pick<
   ReceptionGuestStayDetailProps,
-  'stay' | 'isPending' | 'onCancelOrCheckout' | 'onReissueAccess' | 'operationalDate'
+  | 'stay'
+  | 'isPending'
+  | 'onCancelOrCheckout'
+  | 'onReissueAccess'
+  | 'onExtendStay'
+  | 'operationalDate'
 > & {
   accessGranted: boolean;
   accessPending: boolean;
@@ -1205,9 +1337,21 @@ function ReceptionGuestStayDetailOverflowMenu({
     stay_kind: stay.stay_kind,
   });
 
+  const pastCheckOut = isReceptionStayPastCheckOut(stay, operationalDate);
+  const overdueCheckout = isStayCheckoutOverdue({
+    passport_checked_at: stay.passport_checked_at,
+    desk_checked_in_at: stay.desk_checked_in_at,
+    check_out_date: stay.check_out_date,
+    check_out_at: stay.check_out_at,
+    operationalDate,
+    is_archived: stay.is_archived,
+    stay_kind: stay.stay_kind,
+  });
   const showCancel = endAction === 'cancel';
-  const showRevoke = accessGranted;
+  const showReissue = !pastCheckOut;
+  const showRevoke = accessGranted && (!pastCheckOut || overdueCheckout);
   const busy = isPending || accessPending;
+  const showExtend = stay.stay_kind !== 'volunteer' && !stay.is_archived;
 
   return (
     <DropdownMenu>
@@ -1218,9 +1362,16 @@ function ReceptionGuestStayDetailOverflowMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem disabled={busy} onSelect={() => onReissueAccess(stay)}>
-          Reissue access
-        </DropdownMenuItem>
+        {showReissue ? (
+          <DropdownMenuItem disabled={busy} onSelect={() => onReissueAccess(stay)}>
+            Reissue access
+          </DropdownMenuItem>
+        ) : null}
+        {showExtend ? (
+          <DropdownMenuItem disabled={busy} onSelect={() => onExtendStay(stay)}>
+            Extend stay
+          </DropdownMenuItem>
+        ) : null}
         {showRevoke ? (
           <DropdownMenuItem disabled={busy} onSelect={onRevokeAccess}>
             Revoke access
@@ -1255,10 +1406,12 @@ export function ReceptionGuestStayDetail({
   staffPermissions = [],
   onTourismExportedAtChange,
   onStayBookingBalanceChange,
+  onReceptionNoteChange,
   onPassportCheckedAtChange,
   onCancelOrCheckout,
   onEditStay,
   onReissueAccess,
+  onExtendStay,
   tenantSettings,
   operationalDate,
   initialTab = 'stay',
@@ -1290,6 +1443,17 @@ export function ReceptionGuestStayDetail({
     stay,
     tenantSlug: tenantSlug ?? '',
     onStayUpdated: onPassportCheckedAtChange,
+  });
+
+  const stayEnded = isReceptionStayPastCheckOut(stay, operationalDate);
+  const overdueCheckout = isStayCheckoutOverdue({
+    passport_checked_at: stay.passport_checked_at,
+    desk_checked_in_at: stay.desk_checked_in_at,
+    check_out_date: stay.check_out_date,
+    check_out_at: stay.check_out_at,
+    operationalDate,
+    is_archived: stay.is_archived,
+    stay_kind: stay.stay_kind,
   });
 
   const tourismIncomplete =
@@ -1389,6 +1553,11 @@ export function ReceptionGuestStayDetail({
         {formatDisplayDate(checkInDay)} → {formatDisplayDate(checkOutDay)} ·{' '}
         {guestAccessStatusLabel(status)}
       </p>
+      {overdueCheckout ? (
+        <p className="text-xs font-medium text-amber-800">
+          Checkout overdue — confirm the guest has left
+        </p>
+      ) : null}
       {accessGrantedAt ? (
         <p className="text-xs font-medium text-emerald-800">
           Access granted · {formatReceptionDateTime(accessGrantedAt)}
@@ -1406,10 +1575,10 @@ export function ReceptionGuestStayDetail({
       isPending={isPending || access.isPending}
       onCancelOrCheckout={onCancelOrCheckout}
       operationalDate={operationalDate}
-      showAddTourismGuest={activeTab === 'tourism' && showTourismTab}
+      showAddTourismGuest={activeTab === 'tourism' && showTourismTab && !stayEnded}
       onAddTourismGuest={() => tourismAddGuestRef.current?.()}
       addTourismGuestDisabled={!canAddTourismGuest}
-      showCheckIn={Boolean(tenantSlug) && !access.accessGranted}
+      showCheckIn={Boolean(tenantSlug) && !access.accessGranted && !stayEnded}
       onCheckIn={requestGrantAccess}
       checkInDisabled={primaryGrantBlocked}
       checkInHint={
@@ -1418,7 +1587,9 @@ export function ReceptionGuestStayDetail({
           : null
       }
       checkInError={access.actionError}
-      showGrantAccess={activeTab === 'access' && Boolean(tenantSlug) && !access.accessGranted}
+      showGrantAccess={
+        activeTab === 'access' && Boolean(tenantSlug) && !access.accessGranted && !stayEnded
+      }
       onGrantAccess={requestGrantAccess}
       grantAccessDisabled={primaryGrantBlocked}
     />
@@ -1445,24 +1616,30 @@ export function ReceptionGuestStayDetail({
       <TabsContent value="stay" className="mt-0 space-y-4 outline-none">
         <StayBookingComOpenBlock stay={stay} tenantSettings={tenantSettings} />
         {tenantSlug ? (
-          <StayBookingBalanceBlock
-            stay={stay}
-            tenantSlug={tenantSlug}
-            onStayUpdated={onStayBookingBalanceChange}
-          />
+          <>
+            <StayBookingBalanceBlock
+              stay={stay}
+              tenantSlug={tenantSlug}
+              onStayUpdated={onStayBookingBalanceChange}
+            />
+            <StayReceptionNoteBlock
+              stay={stay}
+              tenantSlug={tenantSlug}
+              onStayUpdated={onReceptionNoteChange}
+            />
+            <StayRoomKeyBlock
+              accessGranted={access.accessGranted}
+              keyIssued={access.keyIssued}
+              keyIssuedAt={stay.key_issued_at}
+              isPending={access.isPending}
+              actionError={access.actionError}
+              readOnly={stayEnded}
+              onToggle={access.setKeyIssuedChecked}
+            />
+          </>
         ) : (
           <p className="text-xs text-muted-foreground">Stay actions unavailable.</p>
         )}
-        {tenantSlug ? (
-          <StayRoomKeyBlock
-            accessGranted={access.accessGranted}
-            keyIssued={access.keyIssued}
-            keyIssuedAt={stay.key_issued_at}
-            isPending={access.isPending}
-            actionError={access.actionError}
-            onToggle={access.setKeyIssuedChecked}
-          />
-        ) : null}
       </TabsContent>
 
       {showTourismTab ? (
@@ -1471,6 +1648,7 @@ export function ReceptionGuestStayDetail({
             <StayTourismRegistrationBlock
               stay={stay}
               tenantSlug={tenantSlug}
+              reviewOnly={stayEnded}
               onTourismExportedAtChange={onTourismExportedAtChange}
               onTourismStatusChange={setTourismStatus}
               onTourismAccessReadyChange={setTourismAccessReady}
@@ -1490,7 +1668,9 @@ export function ReceptionGuestStayDetail({
         )}
 
         {!stay.magicLinkUrl ? (
-          <p className="text-xs text-muted-foreground">Link unavailable — re-issue access.</p>
+          <p className="text-xs text-muted-foreground">
+            {stayEnded ? 'Link unavailable.' : 'Link unavailable — re-issue access.'}
+          </p>
         ) : (
           <MagicLinkCard
             magicLinkUrl={stay.magicLinkUrl}
@@ -1522,7 +1702,7 @@ export function ReceptionGuestStayDetail({
         bodyTop={tabsList}
         body={tabsBody}
         footer={footer}
-        onEdit={() => onEditStay(stay)}
+        onEdit={stayEnded ? undefined : () => onEditStay(stay)}
         editDisabled={isPending}
         headerExtra={
           <Button
@@ -1543,6 +1723,7 @@ export function ReceptionGuestStayDetail({
               isPending={isPending}
               onCancelOrCheckout={onCancelOrCheckout}
               onReissueAccess={onReissueAccess}
+              onExtendStay={onExtendStay}
               operationalDate={operationalDate}
               accessGranted={access.accessGranted}
               accessPending={access.isPending}

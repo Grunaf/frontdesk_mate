@@ -56,6 +56,8 @@ import type {
   UpdateGuestReservationResult,
   SetGuestReservationBookingPaidInput,
   SetGuestReservationBookingPaidResult,
+  SetGuestReservationReceptionNoteInput,
+  SetGuestReservationReceptionNoteResult,
 } from '../model/types';
 
 const OPERATIONAL_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -627,6 +629,78 @@ export async function setGuestReservationBookingPaid(
 
   if (updateError || !updated) {
     console.error('setGuestReservationBookingPaid update:', updateError?.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const stay = mapReservationGrantToStayRecord(
+    updated as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
+  if (!stay) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  return { ok: true, stay };
+}
+
+const RECEPTION_NOTE_MAX_LENGTH = 1000;
+
+export async function setGuestReservationReceptionNote(
+  input: SetGuestReservationReceptionNoteInput
+): Promise<SetGuestReservationReceptionNoteResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'tenant_not_found' };
+  }
+
+  const trimmed = input.note?.trim() ?? '';
+  if (trimmed.length > RECEPTION_NOTE_MAX_LENGTH) {
+    return { ok: false, error: 'invalid_note' };
+  }
+  const receptionNote = trimmed.length > 0 ? trimmed : null;
+
+  const { data: existing, error: loadError } = await admin
+    .from('guest_reservations')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('setGuestReservationReceptionNote load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
+  if (!grant) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const { data: updated, error: updateError } = await admin
+    .from('guest_reservations')
+    .update({
+      reception_note: receptionNote,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .maybeSingle();
+
+  if (updateError || !updated) {
+    console.error('setGuestReservationReceptionNote update:', updateError?.message);
     return { ok: false, error: 'db_unavailable' };
   }
 

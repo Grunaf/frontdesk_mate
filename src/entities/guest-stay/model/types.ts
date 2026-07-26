@@ -33,6 +33,8 @@ export interface GuestStayRecord {
   booking_amount_due_minor?: number | null;
   booking_amount_currency?: string | null;
   booking_paid_at?: string | null;
+  /** Desk-only comment; not shown in guest app. */
+  reception_note?: string | null;
   /** Soft-archive. Operational lists / overlap exclude these. */
   is_archived?: boolean;
   archived_at?: string | null;
@@ -148,6 +150,19 @@ export type SetGuestReservationBookingPaidResult =
         | 'tenant_not_found'
         | 'no_balance_recorded'
         | 'db_unavailable';
+    };
+
+export type SetGuestReservationReceptionNoteInput = {
+  tenantSlug: string;
+  stayId: string;
+  note: string | null;
+};
+
+export type SetGuestReservationReceptionNoteResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'not_found' | 'tenant_not_found' | 'invalid_note' | 'db_unavailable';
     };
 
 export type ReissueGuestStayResult =

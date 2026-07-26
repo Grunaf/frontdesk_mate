@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import { listGuestStayBedIds, stayRecordCheckOutDate } from '@/entities/guest-stay';
 import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccessIntervals';
-import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
 import {
   listLaundryMachines,
@@ -866,6 +866,31 @@ export function ReceptionCheckInPanel({
     setError(null);
   };
 
+  const beginExtendFromStay = (stay: GuestStayRecordWithLink) => {
+    const checkInDate = stayRecordCheckOutDate(stay);
+    const checkOutDate = addNights(checkInDate, 1);
+    const platformIds = new Set(bookingPlatformOptions.map((entry) => entry.id));
+    const bookingPlatformId = platformIds.has('direct')
+      ? 'direct'
+      : platformIds.has('walk-in')
+        ? 'walk-in'
+        : (bookingPlatformOptions[0]?.id ?? '');
+
+    setEditDraft(null);
+    setMode('custom');
+    setGuestName(stay.guest_name ?? '');
+    setBookingPlatformId(bookingPlatformId);
+    setBookingExternalId('');
+    setBookingAmountDue('');
+    setCheckInDate(checkInDate);
+    setCheckOutDate(checkOutDate);
+    setBedId(stay.bed_id);
+    setOfferId(resolveOfferIdForBed(tenantSettings, stay.bed_id) ?? '');
+    setBedPickMode('manual');
+    setError(null);
+    setIssueOverlayOpen(true);
+  };
+
   const handleSubmit = () => {
     setError(null);
 
@@ -1116,6 +1141,13 @@ export function ReceptionCheckInPanel({
           onStayBookingBalanceChange={() => {
             void refresh();
           }}
+          onReceptionNoteChange={(stay) => {
+            setSelectedStayOverride({
+              ...stay,
+              magicLinkUrl: stay.magicLinkUrl ?? selectedStay?.magicLinkUrl ?? null,
+            });
+            void refresh();
+          }}
           onPassportCheckedAtChange={() => {
             void refresh();
           }}
@@ -1128,6 +1160,10 @@ export function ReceptionCheckInPanel({
           }}
           onReissueAccess={(stay) => {
             setPendingReissueAccessStay(stay);
+          }}
+          onExtendStay={(stay) => {
+            closeStayDetail();
+            beginExtendFromStay(stay);
           }}
         />
       ) : null}
