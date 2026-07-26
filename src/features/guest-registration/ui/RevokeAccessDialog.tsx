@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+
 import { Button } from '@/shared/ui';
 
 interface CancelBookingDialogProps {
@@ -18,19 +21,42 @@ export function CancelBookingDialog({
   onConfirm,
   isPending = false,
 }: CancelBookingDialogProps) {
-  if (!open) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onKeep();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onKeep]);
+
+  if (!open || !mounted) {
     return null;
   }
 
   const isCheckout = intent === 'checkout';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+      role="presentation"
+      onClick={onKeep}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="cancel-booking-title"
         className="w-full max-w-sm space-y-4 rounded-xl border bg-background p-5 shadow-lg"
+        onClick={(event) => event.stopPropagation()}
       >
         <div className="space-y-2">
           <h2 id="cancel-booking-title" className="text-sm font-semibold">
@@ -57,7 +83,8 @@ export function CancelBookingDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

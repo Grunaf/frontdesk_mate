@@ -252,29 +252,6 @@ export function IssueGuestAccessFormFields({
         </>
       ) : null}
 
-      <div className="space-y-1">
-        <Label htmlFor="booking-balance-due">Balance due</Label>
-        <p className="text-xs text-muted-foreground">Remaining stay balance. Not city tax.</p>
-        <Input
-          id="booking-balance-due"
-          value={bookingAmountDue}
-          onChange={(event) => onBookingAmountDueChange(event.target.value)}
-          placeholder={`e.g. 24.00 ${bookingBalanceCurrencySymbol}`.trim()}
-          inputMode="decimal"
-          autoComplete="off"
-          required
-        />
-      </div>
-
-      <div className="space-y-1 lg:col-span-2">
-        <GuestAccessDateRange
-          compact
-          checkInDate={checkInDate}
-          checkOutDate={checkOutDate}
-          onChange={onDatesChange}
-        />
-      </div>
-
       {offerFirst ? (
         <div className="space-y-1 lg:col-span-2">
           <Label htmlFor="stay-offer-id">Stay offer</Label>
@@ -317,6 +294,29 @@ export function IssueGuestAccessFormFields({
       ) : (
         bedSelect
       )}
+
+      <div className="space-y-1 lg:col-span-2">
+        <GuestAccessDateRange
+          compact
+          checkInDate={checkInDate}
+          checkOutDate={checkOutDate}
+          onChange={onDatesChange}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="booking-balance-due">Balance due</Label>
+        <p className="text-xs text-muted-foreground">Remaining stay balance. Not city tax.</p>
+        <Input
+          id="booking-balance-due"
+          value={bookingAmountDue}
+          onChange={(event) => onBookingAmountDueChange(event.target.value)}
+          placeholder={`e.g. 24.00 ${bookingBalanceCurrencySymbol}`.trim()}
+          inputMode="decimal"
+          autoComplete="off"
+          required
+        />
+      </div>
     </div>
   );
 

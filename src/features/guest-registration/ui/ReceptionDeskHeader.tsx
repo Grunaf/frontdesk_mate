@@ -217,17 +217,6 @@ export function ReceptionDeskHeader({
             </Popover>
           ) : null}
 
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="shrink-0"
-            aria-label="Open profile"
-            onClick={() => setProfileOpen(true)}
-          >
-            <UserRound aria-hidden />
-          </Button>
-
           {showNewBookingCta ? (
             <Button
               type="button"
@@ -238,6 +227,17 @@ export function ReceptionDeskHeader({
               {RECEPTION_ISSUE_ACCESS_DESKTOP_CTA_LABEL}
             </Button>
           ) : null}
+
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="shrink-0"
+            aria-label="Open profile"
+            onClick={() => setProfileOpen(true)}
+          >
+            <UserRound aria-hidden />
+          </Button>
         </div>
       </header>
 

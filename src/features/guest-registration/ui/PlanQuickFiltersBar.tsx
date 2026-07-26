@@ -14,6 +14,7 @@ import {
   listPlanRoomFilterOptions,
   type PlanQuickFiltersState,
 } from '../lib/filterPlanRoomGroupsByQuickFilters';
+import { PlanFilterField } from './PlanFilterField';
 
 export interface PlanQuickFiltersBarProps {
   settings: TenantSettings;
@@ -83,8 +84,7 @@ export function PlanQuickFiltersBar({
 
   return (
     <div className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
-      <div className="space-y-1">
-        <span className="text-[11px] text-muted-foreground">Availability</span>
+      <PlanFilterField label="Availability">
         <button
           type="button"
           aria-pressed={freeBedsFilterOn}
@@ -109,41 +109,35 @@ export function PlanQuickFiltersBar({
           </span>
           Free beds
         </button>
-      </div>
+      </PlanFilterField>
 
       {showFloorRow ? (
-        <div className="space-y-1">
-          <span className="text-[11px] text-muted-foreground">Floor</span>
+        <PlanFilterField label="Floor">
           <SegmentedChipBar
             ariaLabel="Filter by floor"
             items={floorItems}
             value={filters.floorId}
             onValueChange={(id) => patch({ floorId: id })}
+            bleed={false}
             className="min-w-0"
           />
-        </div>
+        </PlanFilterField>
       ) : null}
 
       {showOfferRow ? (
-        <div className="space-y-1">
-          <span className="text-[11px] text-muted-foreground">Stay offer</span>
+        <PlanFilterField label="Stay offer">
           <SegmentedChipBar
             ariaLabel="Filter by stay offer"
             items={offerItems}
             value={filters.offerId}
             onValueChange={(id) => patch({ offerId: id })}
+            bleed={false}
             className="min-w-0"
           />
-        </div>
+        </PlanFilterField>
       ) : null}
 
-      <div className="space-y-1">
-        <label
-          htmlFor="plan-quick-filter-room"
-          className="text-[11px] text-muted-foreground"
-        >
-          Room
-        </label>
+      <PlanFilterField label="Room" htmlFor="plan-quick-filter-room">
         <div className="flex flex-wrap items-center gap-2">
           <select
             id="plan-quick-filter-room"
@@ -176,7 +170,7 @@ export function PlanQuickFiltersBar({
             </>
           ) : null}
         </div>
-      </div>
+      </PlanFilterField>
     </div>
   );
 }
