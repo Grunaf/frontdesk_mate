@@ -38,6 +38,9 @@ function isCompleteLandingRoom(
     title,
     description: room.description?.trim() || '',
     priceFromEur: typeof room.priceFromEur === 'number' ? room.priceFromEur : undefined,
+    ...(room.bookingUnit === 'room' || room.bookingUnit === 'bed'
+      ? { bookingUnit: room.bookingUnit }
+      : {}),
     imageUrl,
     requiresChatUpgrade: room.requiresChatUpgrade === true,
   };

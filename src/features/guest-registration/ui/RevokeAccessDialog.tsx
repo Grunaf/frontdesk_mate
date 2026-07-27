@@ -47,7 +47,7 @@ export function CancelBookingDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+      className="pointer-events-auto fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
       role="presentation"
       onClick={onKeep}
     >

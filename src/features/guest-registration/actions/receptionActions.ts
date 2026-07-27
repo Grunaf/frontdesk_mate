@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import {
   cancelOrCheckoutGuestReservation,
   createGuestStay,
+  createGuestStayParty,
   completeDeskCheckIn,
   getGuestReservationForDesk,
   listActiveGuestStays,
@@ -20,6 +21,7 @@ import { getGuestById, searchGuests, type GuestProfile } from '@/entities/guest/
 import { seedTourismGuestFromGuestProfile } from '@/entities/guest-tourism-registration/server';
 import { getTenantRecord } from '@/entities/tenant/server';
 import type {
+  CreateGuestStayPartyResult,
   CreateGuestStayResult,
   GuestReservationArchiveListItem,
   GuestStayRecordWithLink,
@@ -57,6 +59,10 @@ async function clearStayPresenceAfterDeskMutation(tenantSlug: string, stayId: st
 
 export type CreateGuestStayActionResult =
   | CreateGuestStayResult
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
+
+export type CreateGuestStayPartyActionResult =
+  | CreateGuestStayPartyResult
   | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
 
 export async function createGuestStayAction(input: {
@@ -115,6 +121,63 @@ export async function createGuestStayAction(input: {
     return result;
   } catch (error) {
     console.error('createGuestStayAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export async function createGuestStayPartyAction(input: {
+  tenantSlug: string;
+  guests: Array<{ bedId: string; guestName?: string; guestId?: string }>;
+  checkInDate: string;
+  checkOutDate: string;
+  bookingPlatformId?: string;
+  bookingExternalId?: string;
+  bookingAmountDue?: string;
+  locale?: string;
+}): Promise<CreateGuestStayPartyActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  try {
+    const result = await createGuestStayParty(
+      {
+        tenantSlug: input.tenantSlug,
+        guests: input.guests,
+        checkInDate: input.checkInDate,
+        checkOutDate: input.checkOutDate,
+        bookingPlatformId: input.bookingPlatformId,
+        bookingExternalId: input.bookingExternalId,
+        bookingAmountDue: input.bookingAmountDue,
+      },
+      input.locale ?? 'en'
+    );
+
+    if (result.ok) {
+      const lead = result.stays[0];
+      if (lead?.stay.guest_id) {
+        const seeded = await seedTourismGuestFromGuestProfile({
+          tenantId: lead.stay.tenant_id,
+          stayId: lead.stay.id,
+          guestId: lead.stay.guest_id,
+        });
+        if (!seeded.ok) {
+          console.error('createGuestStayPartyAction seed tourism:', seeded.error);
+        }
+      }
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'createGuestStay',
+        subjectId: lead?.stay.id ?? result.bookingGroupId,
+        bedId: lead?.stay.bed_id,
+      });
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('createGuestStayPartyAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

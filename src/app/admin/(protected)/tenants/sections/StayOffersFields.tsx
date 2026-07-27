@@ -136,7 +136,11 @@ export function StayOffersFields({ settings }: StayOffersFieldsProps) {
             </label>
             <div className="sm:col-span-2">
               <AdminMoneyField
-                label="Base price (per night)"
+                label={
+                  offer.bookingUnit === 'room'
+                    ? 'Base price (per room / night)'
+                    : 'Base price (per night)'
+                }
                 value={offer.basePriceEur ?? ''}
                 onChange={(value) => {
                   syncOffers(
@@ -151,9 +155,35 @@ export function StayOffersFields({ settings }: StayOffersFieldsProps) {
                   );
                 }}
                 currencyCode={primaryCurrency}
-                amountHint="Landing price badge and web booking base."
+                amountHint={
+                  offer.bookingUnit === 'room'
+                    ? 'Whole-room price for landing badge and reception balance (not × guests).'
+                    : 'Landing price badge and web booking base (per bed / guest).'
+                }
               />
             </div>
+            <label className="block space-y-1.5 sm:col-span-2">
+              <span className="text-sm font-medium">Booking unit</span>
+              <select
+                value={offer.bookingUnit === 'room' ? 'room' : 'bed'}
+                onChange={(event) => {
+                  const bookingUnit = event.target.value === 'room' ? 'room' : 'bed';
+                  syncOffers(
+                    offers.map((item, i) =>
+                      i === index ? { ...item, bookingUnit } : item
+                    )
+                  );
+                }}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              >
+                <option value="bed">Per bed</option>
+                <option value="room">Whole room</option>
+              </select>
+              <span className="block text-xs text-muted-foreground">
+                Whole room = one sellable unit (private). Guest capacity comes from beds in the
+                room map, not this offer.
+              </span>
+            </label>
             {showEngineId ? (
               <label className="block space-y-1.5 sm:col-span-2">
                 <span className="text-sm font-medium">Booking engine room type ID</span>

@@ -8,14 +8,16 @@ import {
 import { listGuestStayBedIds } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
 import { resolveBedDisplayLabel } from '@/entities/tenant/lib/resolveBedDisplay';
-import { resolveBedInventory, type BedInventoryRoomGroup } from './resolveBedInventory';
+import { resolveBedInventory } from './resolveBedInventory';
 import { addNights, todayUtcDate } from './guestAccessDates';
+import { listWholeRoomBlockedBedIdsForNight } from './resolveRoomOccupancyBlocks';
 
 export type BedDayCalendarView = 'week' | 'month';
 
 export interface BedDayCalendarCell {
   nightDate: string;
-  status: 'free' | BedNightCellStatus;
+  /** `blocked` = whole-room sibling hold (not walk-in free). */
+  status: 'free' | 'blocked' | BedNightCellStatus;
   stay?: GuestStayRecordWithLink;
 }
 
@@ -143,6 +145,25 @@ export function resolveBedDayCalendar(
       roomLabel: 'Unknown beds',
       rows: orphanBedIds.map((bedId) => buildRow(settings, bedId, days, occupancyStays, now)),
     });
+  }
+
+  // Whole-room offer: occupied room holds remaining free beds for those nights.
+  for (const nightDate of days) {
+    const blocked = listWholeRoomBlockedBedIdsForNight({
+      settings,
+      stays: occupancyStays,
+      nightDate,
+    });
+    if (blocked.size === 0) continue;
+    for (const group of roomGroups) {
+      for (const row of group.rows) {
+        if (!blocked.has(row.bedId)) continue;
+        const cell = row.cells.find((entry) => entry.nightDate === nightDate);
+        if (cell && cell.status === 'free') {
+          cell.status = 'blocked';
+        }
+      }
+    }
   }
 
   return { rangeStart, rangeEnd, days, roomGroups };

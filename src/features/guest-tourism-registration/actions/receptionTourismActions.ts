@@ -29,7 +29,7 @@ import {
 } from '@/entities/guest-tourism-registration/server';
 import { getGuestReservationForDesk, setPassportCheckedAt } from '@/entities/guest-stay/server';
 import type { GuestStayRecord } from '@/entities/guest-stay/server';
-import { resolveGuestIdForBooking, updateGuestIdentity } from '@/entities/guest/server';
+import { getGuestById, resolveGuestIdForBooking, updateGuestIdentity } from '@/entities/guest/server';
 import {
   findReceptionUserById,
   receptionStaffCanSkipTourismGate,
@@ -767,6 +767,8 @@ export async function createTourismGuestForReceptionAction(input: {
   tenantSlug: string;
   stayId: string;
   identity: TourismGuestIdentityInput;
+  /** Existing `guests.id` chosen from typeahead (preferred over stay primary guest). */
+  guestId?: string | null;
 }): Promise<CreateTourismGuestForReceptionActionResult> {
   try {
     await assertReceptionAuthenticated(input.tenantSlug);
@@ -809,7 +811,18 @@ export async function createTourismGuestForReceptionAction(input: {
       return { ok: false, error: 'db_unavailable' };
     }
 
-    let profileGuestId = stayGuestId;
+    let profileGuestId: string | null = null;
+    const requestedGuestId = input.guestId?.trim() || null;
+    if (requestedGuestId) {
+      const existingProfile = await getGuestById(tenant.id, requestedGuestId);
+      if (!existingProfile) {
+        return { ok: false, error: 'invalid_input' };
+      }
+      profileGuestId = existingProfile.id;
+    } else {
+      profileGuestId = stayGuestId;
+    }
+
     if (!profileGuestId) {
       const ensured = await resolveGuestIdForBooking({
         tenantId: tenant.id,
@@ -828,7 +841,20 @@ export async function createTourismGuestForReceptionAction(input: {
         })
         .eq('id', input.stayId)
         .eq('tenant_id', tenant.id);
+    } else if (!stayGuestId) {
+      // First tourism guest on a stay without a linked profile — attach as primary.
+      await admin
+        .from('guest_reservations')
+        .update({
+          guest_id: profileGuestId,
+          guest_name: `${identity.firstName} ${identity.lastName}`.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.stayId)
+        .eq('tenant_id', tenant.id);
     }
+
+    await purgePassportPhotosForGuestProfile(profileGuestId);
 
     await syncGuestProfileFromTourismIdentity({
       tenantId: tenant.id,

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { randomBytes } from 'node:crypto';
 import type { TenantSettings } from '../../src/entities/tenant/model/settings';
 import {
   encryptAccessToken,
@@ -15,8 +16,15 @@ import {
   todayPropertyStayCalendarDay,
 } from '../../src/entities/guest-stay';
 import type { SmokeSessionRuntime } from './smokeRuntime';
+import { readSmokeSession } from './smokeRuntime';
 
+/** Prefix for auto-provisioned smoke guests (`__e2e_smoke_<runId>`). */
+export const E2E_SMOKE_GUEST_NAME_PREFIX = '__e2e_smoke_';
+
+/** @deprecated Prefer unique per-run names; kept for stale cleanup of older exact-name stays. */
 export const E2E_SMOKE_GUEST_NAME = '__e2e_smoke__';
+
+const SMOKE_STALE_MS = 6 * 60 * 60 * 1000;
 
 /** Fallback when tenant has no check-in time — matches product defaults. */
 const SMOKE_CHECK_IN_TIME_FALLBACK = '14:00';
@@ -96,23 +104,14 @@ async function loadTenant(slug: string): Promise<TenantRow | null> {
   };
 }
 
-async function revokeSmokeStays(tenantId: string): Promise<void> {
+async function cancelReservationsWithGrants(
+  tenantId: string,
+  reservationIds: string[]
+): Promise<void> {
   const admin = getSupabaseAdmin();
-  if (!admin) return;
+  if (!admin || reservationIds.length === 0) return;
 
   const revokedAt = new Date().toISOString();
-
-  const { data: reservations } = await admin
-    .from('guest_reservations')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('guest_name', E2E_SMOKE_GUEST_NAME)
-    .eq('status', 'planned');
-
-  const reservationIds = (reservations ?? []).map((row) => String(row.id));
-  if (reservationIds.length === 0) {
-    return;
-  }
 
   await admin
     .from('guest_access_grants')
@@ -123,11 +122,53 @@ async function revokeSmokeStays(tenantId: string): Promise<void> {
   const { error } = await admin
     .from('guest_reservations')
     .update({ status: 'cancelled', updated_at: revokedAt })
+    .eq('tenant_id', tenantId)
     .in('id', reservationIds);
 
   if (error) {
     console.error('[e2e provision] revoke smoke stays failed:', error.message);
   }
+}
+
+/**
+ * Do not wipe every `__e2e_smoke__*` planned stay — that races concurrent smoke runs.
+ * Only revoke the prior session stay (same machine) and clean up stale leftovers.
+ */
+async function revokePriorAndStaleSmokeStays(tenantId: string): Promise<void> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return;
+
+  const priorStayId = readSmokeSession()?.stayId?.trim() || null;
+  const idsToCancel = new Set<string>();
+  if (priorStayId) idsToCancel.add(priorStayId);
+
+  const staleBefore = new Date(Date.now() - SMOKE_STALE_MS).toISOString();
+  const { data: staleRows, error: staleError } = await admin
+    .from('guest_reservations')
+    .select('id, guest_name, created_at')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'planned')
+    .lt('created_at', staleBefore);
+
+  if (staleError) {
+    console.error('[e2e provision] stale smoke query failed:', staleError.message);
+  } else {
+    for (const row of staleRows ?? []) {
+      const name = String(row.guest_name ?? '');
+      if (
+        name === E2E_SMOKE_GUEST_NAME ||
+        name.startsWith(E2E_SMOKE_GUEST_NAME_PREFIX)
+      ) {
+        idsToCancel.add(String(row.id));
+      }
+    }
+  }
+
+  await cancelReservationsWithGrants(tenantId, [...idsToCancel]);
+}
+
+function createSmokeGuestName(): string {
+  return `${E2E_SMOKE_GUEST_NAME_PREFIX}${Date.now().toString(36)}_${randomBytes(2).toString('hex')}`;
 }
 
 async function pickBedId(
@@ -210,7 +251,7 @@ export async function provisionGuestStayForSmoke(input: {
   const checkInAt = resolveCheckInIso(checkInDate, checkInTime, propertyTimeZone);
   const checkOutAt = `${checkOutDate}T23:59:59.999Z`;
 
-  await revokeSmokeStays(tenant.id);
+  await revokePriorAndStaleSmokeStays(tenant.id);
 
   const bedId = await pickBedId(
     tenant.id,
@@ -225,6 +266,7 @@ export async function provisionGuestStayForSmoke(input: {
     return null;
   }
 
+  const guestName = createSmokeGuestName();
   const guestPin = generateGuestPin();
   const accessToken = generateAccessToken();
   const nowIso = new Date().toISOString();
@@ -234,7 +276,7 @@ export async function provisionGuestStayForSmoke(input: {
     .insert({
       tenant_id: tenant.id,
       bed_id: bedId,
-      guest_name: E2E_SMOKE_GUEST_NAME,
+      guest_name: guestName,
       check_in_date: checkInDate,
       check_out_date: checkOutDate,
       check_in_at: checkInAt,
@@ -270,7 +312,7 @@ export async function provisionGuestStayForSmoke(input: {
   }
 
   console.info(
-    `[e2e provision] created smoke reservation ${reservationId} on bed ${bedId} for ${input.tenantSlug}`
+    `[e2e provision] created smoke reservation ${reservationId} (${guestName}) on bed ${bedId} for ${input.tenantSlug}`
   );
 
   return {

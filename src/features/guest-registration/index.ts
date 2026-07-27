@@ -1,5 +1,6 @@
 export {
   createGuestStayAction,
+  createGuestStayPartyAction,
   listActiveGuestStaysAction,
   reissueGuestStayAction,
   revokeGuestStayAction,

@@ -155,4 +155,28 @@ describe('resolveReceptionCashSnapshot', () => {
     expect(snapshot.stillToCollect[0]?.leavesTomorrow).toBe(true);
     expect(snapshot.stillToCollect[1]?.leavesTomorrow).toBe(false);
   });
+
+  it('lists one unpaid row per booking group (lead with amount only)', () => {
+    const now = new Date('2026-07-09T12:00:00.000Z');
+    const lead = makeStay({
+      id: 'lead',
+      booking_group_id: 'group-1',
+      booking_amount_due_minor: 8000,
+      booking_paid_at: null,
+    });
+    const sibling = makeStay({
+      id: 'sibling',
+      bed_id: 'bed-2',
+      booking_group_id: 'group-1',
+      booking_amount_due_minor: null,
+      booking_amount_currency: null,
+      booking_paid_at: null,
+    });
+
+    const snapshot = resolveReceptionCashSnapshot(settings, [sibling, lead], now);
+
+    expect(snapshot.unpaidCount).toBe(1);
+    expect(snapshot.stillDueMinor).toBe(8000);
+    expect(snapshot.stillToCollect.map((item) => item.stay.id)).toEqual(['lead']);
+  });
 });

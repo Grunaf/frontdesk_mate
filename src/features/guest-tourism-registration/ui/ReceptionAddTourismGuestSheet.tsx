@@ -16,6 +16,7 @@ import {
 type ReceptionAddTourismGuestSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tenantSlug: string;
   checkInDate: string;
   isPending?: boolean;
   error?: string | null;
@@ -26,6 +27,7 @@ type ReceptionAddTourismGuestSheetProps = {
 export function ReceptionAddTourismGuestSheet({
   open,
   onOpenChange,
+  tenantSlug,
   checkInDate,
   isPending = false,
   error = null,
@@ -50,6 +52,7 @@ export function ReceptionAddTourismGuestSheet({
           {open ? (
             <ReceptionTourismGuestIdentityForm
               key={`reception-add-tourism-guest-${initialValues?.passportNumber ?? 'new'}`}
+              tenantSlug={tenantSlug}
               checkInDate={checkInDate}
               initialValues={initialValues}
               submitLabel="Add guest"

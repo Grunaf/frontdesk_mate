@@ -131,6 +131,7 @@ function LandingRoomCardPreviewBody({
   const locale = useLocale();
   const hasDescription = shouldShowRoomDescription(room.description);
   const priceLabel = formatLandingRoomPrice(settings, room.priceFromEur, locale);
+  const priceUnitLabel = room.bookingUnit === 'room' ? t('roomNight') : t('night');
   const title = room.title?.trim() || 'Room title';
   const layout = roomCardLayout(hasDescription, 'preview');
 
@@ -141,7 +142,7 @@ function LandingRoomCardPreviewBody({
         {priceLabel ? (
           <Badge className="absolute top-2 left-2 rounded-md bg-foreground/80 px-2 py-1 text-[10px] font-bold text-background backdrop-blur-sm">
             {t('priceFrom')}
-            <span className="text-primary">{priceLabel}</span> / {t('night')}
+            <span className="text-primary">{priceLabel}</span> / {priceUnitLabel}
           </Badge>
         ) : null}
       </div>
@@ -179,6 +180,7 @@ function LandingRoomCardLiveBody({
   const locale = useLocale();
   const hasDescription = shouldShowRoomDescription(room.description);
   const priceLabel = formatLandingRoomPrice(settings, room.priceFromEur, locale);
+  const priceUnitLabel = room.bookingUnit === 'room' ? t('roomNight') : t('night');
   const showBookingCta = bookingEnabled && bookingLink;
   const showFallbackCta = !bookingEnabled && fallbackLink;
   const showUnavailableHint = !bookingEnabled && !fallbackLink;
@@ -196,7 +198,7 @@ function LandingRoomCardLiveBody({
         {priceLabel ? (
           <Badge className="absolute top-4 left-4 rounded-lg bg-foreground/80 px-3 py-1.5 text-sm font-bold text-background backdrop-blur-sm">
             {t('priceFrom')}
-            <span className="text-primary">{priceLabel}</span> / {t('night')}
+            <span className="text-primary">{priceLabel}</span> / {priceUnitLabel}
           </Badge>
         ) : null}
       </div>

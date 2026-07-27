@@ -1,9 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
+import type { GuestProfile } from '@/entities/guest';
 import { buildCitizenshipOptions } from '../lib/citizenshipOptions';
+import { guestProfileToTourismFormValues } from '../lib/guestProfileToTourismFormValues';
+import { searchGuestProfilesForTourismAction } from '../actions/searchGuestProfilesForTourismAction';
 import {
   isUnderageOnCheckIn,
   isValidPassportNumber,
@@ -44,6 +47,8 @@ export type ReceptionTourismGuestIdentityValues = {
   citizenship: string;
   documentType: TourismGuestDocumentType;
   passportNumber: string;
+  /** Linked reusable guest profile when chosen from typeahead. */
+  guestId?: string | null;
 };
 
 type FieldErrors = {
@@ -60,6 +65,8 @@ type FieldErrors = {
 
 type ReceptionTourismGuestIdentityFormProps = {
   checkInDate: string;
+  /** Enables returning-guest typeahead on the name field. */
+  tenantSlug?: string;
   initialValues?: Partial<ReceptionTourismGuestIdentityValues>;
   submitLabel: string;
   pendingLabel: string;
@@ -77,6 +84,7 @@ function toCalendarDate(isoDay: string): Date | undefined {
 
 export function ReceptionTourismGuestIdentityForm({
   checkInDate,
+  tenantSlug,
   initialValues,
   submitLabel,
   pendingLabel,
@@ -86,6 +94,8 @@ export function ReceptionTourismGuestIdentityForm({
   onSubmit,
 }: ReceptionTourismGuestIdentityFormProps) {
   const citizenshipOptions = useMemo(() => buildCitizenshipOptions('en'), []);
+  const suggestionsListId = useId();
+  const nameSearchRef = useRef<HTMLDivElement>(null);
   const [firstName, setFirstName] = useState(initialValues?.firstName ?? '');
   const [lastName, setLastName] = useState(initialValues?.lastName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(initialValues?.dateOfBirth ?? '');
@@ -99,8 +109,70 @@ export function ReceptionTourismGuestIdentityForm({
     initialValues?.documentType ?? 'passport'
   );
   const [passportNumber, setPassportNumber] = useState(initialValues?.passportNumber ?? '');
+  const [selectedGuestId, setSelectedGuestId] = useState<string | null>(
+    initialValues?.guestId ?? null
+  );
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<GuestProfile[]>([]);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const [suggestionsPending, startSuggestionsTransition] = useTransition();
   const [dobPopoverOpen, setDobPopoverOpen] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const searchQuery = `${firstName} ${lastName}`.trim();
+
+  useEffect(() => {
+    if (!tenantSlug || !suggestionsOpen || disabled || isPending) return;
+
+    const timer = window.setTimeout(() => {
+      startSuggestionsTransition(async () => {
+        const result = await searchGuestProfilesForTourismAction({
+          tenantSlug,
+          query: searchQuery,
+        });
+        if (!result.ok) {
+          setSuggestionsError('Could not search guests.');
+          setSuggestions([]);
+          return;
+        }
+        setSuggestionsError(null);
+        setSuggestions(result.items);
+      });
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [disabled, isPending, searchQuery, suggestionsOpen, tenantSlug]);
+
+  useEffect(() => {
+    if (!suggestionsOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!nameSearchRef.current?.contains(event.target as Node)) {
+        setSuggestionsOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', onPointerDown);
+    return () => window.removeEventListener('mousedown', onPointerDown);
+  }, [suggestionsOpen]);
+
+  const applyGuestProfile = (guest: GuestProfile) => {
+    const prefill = guestProfileToTourismFormValues(guest);
+    setSelectedGuestId(prefill.guestId);
+    setFirstName(prefill.firstName);
+    setLastName(prefill.lastName);
+    setDateOfBirth(prefill.dateOfBirth);
+    setCountryOfBirth(prefill.countryOfBirth);
+    setPlaceOfBirth(prefill.placeOfBirth);
+    setGender(prefill.gender ?? '');
+    setCitizenship(prefill.citizenship);
+    setDocumentType(prefill.documentType);
+    setPassportNumber(prefill.passportNumber);
+    setFieldErrors({});
+    setSuggestionsOpen(false);
+  };
+
+  const clearSelectedGuest = () => {
+    if (selectedGuestId) setSelectedGuestId(null);
+  };
 
   const showUnderageWarning =
     Boolean(dateOfBirth) &&
@@ -166,6 +238,7 @@ export function ReceptionTourismGuestIdentityForm({
       citizenship,
       documentType,
       passportNumber: normalizePassportNumber(passportNumber),
+      guestId: selectedGuestId,
     });
   };
 
@@ -243,39 +316,117 @@ export function ReceptionTourismGuestIdentityForm({
         ) : null}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="reception-tourism-first-name" className="text-xs">
-          First name
-        </Label>
-        <Input
-          id="reception-tourism-first-name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          disabled={fieldsDisabled}
-          autoComplete="given-name"
-          className="h-8 text-xs"
-          aria-invalid={Boolean(fieldErrors.firstName)}
-        />
-        {fieldErrors.firstName ? (
-          <p className="text-[11px] text-destructive">{fieldErrors.firstName}</p>
-        ) : null}
-      </div>
+      <div ref={nameSearchRef} className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="reception-tourism-first-name" className="text-xs">
+            First name
+          </Label>
+          {tenantSlug ? (
+            <p className="text-[11px] text-muted-foreground">
+              Type to find a guest from another booking and reuse their details.
+            </p>
+          ) : null}
+          <div className="relative">
+            <Input
+              id="reception-tourism-first-name"
+              role={tenantSlug ? 'combobox' : undefined}
+              aria-expanded={tenantSlug ? suggestionsOpen : undefined}
+              aria-controls={tenantSlug ? suggestionsListId : undefined}
+              value={firstName}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                clearSelectedGuest();
+                if (tenantSlug) setSuggestionsOpen(true);
+              }}
+              onFocus={() => {
+                if (tenantSlug) setSuggestionsOpen(true);
+              }}
+              disabled={fieldsDisabled}
+              autoComplete="off"
+              className="h-8 text-xs"
+              aria-invalid={Boolean(fieldErrors.firstName)}
+            />
+            {tenantSlug && suggestionsOpen && !fieldsDisabled ? (
+              <div
+                id={suggestionsListId}
+                role="listbox"
+                className="absolute left-0 right-0 top-full z-20 mt-0.5 max-h-56 overflow-auto rounded-md border bg-background shadow-md"
+              >
+                {suggestionsPending ? (
+                  <p className="px-3 py-2 text-[11px] text-muted-foreground">Searching…</p>
+                ) : suggestionsError ? (
+                  <p className="px-3 py-2 text-[11px] text-destructive">{suggestionsError}</p>
+                ) : suggestions.length === 0 ? (
+                  <p className="px-3 py-2 text-[11px] text-muted-foreground">
+                    No matches — enter details for a new guest.
+                  </p>
+                ) : (
+                  <ul className="py-1">
+                    {suggestions.map((item) => {
+                      const passport = item.passport_number?.trim();
+                      const meta = [passport ? `Passport ${passport}` : null, item.citizenship]
+                        .filter(Boolean)
+                        .join(' · ');
+                      return (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={item.id === selectedGuestId}
+                            className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-xs hover:bg-muted"
+                            onClick={() => applyGuestProfile(item)}
+                          >
+                            <span className="font-medium">{item.display_name}</span>
+                            {meta ? (
+                              <span className="text-[11px] text-muted-foreground">{meta}</span>
+                            ) : (
+                              <span className="text-[11px] text-muted-foreground">
+                                No passport on file
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            ) : null}
+          </div>
+          {fieldErrors.firstName ? (
+            <p className="text-[11px] text-destructive">{fieldErrors.firstName}</p>
+          ) : null}
+        </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="reception-tourism-last-name" className="text-xs">
-          Last name
-        </Label>
-        <Input
-          id="reception-tourism-last-name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          disabled={fieldsDisabled}
-          autoComplete="family-name"
-          className="h-8 text-xs"
-          aria-invalid={Boolean(fieldErrors.lastName)}
-        />
-        {fieldErrors.lastName ? (
-          <p className="text-[11px] text-destructive">{fieldErrors.lastName}</p>
+        <div className="space-y-1.5">
+          <Label htmlFor="reception-tourism-last-name" className="text-xs">
+            Last name
+          </Label>
+          <Input
+            id="reception-tourism-last-name"
+            value={lastName}
+            onChange={(e) => {
+              setLastName(e.target.value);
+              clearSelectedGuest();
+              if (tenantSlug) setSuggestionsOpen(true);
+            }}
+            onFocus={() => {
+              if (tenantSlug) setSuggestionsOpen(true);
+            }}
+            disabled={fieldsDisabled}
+            autoComplete="off"
+            className="h-8 text-xs"
+            aria-invalid={Boolean(fieldErrors.lastName)}
+          />
+          {fieldErrors.lastName ? (
+            <p className="text-[11px] text-destructive">{fieldErrors.lastName}</p>
+          ) : null}
+        </div>
+
+        {selectedGuestId ? (
+          <p className="text-[11px] text-muted-foreground">
+            Linked to an existing guest profile. Passport photo still required for this stay.
+          </p>
         ) : null}
       </div>
 

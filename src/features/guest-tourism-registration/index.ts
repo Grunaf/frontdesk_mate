@@ -41,6 +41,10 @@ export {
   type UpdateTourismGuestIdentityForReceptionActionResult,
   type UploadTourismDocumentForReceptionActionResult,
 } from './actions/receptionTourismActions';
+export {
+  searchGuestProfilesForTourismAction,
+  type SearchGuestProfilesForTourismActionResult,
+} from './actions/searchGuestProfilesForTourismAction';
 export type { TourismReceptionDocumentKind } from '@/entities/guest-tourism-registration/server';
 export {
   listTourismGuestsForSessionAction,

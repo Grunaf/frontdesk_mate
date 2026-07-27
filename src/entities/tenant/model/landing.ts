@@ -8,6 +8,8 @@ export interface LandingRoomType {
   title: string;
   description: string;
   priceFromEur?: number;
+  /** Inherited from StayOffer — room = whole-room sell (price per room / night). */
+  bookingUnit?: 'bed' | 'room';
   imageUrl: string;
   requiresChatUpgrade?: boolean;
 }

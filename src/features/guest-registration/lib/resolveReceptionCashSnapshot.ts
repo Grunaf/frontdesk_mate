@@ -98,6 +98,7 @@ function compareStillDueItems(a: ReceptionCashStillDueItem, b: ReceptionCashStil
  * Cash desk snapshot for the current operational day.
  * Unpaid cohort matches hub `unpaid` (covers operational night, not paid).
  * Collected = amounts marked paid within [startsAt, endsAt).
+ * Multi-guest parties: only the balance-bearing row is listed (no N× duplicates).
  */
 export function resolveReceptionCashSnapshot(
   settings: TenantSettings,
@@ -112,6 +113,7 @@ export function resolveReceptionCashSnapshot(
   let collectedMinor = 0;
   let paidTodayCount = 0;
   const stillToCollect: ReceptionCashStillDueItem[] = [];
+  const seenUnpaidGroups = new Set<string>();
 
   for (const stay of stays) {
     if (isPaidInOperationalWindow(stay, operational)) {
@@ -124,6 +126,18 @@ export function resolveReceptionCashSnapshot(
 
     if (!isUnpaidOperationalNightStay(stay, operationalDate)) {
       continue;
+    }
+
+    const groupId = stay.booking_group_id?.trim() || null;
+    if (groupId) {
+      // Party siblings without their own amount are covered by the lead row.
+      if (stay.booking_amount_due_minor == null) {
+        continue;
+      }
+      if (seenUnpaidGroups.has(groupId)) {
+        continue;
+      }
+      seenUnpaidGroups.add(groupId);
     }
 
     const due = resolveStayDueAmount(stay);

@@ -145,6 +145,54 @@ describe('normalizeStayOffers', () => {
     expect(resolveLandingRooms(settings).roomTypes[0]?.priceFromEur).toBe(18);
   });
 
+  it('preserves room bookingUnit onto landing cards', () => {
+    const settings: TenantSettings = {
+      booking: { provider: 'none' },
+      stayOffers: [
+        {
+          id: 'private',
+          title: 'Private double',
+          engineRoomTypeId: 'PRIV',
+          basePriceEur: 55,
+          bookingUnit: 'room',
+        },
+      ],
+      landing: {
+        roomCards: [{ offerId: 'private', imageUrl: '/p.jpg' }],
+      },
+    };
+
+    expect(resolveLandingRooms(settings).roomTypes[0]).toMatchObject({
+      id: 'private',
+      bookingUnit: 'room',
+      priceFromEur: 55,
+    });
+  });
+
+  it('finalizeStayOffersForSave keeps room bookingUnit', () => {
+    const settings: TenantSettings = {
+      stayOffers: [
+        {
+          id: 'private',
+          title: 'Private',
+          bookingUnit: 'room',
+          basePriceEur: 40,
+        },
+      ],
+      landing: {
+        roomCards: [{ offerId: 'private', imageUrl: '/p.jpg' }],
+      },
+    };
+
+    const saved = finalizeStayOffersForSave(settings);
+    expect(saved.stayOffers?.[0]).toMatchObject({
+      id: 'private',
+      bookingUnit: 'room',
+      basePriceEur: 40,
+    });
+    expect(saved.stayOffers?.[0]).not.toHaveProperty('maxGuests');
+  });
+
   it('lifts legacy card price onto offer basePriceEur on read', () => {
     const settings: TenantSettings = {
       stayOffers: [{ id: 'female', title: 'Female dorm' }],

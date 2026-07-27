@@ -36,6 +36,7 @@
         "subtitle": "Select between social single bed dorms or comfortable private rooms",
         "priceFrom": "from",
         "night": "night",
+        "roomNight": "room / night",
         "bookButton": "Book Now",
         "bookAndUpgradeButton": "Book 2 beds, then upgrade",
         "upgradeNoticeHint": "После бронирования пришлём инструкции по upgrade",

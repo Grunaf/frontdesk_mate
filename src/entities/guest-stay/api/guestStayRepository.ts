@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { randomUUID } from 'crypto';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import { getTenantRecord } from '@/entities/tenant/server';
 import { resolveGuestIdForBooking } from '@/entities/guest/server';
@@ -22,7 +23,7 @@ import {
 } from '../lib/resolveReservationStayPeriod';
 import { bedExistsInGuestStay } from '../lib/validateBedForTenant';
 import { validateReservationBookingSource } from '../lib/validateReservationBookingSource';
-import { resolveReservationBookingBalance } from '../lib/validateReservationBookingBalance';
+import { resolveReservationBookingBalance, readBookingAmountMinorFromRow } from '../lib/validateReservationBookingBalance';
 import {
   buildMagicLinkFromGrantRow,
   GUEST_ACCESS_GRANT_COLUMNS,
@@ -37,6 +38,8 @@ import type {
   CompleteDeskCheckInInput,
   CompleteDeskCheckInResult,
   CreateGuestStayInput,
+  CreateGuestStayPartyInput,
+  CreateGuestStayPartyResult,
   CreateGuestStayResult,
   SetPassportCheckedAtInput,
   SetPassportCheckedAtResult,
@@ -333,9 +336,10 @@ export async function createGuestStay(
     return { ok: false, error: 'invalid_booking_source' };
   }
 
-  const balanceFields = isVolunteer
-    ? ({ ok: true as const, amountMinor: null, currency: null })
-    : resolveBookingBalanceFields(tenant.settings, input.bookingAmountDue, true);
+  const balanceFields =
+    isVolunteer || input.recordBookingBalance === false
+      ? ({ ok: true as const, amountMinor: null, currency: null })
+      : resolveBookingBalanceFields(tenant.settings, input.bookingAmountDue, true);
   if (!balanceFields.ok) {
     return { ok: false, error: 'invalid_booking_balance' };
   }
@@ -351,6 +355,8 @@ export async function createGuestStay(
       error: guestLink.error === 'not_found' ? 'guest_not_found' : 'db_unavailable',
     };
   }
+
+  const bookingGroupId = input.bookingGroupId?.trim() || null;
 
   const nowIso = new Date().toISOString();
   const { data: reservation, error: reservationError } = await admin
@@ -370,6 +376,7 @@ export async function createGuestStay(
       booking_amount_due_minor: balanceFields.amountMinor,
       booking_amount_currency: balanceFields.currency,
       booking_paid_at: null,
+      booking_group_id: bookingGroupId,
       status: 'planned',
       created_at: nowIso,
       updated_at: nowIso,
@@ -426,6 +433,115 @@ export async function createGuestStay(
   );
 
   return { ok: true, stay, accessToken: grantResult.accessToken, magicLinkUrl, guestPin: grantResult.guestPin };
+}
+
+/**
+ * Create N reservations sharing `booking_group_id`.
+ * Group balance is stored on the first (lead) guest only.
+ * Guests=1 delegates to `createGuestStay` (no group id).
+ */
+export async function createGuestStayParty(
+  input: CreateGuestStayPartyInput,
+  locale = 'en'
+): Promise<CreateGuestStayPartyResult> {
+  const guests = input.guests ?? [];
+  if (guests.length === 0) {
+    return { ok: false, error: 'empty_party' };
+  }
+
+  const bedIds = guests.map((guest) => guest.bedId.trim());
+  if (bedIds.some((id) => !id)) {
+    return { ok: false, error: 'bed_not_found' };
+  }
+  if (new Set(bedIds).size !== bedIds.length) {
+    return { ok: false, error: 'duplicate_bed' };
+  }
+
+  if (guests.length === 1) {
+    const single = await createGuestStay(
+      {
+        tenantSlug: input.tenantSlug,
+        bedId: bedIds[0],
+        guestName: guests[0]?.guestName,
+        guestId: guests[0]?.guestId,
+        checkInDate: input.checkInDate,
+        checkOutDate: input.checkOutDate,
+        bookingPlatformId: input.bookingPlatformId,
+        bookingExternalId: input.bookingExternalId,
+        bookingAmountDue: input.bookingAmountDue,
+        stayKind: input.stayKind,
+      },
+      locale
+    );
+    if (!single.ok) {
+      return { ok: false, error: single.error };
+    }
+    return {
+      ok: true,
+      bookingGroupId: single.stay.booking_group_id ?? single.stay.id,
+      stays: [
+        {
+          stay: single.stay,
+          accessToken: single.accessToken,
+          magicLinkUrl: single.magicLinkUrl,
+          guestPin: single.guestPin,
+        },
+      ],
+    };
+  }
+
+  const bookingGroupId = randomUUID();
+  const created: Array<{
+    stay: GuestStayRecord;
+    accessToken: string;
+    magicLinkUrl: string;
+    guestPin: string;
+  }> = [];
+
+  for (let index = 0; index < guests.length; index += 1) {
+    const guest = guests[index];
+    const isLead = index === 0;
+    const result = await createGuestStay(
+      {
+        tenantSlug: input.tenantSlug,
+        bedId: guest.bedId,
+        guestName: guest.guestName?.trim() || (isLead ? undefined : `Guest ${index + 1}`),
+        guestId: guest.guestId,
+        checkInDate: input.checkInDate,
+        checkOutDate: input.checkOutDate,
+        bookingPlatformId: input.bookingPlatformId,
+        bookingExternalId: input.bookingExternalId,
+        bookingAmountDue: isLead ? input.bookingAmountDue : undefined,
+        stayKind: input.stayKind,
+        bookingGroupId,
+        recordBookingBalance: isLead,
+      },
+      locale
+    );
+
+    if (!result.ok) {
+      // Best-effort rollback of earlier party members.
+      for (const prior of created) {
+        await cancelOrCheckoutGuestReservation({
+          tenantSlug: input.tenantSlug,
+          stayId: prior.stay.id,
+          operationalDate: new Date().toISOString().slice(0, 10),
+          archivedByReceptionUserId: '',
+          intent: 'cancel',
+        });
+      }
+      return { ok: false, error: result.error };
+    }
+
+    created.push({
+      stay: result.stay,
+      accessToken: result.accessToken,
+      magicLinkUrl: result.magicLinkUrl,
+      guestPin: result.guestPin,
+    });
+  }
+
+  return { ok: true, bookingGroupId, stays: created };
 }
 
 export async function updateGuestReservation(
@@ -1365,6 +1481,115 @@ async function markReservationFullyArchived(input: {
 }
 
 /**
+ * After one party member leaves inventory, recalculate unpaid group balance on the
+ * remaining lead: previousTotal × remainingCount / previousCount.
+ */
+async function recalculatePartyBalanceAfterMemberLeft(input: {
+  tenantId: string;
+  bookingGroupId: string | null | undefined;
+  leftStayId: string;
+  leftAmountMinor: number | null | undefined;
+  leftCurrency: string | null | undefined;
+  leftPaidAt: string | null | undefined;
+  nowIso: string;
+}): Promise<void> {
+  const groupId = input.bookingGroupId?.trim();
+  if (!groupId) return;
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return;
+
+  const { data: remaining, error } = await admin
+    .from('guest_reservations')
+    .select(
+      'id, booking_amount_due_minor, booking_amount_currency, booking_paid_at, created_at'
+    )
+    .eq('tenant_id', input.tenantId)
+    .eq('booking_group_id', groupId)
+    .eq('status', 'planned')
+    .eq('is_archived', false)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('recalculatePartyBalanceAfterMemberLeft load:', error.message);
+    return;
+  }
+
+  const remainingRows = remaining ?? [];
+  if (remainingRows.length === 0) return;
+
+  const previousCount = remainingRows.length + 1;
+  const remainingCount = remainingRows.length;
+
+  type BalanceRow = {
+    id: string;
+    booking_amount_due_minor: number | null;
+    booking_amount_currency: string | null;
+    booking_paid_at: string | null;
+  };
+
+  const remainingWithAmount = remainingRows.find(
+    (row) => row.booking_amount_due_minor != null && row.booking_amount_due_minor !== ''
+  ) as BalanceRow | undefined;
+
+  const sourceAmount =
+    remainingWithAmount?.booking_amount_due_minor != null
+      ? Number(remainingWithAmount.booking_amount_due_minor)
+      : input.leftAmountMinor != null
+        ? Number(input.leftAmountMinor)
+        : null;
+  const sourceCurrency =
+    remainingWithAmount?.booking_amount_currency ?? input.leftCurrency ?? null;
+  const sourcePaidAt =
+    remainingWithAmount?.booking_paid_at ?? input.leftPaidAt ?? null;
+
+  if (sourceAmount == null || !Number.isFinite(sourceAmount) || !sourceCurrency) {
+    return;
+  }
+
+  // Paid group balance is left as-is (desk already settled).
+  if (sourcePaidAt) return;
+
+  const newAmountMinor = Math.round((sourceAmount * remainingCount) / previousCount);
+  const leadId = String(remainingWithAmount?.id ?? remainingRows[0]?.id);
+
+  for (const row of remainingRows) {
+    const rowId = String(row.id);
+    const shouldHoldBalance = rowId === leadId;
+    const { error: updateError } = await admin
+      .from('guest_reservations')
+      .update({
+        booking_amount_due_minor: shouldHoldBalance ? newAmountMinor : null,
+        booking_amount_currency: shouldHoldBalance ? sourceCurrency : null,
+        booking_paid_at: null,
+        updated_at: input.nowIso,
+      })
+      .eq('id', rowId)
+      .eq('tenant_id', input.tenantId);
+
+    if (updateError) {
+      console.error('recalculatePartyBalanceAfterMemberLeft update:', updateError.message);
+    }
+  }
+
+  // Clear balance on the left row so archive history does not look like a second due.
+  const { error: clearLeftError } = await admin
+    .from('guest_reservations')
+    .update({
+      booking_amount_due_minor: null,
+      booking_amount_currency: null,
+      booking_paid_at: null,
+      updated_at: input.nowIso,
+    })
+    .eq('id', input.leftStayId)
+    .eq('tenant_id', input.tenantId);
+
+  if (clearLeftError) {
+    console.error('recalculatePartyBalanceAfterMemberLeft clear left:', clearLeftError.message);
+  }
+}
+
+/**
  * Cancel (before admit) or check out (after admit):
  * - A: nothing lived / cancel → whole booking soft-archived
  * - B: mid-stay checkout → shorten original; archive remainder with original_reservation_id
@@ -1417,6 +1642,17 @@ export async function cancelOrCheckoutGuestReservation(
   });
 
   if (splitPlan.kind === 'full') {
+    const leftAmountMinor = readBookingAmountMinorFromRow(reservation.booking_amount_due_minor);
+    const leftCurrency = reservation.booking_amount_currency
+      ? String(reservation.booking_amount_currency)
+      : null;
+    const leftPaidAt = reservation.booking_paid_at
+      ? String(reservation.booking_paid_at)
+      : null;
+    const bookingGroupId = reservation.booking_group_id
+      ? String(reservation.booking_group_id)
+      : null;
+
     const status = await markReservationFullyArchived({
       tenantId: tenant.id,
       stayId: input.stayId,
@@ -1425,6 +1661,17 @@ export async function cancelOrCheckoutGuestReservation(
       archiveReason,
     });
     if (status !== 'ok') return { ok: false, error: status };
+
+    await recalculatePartyBalanceAfterMemberLeft({
+      tenantId: tenant.id,
+      bookingGroupId,
+      leftStayId: input.stayId,
+      leftAmountMinor,
+      leftCurrency,
+      leftPaidAt,
+      nowIso,
+    });
+
     return {
       ok: true,
       kind: input.intent === 'checkout' ? 'checkout_no_remainder' : 'full_archived',
@@ -1489,6 +1736,7 @@ export async function cancelOrCheckoutGuestReservation(
       booking_amount_due_minor: reservation.booking_amount_due_minor ?? null,
       booking_amount_currency: reservation.booking_amount_currency ?? null,
       booking_paid_at: reservation.booking_paid_at ?? null,
+      booking_group_id: reservation.booking_group_id ?? null,
       status: 'cancelled',
       is_archived: true,
       archived_at: nowIso,

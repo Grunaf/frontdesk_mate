@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { E2eConfig } from '../fixtures';
 import { e2eGuestAppUrl, e2eGuestCheckInUrl } from '../fixtures';
+import { readSmokeSession } from '../lib/smokeRuntime';
 
 export async function completeGuestIntentIfShown(page: Page, config: E2eConfig): Promise<void> {
   const intentTitle = page.getByRole('heading', { name: 'Where are you now?' });
@@ -16,12 +17,14 @@ export async function completeGuestIntentIfShown(page: Page, config: E2eConfig):
 }
 
 export async function checkInWithPin(page: Page, config: E2eConfig): Promise<void> {
-  if (!config.guestPin) {
+  // Prefer live session file — module-level config can be stale if provision re-ran.
+  const guestPin = readSmokeSession()?.guestPin?.trim() || config.guestPin?.trim();
+  if (!guestPin) {
     throw new Error('Guest PIN is missing. global-setup should provision a smoke stay before tests run.');
   }
 
   await page.goto(e2eGuestCheckInUrl(config));
-  await page.getByLabel('Check-in PIN').fill(config.guestPin);
+  await page.getByLabel('Check-in PIN').fill(guestPin);
 
   const pinError = page.getByText(/PIN not recognized|Access revoked|Too many tries/i);
   const navigated = page.waitForURL(/\/(check-in\/intent|welcome)/, {

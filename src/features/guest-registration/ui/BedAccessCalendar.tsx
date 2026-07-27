@@ -44,6 +44,8 @@ interface BedAccessCalendarProps {
   stays: GuestStayRecordWithLink[];
   onViewStay: (stayId: string) => void;
   onSelectFreeNight: (bedId: string, nightDate: string) => void;
+  /** Rare whole-room hold: click blocked cell → parent confirm → create. */
+  onSelectBlockedNight?: (bedId: string, nightDate: string) => void;
   embedded?: boolean;
   /** Used for plan quick-filter localStorage key. */
   tenantSlug?: string;
@@ -158,6 +160,7 @@ export function BedAccessCalendar({
   stays,
   onViewStay,
   onSelectFreeNight,
+  onSelectBlockedNight,
   embedded = false,
   tenantSlug,
   bedStatuses,
@@ -459,6 +462,26 @@ export function BedAccessCalendar({
                                 >
                                   ·
                                 </button>
+                              ) : cell.status === 'blocked' ? (
+                                onSelectBlockedNight ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => onSelectBlockedNight(row.bedId, cell.nightDate)}
+                                    className="flex min-h-10 w-full items-center justify-center rounded bg-muted/20 px-1 text-[10px] text-muted-foreground/70 hover:bg-muted/40 hover:text-muted-foreground"
+                                    title="Held by whole-room booking"
+                                    aria-label="Held by whole-room booking — tap for options"
+                                  >
+                                    —
+                                  </button>
+                                ) : (
+                                  <div
+                                    className="flex min-h-10 w-full items-center justify-center rounded bg-muted/20 px-1 text-[10px] text-muted-foreground/50"
+                                    title="Held by whole-room booking"
+                                    aria-label="Held by whole-room booking"
+                                  >
+                                    —
+                                  </div>
+                                )
                               ) : (
                                 <button
                                   type="button"

@@ -24,6 +24,9 @@ export interface ConfirmDialogProps {
 /**
  * In-app confirm above nested modals/sheets (`z-[60]` + body portal).
  * Prefer over `window.confirm` when a sheet/dialog already owns the viewport.
+ *
+ * `pointer-events-auto` is required: Radix/Vaul modal sets `body { pointer-events: none }`
+ * and only re-enables the sheet content layer — portal siblings stay inert without it.
  */
 export function ConfirmDialog({
   open,
@@ -63,7 +66,7 @@ export function ConfirmDialog({
   return createPortal(
     <div
       className={cn(
-        'fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4',
+        'pointer-events-auto fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4',
         className
       )}
       role="presentation"

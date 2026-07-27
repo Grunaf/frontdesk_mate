@@ -45,7 +45,8 @@ export {
   resolveGuestBedId,
 } from './lib/resolveGuestBedId';
 export type { LandingRoomType, LandingRoomCard, TenantLandingSettings } from './model/landing';
-export type { StayOffer } from './model/stayOffers';
+export type { StayOffer, StayOfferBookingUnit } from './model/stayOffers';
+export { resolveStayOfferBookingUnit } from './model/stayOffers';
 export {
   normalizeStayOffers,
   normalizeStayOffersOnRead,
