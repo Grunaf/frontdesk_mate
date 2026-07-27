@@ -1,5 +1,5 @@
 import type { LandingRoomCard, LandingRoomType, TenantLandingSettings } from '../model/landing';
-import type { StayOffer } from '../model/stayOffers';
+import type { StayOffer, StayOfferBookingUnit } from '../model/stayOffers';
 import type { TenantSettings } from '../model/settings';
 
 function trimOrUndefined(value: string | undefined): string | undefined {
@@ -9,6 +9,31 @@ function trimOrUndefined(value: string | undefined): string | undefined {
 
 function normalizeBasePriceEur(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function normalizeBookingUnit(value: unknown): StayOfferBookingUnit | undefined {
+  return value === 'room' ? 'room' : value === 'bed' ? 'bed' : undefined;
+}
+
+function normalizeMaxGuests(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) return undefined;
+  return Math.min(99, Math.floor(value));
+}
+
+function bookingUnitFields(raw: Pick<StayOffer, 'bookingUnit' | 'maxGuests'>): {
+  bookingUnit?: StayOfferBookingUnit;
+  maxGuests?: number;
+} {
+  const bookingUnit = normalizeBookingUnit(raw.bookingUnit);
+  if (bookingUnit !== 'room') {
+    // Persist explicit `bed` only when set; omit default to keep JSON lean.
+    return bookingUnit === 'bed' ? { bookingUnit: 'bed' } : {};
+  }
+  const maxGuests = normalizeMaxGuests(raw.maxGuests);
+  return {
+    bookingUnit: 'room',
+    ...(maxGuests !== undefined ? { maxGuests } : {}),
+  };
 }
 
 export function normalizeStayOffer(raw: StayOffer, index: number): StayOffer | null {
@@ -26,6 +51,7 @@ export function normalizeStayOffer(raw: StayOffer, index: number): StayOffer | n
     id,
     title,
     ...(basePriceEur !== undefined ? { basePriceEur } : {}),
+    ...bookingUnitFields(raw),
     ...(engineRoomTypeId ? { engineRoomTypeId } : {}),
     sortOrder,
   };
@@ -61,6 +87,7 @@ export function coerceStayOffersForAdminEdit(raw: StayOffer[] | undefined): Stay
           id,
           title: typeof offer.title === 'string' ? offer.title : '',
           ...(basePriceEur !== undefined ? { basePriceEur } : {}),
+          ...bookingUnitFields(offer),
           ...(engineRoomTypeId ? { engineRoomTypeId } : {}),
           sortOrder,
         },
@@ -280,6 +307,7 @@ export function mergeOfferIntoLandingRoomType(
   const priceFromEur =
     normalizeBasePriceEur(offer.basePriceEur) ??
     normalizeBasePriceEur(card?.priceFromEur);
+  const unitFields = bookingUnitFields(offer);
 
   return {
     id: offer.id,
@@ -289,5 +317,7 @@ export function mergeOfferIntoLandingRoomType(
     priceFromEur,
     imageUrl,
     requiresChatUpgrade: card?.requiresChatUpgrade === true,
+    ...(unitFields.bookingUnit ? { bookingUnit: unitFields.bookingUnit } : {}),
+    ...(unitFields.maxGuests !== undefined ? { maxGuests: unitFields.maxGuests } : {}),
   };
 }

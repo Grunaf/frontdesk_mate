@@ -33,6 +33,11 @@ export interface GuestStayRecord {
   booking_amount_due_minor?: number | null;
   booking_amount_currency?: string | null;
   booking_paid_at?: string | null;
+  /**
+   * Shared id for multi-guest party; null = singleton.
+   * Group balance (`booking_amount_*`) lives on the lead row only.
+   */
+  booking_group_id?: string | null;
   /** Desk-only comment; not shown in guest app. */
   reception_note?: string | null;
   /** Soft-archive. Operational lists / overlap exclude these. */
@@ -83,6 +88,10 @@ export type CreateGuestStayInput = {
    * Defaults to `guest`.
    */
   stayKind?: GuestStayKind;
+  /** When set, stay joins a party; balance should be on lead only. */
+  bookingGroupId?: string | null;
+  /** When false, skip booking_amount_* (sibling party rows). Defaults to true. */
+  recordBookingBalance?: boolean;
 };
 
 export type CreateGuestStayResult =
@@ -97,6 +106,50 @@ export type CreateGuestStayResult =
         | 'invalid_booking_source'
         | 'invalid_booking_balance'
         | 'guest_not_found';
+    };
+
+/** One guest slot in a multi-bed party booking. */
+export type CreateGuestStayPartyGuest = {
+  bedId: string;
+  guestName?: string;
+  guestId?: string;
+};
+
+export type CreateGuestStayPartyInput = {
+  tenantSlug: string;
+  guests: CreateGuestStayPartyGuest[];
+  checkInDate: string;
+  checkOutDate: string;
+  bookingPlatformId?: string;
+  bookingExternalId?: string;
+  /** Group total — stored on lead (first guest) only. */
+  bookingAmountDue?: string | number;
+  stayKind?: GuestStayKind;
+};
+
+export type CreateGuestStayPartyResult =
+  | {
+      ok: true;
+      bookingGroupId: string;
+      stays: Array<{
+        stay: GuestStayRecord;
+        accessToken: string;
+        magicLinkUrl: string;
+        guestPin: string;
+      }>;
+    }
+  | {
+      ok: false;
+      error:
+        | 'tenant_not_found'
+        | 'bed_not_found'
+        | 'access_overlap'
+        | 'db_unavailable'
+        | 'invalid_booking_source'
+        | 'invalid_booking_balance'
+        | 'guest_not_found'
+        | 'duplicate_bed'
+        | 'empty_party';
     };
 
 export type ReissueGuestStayInput = {

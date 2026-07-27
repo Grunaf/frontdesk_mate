@@ -289,13 +289,14 @@ function StayTourismRegistrationBlock({
           if (result.guest.display_name.trim()) {
             const parts = result.guest.display_name.trim().split(/\s+/);
             setAddGuestPrefill({
+              guestId: stay.guest_id,
               firstName: parts[0] ?? '',
               lastName: parts.slice(1).join(' '),
             });
           }
           return;
         }
-        setAddGuestPrefill(identity);
+        setAddGuestPrefill({ ...identity, guestId: stay.guest_id });
       });
     }
     if (isBelowLg) {
@@ -487,6 +488,7 @@ function StayTourismRegistrationBlock({
         tenantSlug,
         stayId: stay.id,
         identity: values,
+        guestId: values.guestId,
       });
       if (!result.ok) {
         setActionError(resolveIdentityActionError(result.error));
@@ -624,6 +626,7 @@ function StayTourismRegistrationBlock({
                   >
                     {editingGuestId === guest.id && !reviewOnly ? (
                       <ReceptionTourismGuestIdentityForm
+                        tenantSlug={tenantSlug}
                         checkInDate={checkInDate}
                         initialValues={{
                           firstName: guest.first_name,
@@ -635,6 +638,7 @@ function StayTourismRegistrationBlock({
                           citizenship: guest.citizenship,
                           documentType: guest.document_type,
                           passportNumber: guest.passport_number,
+                          guestId: guest.guest_id,
                         }}
                         submitLabel="Save guest"
                         pendingLabel="Saving…"
@@ -697,6 +701,7 @@ function StayTourismRegistrationBlock({
           {!isBelowLg && showAddForm && !registrationComplete && !reviewOnly ? (
             <ReceptionTourismGuestIdentityForm
               key={`reception-add-tourism-guest-desktop-${addGuestPrefill?.passportNumber ?? 'new'}`}
+              tenantSlug={tenantSlug}
               checkInDate={checkInDate}
               initialValues={addGuestPrefill ?? undefined}
               submitLabel="Add guest"
@@ -742,6 +747,7 @@ function StayTourismRegistrationBlock({
       <ReceptionAddTourismGuestSheet
         open={addGuestSheetOpen}
         onOpenChange={setAddGuestSheetOpen}
+        tenantSlug={tenantSlug}
         checkInDate={checkInDate}
         isPending={isPending}
         error={addGuestSheetOpen ? actionError : null}
@@ -1012,26 +1018,32 @@ function StayRoomKeyBlock({
 
 function StayBookingBalanceBlock({
   stay,
+  balanceStay,
+  isPartySibling,
   tenantSlug,
   onStayUpdated,
 }: {
   stay: GuestStayRecordWithLink;
+  /** Row that holds booking_amount_* (lead for party). */
+  balanceStay: GuestStayRecordWithLink;
+  isPartySibling: boolean;
   tenantSlug: string;
   onStayUpdated?: (stay: GuestStayRecordWithLink) => void;
 }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startAction] = useTransition();
 
-  const summary = formatReservationBookingBalanceSummary(stay);
-  const hasBalance = stay.booking_amount_due_minor != null && stay.booking_amount_currency;
-  const isPaid = Boolean(stay.booking_paid_at);
+  const summary = formatReservationBookingBalanceSummary(balanceStay);
+  const hasBalance =
+    balanceStay.booking_amount_due_minor != null && balanceStay.booking_amount_currency;
+  const isPaid = Boolean(balanceStay.booking_paid_at);
 
   const handleTogglePaid = () => {
     startAction(async () => {
       setActionError(null);
       const result = await setGuestReservationBookingPaidAction({
         tenantSlug,
-        stayId: stay.id,
+        stayId: balanceStay.id,
         paid: !isPaid,
       });
       if (!result.ok) {
@@ -1046,14 +1058,19 @@ function StayBookingBalanceBlock({
       }
 
       onStayUpdated?.({
-        ...stay,
+        ...balanceStay,
         ...result.stay,
-        magicLinkUrl: stay.magicLinkUrl,
+        magicLinkUrl: balanceStay.magicLinkUrl,
       });
     });
   };
 
   if (!hasBalance) {
+    if (isPartySibling) {
+      return (
+        <p className="text-xs text-muted-foreground">Included in party balance.</p>
+      );
+    }
     return (
       <p className="text-xs text-muted-foreground">No balance recorded for this stay.</p>
     );
@@ -1062,9 +1079,12 @@ function StayBookingBalanceBlock({
   return (
     <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Stay balance
+        {stay.booking_group_id ? 'Party balance' : 'Stay balance'}
       </p>
       <p className="text-sm">{summary}</p>
+      {isPartySibling && balanceStay.id !== stay.id ? (
+        <p className="text-xs text-muted-foreground">Shared with the party lead.</p>
+      ) : null}
       {actionError ? <p className="text-xs text-destructive">{actionError}</p> : null}
       <Button
         type="button"
@@ -1076,6 +1096,57 @@ function StayBookingBalanceBlock({
       >
         {isPaid ? 'Mark unpaid' : 'Mark as paid'}
       </Button>
+    </div>
+  );
+}
+
+function StayPartyBlock({
+  stay,
+  partyStays,
+  resolveBedLabel,
+  onSelectStay,
+}: {
+  stay: GuestStayRecordWithLink;
+  partyStays: GuestStayRecordWithLink[];
+  resolveBedLabel: (bedId: string) => string;
+  onSelectStay: (stayId: string) => void;
+}) {
+  if (partyStays.length <= 1) return null;
+
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Party · {partyStays.length} guests
+      </p>
+      <ul className="space-y-1.5">
+        {partyStays.map((member, index) => {
+          const isCurrent = member.id === stay.id;
+          const label = member.guest_name?.trim() || `Guest ${index + 1}`;
+          const bedLabel = resolveBedLabel(member.bed_id);
+          const ref = formatStayReference(member.id);
+          return (
+            <li key={member.id}>
+              <button
+                type="button"
+                disabled={isCurrent}
+                onClick={() => onSelectStay(member.id)}
+                className={cn(
+                  'flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm',
+                  isCurrent
+                    ? 'bg-background font-medium'
+                    : 'hover:bg-background/80 text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <span className="min-w-0 truncate">
+                  {label}
+                  <span className="text-muted-foreground"> · {bedLabel}</span>
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">{ref ?? ''}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -1162,6 +1233,9 @@ export interface ReceptionGuestStayDetailProps {
   open: boolean;
   onClose: () => void;
   stay: GuestStayRecordWithLink;
+  /** Active stays sharing booking_group_id (includes current). */
+  partyStays?: GuestStayRecordWithLink[];
+  onSelectPartyStay?: (stayId: string) => void;
   stayPins: Record<string, string>;
   isPending: boolean;
   hostelName: string;
@@ -1395,6 +1469,8 @@ export function ReceptionGuestStayDetail({
   open,
   onClose,
   stay,
+  partyStays = [],
+  onSelectPartyStay,
   stayPins,
   isPending,
   hostelName,
@@ -1611,14 +1687,39 @@ export function ReceptionGuestStayDetail({
     </TabsList>
   );
 
+  const resolvedPartyStays =
+    partyStays.length > 0
+      ? partyStays
+      : stay.booking_group_id
+        ? [stay]
+        : [];
+  const balanceStay =
+    resolvedPartyStays.find(
+      (member) => member.booking_amount_due_minor != null && member.booking_amount_currency
+    ) ?? stay;
+  const isPartySibling =
+    Boolean(stay.booking_group_id) &&
+    balanceStay.id !== stay.id &&
+    stay.booking_amount_due_minor == null;
+
   const tabsBody = (
     <>
       <TabsContent value="stay" className="mt-0 space-y-4 outline-none">
         <StayBookingComOpenBlock stay={stay} tenantSettings={tenantSettings} />
+        {resolvedPartyStays.length > 1 && onSelectPartyStay ? (
+          <StayPartyBlock
+            stay={stay}
+            partyStays={resolvedPartyStays}
+            resolveBedLabel={resolveBedLabel}
+            onSelectStay={onSelectPartyStay}
+          />
+        ) : null}
         {tenantSlug ? (
           <>
             <StayBookingBalanceBlock
               stay={stay}
+              balanceStay={balanceStay}
+              isPartySibling={isPartySibling}
               tenantSlug={tenantSlug}
               onStayUpdated={onStayBookingBalanceChange}
             />

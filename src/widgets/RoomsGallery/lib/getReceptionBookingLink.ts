@@ -5,6 +5,8 @@ export interface GetReceptionBookingLinkArgs {
   roomTitle: string;
   checkin?: string | null;
   checkout?: string | null;
+  /** When true, message asks for the whole room (private / room-unit offer). */
+  wholeRoom?: boolean;
 }
 
 export function getReceptionBookingLink({
@@ -12,13 +14,16 @@ export function getReceptionBookingLink({
   roomTitle,
   checkin,
   checkout,
+  wholeRoom = false,
 }: GetReceptionBookingLinkArgs): string | null {
   const phone = phoneRaw?.trim();
   if (!phone) {
     return null;
   }
 
-  let message = `Hello! I would like to book ${roomTitle}.`;
+  let message = wholeRoom
+    ? `Hello! I would like to book the whole room: ${roomTitle}.`
+    : `Hello! I would like to book ${roomTitle}.`;
   if (checkin && checkout) {
     message += ` Dates: from ${checkin} to ${checkout}.`;
   }

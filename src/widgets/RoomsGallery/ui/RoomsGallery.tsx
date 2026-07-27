@@ -32,7 +32,7 @@ export function RoomsGallery({ checkin, checkout }: RoomsGalleryProps) {
   const getBookingLink = (roomTypeId: string) =>
     buildBookingRoomUrl(hostel.booking, roomTypeId, { checkIn: checkin, checkOut: checkout });
 
-  const getFallbackLink = (roomTitle: string, requiresChatUpgrade: boolean) => {
+  const getFallbackLink = (roomTitle: string, requiresChatUpgrade: boolean, wholeRoom: boolean) => {
     if (!receptionPhone?.trim()) {
       return null;
     }
@@ -50,6 +50,7 @@ export function RoomsGallery({ checkin, checkout }: RoomsGalleryProps) {
       roomTitle,
       checkin,
       checkout,
+      wholeRoom,
     });
   };
 
@@ -77,7 +78,11 @@ export function RoomsGallery({ checkin, checkout }: RoomsGalleryProps) {
                   : t('selectDatesButton');
             const bookingLink = bookingEnabled ? getBookingLink(room.engineRoomTypeId) : null;
             const fallbackLink = !bookingEnabled
-              ? getFallbackLink(room.title, room.requiresChatUpgrade === true)
+              ? getFallbackLink(
+                  room.title,
+                  room.requiresChatUpgrade === true,
+                  room.bookingUnit === 'room'
+                )
               : null;
             const fallbackLabel = room.requiresChatUpgrade === true
               ? isDatesSelected

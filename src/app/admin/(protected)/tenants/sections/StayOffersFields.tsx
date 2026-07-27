@@ -136,7 +136,11 @@ export function StayOffersFields({ settings }: StayOffersFieldsProps) {
             </label>
             <div className="sm:col-span-2">
               <AdminMoneyField
-                label="Base price (per night)"
+                label={
+                  offer.bookingUnit === 'room'
+                    ? 'Base price (per room / night)'
+                    : 'Base price (per night)'
+                }
                 value={offer.basePriceEur ?? ''}
                 onChange={(value) => {
                   syncOffers(
@@ -151,9 +155,70 @@ export function StayOffersFields({ settings }: StayOffersFieldsProps) {
                   );
                 }}
                 currencyCode={primaryCurrency}
-                amountHint="Landing price badge and web booking base."
+                amountHint={
+                  offer.bookingUnit === 'room'
+                    ? 'Whole-room price for landing badge and reception balance (not × guests).'
+                    : 'Landing price badge and web booking base (per bed / guest).'
+                }
               />
             </div>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium">Booking unit</span>
+              <select
+                value={offer.bookingUnit === 'room' ? 'room' : 'bed'}
+                onChange={(event) => {
+                  const bookingUnit = event.target.value === 'room' ? 'room' : 'bed';
+                  syncOffers(
+                    offers.map((item, i) => {
+                      if (i !== index) return item;
+                      if (bookingUnit === 'bed') {
+                        const { maxGuests: _removed, ...rest } = item;
+                        return { ...rest, bookingUnit: 'bed' };
+                      }
+                      return {
+                        ...item,
+                        bookingUnit: 'room',
+                        maxGuests: item.maxGuests && item.maxGuests >= 1 ? item.maxGuests : 2,
+                      };
+                    })
+                  );
+                }}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              >
+                <option value="bed">Per bed</option>
+                <option value="room">Whole room</option>
+              </select>
+              <span className="block text-xs text-muted-foreground">
+                Whole room = one sellable unit on landing and reception (private).
+              </span>
+            </label>
+            {offer.bookingUnit === 'room' ? (
+              <AdminField
+                label="Max guests"
+                value={offer.maxGuests != null ? String(offer.maxGuests) : ''}
+                onChange={(value) => {
+                  const trimmed = value.trim();
+                  const parsed = Number(trimmed);
+                  syncOffers(
+                    offers.map((item, i) =>
+                      i === index
+                        ? {
+                            ...item,
+                            maxGuests:
+                              trimmed && Number.isFinite(parsed) && parsed >= 1
+                                ? Math.floor(parsed)
+                                : undefined,
+                          }
+                        : item
+                    )
+                  );
+                }}
+                type="number"
+                placeholder="2"
+                width="sm"
+                hint="Party size cap for this room offer."
+              />
+            ) : null}
             {showEngineId ? (
               <label className="block space-y-1.5 sm:col-span-2">
                 <span className="text-sm font-medium">Booking engine room type ID</span>

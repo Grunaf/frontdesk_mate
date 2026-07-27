@@ -16,6 +16,7 @@ export interface StayOfferFormOption {
 }
 
 const BOOKING_REFERENCE_HIDDEN_PLATFORM_IDS = new Set(['walk-in', 'direct']);
+const DEFAULT_MAX_GUEST_COUNT = 8;
 
 function showsBookingReference(platformId: string): boolean {
   const id = platformId.trim();
@@ -49,8 +50,16 @@ export interface IssueGuestAccessFormProps {
   stayOfferOptions?: StayOfferFormOption[];
   offerId?: string;
   onOfferIdChange?: (value: string) => void;
+  /** Lead / single bed (edit + Guests=1). */
   bedId: string;
   onBedIdChange: (value: string) => void;
+  /** Multi-guest bed slots (create only). Length should match guestCount. */
+  bedIds?: string[];
+  onBedIdAtIndexChange?: (index: number, bedId: string) => void;
+  /** Party size for create booking. Hidden while editing. */
+  guestCount?: number;
+  onGuestCountChange?: (value: number) => void;
+  maxGuestCount?: number;
   bedsByRoom: BedRoomOptionGroup[];
   /** When true, Advanced bed picker starts open (move bed / manual). */
   advancedBedOpenDefault?: boolean;
@@ -107,6 +116,11 @@ export function IssueGuestAccessFormFields({
   onOfferIdChange,
   bedId,
   onBedIdChange,
+  bedIds,
+  onBedIdAtIndexChange,
+  guestCount = 1,
+  onGuestCountChange,
+  maxGuestCount = DEFAULT_MAX_GUEST_COUNT,
   bedsByRoom,
   advancedBedOpenDefault = false,
   checkInDate,
@@ -140,6 +154,11 @@ export function IssueGuestAccessFormFields({
   | 'onOfferIdChange'
   | 'bedId'
   | 'onBedIdChange'
+  | 'bedIds'
+  | 'onBedIdAtIndexChange'
+  | 'guestCount'
+  | 'onGuestCountChange'
+  | 'maxGuestCount'
   | 'bedsByRoom'
   | 'advancedBedOpenDefault'
   | 'checkInDate'
@@ -162,6 +181,13 @@ export function IssueGuestAccessFormFields({
   const selectedOffer = stayOfferOptions.find((option) => option.id === offerId);
   const offerHasNoBeds =
     offerFirst && Boolean(offerId) && (selectedOffer?.availableBedCount ?? 0) === 0;
+  const partySize = Math.max(1, Math.min(guestCount, maxGuestCount));
+  const multiGuest = !isEditingReservation && partySize > 1;
+  const resolvedBedIds =
+    bedIds && bedIds.length > 0
+      ? bedIds
+      : Array.from({ length: partySize }, (_, i) => (i === 0 ? bedId : ''));
+  const assignedBedsLabel = resolvedBedIds.filter(Boolean).join(', ');
 
   const handlePlatformChange = (nextPlatformId: string) => {
     onBookingPlatformIdChange(nextPlatformId);
@@ -170,7 +196,20 @@ export function IssueGuestAccessFormFields({
     }
   };
 
-  const bedSelect = (
+  const bedsByRoomExcluding = (
+    excludeBedIds: Set<string>,
+    keepBedId: string
+  ): BedRoomOptionGroup[] =>
+    bedsByRoom
+      .map((group) => ({
+        ...group,
+        beds: group.beds.filter(
+          (bed) => bed.bedId === keepBedId || !excludeBedIds.has(bed.bedId)
+        ),
+      }))
+      .filter((group) => group.beds.length > 0);
+
+  const singleBedSelect = (
     <BedRoomGroupedSelect
       label={offerFirst ? 'Specific bed' : 'Bed'}
       hint={
@@ -183,6 +222,32 @@ export function IssueGuestAccessFormFields({
       bedsByRoom={bedsByRoom}
     />
   );
+
+  const multiBedSelects = (
+    <div className="space-y-3">
+      {resolvedBedIds.map((slotBedId, index) => {
+        const taken = new Set(resolvedBedIds.filter((id, i) => i !== index && Boolean(id)));
+        return (
+          <BedRoomGroupedSelect
+            key={`guest-bed-${index}`}
+            label={index === 0 ? 'Guest 1 bed' : `Guest ${index + 1} bed`}
+            hint={index === 0 ? 'Lead guest bed.' : null}
+            bedId={slotBedId}
+            onBedIdChange={(next) => {
+              if (onBedIdAtIndexChange) {
+                onBedIdAtIndexChange(index, next);
+                return;
+              }
+              if (index === 0) onBedIdChange(next);
+            }}
+            bedsByRoom={bedsByRoomExcluding(taken, slotBedId)}
+          />
+        );
+      })}
+    </div>
+  );
+
+  const bedSelect = multiGuest ? multiBedSelects : singleBedSelect;
 
   const fieldsGrid = (
     <div
@@ -217,6 +282,27 @@ export function IssueGuestAccessFormFields({
           </>
         )}
       </div>
+
+      {!isEditingReservation && onGuestCountChange ? (
+        <div className="space-y-1">
+          <Label htmlFor="guest-count">Guests</Label>
+          <p className="text-xs text-muted-foreground">
+            One bed per guest. Extra guests can be named later in tourism.
+          </p>
+          <select
+            id="guest-count"
+            value={partySize}
+            onChange={(event) => onGuestCountChange(Number(event.target.value))}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          >
+            {Array.from({ length: maxGuestCount }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       {showBookingSourceFields ? (
         <>
@@ -256,7 +342,9 @@ export function IssueGuestAccessFormFields({
         <div className="space-y-1 lg:col-span-2">
           <Label htmlFor="stay-offer-id">Stay offer</Label>
           <p className="text-xs text-muted-foreground">
-            A free bed in this group is assigned automatically.
+            {multiGuest
+              ? 'Free beds in this group are assigned automatically.'
+              : 'A free bed in this group is assigned automatically.'}
           </p>
           <select
             id="stay-offer-id"
@@ -273,8 +361,11 @@ export function IssueGuestAccessFormFields({
           </select>
           {offerHasNoBeds ? (
             <p className="text-xs text-destructive">No free beds in this offer for these dates.</p>
-          ) : bedId ? (
-            <p className="text-xs text-muted-foreground">Assigned bed: {bedId}</p>
+          ) : assignedBedsLabel ? (
+            <p className="text-xs text-muted-foreground">
+              {multiGuest ? 'Assigned beds: ' : 'Assigned bed: '}
+              {assignedBedsLabel}
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -286,8 +377,10 @@ export function IssueGuestAccessFormFields({
             onClick={() => setAdvancedOpen((open) => !open)}
             className="flex w-full items-center justify-between gap-2 py-1 text-left text-sm text-muted-foreground hover:text-foreground"
           >
-            Advanced · pick specific bed
-            <ChevronDown className={cn('size-4 shrink-0 transition-transform', advancedOpen && 'rotate-180')} />
+            {multiGuest ? 'Advanced · pick beds' : 'Advanced · pick specific bed'}
+            <ChevronDown
+              className={cn('size-4 shrink-0 transition-transform', advancedOpen && 'rotate-180')}
+            />
           </button>
           {advancedOpen ? bedSelect : null}
         </div>
@@ -306,7 +399,10 @@ export function IssueGuestAccessFormFields({
 
       <div className="space-y-1">
         <Label htmlFor="booking-balance-due">Balance due</Label>
-        <p className="text-xs text-muted-foreground">Remaining stay balance. Not city tax.</p>
+        <p className="text-xs text-muted-foreground">
+          Remaining stay balance
+          {multiGuest ? ' for the whole party' : ''}. Not city tax.
+        </p>
         <Input
           id="booking-balance-due"
           value={bookingAmountDue}

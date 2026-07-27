@@ -210,13 +210,13 @@ function MobileStayDetailSheet({
   body,
   bodyTop,
   footer,
-  titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
   onEdit,
   editDisabled = false,
   headerExtra,
   headerOverflow,
 }: ReceptionStayDetailShellProps) {
-  const labelledBy = titleId;
+  // Do not pass a custom `id` to BottomSheetTitle / aria-labelledby here:
+  // Vaul→Radix Dialog owns titleId; overriding it triggers DialogTitle a11y warnings.
   const leadingCount = countLeadingHeaderActions({ onEdit, headerExtra, headerOverflow });
   const hasEditChrome = leadingCount > 0;
 
@@ -230,7 +230,6 @@ function MobileStayDetailSheet({
       <BottomSheetContent
         size={BOTTOM_SHEET_SIZES.large}
         className="flex flex-col px-0 pb-0"
-        aria-labelledby={labelledBy}
         aria-describedby={undefined}
         showCloseButton={!hasEditChrome}
       >
@@ -262,7 +261,6 @@ function MobileStayDetailSheet({
         ) : null}
         <BottomSheetHeader className={mobileHeaderPaddingClass(leadingCount)}>
           <BottomSheetTitle
-            id={labelledBy}
             className={RECEPTION_SHELL_TITLE_CLASS}
             title={accessibleTitleTooltip}
           >
