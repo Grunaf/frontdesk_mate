@@ -22,6 +22,7 @@
     "sync-i18n": "node scripts/sync-i18n.js && node scripts/validate-i18n.js --strict",
     "start": "next start",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "smoke": "node scripts/run-smoke.js",
     "smoke:ui": "node scripts/run-smoke.js --ui",
     "smoke:install": "playwright install chromium",
