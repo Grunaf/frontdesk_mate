@@ -61,14 +61,15 @@ Bed unit: `unit × nights × guests`.
 
 На `StayOffer` (рядом с `basePriceEur`), тихо в Stay offers form:
 
-- `bookingUnit: 'room' | 'bed'` (default `'bed'`)  
-  и/или `maxGuests` при `bookingUnit: 'room'`
+- `bookingUnit: 'room' | 'bed'` (default `'bed'`)
 
-Private offer → `bookingUnit: 'room'` + `maxGuests` (например 2).  
-Rooms с этим `offerId` наследуют поведение.  
+Private offer → `bookingUnit: 'room'`.  
+**Вместимость** — от физической комнаты (beds в room map), не от категории offer.  
+Rooms с этим `offerId` наследуют whole-room поведение.  
 Landing и Create booking читают одно и то же.
 
-Отдельной секции «Private rooms» / sellUnit на room **не делать**.
+Отдельной секции «Private rooms» / sellUnit на room **не делать**.  
+`maxGuests` на offer **не хранить** (отклонено 2026-07-27: capacity ≠ category).
 
 ### Разовый dorm override
 
@@ -135,7 +136,7 @@ Landing и Create booking читают одно и то же.
 
 ### A. Create booking form
 
-1. **Guests:** `1…min(availableCapacity, cap)` (cap например 8). Для `bookingUnit: 'room'` — cap = `maxGuests` offer / beds in linked rooms.  
+1. **Guests:** `1…min(availableCapacity, cap)` (cap например 8). Capacity = free beds (для room-unit — beds выбранной физической комнаты / same-room auto-assign).  
 2. N слотов кроватей:
    - default: auto-assign N free beds из offer pool;  
    - Advanced: picker на слот; beds не дублируются.  
@@ -174,7 +175,7 @@ due    = unit × nights × guestCount   // уточнить: для room unit ц
 
 ### E. Landing
 
-- Offer с `bookingUnit: 'room'` бронируется как единица (capacity / maxGuests).  
+- Offer с `bookingUnit: 'room'` бронируется как единица (capacity = beds комнаты).  
 - Нельзя создать вторую независимую web-бронь в ту же room на пересекающиеся ночи.  
 - Цена согласована с формулой Balance due (после решения A/B выше).
 
@@ -189,8 +190,8 @@ due    = unit × nights × guestCount   // уточнить: для room unit ц
 - [ ] Cash не дублирует unpaid total.  
 - [ ] Guests=1 — как сегодня (`booking_group_id` null или singleton).  
 - [ ] Stay offer `bookingUnit: 'room'` работает на **landing и reception**.  
-- [ ] Plan не предлагает walk-in на free bed в комнате, уже занятой whole-room/party на эти ночи.  
-- [ ] Разовый per-bed в private room — только reception confirm, без admin flag.  
+- [x] Plan не предлагает walk-in на free bed в комнате, уже занятой whole-room/party на эти ночи.  
+- [x] Разовый per-bed в private room — reception confirm (Create → Advanced **или** Plan blocked cell → modal → Create), без admin flag.  
 - [ ] Нет новой admin-секции «Private rooms».
 
 ---
@@ -211,7 +212,7 @@ due    = unit × nights × guestCount   // уточнить: для room unit ц
 2. **Stay offer `bookingUnit` + landing**.  
 3. **Detail party UI + Cash dedupe**.  
 4. **Plan collapse / block free beds under party/whole-room**.  
-5. **Rare dorm override confirm** (optional P2).
+5. **Rare dorm override confirm** (Create → Advanced; Plan blocked → modal → Create overlay).
 
 ---
 

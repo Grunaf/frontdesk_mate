@@ -10,14 +10,9 @@ export interface StayOffer {
   /**
    * Sell unit for this offer.
    * - `bed` (default): price is per person / bed / night; capacity = free beds.
-   * - `room`: price is per room / night (formula A); capacity = `maxGuests` / linked beds.
+   * - `room`: price is per room / night (formula A); capacity = beds in the physical room.
    */
   bookingUnit?: StayOfferBookingUnit;
-  /**
-   * Max guests when `bookingUnit: 'room'`.
-   * Ignored for bed offers (capacity comes from free beds).
-   */
-  maxGuests?: number;
   /** Booking-engine room type id when online booking is enabled. */
   engineRoomTypeId?: string;
   sortOrder?: number;
@@ -27,13 +22,4 @@ export function resolveStayOfferBookingUnit(
   offer: Pick<StayOffer, 'bookingUnit'> | null | undefined
 ): StayOfferBookingUnit {
   return offer?.bookingUnit === 'room' ? 'room' : 'bed';
-}
-
-export function resolveStayOfferMaxGuests(
-  offer: Pick<StayOffer, 'bookingUnit' | 'maxGuests'> | null | undefined
-): number | undefined {
-  if (resolveStayOfferBookingUnit(offer) !== 'room') return undefined;
-  const max = offer?.maxGuests;
-  if (typeof max !== 'number' || !Number.isFinite(max) || max < 1) return undefined;
-  return Math.floor(max);
 }

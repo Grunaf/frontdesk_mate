@@ -13,7 +13,6 @@ import {
   resolveGuestAccessMessageTemplate,
   resolveGuestAccessPinMissingText,
   resolvePlanStayStatusEnabled,
-  resolveStayOfferMaxGuests,
   resolveTourismRegistrationRequired,
 } from '@/entities/tenant';
 import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
@@ -23,6 +22,7 @@ import {
   resolveOfferIdForBed,
 } from '../lib/pickAvailableBedForStayOffer';
 import { resolveReceptionOfferBalance } from '../lib/resolveReceptionOfferBalance';
+import { listWholeRoomBlockedBedIdsForDateRange } from '../lib/resolveRoomOccupancyBlocks';
 import {
   reservationBookingSourceErrorMessage,
   validateReservationBookingSource,
@@ -117,7 +117,7 @@ import { prefetchMyReceptionSchedule } from '../lib/myReceptionScheduleCache';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { CancelBookingDialog } from './RevokeAccessDialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger, ConfirmDialog } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
 import { FALLBACK_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
@@ -676,18 +676,48 @@ export function ReceptionCheckInPanel({
     setStayDetailInitialTab('stay');
   }, []);
 
-  const overlappingBedIds = useMemo(() => {
+  const hardOverlappingBedIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const bedId of bedOptions) {
+    for (const id of bedOptions) {
       const overlaps = planStays.some((stay) => {
         if (editDraft?.stayId === stay.id) return false;
-        return stayOverlapsBedNightRange(stay, bedId, accessPeriod.checkInAt, accessPeriod.checkOutAt);
+        return stayOverlapsBedNightRange(stay, id, accessPeriod.checkInAt, accessPeriod.checkOutAt);
       });
-      if (overlaps) ids.add(bedId);
+      if (overlaps) ids.add(id);
     }
     return ids;
   }, [accessPeriod.checkInAt, accessPeriod.checkOutAt, bedOptions, editDraft?.stayId, planStays]);
 
+  const wholeRoomBlockedBedIds = useMemo(
+    () =>
+      listWholeRoomBlockedBedIdsForDateRange({
+        settings: tenantSettings,
+        stays: planStays.filter((stay) => editDraft?.stayId !== stay.id),
+        checkInDate,
+        checkOutDate,
+      }),
+    [checkInDate, checkOutDate, editDraft?.stayId, planStays, tenantSettings]
+  );
+
+  /** Beds confirmed for rare per-bed booking inside an occupied whole-room unit. */
+  const [wholeRoomOverrideBedIds, setWholeRoomOverrideBedIds] = useState<string[]>([]);
+  const [pendingWholeRoomOverride, setPendingWholeRoomOverride] = useState<
+    | { source: 'advanced'; bedId: string; index: number }
+    | { source: 'plan'; bedId: string; nightDate: string }
+    | null
+  >(null);
+  const [openAdvancedBeds, setOpenAdvancedBeds] = useState(false);
+
+  const overlappingBedIds = useMemo(() => {
+    const ids = new Set(hardOverlappingBedIds);
+    const override = new Set(wholeRoomOverrideBedIds);
+    for (const bedId of wholeRoomBlockedBedIds) {
+      if (!override.has(bedId)) ids.add(bedId);
+    }
+    return ids;
+  }, [hardOverlappingBedIds, wholeRoomBlockedBedIds, wholeRoomOverrideBedIds]);
+
+  /** Advanced picker: include whole-room held beds (confirm before use); hide hard overlaps only. */
   const bedsByRoom = useMemo(
     () =>
       inventory.roomGroups
@@ -695,11 +725,11 @@ export function ReceptionCheckInPanel({
           roomId: group.roomId,
           roomLabel: group.roomLabel,
           beds: group.beds
-            .filter((entry) => !overlappingBedIds.has(entry.bedId))
+            .filter((entry) => !hardOverlappingBedIds.has(entry.bedId))
             .map((entry) => ({ bedId: entry.bedId, displayLabel: entry.displayLabel })),
         }))
         .filter((group) => group.beds.length > 0),
-    [inventory.roomGroups, overlappingBedIds]
+    [hardOverlappingBedIds, inventory.roomGroups]
   );
 
   const availableBedIds = useMemo(
@@ -733,13 +763,8 @@ export function ReceptionCheckInPanel({
     const offerFree =
       stayOfferOptions.find((option) => option.id === offerId)?.availableBedCount ??
       availableBedIds.length;
-    const bedCap = Math.max(1, Math.min(MAX_PARTY_GUESTS, offerFree || availableBedIds.length || 1));
-    const roomMax = resolveStayOfferMaxGuests(selectedStayOffer);
-    if (roomMax != null) {
-      return Math.max(1, Math.min(bedCap, roomMax));
-    }
-    return bedCap;
-  }, [availableBedIds.length, offerId, selectedStayOffer, stayOfferOptions]);
+    return Math.max(1, Math.min(MAX_PARTY_GUESTS, offerFree || availableBedIds.length || 1));
+  }, [availableBedIds.length, offerId, stayOfferOptions]);
 
   useEffect(() => {
     if (guestCount > maxGuestCount) {
@@ -824,18 +849,12 @@ export function ReceptionCheckInPanel({
     setOfferId(nextOfferId);
     setBedPickMode('auto');
     setBookingAmountTouched(false);
+    setWholeRoomOverrideBedIds([]);
+    setPendingWholeRoomOverride(null);
+    setOpenAdvancedBeds(false);
   }, []);
 
-  const handleBedIdChange = useCallback((nextBedId: string) => {
-    setBedIds((current) => {
-      const next = current.length > 0 ? [...current] : [''];
-      next[0] = nextBedId;
-      return next;
-    });
-    setBedPickMode('manual');
-  }, []);
-
-  const handleBedIdAtIndexChange = useCallback((index: number, nextBedId: string) => {
+  const applyBedIdAtIndex = useCallback((index: number, nextBedId: string) => {
     setBedIds((current) => {
       const next = [...current];
       while (next.length <= index) next.push('');
@@ -844,6 +863,77 @@ export function ReceptionCheckInPanel({
     });
     setBedPickMode('manual');
   }, []);
+
+  const requestBedIdAtIndex = useCallback(
+    (index: number, nextBedId: string) => {
+      if (
+        nextBedId &&
+        wholeRoomBlockedBedIds.has(nextBedId) &&
+        !wholeRoomOverrideBedIds.includes(nextBedId)
+      ) {
+        setPendingWholeRoomOverride({ source: 'advanced', bedId: nextBedId, index });
+        return;
+      }
+      applyBedIdAtIndex(index, nextBedId);
+    },
+    [applyBedIdAtIndex, wholeRoomBlockedBedIds, wholeRoomOverrideBedIds]
+  );
+
+  const handleBedIdChange = useCallback(
+    (nextBedId: string) => {
+      requestBedIdAtIndex(0, nextBedId);
+    },
+    [requestBedIdAtIndex]
+  );
+
+  const handleBedIdAtIndexChange = useCallback(
+    (index: number, nextBedId: string) => {
+      requestBedIdAtIndex(index, nextBedId);
+    },
+    [requestBedIdAtIndex]
+  );
+
+  const confirmWholeRoomOverride = useCallback(() => {
+    if (!pendingWholeRoomOverride) return;
+
+    if (pendingWholeRoomOverride.source === 'advanced') {
+      const { bedId: nextBedId, index } = pendingWholeRoomOverride;
+      setWholeRoomOverrideBedIds((current) =>
+        current.includes(nextBedId) ? current : [...current, nextBedId]
+      );
+      applyBedIdAtIndex(index, nextBedId);
+      setPendingWholeRoomOverride(null);
+      return;
+    }
+
+    const { bedId: nextBedId, nightDate } = pendingWholeRoomOverride;
+    setWholeRoomOverrideBedIds((current) =>
+      current.includes(nextBedId) ? current : [...current, nextBedId]
+    );
+    setMode('custom');
+    setCheckInDate(nightDate);
+    setCheckOutDate(addNights(nightDate, 1));
+    setBedIds([nextBedId]);
+    setGuestCount(1);
+    setOfferId(resolveOfferIdForBed(tenantSettings, nextBedId) ?? '');
+    setBedPickMode('manual');
+    setOpenAdvancedBeds(true);
+    setBookingAmountTouched(false);
+    setPendingWholeRoomOverride(null);
+    setIssueOverlayOpen(true);
+  }, [applyBedIdAtIndex, pendingWholeRoomOverride, tenantSettings]);
+
+  const cancelWholeRoomOverride = useCallback(() => {
+    setPendingWholeRoomOverride(null);
+  }, []);
+
+  const handleSelectBlockedNight = useCallback(
+    (nextBedId: string, nightDate: string) => {
+      if (editDraft) return;
+      setPendingWholeRoomOverride({ source: 'plan', bedId: nextBedId, nightDate });
+    },
+    [editDraft]
+  );
 
   const handleGuestCountChange = useCallback((nextCount: number) => {
     setGuestCount(Math.max(1, Math.min(MAX_PARTY_GUESTS, nextCount)));
@@ -865,6 +955,9 @@ export function ReceptionCheckInPanel({
     setBookingAmountTouched(false);
     setGuestCount(1);
     setBedPickMode('auto');
+    setWholeRoomOverrideBedIds([]);
+    setPendingWholeRoomOverride(null);
+    setOpenAdvancedBeds(false);
     setOfferId(stayOfferOptions[0]?.id ?? '');
     if (stayOfferOptions.length > 0) {
       const picked = pickAvailableBedsForStayOffer({
@@ -1354,7 +1447,7 @@ export function ReceptionCheckInPanel({
         onGuestCountChange={handleGuestCountChange}
         maxGuestCount={maxGuestCount}
         bedsByRoom={bedsByRoom}
-        advancedBedOpenDefault={editDraft?.intent === 'moveBed'}
+        advancedBedOpenDefault={editDraft?.intent === 'moveBed' || openAdvancedBeds}
         checkInDate={checkInDate}
         checkOutDate={checkOutDate}
         onDatesChange={({ checkInDate: nextFrom, checkOutDate: nextUntil }) => {
@@ -1363,6 +1456,9 @@ export function ReceptionCheckInPanel({
           if (!editDraft) {
             setBedPickMode('auto');
             setBookingAmountTouched(false);
+            setWholeRoomOverrideBedIds([]);
+            setPendingWholeRoomOverride(null);
+            setOpenAdvancedBeds(false);
           }
         }}
         reissueGuestLabel={editDraft?.guestName}
@@ -1373,9 +1469,13 @@ export function ReceptionCheckInPanel({
         rangeValid={rangeValid}
         canSubmit={
           rangeValid &&
-          availableBedIds.length > 0 &&
           Boolean(bedId) &&
-          (editDraft || guestCount <= 1 || bedIds.slice(0, guestCount).every(Boolean)) &&
+          !hardOverlappingBedIds.has(bedId) &&
+          (editDraft ||
+            guestCount <= 1 ||
+            bedIds.slice(0, guestCount).every(
+              (id) => Boolean(id) && !hardOverlappingBedIds.has(id)
+            )) &&
           Boolean(guestName.trim()) &&
           resolveReservationBookingBalance({
             settings: tenantSettings,
@@ -1393,6 +1493,25 @@ export function ReceptionCheckInPanel({
         onSubmit={handleSubmit}
       />
       ) : null}
+
+      <ConfirmDialog
+        open={pendingWholeRoomOverride !== null}
+        title={
+          pendingWholeRoomOverride?.source === 'plan'
+            ? 'Bed held by whole-room booking'
+            : 'Book another bed in this room?'
+        }
+        description={
+          pendingWholeRoomOverride?.source === 'plan'
+            ? `${resolveBedLabel(pendingWholeRoomOverride.bedId)} · ${pendingWholeRoomOverride.nightDate}. This bed is in a room already booked as a whole room for this night.`
+            : 'This bed is in a room already booked as a whole room. Book another bed here anyway?'
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Book anyway"
+        confirmVariant="destructive"
+        onCancel={cancelWholeRoomOverride}
+        onConfirm={confirmWholeRoomOverride}
+      />
 
       <section className="min-w-0">
         {moreMenuOpen ? (
@@ -1459,6 +1578,7 @@ export function ReceptionCheckInPanel({
                 stays={planStays}
                 onViewStay={openStayDetail}
                 onSelectFreeNight={handleSelectFreeNight}
+                onSelectBlockedNight={canCheckIn ? handleSelectBlockedNight : undefined}
                 bedStatuses={bedStatuses}
                 roomStatuses={roomStatuses}
                 onSetBedStatus={handleSetBedStatus}

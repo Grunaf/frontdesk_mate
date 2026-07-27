@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { GuestAccessFormMode } from '../lib/guestAccessDates';
 import { GuestAccessDateRange } from './GuestAccessDateRange';
 import { GuestProfilePicker } from './GuestProfilePicker';
@@ -178,6 +178,12 @@ export function IssueGuestAccessFormFields({
     advancedBedOpenDefault || editIntent === 'moveBed' || !offerFirst
   );
 
+  useEffect(() => {
+    if (advancedBedOpenDefault || editIntent === 'moveBed') {
+      setAdvancedOpen(true);
+    }
+  }, [advancedBedOpenDefault, editIntent]);
+
   const selectedOffer = stayOfferOptions.find((option) => option.id === offerId);
   const offerHasNoBeds =
     offerFirst && Boolean(offerId) && (selectedOffer?.availableBedCount ?? 0) === 0;
@@ -214,7 +220,7 @@ export function IssueGuestAccessFormFields({
       label={offerFirst ? 'Specific bed' : 'Bed'}
       hint={
         offerFirst
-          ? 'Overrides auto-assign for this booking. Leave closed to pick any free bed in the offer.'
+          ? 'Overrides auto-assign. Beds held by a whole-room booking need confirmation.'
           : null
       }
       bedId={bedId}

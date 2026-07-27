@@ -41,9 +41,6 @@ function isCompleteLandingRoom(
     ...(room.bookingUnit === 'room' || room.bookingUnit === 'bed'
       ? { bookingUnit: room.bookingUnit }
       : {}),
-    ...(typeof room.maxGuests === 'number' && Number.isFinite(room.maxGuests) && room.maxGuests >= 1
-      ? { maxGuests: Math.floor(room.maxGuests) }
-      : {}),
     imageUrl,
     requiresChatUpgrade: room.requiresChatUpgrade === true,
   };

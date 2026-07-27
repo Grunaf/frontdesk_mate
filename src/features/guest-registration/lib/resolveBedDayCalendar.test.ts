@@ -95,4 +95,67 @@ describe('resolveBedDayCalendar', () => {
     expect(range.rangeStart).toBe('2026-06-01');
     expect(range.days).toHaveLength(30);
   });
+
+  it('marks sibling beds blocked when whole-room offer room is occupied', () => {
+    const roomSettings: TenantSettings = {
+      stayOffers: [{ id: 'private', title: 'Private', bookingUnit: 'room' }],
+      guestStay: {
+        rooms: [{ id: 'room-a', label: 'Room A', floorId: 'floor-1', offerId: 'private' }],
+        beds: [
+          { id: 'bed-1', roomId: 'room-a' },
+          { id: 'bed-2', roomId: 'room-a' },
+        ],
+      },
+    };
+    const now = new Date('2026-06-23T12:00:00.000Z');
+    const snapshot = resolveBedDayCalendar(
+      roomSettings,
+      [
+        makeStay({
+          bed_id: 'bed-1',
+          check_in_at: '2026-06-23T14:00:00.000Z',
+          check_out_at: '2026-06-25T10:00:00.000Z',
+        }),
+      ],
+      'week',
+      '2026-06-24',
+      now
+    );
+
+    const bed2On23 = snapshot.roomGroups[0]?.rows[1]?.cells.find(
+      (cell) => cell.nightDate === '2026-06-23'
+    );
+    const bed2On25 = snapshot.roomGroups[0]?.rows[1]?.cells.find(
+      (cell) => cell.nightDate === '2026-06-25'
+    );
+
+    expect(bed2On23?.status).toBe('blocked');
+    expect(bed2On25?.status).toBe('free');
+  });
+
+  it('keeps dorm siblings free when bed-unit offer has occupancy', () => {
+    const dormSettings: TenantSettings = {
+      stayOffers: [{ id: 'dorm', title: 'Dorm', bookingUnit: 'bed' }],
+      guestStay: {
+        rooms: [{ id: 'room-a', label: 'Room A', floorId: 'floor-1', offerId: 'dorm' }],
+        beds: [
+          { id: 'bed-1', roomId: 'room-a' },
+          { id: 'bed-2', roomId: 'room-a' },
+        ],
+      },
+    };
+    const now = new Date('2026-06-23T12:00:00.000Z');
+    const snapshot = resolveBedDayCalendar(
+      dormSettings,
+      [makeStay({ bed_id: 'bed-1' })],
+      'week',
+      '2026-06-24',
+      now
+    );
+
+    const bed2On23 = snapshot.roomGroups[0]?.rows[1]?.cells.find(
+      (cell) => cell.nightDate === '2026-06-23'
+    );
+    expect(bed2On23?.status).toBe('free');
+  });
 });

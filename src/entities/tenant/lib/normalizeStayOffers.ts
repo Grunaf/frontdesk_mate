@@ -15,25 +15,15 @@ function normalizeBookingUnit(value: unknown): StayOfferBookingUnit | undefined 
   return value === 'room' ? 'room' : value === 'bed' ? 'bed' : undefined;
 }
 
-function normalizeMaxGuests(value: unknown): number | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) return undefined;
-  return Math.min(99, Math.floor(value));
-}
-
-function bookingUnitFields(raw: Pick<StayOffer, 'bookingUnit' | 'maxGuests'>): {
+function bookingUnitFields(raw: Pick<StayOffer, 'bookingUnit'>): {
   bookingUnit?: StayOfferBookingUnit;
-  maxGuests?: number;
 } {
   const bookingUnit = normalizeBookingUnit(raw.bookingUnit);
   if (bookingUnit !== 'room') {
     // Persist explicit `bed` only when set; omit default to keep JSON lean.
     return bookingUnit === 'bed' ? { bookingUnit: 'bed' } : {};
   }
-  const maxGuests = normalizeMaxGuests(raw.maxGuests);
-  return {
-    bookingUnit: 'room',
-    ...(maxGuests !== undefined ? { maxGuests } : {}),
-  };
+  return { bookingUnit: 'room' };
 }
 
 export function normalizeStayOffer(raw: StayOffer, index: number): StayOffer | null {
@@ -318,6 +308,5 @@ export function mergeOfferIntoLandingRoomType(
     imageUrl,
     requiresChatUpgrade: card?.requiresChatUpgrade === true,
     ...(unitFields.bookingUnit ? { bookingUnit: unitFields.bookingUnit } : {}),
-    ...(unitFields.maxGuests !== undefined ? { maxGuests: unitFields.maxGuests } : {}),
   };
 }

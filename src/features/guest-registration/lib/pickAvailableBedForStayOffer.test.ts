@@ -55,7 +55,7 @@ describe('pickAvailableBedForStayOffer', () => {
 
   it('for room-unit offers prefers beds from one physical room', () => {
     const roomSettings: TenantSettings = {
-      stayOffers: [{ id: 'private', title: 'Private', bookingUnit: 'room', maxGuests: 2 }],
+      stayOffers: [{ id: 'private', title: 'Private', bookingUnit: 'room' }],
       guestStay: {
         rooms: [
           { id: 'p1', label: 'P1', floorId: '1', offerId: 'private' },

@@ -145,7 +145,7 @@ describe('normalizeStayOffers', () => {
     expect(resolveLandingRooms(settings).roomTypes[0]?.priceFromEur).toBe(18);
   });
 
-  it('preserves room bookingUnit + maxGuests onto landing cards', () => {
+  it('preserves room bookingUnit onto landing cards', () => {
     const settings: TenantSettings = {
       booking: { provider: 'none' },
       stayOffers: [
@@ -155,7 +155,6 @@ describe('normalizeStayOffers', () => {
           engineRoomTypeId: 'PRIV',
           basePriceEur: 55,
           bookingUnit: 'room',
-          maxGuests: 2,
         },
       ],
       landing: {
@@ -166,19 +165,17 @@ describe('normalizeStayOffers', () => {
     expect(resolveLandingRooms(settings).roomTypes[0]).toMatchObject({
       id: 'private',
       bookingUnit: 'room',
-      maxGuests: 2,
       priceFromEur: 55,
     });
   });
 
-  it('finalizeStayOffersForSave keeps room bookingUnit fields', () => {
+  it('finalizeStayOffersForSave keeps room bookingUnit', () => {
     const settings: TenantSettings = {
       stayOffers: [
         {
           id: 'private',
           title: 'Private',
           bookingUnit: 'room',
-          maxGuests: 2.7,
           basePriceEur: 40,
         },
       ],
@@ -191,9 +188,9 @@ describe('normalizeStayOffers', () => {
     expect(saved.stayOffers?.[0]).toMatchObject({
       id: 'private',
       bookingUnit: 'room',
-      maxGuests: 2,
       basePriceEur: 40,
     });
+    expect(saved.stayOffers?.[0]).not.toHaveProperty('maxGuests');
   });
 
   it('lifts legacy card price onto offer basePriceEur on read', () => {
