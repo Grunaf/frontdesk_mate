@@ -46,6 +46,8 @@ export interface GuestStayRecord {
   archived_by_reception_user_id?: string | null;
   /** `full` = whole booking archived; `remainder` = unlived tail linked to original. */
   archive_kind?: 'full' | 'remainder' | null;
+  /** Why the booking left operational inventory (`cancelled` | `checked_out`). */
+  archive_reason?: GuestReservationArchiveReason | null;
   /** For remainder rows: lived/shortened original reservation. */
   original_reservation_id?: string | null;
 }

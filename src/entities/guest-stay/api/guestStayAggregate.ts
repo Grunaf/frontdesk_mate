@@ -85,6 +85,10 @@ export function mapReservationGrantToStayRecord(
       reservation.archive_kind === 'full' || reservation.archive_kind === 'remainder'
         ? reservation.archive_kind
         : null,
+    archive_reason:
+      reservation.archive_reason === 'cancelled' || reservation.archive_reason === 'checked_out'
+        ? reservation.archive_reason
+        : null,
     original_reservation_id: reservation.original_reservation_id
       ? String(reservation.original_reservation_id)
       : null,

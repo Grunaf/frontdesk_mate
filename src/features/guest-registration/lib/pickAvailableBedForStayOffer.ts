@@ -2,6 +2,11 @@ import type { TenantSettings } from '@/entities/tenant';
 import { listStayOffers, normalizeStayOffersOnRead } from '@/entities/tenant/lib/normalizeStayOffers';
 import { resolveBedUnitType } from '@/entities/room/model/bed-type';
 import type { StayBed } from '@/entities/tenant/model/guestStay';
+import {
+  resolveStayOfferBookingUnit,
+  type StayOfferBookingUnit,
+} from '@/entities/tenant/model/stayOffers';
+import { pickBedsSameRoomFirst, countDormFreeBeds } from './resolveReceptionPartyPlacement';
 
 function listBookableIdsForStayBed(bed: StayBed): string[] {
   if (resolveBedUnitType(bed) === 'bunk') {
@@ -44,14 +49,14 @@ export function pickAvailableBedForStayOffer(input: {
   offerId: string | undefined | null;
   availableBedIds: string[];
 }): string | null {
-  const pool = listBedIdsForStayOffer(input.settings, input.offerId);
-  if (pool.length === 0) return null;
-  const available = new Set(input.availableBedIds);
-  return pool.find((bedId) => available.has(bedId)) ?? null;
+  const picked = pickAvailableBedsForStayOffer({ ...input, count: 1 });
+  return picked[0] ?? null;
 }
 
-/** First `count` free beds in offer order (for multi-guest auto-assign).
- * Room-unit offers prefer beds from a single physical room that can fit `count`.
+/**
+ * Auto-assign `count` beds.
+ * Bed-unit: same room with most free first (preferred offer, then other dorms); else split.
+ * Room-unit: only fully empty rooms on that offer; whole-room fit preferred.
  */
 export function pickAvailableBedsForStayOffer(input: {
   settings: TenantSettings | undefined;
@@ -62,64 +67,47 @@ export function pickAvailableBedsForStayOffer(input: {
   const n = Math.max(0, Math.floor(input.count));
   if (n === 0) return [];
 
-  const pool = listBedIdsForStayOffer(input.settings, input.offerId);
-  const available = new Set(input.availableBedIds);
-  const offer = listStayOffers(normalizeStayOffersOnRead(input.settings ?? {})).find(
-    (entry) => entry.id === input.offerId?.trim()
-  );
-  const isRoomUnit = offer?.bookingUnit === 'room';
+  const normalized = normalizeStayOffersOnRead(input.settings ?? {});
+  const offer = listStayOffers(normalized).find((entry) => entry.id === input.offerId?.trim());
+  const bookingUnit = resolveStayOfferBookingUnit(offer);
 
-  if (isRoomUnit && pool.length > 0 && input.settings?.guestStay) {
-    const beds = input.settings.guestStay.beds ?? [];
-    const roomOrder: string[] = [];
-    const bedsByRoom = new Map<string, string[]>();
-
-    for (const bedId of pool) {
-      const bed = beds.find(
-        (entry) =>
-          entry.id === bedId || entry.topId === bedId || entry.bottomId === bedId
-      );
-      const roomId = bed?.roomId?.trim();
-      if (!roomId) continue;
-      if (!bedsByRoom.has(roomId)) {
-        bedsByRoom.set(roomId, []);
-        roomOrder.push(roomId);
-      }
-      bedsByRoom.get(roomId)!.push(bedId);
-    }
-
-    for (const roomId of roomOrder) {
-      const freeInRoom = (bedsByRoom.get(roomId) ?? []).filter((bedId) => available.has(bedId));
-      if (freeInRoom.length >= n) {
-        return freeInRoom.slice(0, n);
-      }
-    }
+  if (bookingUnit === 'room') {
+    return pickBedsSameRoomFirst({
+      settings: normalized,
+      preferredOfferId: input.offerId,
+      availableBedIds: input.availableBedIds,
+      count: n,
+      emptyRoomsOnly: true,
+      offerIdOnly: true,
+    });
   }
 
-  const picked: string[] = [];
-
-  if (pool.length > 0) {
-    for (const bedId of pool) {
-      if (!available.has(bedId)) continue;
-      picked.push(bedId);
-      if (picked.length >= n) return picked;
-    }
-  }
-
-  // Fallback: any free inventory beds when offer pool is empty / short.
-  for (const bedId of input.availableBedIds) {
-    if (picked.includes(bedId)) continue;
-    picked.push(bedId);
-    if (picked.length >= n) break;
-  }
-
-  return picked;
+  return pickBedsSameRoomFirst({
+    settings: normalized,
+    preferredOfferId: input.offerId,
+    availableBedIds: input.availableBedIds,
+    count: n,
+    emptyRoomsOnly: false,
+    offerIdOnly: false,
+  });
 }
 
 export interface ReceptionStayOfferOption {
   id: string;
   title: string;
   availableBedCount: number;
+  bookingUnit: StayOfferBookingUnit;
+}
+
+/**
+ * Free bookable beds across all StayOffers with bookingUnit `bed` (dorms).
+ * Room-unit offers are excluded.
+ */
+export function countAvailableBedUnitBeds(input: {
+  settings: TenantSettings | undefined;
+  availableBedIds: string[];
+}): number {
+  return countDormFreeBeds(input);
 }
 
 /** Offers that have at least one configured bed in linked rooms (availability counted separately). */
@@ -133,17 +121,49 @@ export function listReceptionStayOfferOptions(input: {
 
   return offers
     .map((offer) => {
+      const bookingUnit = resolveStayOfferBookingUnit(offer);
       const pool = listBedIdsForStayOffer(normalized, offer.id);
-      const availableBedCount = pool.filter((bedId) => available.has(bedId)).length;
+      let availableBedCount = 0;
+      if (bookingUnit === 'room') {
+        const roomIds = new Set(
+          (normalized.guestStay?.rooms ?? [])
+            .filter((room) => room.offerId?.trim() === offer.id)
+            .map((room) => room.id)
+        );
+        const byRoom = new Map<string, { configured: string[]; free: string[] }>();
+        for (const bed of normalized.guestStay?.beds ?? []) {
+          if (!roomIds.has(bed.roomId)) continue;
+          const ids = listBookableIdsForStayBed(bed);
+          const entry = byRoom.get(bed.roomId) ?? { configured: [], free: [] };
+          for (const id of ids) {
+            entry.configured.push(id);
+            if (available.has(id)) entry.free.push(id);
+          }
+          byRoom.set(bed.roomId, entry);
+        }
+        for (const entry of byRoom.values()) {
+          if (entry.free.length === entry.configured.length && entry.configured.length > 0) {
+            availableBedCount += entry.free.length;
+          }
+        }
+      } else {
+        availableBedCount = pool.filter((bedId) => available.has(bedId)).length;
+      }
       return {
         id: offer.id,
         title: offer.title,
         availableBedCount,
+        bookingUnit,
         configuredBedCount: pool.length,
       };
     })
     .filter((offer) => offer.configuredBedCount > 0)
-    .map(({ id, title, availableBedCount }) => ({ id, title, availableBedCount }));
+    .map(({ id, title, availableBedCount, bookingUnit }) => ({
+      id,
+      title,
+      availableBedCount,
+      bookingUnit,
+    }));
 }
 
 export function resolveOfferIdForBed(

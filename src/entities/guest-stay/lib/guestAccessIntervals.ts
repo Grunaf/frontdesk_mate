@@ -110,7 +110,8 @@ export function stayOverlapsBedNightRange(
   return guestAccessBedNightsOverlap(stay.check_in_at, stay.check_out_at, checkInAt, checkOutAt);
 }
 
-/** Bed-night occupancy for Plan/inventory (ignores access revocation). */
+/** Bed-night occupancy for Plan/inventory (ignores access revocation and archive flags).
+ * Callers filter active vs Plan-history stays before using this. */
 export function guestStayCoversNight(
   stay: Pick<GuestStayRecord, 'check_in_at' | 'check_out_at'> & {
     check_in_date?: string | null;
@@ -119,7 +120,6 @@ export function guestStayCoversNight(
   },
   nightDate: string
 ): boolean {
-  if (stay.is_archived) return false;
   const start = stayRecordCheckInDate(stay);
   const end = stayRecordCheckOutDate(stay);
   return start <= nightDate && nightDate < end;

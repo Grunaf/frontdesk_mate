@@ -11,6 +11,7 @@ import { resolveBedDisplayLabel } from '@/entities/tenant/lib/resolveBedDisplay'
 import { resolveBedInventory } from './resolveBedInventory';
 import { addNights, todayUtcDate } from './guestAccessDates';
 import { listWholeRoomBlockedBedIdsForNight } from './resolveRoomOccupancyBlocks';
+import { isPlanCalendarOccupancyStay } from './resolvePlanStayCalendarPresentation';
 
 export type BedDayCalendarView = 'week' | 'month';
 
@@ -127,8 +128,8 @@ export function resolveBedDayCalendar(
 ): BedDayCalendarSnapshot {
   const inventory = resolveBedInventory(settings, stays, now);
   const { rangeStart, rangeEnd, days } = resolveCalendarRange(view, anchorDate);
-  // Occupancy is booking-based: include lived shortened stays even when access is revoked.
-  const occupancyStays = stays.filter((stay) => !stay.is_archived);
+  // Plan paints active + full checked-out history; inventory still excludes archived.
+  const occupancyStays = stays.filter(isPlanCalendarOccupancyStay);
   const configuredBedIds = new Set(listGuestStayBedIds(settings));
 
   const roomGroups: BedDayCalendarRoomGroup[] = inventory.roomGroups.map((group) => ({

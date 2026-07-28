@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  countAvailableBedUnitBeds,
   listBedIdsForStayOffer,
   listReceptionStayOfferOptions,
   pickAvailableBedForStayOffer,
@@ -32,7 +33,7 @@ describe('pickAvailableBedForStayOffer', () => {
     expect(listBedIdsForStayOffer(settings, 'female')).toEqual(['f1', 'f2']);
   });
 
-  it('picks first available bed in offer pool order', () => {
+  it('picks first available bed preferring fullest room', () => {
     expect(
       pickAvailableBedForStayOffer({
         settings,
@@ -42,7 +43,7 @@ describe('pickAvailableBedForStayOffer', () => {
     ).toBe('f2');
   });
 
-  it('picks N free beds from offer pool', () => {
+  it('picks N free beds same-room first', () => {
     expect(
       pickAvailableBedsForStayOffer({
         settings,
@@ -53,7 +54,7 @@ describe('pickAvailableBedForStayOffer', () => {
     ).toEqual(['f1', 'f2']);
   });
 
-  it('for room-unit offers prefers beds from one physical room', () => {
+  it('for room-unit offers prefers beds from one empty physical room', () => {
     const roomSettings: TenantSettings = {
       stayOffers: [{ id: 'private', title: 'Private', bookingUnit: 'room' }],
       guestStay: {
@@ -80,25 +81,78 @@ describe('pickAvailableBedForStayOffer', () => {
     ).toEqual(['b1', 'b2']);
   });
 
-  it('returns null when no beds free in offer', () => {
+  it('returns null when no beds free in dorm offers', () => {
+    const withRoomPrivate: TenantSettings = {
+      ...settings,
+      stayOffers: [
+        { id: 'female', title: 'Female dorm', bookingUnit: 'bed' },
+        { id: 'private', title: 'Private', bookingUnit: 'room' },
+      ],
+    };
     expect(
       pickAvailableBedForStayOffer({
-        settings,
+        settings: withRoomPrivate,
         offerId: 'female',
         availableBedIds: ['p1'],
       })
     ).toBeNull();
   });
 
-  it('lists reception offer options with availability counts', () => {
+  it('lists reception offer options with availability counts and bookingUnit', () => {
+    const withUnits: TenantSettings = {
+      ...settings,
+      stayOffers: [
+        { id: 'female', title: 'Female dorm', bookingUnit: 'bed' },
+        { id: 'private', title: 'Private', bookingUnit: 'room' },
+      ],
+    };
     const options = listReceptionStayOfferOptions({
-      settings,
+      settings: withUnits,
       availableBedIds: ['f1', 'p1'],
     });
     expect(options).toEqual([
-      { id: 'female', title: 'Female dorm', availableBedCount: 1 },
-      { id: 'private', title: 'Private', availableBedCount: 1 },
+      { id: 'female', title: 'Female dorm', availableBedCount: 1, bookingUnit: 'bed' },
+      { id: 'private', title: 'Private', availableBedCount: 1, bookingUnit: 'room' },
     ]);
+  });
+
+  it('counts free beds across bed-unit offers only', () => {
+    const multiDorm: TenantSettings = {
+      stayOffers: [
+        { id: 'female', title: 'Female', bookingUnit: 'bed' },
+        { id: 'mixed', title: 'Mixed', bookingUnit: 'bed' },
+        { id: 'private', title: 'Private', bookingUnit: 'room' },
+      ],
+      guestStay: {
+        rooms: [
+          { id: 'r1', label: '1', floorId: '1', offerId: 'female' },
+          { id: 'r2', label: '2', floorId: '1', offerId: 'mixed' },
+          { id: 'r3', label: 'P', floorId: '1', offerId: 'private' },
+        ],
+        beds: [
+          { id: 'f1', roomId: 'r1' },
+          { id: 'f2', roomId: 'r1' },
+          { id: 'm1', roomId: 'r2' },
+          { id: 'm2', roomId: 'r2' },
+          { id: 'm3', roomId: 'r2' },
+          { id: 'p1', roomId: 'r3' },
+        ],
+      },
+    };
+
+    expect(
+      countAvailableBedUnitBeds({
+        settings: multiDorm,
+        availableBedIds: ['f1', 'f2', 'm1', 'm2', 'm3', 'p1'],
+      })
+    ).toBe(5);
+
+    expect(
+      countAvailableBedUnitBeds({
+        settings: multiDorm,
+        availableBedIds: ['f1', 'm2', 'p1'],
+      })
+    ).toBe(2);
   });
 
   it('resolves offer from bed via room', () => {

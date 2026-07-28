@@ -158,4 +158,55 @@ describe('resolveBedDayCalendar', () => {
     );
     expect(bed2On23?.status).toBe('free');
   });
+
+  it('keeps full checked-out stays on the Plan grid (cancelled stay off)', () => {
+    const now = new Date('2026-06-26T12:00:00.000Z');
+    const snapshot = resolveBedDayCalendar(
+      settings,
+      [
+        makeStay({
+          id: 'checked-out',
+          guest_name: 'Done',
+          is_archived: true,
+          archive_kind: 'full',
+          archive_reason: 'checked_out',
+          check_in_at: '2026-06-22T14:00:00.000Z',
+          check_out_at: '2026-06-25T10:00:00.000Z',
+          check_in_date: '2026-06-22',
+          check_out_date: '2026-06-25',
+        }),
+        makeStay({
+          id: 'cancelled',
+          bed_id: 'bed-2',
+          guest_name: 'Gone',
+          is_archived: true,
+          archive_kind: 'full',
+          archive_reason: 'cancelled',
+          check_in_at: '2026-06-22T14:00:00.000Z',
+          check_out_at: '2026-06-25T10:00:00.000Z',
+          check_in_date: '2026-06-22',
+          check_out_date: '2026-06-25',
+        }),
+      ],
+      'week',
+      '2026-06-24',
+      now
+    );
+
+    const checkedOutCell = snapshot.roomGroups[0]?.rows[0]?.cells.find(
+      (cell) => cell.nightDate === '2026-06-23'
+    );
+    const cancelledCell = snapshot.roomGroups[0]?.rows[1]?.cells.find(
+      (cell) => cell.nightDate === '2026-06-23'
+    );
+
+    expect(checkedOutCell).toEqual(
+      expect.objectContaining({
+        nightDate: '2026-06-23',
+        status: 'occupied',
+        stay: expect.objectContaining({ id: 'checked-out' }),
+      })
+    );
+    expect(cancelledCell?.status).toBe('free');
+  });
 });

@@ -13,6 +13,7 @@ export interface StayOfferFormOption {
   id: string;
   title: string;
   availableBedCount: number;
+  bookingUnit?: 'bed' | 'room';
 }
 
 const BOOKING_REFERENCE_HIDDEN_PLATFORM_IDS = new Set(['walk-in', 'direct']);
@@ -60,6 +61,9 @@ export interface IssueGuestAccessFormProps {
   guestCount?: number;
   onGuestCountChange?: (value: number) => void;
   maxGuestCount?: number;
+  guestsReducedMessage?: string | null;
+  placementWarning?: string | null;
+  privateRoomCta?: { label: string; onClick: () => void } | null;
   bedsByRoom: BedRoomOptionGroup[];
   /** When true, Advanced bed picker starts open (move bed / manual). */
   advancedBedOpenDefault?: boolean;
@@ -121,6 +125,9 @@ export function IssueGuestAccessFormFields({
   guestCount = 1,
   onGuestCountChange,
   maxGuestCount = DEFAULT_MAX_GUEST_COUNT,
+  guestsReducedMessage = null,
+  placementWarning = null,
+  privateRoomCta = null,
   bedsByRoom,
   advancedBedOpenDefault = false,
   checkInDate,
@@ -159,6 +166,9 @@ export function IssueGuestAccessFormFields({
   | 'guestCount'
   | 'onGuestCountChange'
   | 'maxGuestCount'
+  | 'guestsReducedMessage'
+  | 'placementWarning'
+  | 'privateRoomCta'
   | 'bedsByRoom'
   | 'advancedBedOpenDefault'
   | 'checkInDate'
@@ -193,7 +203,13 @@ export function IssueGuestAccessFormFields({
     bedIds && bedIds.length > 0
       ? bedIds
       : Array.from({ length: partySize }, (_, i) => (i === 0 ? bedId : ''));
-  const assignedBedsLabel = resolvedBedIds.filter(Boolean).join(', ');
+  const bedDisplayLabelById = new Map(
+    bedsByRoom.flatMap((group) => group.beds.map((bed) => [bed.bedId, bed.displayLabel] as const))
+  );
+  const assignedBedsLabel = resolvedBedIds
+    .filter(Boolean)
+    .map((id) => bedDisplayLabelById.get(id) ?? id)
+    .join(', ');
 
   const handlePlatformChange = (nextPlatformId: string) => {
     onBookingPlatformIdChange(nextPlatformId);
@@ -289,6 +305,15 @@ export function IssueGuestAccessFormFields({
         )}
       </div>
 
+      <div className="space-y-1 lg:col-span-2">
+        <GuestAccessDateRange
+          compact
+          checkInDate={checkInDate}
+          checkOutDate={checkOutDate}
+          onChange={onDatesChange}
+        />
+      </div>
+
       {!isEditingReservation && onGuestCountChange ? (
         <div className="space-y-1">
           <Label htmlFor="guest-count">Guests</Label>
@@ -307,6 +332,9 @@ export function IssueGuestAccessFormFields({
               </option>
             ))}
           </select>
+          {guestsReducedMessage ? (
+            <p className="text-xs text-muted-foreground">{guestsReducedMessage}</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -348,9 +376,11 @@ export function IssueGuestAccessFormFields({
         <div className="space-y-1 lg:col-span-2">
           <Label htmlFor="stay-offer-id">Stay offer</Label>
           <p className="text-xs text-muted-foreground">
-            {multiGuest
-              ? 'Free beds in this group are assigned automatically.'
-              : 'A free bed in this group is assigned automatically.'}
+            {selectedOffer?.bookingUnit === 'room'
+              ? 'Empty private room is held as a whole. Priced per room.'
+              : multiGuest
+                ? 'Beds are assigned in one room when possible, then split if needed.'
+                : 'A free bed in this group is assigned automatically.'}
           </p>
           <select
             id="stay-offer-id"
@@ -358,14 +388,45 @@ export function IssueGuestAccessFormFields({
             onChange={(event) => onOfferIdChange?.(event.target.value)}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
           >
-            {stayOfferOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.title}
-                {option.availableBedCount === 0 ? ' (full)' : ` · ${option.availableBedCount} free`}
-              </option>
-            ))}
+            {stayOfferOptions.some((option) => (option.bookingUnit ?? 'bed') === 'bed') ? (
+              <optgroup label="Dorms">
+                {stayOfferOptions
+                  .filter((option) => (option.bookingUnit ?? 'bed') === 'bed')
+                  .map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.title}
+                      {option.availableBedCount === 0
+                        ? ' (full)'
+                        : ` · ${option.availableBedCount} free`}
+                    </option>
+                  ))}
+              </optgroup>
+            ) : null}
+            {stayOfferOptions.some((option) => option.bookingUnit === 'room') ? (
+              <optgroup label="Private rooms">
+                {stayOfferOptions
+                  .filter((option) => option.bookingUnit === 'room')
+                  .map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.title}
+                      {option.availableBedCount === 0
+                        ? ' (full)'
+                        : ` · ${option.availableBedCount} free`}
+                    </option>
+                  ))}
+              </optgroup>
+            ) : null}
           </select>
-          {offerHasNoBeds ? (
+          {placementWarning ? (
+            <div className="space-y-2">
+              <p className="text-xs text-destructive">{placementWarning}</p>
+              {privateRoomCta ? (
+                <Button type="button" size="sm" variant="outline" onClick={privateRoomCta.onClick}>
+                  {privateRoomCta.label}
+                </Button>
+              ) : null}
+            </div>
+          ) : offerHasNoBeds ? (
             <p className="text-xs text-destructive">No free beds in this offer for these dates.</p>
           ) : assignedBedsLabel ? (
             <p className="text-xs text-muted-foreground">
@@ -393,15 +454,6 @@ export function IssueGuestAccessFormFields({
       ) : (
         bedSelect
       )}
-
-      <div className="space-y-1 lg:col-span-2">
-        <GuestAccessDateRange
-          compact
-          checkInDate={checkInDate}
-          checkOutDate={checkOutDate}
-          onChange={onDatesChange}
-        />
-      </div>
 
       <div className="space-y-1">
         <Label htmlFor="booking-balance-due">Balance due</Label>
