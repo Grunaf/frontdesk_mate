@@ -1,6 +1,7 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
   HOUSEKEEPING_BED_STATUS_LABELS,
@@ -35,6 +36,11 @@ import {
   resolvePlanStayLifecycleStatus,
   type PlanStayLifecycleStatus,
 } from '../lib/resolvePlanStayLifecycleStatus';
+import {
+  isPlanStayCellInactive,
+  isPlanStayUnpaid,
+} from '../lib/resolvePlanStayCalendarPresentation';
+import { RECEPTION_PLAN_TOOLBAR_SLOT_ID } from '../lib/receptionStickyChrome';
 import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
 import { Button, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
@@ -180,6 +186,7 @@ export function BedAccessCalendar({
   const [internalBedFilter, setInternalBedFilter] = useState<PlanBedFilter>('all');
   const [quickFilters, setQuickFilters] = useState<PlanQuickFiltersState>(DEFAULT_PLAN_QUICK_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [toolbarSlotEl, setToolbarSlotEl] = useState<HTMLElement | null>(null);
   const quickFiltersSlugRef = useRef<string | null>(null);
 
   const effectiveView = isMobile && view === 'month' ? 'week' : view;
@@ -195,6 +202,14 @@ export function BedAccessCalendar({
     if (!focusToken) return;
     setAnchorDate(lifecycleToday);
   }, [focusToken, lifecycleToday]);
+
+  useLayoutEffect(() => {
+    if (!embedded) {
+      setToolbarSlotEl(null);
+      return;
+    }
+    setToolbarSlotEl(document.getElementById(RECEPTION_PLAN_TOOLBAR_SLOT_ID));
+  }, [embedded]);
 
   useEffect(() => {
     const slug = tenantSlug?.trim() ?? '';
@@ -272,56 +287,60 @@ export function BedAccessCalendar({
   const viewItems = isMobile ? VIEW_ITEMS.filter((item) => item.id === 'week') : [...VIEW_ITEMS];
   const quickFiltersHideAll = quickFilteredRoomGroups.length === 0;
 
+  const toolbar = (
+    <div className="flex flex-wrap items-center gap-2">
+      <SegmentedChipBar
+        ariaLabel="Calendar view"
+        items={viewItems}
+        value={effectiveView}
+        onValueChange={(id) => {
+          setView(id as BedDayCalendarView);
+          setAnchorDate(lifecycleToday);
+        }}
+        className="min-w-0"
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant={filtersOpen || anyFiltersActive ? 'default' : 'outline'}
+        aria-expanded={filtersOpen}
+        aria-controls="plan-filters-panel"
+        onClick={() => setFiltersOpen((open) => !open)}
+      >
+        Filters
+        {anyFiltersActive && !filtersOpen ? (
+          <span
+            aria-hidden
+            className="ml-1.5 inline-block size-1.5 rounded-full bg-primary-foreground"
+          />
+        ) : null}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, -1))}
+      >
+        Prev
+      </Button>
+      <Button type="button" size="sm" variant="outline" onClick={snapAnchorToPlanToday}>
+        Today
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, 1))}
+      >
+        Next
+      </Button>
+      <span className="text-xs text-muted-foreground">{rangeLabel}</span>
+    </div>
+  );
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <SegmentedChipBar
-          ariaLabel="Calendar view"
-          items={viewItems}
-          value={effectiveView}
-          onValueChange={(id) => {
-            setView(id as BedDayCalendarView);
-            setAnchorDate(lifecycleToday);
-          }}
-          className="min-w-0"
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant={filtersOpen || anyFiltersActive ? 'default' : 'outline'}
-          aria-expanded={filtersOpen}
-          aria-controls="plan-filters-panel"
-          onClick={() => setFiltersOpen((open) => !open)}
-        >
-          Filters
-          {anyFiltersActive && !filtersOpen ? (
-            <span
-              aria-hidden
-              className="ml-1.5 inline-block size-1.5 rounded-full bg-primary-foreground"
-            />
-          ) : null}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, -1))}
-        >
-          Prev
-        </Button>
-        <Button type="button" size="sm" variant="outline" onClick={snapAnchorToPlanToday}>
-          Today
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, 1))}
-        >
-          Next
-        </Button>
-        <span className="text-xs text-muted-foreground">{rangeLabel}</span>
-      </div>
+      {toolbarSlotEl ? createPortal(toolbar, toolbarSlotEl) : toolbar}
 
       {filtersOpen ? (
         <div id="plan-filters-panel">
@@ -436,8 +455,14 @@ export function BedAccessCalendar({
                           </div>
                         </td>
                         {row.cells.map((cell) => {
+                          const inactive = isPlanStayCellInactive({
+                            nightDate: cell.nightDate,
+                            planToday: lifecycleToday,
+                            stay: cell.stay,
+                          });
+                          const unpaid = cell.stay ? isPlanStayUnpaid(cell.stay) : false;
                           const lifecycle =
-                            planStayStatusEnabled && cell.stay
+                            planStayStatusEnabled && cell.stay && !inactive
                               ? resolvePlanStayLifecycleStatus({
                                   stay: cell.stay,
                                   today: lifecycleToday,
@@ -467,7 +492,12 @@ export function BedAccessCalendar({
                                   <button
                                     type="button"
                                     onClick={() => onSelectBlockedNight(row.bedId, cell.nightDate)}
-                                    className="flex min-h-10 w-full items-center justify-center rounded bg-muted/20 px-1 text-[10px] text-muted-foreground/70 hover:bg-muted/40 hover:text-muted-foreground"
+                                    className={cn(
+                                      'flex min-h-10 w-full items-center justify-center rounded px-1 text-[10px]',
+                                      inactive
+                                        ? 'bg-muted/30 text-muted-foreground/50'
+                                        : 'bg-muted/20 text-muted-foreground/70 hover:bg-muted/40 hover:text-muted-foreground'
+                                    )}
                                     title="Held by whole-room booking"
                                     aria-label="Held by whole-room booking — tap for options"
                                   >
@@ -475,7 +505,12 @@ export function BedAccessCalendar({
                                   </button>
                                 ) : (
                                   <div
-                                    className="flex min-h-10 w-full items-center justify-center rounded bg-muted/20 px-1 text-[10px] text-muted-foreground/50"
+                                    className={cn(
+                                      'flex min-h-10 w-full items-center justify-center rounded px-1 text-[10px]',
+                                      inactive
+                                        ? 'bg-muted/30 text-muted-foreground/40'
+                                        : 'bg-muted/20 text-muted-foreground/50'
+                                    )}
                                     title="Held by whole-room booking"
                                     aria-label="Held by whole-room booking"
                                   >
@@ -489,14 +524,35 @@ export function BedAccessCalendar({
                                   onClick={() => cell.stay && onViewStay(cell.stay.id)}
                                   className={cn(
                                     'flex min-h-10 w-full flex-col items-start justify-center gap-0.5 rounded px-1 py-0.5 text-left text-[10px]',
-                                    cell.status === 'scheduled' ? 'bg-amber-50' : 'bg-primary/10',
-                                    cell.stay && 'hover:bg-muted/40'
+                                    inactive
+                                      ? 'bg-muted/40 text-muted-foreground hover:bg-muted/50'
+                                      : cell.status === 'scheduled'
+                                        ? 'bg-amber-50'
+                                        : 'bg-primary/10',
+                                    cell.stay && !inactive && 'hover:bg-muted/40'
                                   )}
                                 >
-                                  <span className="truncate font-medium">
+                                  <span
+                                    className={cn(
+                                      'truncate font-medium',
+                                      inactive && 'text-muted-foreground'
+                                    )}
+                                  >
                                     {cell.stay?.guest_name ||
                                       (cell.status === 'scheduled' ? 'Soon' : 'Guest')}
                                   </span>
+                                  {unpaid ? (
+                                    <span
+                                      className={cn(
+                                        'rounded border px-1 py-px text-[9px] font-medium leading-tight',
+                                        inactive
+                                          ? 'border-border/60 bg-muted text-muted-foreground'
+                                          : 'border-destructive/30 bg-destructive/10 text-destructive'
+                                      )}
+                                    >
+                                      Unpaid
+                                    </span>
+                                  ) : null}
                                   {lifecycle ? (
                                     <span
                                       className={cn(

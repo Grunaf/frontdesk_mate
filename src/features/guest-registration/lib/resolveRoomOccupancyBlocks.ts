@@ -5,6 +5,7 @@ import { listStayOffers, resolveStayOfferBookingUnit } from '@/entities/tenant';
 import { resolveBedUnitType } from '@/entities/room/model/bed-type';
 import type { StayBed } from '@/entities/tenant/model/guestStay';
 import { addNights } from './guestAccessDates';
+import { isPlanCalendarOccupancyStay } from './resolvePlanStayCalendarPresentation';
 
 function listBookableIdsForStayBed(bed: StayBed): string[] {
   if (resolveBedUnitType(bed) === 'bunk') {
@@ -53,7 +54,7 @@ export function isWholeRoomUnitRoom(
 
 /**
  * Room has occupancy that should hold remaining free beds for that night:
- * whole-room offer + at least one non-archived stay covering the night.
+ * whole-room offer + at least one Plan-occupancy stay covering the night.
  * Empty private / bed-unit dorm → false (siblings stay walk-in free).
  */
 export function roomHasWholeRoomOccupancyOnNight(input: {
@@ -69,7 +70,7 @@ export function roomHasWholeRoomOccupancyOnNight(input: {
 
   return input.stays.some(
     (stay) =>
-      !stay.is_archived &&
+      isPlanCalendarOccupancyStay(stay) &&
       bedIds.has(stay.bed_id) &&
       guestStayCoversNight(stay, input.nightDate)
   );
@@ -88,7 +89,7 @@ export function listWholeRoomBlockedBedIdsForNight(input: {
   const rooms = input.settings?.guestStay?.rooms ?? [];
   if (rooms.length === 0) return blocked;
 
-  const occupancyStays = input.stays.filter((stay) => !stay.is_archived);
+  const occupancyStays = input.stays.filter(isPlanCalendarOccupancyStay);
 
   for (const room of rooms) {
     if (
@@ -132,7 +133,8 @@ export function listWholeRoomBlockedBedIdsForDateRange(input: {
   for (let night = start; night < end; night = addNights(night, 1)) {
     for (const bedId of listWholeRoomBlockedBedIdsForNight({
       settings: input.settings,
-      stays: input.stays,
+      // New bookings must not treat checked-out history as live holds.
+      stays: input.stays.filter((stay) => !stay.is_archived),
       nightDate: night,
     })) {
       blocked.add(bedId);

@@ -21,8 +21,15 @@ import {
   pickAvailableBedsForStayOffer,
   resolveOfferIdForBed,
 } from '../lib/pickAvailableBedForStayOffer';
+import {
+  countDormFreeBeds,
+  findPrivateRoomOfferForParty,
+  maxEmptyRoomCapacityForOffer,
+  resolveGlobalPartyCapacity,
+} from '../lib/resolveReceptionPartyPlacement';
 import { resolveReceptionOfferBalance } from '../lib/resolveReceptionOfferBalance';
 import { listWholeRoomBlockedBedIdsForDateRange } from '../lib/resolveRoomOccupancyBlocks';
+import { resolveStayOfferBookingUnit } from '@/entities/tenant/model/stayOffers';
 import {
   reservationBookingSourceErrorMessage,
   validateReservationBookingSource,
@@ -110,6 +117,11 @@ import {
   ReceptionBottomNav,
   RECEPTION_BOTTOM_NAV_CONTENT_PAD,
 } from './ReceptionBottomNav';
+import {
+  RECEPTION_PLAN_TOOLBAR_SLOT_ID,
+  RECEPTION_STICKY_CHROME_SURFACE,
+  RECEPTION_STICKY_CHROME_Z,
+} from '../lib/receptionStickyChrome';
 import { ReceptionMoreMenu } from './ReceptionMoreMenu';
 import { ReceptionMySchedulePanel } from './ReceptionMySchedulePanel';
 import { ReceptionDeskHeader } from './ReceptionDeskHeader';
@@ -127,6 +139,8 @@ import {
   useReceptionOperationalPolling,
   subscribeReceptionRefresh,
 } from '@/features/reception-sync';
+import { cn } from '@/shared/lib/utils';
+
 interface ReceptionCheckInPanelProps {
   tenantSlug: string;
   tenantName: string;
@@ -149,8 +163,6 @@ interface EditReservationDraft {
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
   return bedOptions.find((id) => !unavailableBedIds.has(id)) ?? bedOptions[0] ?? '';
 }
-
-const MAX_PARTY_GUESTS = 8;
 
 function pickDefaultBedIds(
   count: number,
@@ -264,6 +276,9 @@ export function ReceptionCheckInPanel({
   const [lastBookingsTab, setLastBookingsTab] = useState<BookingsContextTab>('plan');
   const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
   const [planFocusToken, setPlanFocusToken] = useState(0);
+  const showBookingsContextTabs =
+    shouldShowBookingsContextTabs(deskTab) && bookingsContextTabs.length > 0;
+
   const [mode, setMode] = useState<GuestAccessFormMode>('custom');
   const [guestName, setGuestName] = useState('');
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
@@ -758,25 +773,90 @@ export function ReceptionCheckInPanel({
     () => listStayOffers(tenantSettings).find((offer) => offer.id === offerId) ?? null,
     [offerId, tenantSettings]
   );
+  const selectedBookingUnit = resolveStayOfferBookingUnit(selectedStayOffer);
 
-  const maxGuestCount = useMemo(() => {
-    const offerFree =
-      stayOfferOptions.find((option) => option.id === offerId)?.availableBedCount ??
-      availableBedIds.length;
-    return Math.max(1, Math.min(MAX_PARTY_GUESTS, offerFree || availableBedIds.length || 1));
-  }, [availableBedIds.length, offerId, stayOfferOptions]);
+  const dormFreeBeds = useMemo(
+    () =>
+      countDormFreeBeds({
+        settings: tenantSettings,
+        availableBedIds,
+      }),
+    [availableBedIds, tenantSettings]
+  );
+
+  const partyInventoryCapacity = useMemo(
+    () =>
+      resolveGlobalPartyCapacity({
+        settings: tenantSettings,
+        availableBedIds,
+      }),
+    [availableBedIds, tenantSettings]
+  );
+
+  const maxGuestCount = Math.max(1, partyInventoryCapacity || 1);
+
+  const selectedOfferEmptyRoomCapacity = useMemo(
+    () =>
+      selectedBookingUnit === 'room'
+        ? maxEmptyRoomCapacityForOffer({
+            settings: tenantSettings,
+            offerId,
+            availableBedIds,
+          })
+        : null,
+    [availableBedIds, offerId, selectedBookingUnit, tenantSettings]
+  );
+
+  const [guestsReducedMessage, setGuestsReducedMessage] = useState<string | null>(null);
+
+  const privateRoomCtaOfferId = useMemo(() => {
+    if (editDraft || selectedBookingUnit !== 'bed') return null;
+    if (guestCount <= dormFreeBeds) return null;
+    return findPrivateRoomOfferForParty({
+      settings: tenantSettings,
+      availableBedIds,
+      guestCount,
+    });
+  }, [
+    availableBedIds,
+    dormFreeBeds,
+    editDraft,
+    guestCount,
+    selectedBookingUnit,
+    tenantSettings,
+  ]);
+
+  const bedPathNeedsPrivateRoom = Boolean(privateRoomCtaOfferId);
+  const bedPathNotEnoughBeds =
+    !editDraft &&
+    selectedBookingUnit === 'bed' &&
+    guestCount > dormFreeBeds &&
+    !privateRoomCtaOfferId;
+  const roomPathTooSmall =
+    !editDraft &&
+    selectedBookingUnit === 'room' &&
+    (selectedOfferEmptyRoomCapacity ?? 0) < guestCount;
+  const inventoryCapacityZero = !editDraft && partyInventoryCapacity === 0;
 
   useEffect(() => {
     if (guestCount > maxGuestCount) {
       setGuestCount(maxGuestCount);
+      setGuestsReducedMessage(
+        `Guests reduced to ${maxGuestCount} — fewer beds for these dates.`
+      );
     }
   }, [guestCount, maxGuestCount]);
+
+  const preferredDefaultOfferId = useMemo(() => {
+    const dorm = stayOfferOptions.find((option) => option.bookingUnit === 'bed');
+    return dorm?.id ?? stayOfferOptions[0]?.id ?? '';
+  }, [stayOfferOptions]);
 
   useEffect(() => {
     if (stayOfferOptions.length === 0) return;
     if (offerId && stayOfferOptions.some((option) => option.id === offerId)) return;
-    setOfferId(stayOfferOptions[0]?.id ?? '');
-  }, [offerId, stayOfferOptions]);
+    setOfferId(preferredDefaultOfferId);
+  }, [offerId, preferredDefaultOfferId, stayOfferOptions]);
 
   useEffect(() => {
     if (editDraft?.intent === 'moveBed' && bedPickMode === 'manual') {
@@ -935,11 +1015,26 @@ export function ReceptionCheckInPanel({
     [editDraft]
   );
 
-  const handleGuestCountChange = useCallback((nextCount: number) => {
-    setGuestCount(Math.max(1, Math.min(MAX_PARTY_GUESTS, nextCount)));
+  const handleGuestCountChange = useCallback(
+    (nextCount: number) => {
+      setGuestCount(Math.max(1, Math.min(maxGuestCount, nextCount)));
+      setGuestsReducedMessage(null);
+      setBedPickMode('auto');
+      setBookingAmountTouched(false);
+    },
+    [maxGuestCount]
+  );
+
+  const handleBookPrivateRoom = useCallback(() => {
+    if (!privateRoomCtaOfferId) return;
+    setOfferId(privateRoomCtaOfferId);
     setBedPickMode('auto');
     setBookingAmountTouched(false);
-  }, []);
+    setWholeRoomOverrideBedIds([]);
+    setPendingWholeRoomOverride(null);
+    setOpenAdvancedBeds(false);
+    setGuestsReducedMessage(null);
+  }, [privateRoomCtaOfferId]);
 
   const resetCreateIssueForm = useCallback(() => {
     setError(null);
@@ -958,11 +1053,11 @@ export function ReceptionCheckInPanel({
     setWholeRoomOverrideBedIds([]);
     setPendingWholeRoomOverride(null);
     setOpenAdvancedBeds(false);
-    setOfferId(stayOfferOptions[0]?.id ?? '');
+    setOfferId(preferredDefaultOfferId);
     if (stayOfferOptions.length > 0) {
       const picked = pickAvailableBedsForStayOffer({
         settings: tenantSettings,
-        offerId: stayOfferOptions[0]?.id,
+        offerId: preferredDefaultOfferId,
         availableBedIds,
         count: 1,
       });
@@ -970,7 +1065,14 @@ export function ReceptionCheckInPanel({
     } else {
       setBedIds([pickDefaultBedId(bedOptions, overlappingBedIds)]);
     }
-  }, [availableBedIds, bedOptions, overlappingBedIds, stayOfferOptions, tenantSettings]);
+  }, [
+    availableBedIds,
+    bedOptions,
+    overlappingBedIds,
+    preferredDefaultOfferId,
+    stayOfferOptions,
+    tenantSettings,
+  ]);
 
   const clearEditDraft = useCallback(() => {
     setEditDraft(null);
@@ -1304,20 +1406,33 @@ export function ReceptionCheckInPanel({
     );
   }
 
+  const deskHeader = (
+    <ReceptionDeskHeader
+      tenantName={tenantName}
+      accountLabel={signedInAsLabel}
+      showBookingSearch={canCheckIn}
+      showNewBookingCta={canCheckIn}
+      staysForSearch={stays}
+      resolveBedLabel={resolveBedLabel}
+      onFindStayByRef={openStayDetailFromRefSearch}
+      onNewBooking={() => setIssueOverlayOpen(true)}
+    />
+  );
+
+  const stickyChromeClassName = cn(
+    'sticky top-0',
+    RECEPTION_STICKY_CHROME_Z,
+    '-mx-4 space-y-2 border-b px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))]',
+    RECEPTION_STICKY_CHROME_SURFACE
+  );
+
   return (
     <div className={`space-y-4 ${RECEPTION_BOTTOM_NAV_CONTENT_PAD}`}>
-      <ReceptionDeskHeader
-        tenantName={tenantName}
-        accountLabel={signedInAsLabel}
-        showBookingSearch={canCheckIn}
-        showNewBookingCta={canCheckIn}
-        staysForSearch={stays}
-        resolveBedLabel={resolveBedLabel}
-        onFindStayByRef={openStayDetailFromRefSearch}
-        onNewBooking={() => setIssueOverlayOpen(true)}
-      />
+      {moreMenuOpen ? (
+        <div className={stickyChromeClassName}>{deskHeader}</div>
+      ) : null}
 
-      <ReceptionPushOptIn tenantSlug={tenantSlug} />
+      {moreMenuOpen ? <ReceptionPushOptIn tenantSlug={tenantSlug} /> : null}
 
       {canCheckIn ? (
         <ReceptionIssueAccessFab
@@ -1446,6 +1561,25 @@ export function ReceptionCheckInPanel({
         guestCount={guestCount}
         onGuestCountChange={handleGuestCountChange}
         maxGuestCount={maxGuestCount}
+        guestsReducedMessage={guestsReducedMessage}
+        privateRoomCta={
+          bedPathNeedsPrivateRoom
+            ? { label: 'Book a private room', onClick: handleBookPrivateRoom }
+            : null
+        }
+        placementWarning={
+          inventoryCapacityZero
+            ? 'No beds for these dates.'
+            : bedPathNotEnoughBeds
+              ? `Not enough beds for ${guestCount} guests.`
+              : bedPathNeedsPrivateRoom
+                ? `Only ${dormFreeBeds} dorm beds free for these dates.`
+                : roomPathTooSmall
+                  ? selectedOfferEmptyRoomCapacity === 0
+                    ? 'No empty private room in this offer for these dates.'
+                    : `This private offer only fits ${selectedOfferEmptyRoomCapacity} guests.`
+                  : null
+        }
         bedsByRoom={bedsByRoom}
         advancedBedOpenDefault={editDraft?.intent === 'moveBed' || openAdvancedBeds}
         checkInDate={checkInDate}
@@ -1454,11 +1588,9 @@ export function ReceptionCheckInPanel({
           setCheckInDate(nextFrom);
           setCheckOutDate(nextUntil);
           if (!editDraft) {
-            setBedPickMode('auto');
             setBookingAmountTouched(false);
             setWholeRoomOverrideBedIds([]);
             setPendingWholeRoomOverride(null);
-            setOpenAdvancedBeds(false);
           }
         }}
         reissueGuestLabel={editDraft?.guestName}
@@ -1471,6 +1603,10 @@ export function ReceptionCheckInPanel({
           rangeValid &&
           Boolean(bedId) &&
           !hardOverlappingBedIds.has(bedId) &&
+          !inventoryCapacityZero &&
+          !bedPathNeedsPrivateRoom &&
+          !bedPathNotEnoughBeds &&
+          !roomPathTooSmall &&
           (editDraft ||
             guestCount <= 1 ||
             bedIds.slice(0, guestCount).every(
@@ -1522,20 +1658,28 @@ export function ReceptionCheckInPanel({
             onSelect={(tab) => navigateDeskTab(tab, { clearStayId: true })}
           />
         ) : (
-          <Tabs value={deskTab} onValueChange={handleDeskTabChange}>
-            {shouldShowBookingsContextTabs(deskTab) && bookingsContextTabs.length > 0 ? (
-              <TabsList variant="line" className="mb-4 w-full justify-start">
-                {bookingsContextTabs.includes('plan') ? (
-                  <TabsTrigger value="plan">Plan</TabsTrigger>
-                ) : null}
-                {bookingsContextTabs.includes('access') ? (
-                  <TabsTrigger value="access">Access</TabsTrigger>
-                ) : null}
-                {bookingsContextTabs.includes('cash') ? (
-                  <TabsTrigger value="cash">Cash</TabsTrigger>
-                ) : null}
-              </TabsList>
-            ) : null}
+          <Tabs value={deskTab} onValueChange={handleDeskTabChange} className="space-y-3">
+            <div className={stickyChromeClassName}>
+              {deskHeader}
+              {showBookingsContextTabs ? (
+                <TabsList variant="line" className="mb-0 w-full justify-start">
+                  {bookingsContextTabs.includes('plan') ? (
+                    <TabsTrigger value="plan">Plan</TabsTrigger>
+                  ) : null}
+                  {bookingsContextTabs.includes('access') ? (
+                    <TabsTrigger value="access">Access</TabsTrigger>
+                  ) : null}
+                  {bookingsContextTabs.includes('cash') ? (
+                    <TabsTrigger value="cash">Cash</TabsTrigger>
+                  ) : null}
+                </TabsList>
+              ) : null}
+              {deskTab === 'plan' ? (
+                <div id={RECEPTION_PLAN_TOOLBAR_SLOT_ID} className="min-w-0" />
+              ) : null}
+            </div>
+
+            <ReceptionPushOptIn tenantSlug={tenantSlug} />
 
             {canCheckIn ? (
               <>

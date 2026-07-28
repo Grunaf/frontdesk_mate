@@ -1311,8 +1311,9 @@ export async function listActiveGuestStays(
 }
 
 /**
- * Plan / inventory occupancy: planned + not archived bookings.
- * Does not require an active access grant (lived shortened stays after checkout still appear).
+ * Plan calendar occupancy: active planned bookings + full checked-out history.
+ * Cancelled / remainder archives are excluded (Archive tab only).
+ * Does not require an active access grant (lived shortened stays after mid-stay checkout still appear).
  */
 export async function listPlanGuestReservations(
   tenantSlug: string,
@@ -1324,20 +1325,43 @@ export async function listPlanGuestReservations(
   const tenant = await getTenantRecord(tenantSlug);
   if (!tenant) return [];
 
-  const { data: reservations, error } = await admin
-    .from('guest_reservations')
-    .select(GUEST_RESERVATION_COLUMNS)
-    .eq('tenant_id', tenant.id)
-    .eq('status', 'planned')
-    .eq('is_archived', false)
-    .order('check_in_date', { ascending: true });
+  const [activeResult, checkedOutResult] = await Promise.all([
+    admin
+      .from('guest_reservations')
+      .select(GUEST_RESERVATION_COLUMNS)
+      .eq('tenant_id', tenant.id)
+      .eq('status', 'planned')
+      .eq('is_archived', false)
+      .order('check_in_date', { ascending: true }),
+    admin
+      .from('guest_reservations')
+      .select(GUEST_RESERVATION_COLUMNS)
+      .eq('tenant_id', tenant.id)
+      .eq('is_archived', true)
+      .eq('archive_reason', 'checked_out')
+      .eq('archive_kind', 'full')
+      .order('check_in_date', { ascending: true }),
+  ]);
 
-  if (error) {
-    console.error('listPlanGuestReservations:', error.message);
+  if (activeResult.error) {
+    console.error('listPlanGuestReservations:', activeResult.error.message);
     return [];
   }
+  if (checkedOutResult.error) {
+    console.error('listPlanGuestReservations checked_out:', checkedOutResult.error.message);
+  }
 
-  const rows = reservations ?? [];
+  const byId = new Map<string, Record<string, unknown>>();
+  for (const row of activeResult.data ?? []) {
+    byId.set(String(row.id), row as Record<string, unknown>);
+  }
+  for (const row of checkedOutResult.data ?? []) {
+    byId.set(String(row.id), row as Record<string, unknown>);
+  }
+  const rows = [...byId.values()].sort((a, b) =>
+    String(a.check_in_date).localeCompare(String(b.check_in_date))
+  );
+
   if (rows.length === 0) return [];
 
   const reservationIds = rows.map((row) => String(row.id));
@@ -1364,11 +1388,7 @@ export async function listPlanGuestReservations(
     .map((reservation) => {
       const reservationId = String(reservation.id);
       const grant = latestGrantByReservation.get(reservationId) ?? null;
-      const record = mapReservationGrantToStayRecord(
-        reservation as Record<string, unknown>,
-        grant,
-        tenant.slug
-      );
+      const record = mapReservationGrantToStayRecord(reservation, grant, tenant.slug);
       if (!record) return null;
       return {
         ...record,
