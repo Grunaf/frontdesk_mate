@@ -61,6 +61,11 @@ export interface ReceptionStayDetailShellProps {
   headerExtra?: ReactNode;
   /** Rendered to the right of the pencil / headerExtra (e.g. vertical ⋮ overflow menu). */
   headerOverflow?: ReactNode;
+  /**
+   * When true, ignore outside-click / Escape dismiss (e.g. nested ConfirmDialog open).
+   * Explicit header Close still calls {@link onClose} — parent should no-op if needed.
+   */
+  dismissBlocked?: boolean;
 }
 
 function useCloseOnEscape(open: boolean, onClose: () => void) {
@@ -118,12 +123,13 @@ function DesktopStayDetailDialog({
   editDisabled = false,
   headerExtra,
   headerOverflow,
+  dismissBlocked = false,
 }: ReceptionStayDetailShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const labelledBy = titleId;
   const leadingCount = countLeadingHeaderActions({ onEdit, headerExtra, headerOverflow });
 
-  useCloseOnEscape(open, onClose);
+  useCloseOnEscape(open && !dismissBlocked, onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -140,7 +146,9 @@ function DesktopStayDetailDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+      onClick={() => {
+        if (!dismissBlocked) onClose();
+      }}
       role="presentation"
     >
       <div
@@ -214,6 +222,7 @@ function MobileStayDetailSheet({
   editDisabled = false,
   headerExtra,
   headerOverflow,
+  dismissBlocked = false,
 }: ReceptionStayDetailShellProps) {
   // Do not pass a custom `id` to BottomSheetTitle / aria-labelledby here:
   // Vaul→Radix Dialog owns titleId; overriding it triggers DialogTitle a11y warnings.
@@ -224,6 +233,7 @@ function MobileStayDetailSheet({
     <BottomSheet
       open={open}
       onOpenChange={(nextOpen) => {
+        if (!nextOpen && dismissBlocked) return;
         if (!nextOpen) onClose();
       }}
     >
@@ -232,6 +242,12 @@ function MobileStayDetailSheet({
         className="flex flex-col px-0 pb-0"
         aria-describedby={undefined}
         showCloseButton={!hasEditChrome}
+        onPointerDownOutside={(event) => {
+          if (dismissBlocked) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (dismissBlocked) event.preventDefault();
+        }}
       >
         {hasEditChrome ? (
           <>
@@ -296,6 +312,7 @@ export function ReceptionStayDetailShell({
   editDisabled,
   headerExtra,
   headerOverflow,
+  dismissBlocked,
 }: ReceptionStayDetailShellProps) {
   const isBelowLg = useIsBelowLg();
 
@@ -319,6 +336,7 @@ export function ReceptionStayDetailShell({
         editDisabled={editDisabled}
         headerExtra={headerExtra}
         headerOverflow={headerOverflow}
+        dismissBlocked={dismissBlocked}
       />
     );
   }
@@ -338,6 +356,7 @@ export function ReceptionStayDetailShell({
       editDisabled={editDisabled}
       headerExtra={headerExtra}
       headerOverflow={headerOverflow}
+      dismissBlocked={dismissBlocked}
     />
   );
 }

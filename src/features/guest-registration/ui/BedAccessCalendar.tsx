@@ -37,6 +37,7 @@ import {
   type PlanStayLifecycleStatus,
 } from '../lib/resolvePlanStayLifecycleStatus';
 import {
+  isPlanStayAdmitted,
   isPlanStayCellInactive,
   isPlanStayUnpaid,
 } from '../lib/resolvePlanStayCalendarPresentation';
@@ -44,6 +45,8 @@ import { RECEPTION_PLAN_TOOLBAR_SLOT_ID } from '../lib/receptionStickyChrome';
 import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
 import { Button, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
+import { getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
+import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
 
 interface BedAccessCalendarProps {
   settings: TenantSettings;
@@ -80,17 +83,54 @@ const ROOM_STATUS_LABELS: Record<HousekeepingRoomStatus, string> = {
   not_cleaned: 'Not cleaned',
 };
 
-function lifecycleChipClass(status: PlanStayLifecycleStatus): string {
+function lifecycleChipClass(status: Extract<PlanStayLifecycleStatus, 'late' | 'leaving'>): string {
   switch (status) {
     case 'late':
       return 'border-destructive/40 bg-destructive/15 text-destructive';
-    case 'arrival':
-      return 'border-amber-200 bg-amber-50 text-amber-900';
     case 'leaving':
       return 'border-border bg-muted text-foreground';
-    case 'checked_in':
-      return 'border-transparent bg-primary/15 text-foreground';
   }
+}
+
+/** Today-only nuance chips; Arriving/In are shown via hollow vs solid cell fill. */
+function planLifecycleChipStatus(
+  status: PlanStayLifecycleStatus | null
+): Extract<PlanStayLifecycleStatus, 'late' | 'leaving'> | null {
+  if (status === 'late' || status === 'leaving') return status;
+  return null;
+}
+
+function occupiedCellSurfaceClass(input: {
+  inactive: boolean;
+  isTodayColumn: boolean;
+  admitted: boolean;
+  scheduled: boolean;
+}): string {
+  if (input.inactive) {
+    return 'bg-muted/40 text-muted-foreground hover:bg-muted/50';
+  }
+  if (input.isTodayColumn) {
+    if (!input.admitted) {
+      return 'border border-dashed border-primary/45 bg-transparent text-foreground hover:bg-muted/20';
+    }
+    return input.scheduled
+      ? 'border border-transparent bg-amber-50 hover:bg-muted/40'
+      : 'border border-transparent bg-primary/15 hover:bg-muted/40';
+  }
+  return input.scheduled
+    ? 'bg-amber-50 hover:bg-muted/40'
+    : 'bg-primary/10 hover:bg-muted/40';
+}
+
+function planUnpaidCurrencySymbol(
+  stay: GuestStayRecordWithLink,
+  settings: TenantSettings
+): string {
+  const stayCurrency = stay.booking_amount_currency;
+  if (stayCurrency && isCurrencyCode(stayCurrency)) {
+    return getCurrencyDefinition(stayCurrency).symbol;
+  }
+  return getCurrencyDefinition(resolveTenantCurrency(settings).primary).symbol;
 }
 
 function formatDayHeader(nightDate: string, isToday: boolean): string {
@@ -461,6 +501,11 @@ export function BedAccessCalendar({
                             stay: cell.stay,
                           });
                           const unpaid = cell.stay ? isPlanStayUnpaid(cell.stay) : false;
+                          const unpaidSymbol =
+                            unpaid && cell.stay
+                              ? planUnpaidCurrencySymbol(cell.stay, settings)
+                              : null;
+                          const admitted = cell.stay ? isPlanStayAdmitted(cell.stay) : false;
                           const lifecycle =
                             planStayStatusEnabled && cell.stay && !inactive
                               ? resolvePlanStayLifecycleStatus({
@@ -469,6 +514,7 @@ export function BedAccessCalendar({
                                   nightDate: cell.nightDate,
                                 })
                               : null;
+                          const lifecycleChip = planLifecycleChipStatus(lifecycle);
                           const isTodayColumn = cell.nightDate === lifecycleToday;
 
                           return (
@@ -524,43 +570,45 @@ export function BedAccessCalendar({
                                   onClick={() => cell.stay && onViewStay(cell.stay.id)}
                                   className={cn(
                                     'flex min-h-10 w-full flex-col items-start justify-center gap-0.5 rounded px-1 py-0.5 text-left text-[10px]',
-                                    inactive
-                                      ? 'bg-muted/40 text-muted-foreground hover:bg-muted/50'
-                                      : cell.status === 'scheduled'
-                                        ? 'bg-amber-50'
-                                        : 'bg-primary/10',
-                                    cell.stay && !inactive && 'hover:bg-muted/40'
+                                    occupiedCellSurfaceClass({
+                                      inactive,
+                                      isTodayColumn,
+                                      admitted,
+                                      scheduled: cell.status === 'scheduled',
+                                    })
                                   )}
                                 >
-                                  <span
-                                    className={cn(
-                                      'truncate font-medium',
-                                      inactive && 'text-muted-foreground'
-                                    )}
-                                  >
-                                    {cell.stay?.guest_name ||
-                                      (cell.status === 'scheduled' ? 'Soon' : 'Guest')}
-                                  </span>
-                                  {unpaid ? (
+                                  <span className="flex min-w-0 items-center gap-0.5">
                                     <span
                                       className={cn(
-                                        'rounded border px-1 py-px text-[9px] font-medium leading-tight',
-                                        inactive
-                                          ? 'border-border/60 bg-muted text-muted-foreground'
-                                          : 'border-destructive/30 bg-destructive/10 text-destructive'
+                                        'min-w-0 truncate font-medium',
+                                        inactive && 'text-muted-foreground'
                                       )}
                                     >
-                                      Unpaid
+                                      {cell.stay?.guest_name ||
+                                        (cell.status === 'scheduled' ? 'Soon' : 'Guest')}
                                     </span>
-                                  ) : null}
-                                  {lifecycle ? (
+                                    {unpaidSymbol ? (
+                                      <span
+                                        className={cn(
+                                          'shrink-0 text-[10px] font-semibold leading-none',
+                                          inactive ? 'text-muted-foreground' : 'text-destructive'
+                                        )}
+                                        title="Unpaid"
+                                        aria-label="Unpaid"
+                                      >
+                                        {unpaidSymbol}
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                  {lifecycleChip ? (
                                     <span
                                       className={cn(
                                         'rounded border px-1 py-px text-[9px] font-medium leading-tight',
-                                        lifecycleChipClass(lifecycle)
+                                        lifecycleChipClass(lifecycleChip)
                                       )}
                                     >
-                                      {planStayLifecycleStatusLabel(lifecycle)}
+                                      {planStayLifecycleStatusLabel(lifecycleChip)}
                                     </span>
                                   ) : null}
                                 </button>

@@ -1546,8 +1546,9 @@ export function ReceptionGuestStayDetail({
   };
 
   const confirmSkipTourismGrant = () => {
-    setSkipTourismConfirmOpen(false);
+    // Grant first; defer dialog close so the confirm click does not fall through to the sheet.
     access.grantAccess({ bypassAccessGate: true });
+    window.setTimeout(() => setSkipTourismConfirmOpen(false), 0);
   };
 
   useEffect(() => {
@@ -1797,7 +1798,11 @@ export function ReceptionGuestStayDetail({
     >
       <ReceptionStayDetailShell
         open={open}
-        onClose={onClose}
+        onClose={() => {
+          if (skipTourismConfirmOpen) return;
+          onClose();
+        }}
+        dismissBlocked={skipTourismConfirmOpen}
         accessibleTitle={guestLabel}
         header={header}
         bodyTop={tabsList}
