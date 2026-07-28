@@ -72,24 +72,38 @@ describe('isPlanStayCellInactive', () => {
 });
 
 describe('isPlanStayUnpaid', () => {
-  it('flags guest stays with due amount and no paid_at', () => {
+  it('flags admitted guest stays with due amount and no paid_at', () => {
     expect(
       isPlanStayUnpaid({
         stay_kind: 'guest',
         booking_amount_due_minor: 4500,
         booking_amount_currency: 'EUR',
         booking_paid_at: null,
+        passport_checked_at: '2026-07-26T10:00:00.000Z',
+        desk_checked_in_at: null,
       })
     ).toBe(true);
   });
 
-  it('skips paid, volunteer, and missing due', () => {
+  it('skips pre-check-in, paid, volunteer, and missing due', () => {
+    expect(
+      isPlanStayUnpaid({
+        stay_kind: 'guest',
+        booking_amount_due_minor: 4500,
+        booking_amount_currency: 'EUR',
+        booking_paid_at: null,
+        passport_checked_at: null,
+        desk_checked_in_at: null,
+      })
+    ).toBe(false);
     expect(
       isPlanStayUnpaid({
         stay_kind: 'guest',
         booking_amount_due_minor: 4500,
         booking_amount_currency: 'EUR',
         booking_paid_at: '2026-07-26T10:00:00.000Z',
+        passport_checked_at: '2026-07-26T10:00:00.000Z',
+        desk_checked_in_at: null,
       })
     ).toBe(false);
     expect(
@@ -98,6 +112,8 @@ describe('isPlanStayUnpaid', () => {
         booking_amount_due_minor: 4500,
         booking_amount_currency: 'EUR',
         booking_paid_at: null,
+        passport_checked_at: '2026-07-26T10:00:00.000Z',
+        desk_checked_in_at: null,
       })
     ).toBe(false);
     expect(
@@ -106,6 +122,8 @@ describe('isPlanStayUnpaid', () => {
         booking_amount_due_minor: null,
         booking_amount_currency: null,
         booking_paid_at: null,
+        passport_checked_at: '2026-07-26T10:00:00.000Z',
+        desk_checked_in_at: null,
       })
     ).toBe(false);
   });

@@ -24,17 +24,29 @@ export function isPlanStayCellInactive(input: {
   );
 }
 
+export function isPlanStayAdmitted(
+  stay: Pick<GuestStayRecord, 'passport_checked_at' | 'desk_checked_in_at'>
+): boolean {
+  return Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
+}
+
 /**
- * Unpaid badge for Plan cards: due amount present and not paid.
- * Volunteers and rows without a price skip the indicator.
+ * Unpaid badge for Plan cards: admitted guest with due amount and not paid.
+ * Pre-check-in / volunteers / missing price skip the indicator.
  */
 export function isPlanStayUnpaid(
   stay: Pick<
     GuestStayRecord,
-    'stay_kind' | 'booking_amount_due_minor' | 'booking_amount_currency' | 'booking_paid_at'
+    | 'stay_kind'
+    | 'booking_amount_due_minor'
+    | 'booking_amount_currency'
+    | 'booking_paid_at'
+    | 'passport_checked_at'
+    | 'desk_checked_in_at'
   >
 ): boolean {
   if (stay.stay_kind === 'volunteer') return false;
+  if (!isPlanStayAdmitted(stay)) return false;
   const minor = stay.booking_amount_due_minor;
   const currency = stay.booking_amount_currency;
   if (minor == null || !currency || !isCurrencyCode(currency)) return false;
