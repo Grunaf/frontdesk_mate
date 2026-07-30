@@ -1,19 +1,34 @@
 'use client';
 
+import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { ReceptionCashSnapshot } from '../lib/resolveReceptionCashSnapshot';
 import { formatDisplayDate } from '../lib/guestAccessDates';
+import { countBookingGroupMembers } from '../lib/collapseStaysByBookingGroup';
+import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
 import { formatMoneyFromMinor } from '@/shared/lib/currency';
 import { cn } from '@/shared/lib/utils';
 
 type ReceptionCashViewProps = {
   snapshot: ReceptionCashSnapshot;
   resolveBedLabel: (bedId: string) => string;
+  planStays?: GuestStayRecordWithLink[];
   onViewStay: (stayId: string) => void;
 };
 
 function formatOperationalDayCaption(snapshot: ReceptionCashSnapshot): string {
   const { operationalDate } = snapshot.operational;
   return `Operational day · ${formatDisplayDate(operationalDate)} · starts ${snapshot.operationalDayStartTime}`;
+}
+
+function cashStayLabel(stay: GuestStayRecordWithLink, planStays: GuestStayRecordWithLink[]): string {
+  const groupId = stay.booking_group_id?.trim();
+  const size = countBookingGroupMembers(planStays, groupId);
+  if (!groupId || size <= 1) {
+    return stay.guest_name?.trim() || 'Guest';
+  }
+  const members = planStays.filter((entry) => entry.booking_group_id === groupId);
+  const leadName = resolvePartyLeadName(members.length > 0 ? members : [stay]);
+  return resolvePartyTitle(leadName || stay.guest_name?.trim() || '', size);
 }
 
 function CashStat({
@@ -43,6 +58,7 @@ function CashStat({
 export function ReceptionCashView({
   snapshot,
   resolveBedLabel,
+  planStays = [],
   onViewStay,
 }: ReceptionCashViewProps) {
   const locale = 'en';
@@ -76,16 +92,18 @@ export function ReceptionCashView({
         ) : (
           <ul className="space-y-1.5">
             {snapshot.stillToCollect.map((item) => {
-              const guestLabel = item.stay.guest_name?.trim() || 'Guest';
+              const guestLabel = cashStayLabel(item.stay, planStays);
               const bedLabel = resolveBedLabel(item.stay.bed_id);
+              const partySize = countBookingGroupMembers(planStays, item.stay.booking_group_id);
               const amountLabel =
                 item.hasPrice && item.amountMinor != null && item.currency
                   ? formatMoneyFromMinor(item.amountMinor, item.currency, locale)
                   : 'No price set';
               const statusLabel = item.admitted ? 'In-house' : 'Not admitted';
+              const placeLabel = partySize > 1 ? `${partySize} beds` : bedLabel;
               const metaLabel = item.leavesTomorrow
-                ? `${bedLabel} · ${statusLabel} · Leaves tomorrow`
-                : `${bedLabel} · ${statusLabel}`;
+                ? `${placeLabel} · ${statusLabel} · Leaves tomorrow`
+                : `${placeLabel} · ${statusLabel}`;
 
               return (
                 <li key={item.stay.id}>

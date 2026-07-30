@@ -19,7 +19,8 @@ export const RECEPTION_ISSUE_ACCESS_TITLE_ID = 'reception-issue-access-title';
 
 const RECEPTION_SHELL_TITLE_CLASS = 'text-base font-semibold leading-tight';
 
-function useIsBelowLg(): boolean {
+/** Matches desktop stay dialog breakpoint (`lg` = 1024px). */
+export function useIsReceptionStayDetailBelowLg(): boolean {
   const [isBelowLg, setIsBelowLg] = useState(false);
 
   useEffect(() => {
@@ -48,6 +49,11 @@ export interface ReceptionStayDetailShellProps {
    * Does not scroll with {@link body}.
    */
   bodyTop?: ReactNode;
+  /**
+   * Desktop only: panel to the left of the stay dialog (e.g. party peek).
+   * Ignored on mobile bottom sheet.
+   */
+  sidePanel?: ReactNode;
   /** Defaults to {@link RECEPTION_STAY_DETAIL_TITLE_ID}. */
   titleId?: string;
   /**
@@ -118,6 +124,7 @@ function DesktopStayDetailDialog({
   body,
   bodyTop,
   footer,
+  sidePanel,
   titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
   onEdit,
   editDisabled = false,
@@ -145,19 +152,27 @@ function DesktopStayDetailDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center gap-3 overflow-x-auto bg-black/40 p-4"
       onClick={() => {
         if (!dismissBlocked) onClose();
       }}
       role="presentation"
     >
+      {sidePanel ? (
+        <div
+          className="h-[min(90vh,800px)] max-h-[min(90vh,800px)] shrink-0"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {sidePanel}
+        </div>
+      ) : null}
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className="flex h-[min(90vh,800px)] max-h-[min(90vh,800px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border bg-background shadow-lg outline-none"
+        className="flex h-[min(90vh,800px)] max-h-[min(90vh,800px)] w-full max-w-3xl min-w-0 flex-col overflow-hidden rounded-xl border bg-background shadow-lg outline-none"
         onClick={(event) => event.stopPropagation()}
       >
         <div
@@ -307,6 +322,7 @@ export function ReceptionStayDetailShell({
   body,
   bodyTop,
   footer,
+  sidePanel,
   titleId,
   onEdit,
   editDisabled,
@@ -314,7 +330,7 @@ export function ReceptionStayDetailShell({
   headerOverflow,
   dismissBlocked,
 }: ReceptionStayDetailShellProps) {
-  const isBelowLg = useIsBelowLg();
+  const isBelowLg = useIsReceptionStayDetailBelowLg();
 
   if (!open) {
     return null;
@@ -351,6 +367,7 @@ export function ReceptionStayDetailShell({
       body={body}
       bodyTop={bodyTop}
       footer={footer}
+      sidePanel={sidePanel}
       titleId={titleId}
       onEdit={onEdit}
       editDisabled={editDisabled}

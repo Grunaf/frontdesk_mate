@@ -311,7 +311,10 @@ export function ReceptionCheckInPanel({
   const [selectedStayId, setSelectedStayId] = useState<string | null>(null);
   const [selectedStayOverride, setSelectedStayOverride] =
     useState<GuestStayRecordWithLink | null>(null);
-  const [stayDetailInitialTab, setStayDetailInitialTab] = useState<'access' | 'stay'>('stay');
+  const [stayDetailInitialTab, setStayDetailInitialTab] = useState<'access' | 'stay' | 'tourism'>(
+    'stay'
+  );
+  const [stayDetailPartyView, setStayDetailPartyView] = useState(false);
   const [stayPins, setStayPins] = useState<Record<string, string>>({});
   const [pendingArchiveStay, setPendingArchiveStay] = useState<{
     stayId: string;
@@ -690,14 +693,44 @@ export function ReceptionCheckInPanel({
     return null;
   }, [selectedStayId, selectedStayOverride, planStays, stays]);
 
-  const openStayDetail = useCallback((stayId: string, options?: { initialTab?: 'access' | 'stay' }) => {
-    setStayDetailInitialTab(options?.initialTab ?? 'stay');
-    setSelectedStayOverride(null);
-    setSelectedStayId(stayId);
-  }, []);
+  const openStayDetail = useCallback(
+    (
+      stayId: string,
+      options?: { initialTab?: 'access' | 'stay' | 'tourism'; partyView?: boolean }
+    ) => {
+      setStayDetailInitialTab(options?.initialTab ?? 'stay');
+      setStayDetailPartyView(Boolean(options?.partyView));
+      setSelectedStayOverride(null);
+      setSelectedStayId(stayId);
+    },
+    []
+  );
+
+  const openHubOrCashStay = useCallback(
+    (stayId: string) => {
+      const stay =
+        planStays.find((entry) => entry.id === stayId) ??
+        stays.find((entry) => entry.id === stayId) ??
+        null;
+      const groupId = stay?.booking_group_id?.trim();
+      const partySize = groupId
+        ? planStays.filter((entry) => entry.booking_group_id === groupId).length
+        : 1;
+      openStayDetail(stayId, { partyView: partySize > 1 });
+    },
+    [openStayDetail, planStays, stays]
+  );
+
+  const selectPartyStay = useCallback(
+    (stayId: string) => {
+      openStayDetail(stayId, { partyView: false });
+    },
+    [openStayDetail]
+  );
 
   const openStayDetailRecord = useCallback((stay: GuestStayRecordWithLink) => {
     setStayDetailInitialTab('stay');
+    setStayDetailPartyView(false);
     setSelectedStayOverride(stay);
     setSelectedStayId(stay.id);
   }, []);
@@ -706,6 +739,7 @@ export function ReceptionCheckInPanel({
     setSelectedStayId(null);
     setSelectedStayOverride(null);
     setStayDetailInitialTab('stay');
+    setStayDetailPartyView(false);
   }, []);
 
   const hardOverlappingBedIds = useMemo(() => {
@@ -1601,7 +1635,7 @@ export function ReceptionCheckInPanel({
                   .sort((a, b) => a.created_at.localeCompare(b.created_at))
               : []
           }
-          onSelectPartyStay={openStayDetail}
+          onSelectPartyStay={selectPartyStay}
           stayPins={stayPins}
           isPending={isPending}
           hostelName={tenantName}
@@ -1614,6 +1648,7 @@ export function ReceptionCheckInPanel({
           tenantSettings={tenantSettings}
           operationalDate={hubSnapshot.operational.operationalDate}
           initialTab={stayDetailInitialTab}
+          initialPartyView={stayDetailPartyView}
           onTourismExportedAtChange={() => {
             void refresh();
           }}
@@ -1850,7 +1885,8 @@ export function ReceptionCheckInPanel({
               <ReceptionHubView
                 snapshot={hubSnapshot}
                 resolveBedLabel={resolveBedLabel}
-                onViewStay={openStayDetail}
+                planStays={planStays}
+                onViewStay={openHubOrCashStay}
                 onOpenFreeBeds={openPlanFreeBeds}
                 operationalDayUpdatedNotice={operationalDayUpdatedNotice}
                 presenceByStayId={presenceByStayId}
@@ -1915,7 +1951,8 @@ export function ReceptionCheckInPanel({
               <ReceptionCashView
                 snapshot={cashSnapshot}
                 resolveBedLabel={resolveBedLabel}
-                onViewStay={openStayDetail}
+                planStays={planStays}
+                onViewStay={openHubOrCashStay}
               />
             </TabsContent>
 

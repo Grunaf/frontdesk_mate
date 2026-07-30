@@ -359,6 +359,104 @@ export async function setPassportCheckedAction(input: {
   }
 }
 
+export type CheckInPartyActionResult =
+  | { ok: true; checkedCount: number; skippedCount: number }
+  | {
+      ok: false;
+      error:
+        | 'unauthorized'
+        | 'forbidden'
+        | 'not_found'
+        | 'db_unavailable'
+        | 'tourism_incomplete'
+        | 'missing_documents'
+        | 'unknown';
+      blockedStayId?: string;
+    };
+
+/**
+ * Grant access (passport checked) for every stay in the party that is not yet admitted.
+ * Already-admitted members are skipped. Tourism gate applies per pending member unless bypassed.
+ */
+export async function checkInPartyAction(input: {
+  tenantSlug: string;
+  stayIds: string[];
+  bypassAccessGate?: boolean;
+}): Promise<CheckInPartyActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  const stayIds = [...new Set(input.stayIds.map((id) => id.trim()).filter(Boolean))];
+  if (stayIds.length === 0) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  try {
+    if (input.bypassAccessGate) {
+      const bypass = await assertCanBypassTourismAccessGate(input.tenantSlug);
+      if (bypass !== 'ok') {
+        return { ok: false, error: bypass };
+      }
+    }
+
+    const pendingIds: string[] = [];
+    for (const stayId of stayIds) {
+      const stay = await getGuestReservationForDesk(input.tenantSlug, stayId);
+      if (!stay) {
+        return { ok: false, error: 'not_found', blockedStayId: stayId };
+      }
+      if (stay.passport_checked_at || stay.desk_checked_in_at) {
+        continue;
+      }
+      pendingIds.push(stayId);
+    }
+
+    if (!input.bypassAccessGate) {
+      for (const stayId of pendingIds) {
+        const gate = await assertTourismReadyForAccessGrant(input.tenantSlug, stayId);
+        if (gate === 'tourism_incomplete' || gate === 'missing_documents') {
+          return { ok: false, error: gate, blockedStayId: stayId };
+        }
+      }
+    }
+
+    let checkedCount = 0;
+    for (const stayId of pendingIds) {
+      const result = await setPassportCheckedAt({
+        tenantSlug: input.tenantSlug,
+        stayId,
+        checked: true,
+      });
+      if (!result.ok) {
+        return {
+          ok: false,
+          error:
+            result.error === 'tenant_not_found' || result.error === 'not_found'
+              ? 'not_found'
+              : result.error === 'db_unavailable'
+                ? 'db_unavailable'
+                : 'unknown',
+          blockedStayId: stayId,
+        };
+      }
+      checkedCount += 1;
+    }
+
+    revalidatePath('/');
+    return {
+      ok: true,
+      checkedCount,
+      skippedCount: stayIds.length - pendingIds.length,
+    };
+  } catch (error) {
+    console.error('checkInPartyAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
 export type SetKeyIssuedForReceptionActionResult =
   | { ok: true; stay: GuestStayRecord }
   | {

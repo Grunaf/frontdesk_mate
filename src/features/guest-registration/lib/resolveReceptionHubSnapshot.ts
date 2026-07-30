@@ -24,6 +24,7 @@ import {
   resolveOperationalDayStartTime,
   type OperationalDayWindow,
 } from './resolveOperationalDay';
+import { collapseStaysByBookingGroup } from './collapseStaysByBookingGroup';
 
 export interface ReceptionHubSnapshot {
   operationalDayStartTime: string;
@@ -220,21 +221,24 @@ export function resolveReceptionHubSnapshot(
     )
   );
 
+  const expectedTodayCollapsed = collapseStaysByBookingGroup(sortByCheckIn(expectedToday));
+  const stillExpectedCollapsed = collapseStaysByBookingGroup(sortByCheckIn(stillExpected));
+
   return {
     operationalDayStartTime,
     operational,
-    expectedToday: sortByCheckIn(expectedToday),
-    stillExpected: sortByCheckIn(stillExpected),
-    noShow: sortByCheckIn(noShow),
-    unpaid: sortByCheckIn(unpaid),
-    keyNotIssued: sortByCheckIn(keyNotIssued),
-    departures: sortByCheckIn(departures),
+    expectedToday: expectedTodayCollapsed,
+    stillExpected: stillExpectedCollapsed,
+    noShow: collapseStaysByBookingGroup(sortByCheckIn(noShow)),
+    unpaid: collapseStaysByBookingGroup(sortByCheckIn(unpaid)),
+    keyNotIssued: collapseStaysByBookingGroup(sortByCheckIn(keyNotIssued)),
+    departures: collapseStaysByBookingGroup(sortByCheckIn(departures)),
     departurePhase,
     checkOutTimeLabel,
     freeBedEntries,
     occupiedBedCount,
     checkedInTodayCount,
-    remainingArrivalsCount: expectedToday.length + stillExpected.length,
+    remainingArrivalsCount: expectedTodayCollapsed.length + stillExpectedCollapsed.length,
     orphanStays: sortByCheckIn(inventory.orphanStays),
   };
 }

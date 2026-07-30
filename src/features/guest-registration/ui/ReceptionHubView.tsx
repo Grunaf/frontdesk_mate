@@ -5,6 +5,8 @@ import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { stayRecordCheckInDate } from '@/entities/guest-stay';
 import { housekeepingStayPresenceDeskLabel } from '@/entities/housekeeping';
 import { formatDisplayDate } from '../lib/guestAccessDates';
+import { countBookingGroupMembers } from '../lib/collapseStaysByBookingGroup';
+import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
 import type { DepartureSectionPhase } from '../lib/resolveDepartureSectionPhase';
 import type { ReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
 import { cn } from '@/shared/lib/utils';
@@ -13,6 +15,8 @@ interface ReceptionHubViewProps {
   snapshot: ReceptionHubSnapshot;
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
+  /** Full plan stays — used for party labels / member counts. */
+  planStays?: GuestStayRecordWithLink[];
   onOpenFreeBeds?: () => void;
   operationalDayUpdatedNotice?: boolean;
   /** Cleaning soft presence (Vacant / Still here) by stay id. */
@@ -39,16 +43,49 @@ function formatOperationalDayCaption(snapshot: ReceptionHubSnapshot): string {
   return `Operational day · ${formatDisplayDate(operationalDate)} · starts ${startLabel}`;
 }
 
+function hubStayPrimaryLabel(
+  stay: GuestStayRecordWithLink,
+  planStays: GuestStayRecordWithLink[]
+): string {
+  const groupId = stay.booking_group_id?.trim();
+  if (!groupId) {
+    return stay.guest_name?.trim() || 'Guest';
+  }
+  const members = planStays.filter((entry) => entry.booking_group_id === groupId);
+  const size = members.length > 0 ? members.length : countBookingGroupMembers(planStays, groupId);
+  if (size <= 1) {
+    return stay.guest_name?.trim() || 'Guest';
+  }
+  const leadName = resolvePartyLeadName(members.length > 0 ? members : [stay]);
+  return resolvePartyTitle(leadName || stay.guest_name?.trim() || '', size);
+}
+
+function hubStaySecondaryLabel(
+  stay: GuestStayRecordWithLink,
+  bedLabel: string,
+  planStays: GuestStayRecordWithLink[],
+  resolveSecondary?: (stay: GuestStayRecordWithLink, bedLabel: string) => string
+): string {
+  const groupId = stay.booking_group_id?.trim();
+  const size = countBookingGroupMembers(planStays, groupId);
+  if (groupId && size > 1) {
+    return `${size} beds`;
+  }
+  return resolveSecondary?.(stay, bedLabel) ?? `${bedLabel} · ${formatDisplayDate(stayRecordCheckInDate(stay))}`;
+}
+
 function HubArrivalList({
   stays,
   resolveBedLabel,
   onViewStay,
+  planStays,
   emptyLabel,
   resolveSecondary,
 }: {
   stays: GuestStayRecordWithLink[];
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
+  planStays: GuestStayRecordWithLink[];
   emptyLabel?: string;
   resolveSecondary?: (stay: GuestStayRecordWithLink, bedLabel: string) => string;
 }) {
@@ -61,11 +98,9 @@ function HubArrivalList({
   return (
     <ul className="space-y-1.5">
       {stays.map((stay) => {
-        const checkInDay = stayRecordCheckInDate(stay);
-        const guestLabel = stay.guest_name?.trim() || 'Guest';
         const bedLabel = resolveBedLabel(stay.bed_id);
-        const secondary =
-          resolveSecondary?.(stay, bedLabel) ?? `${bedLabel} · ${formatDisplayDate(checkInDay)}`;
+        const guestLabel = hubStayPrimaryLabel(stay, planStays);
+        const secondary = hubStaySecondaryLabel(stay, bedLabel, planStays, resolveSecondary);
 
         return (
           <li key={stay.id}>
@@ -144,11 +179,13 @@ function DeparturesSection({
   snapshot,
   resolveBedLabel,
   onViewStay,
+  planStays,
   presenceByStayId,
 }: {
   snapshot: ReceptionHubSnapshot;
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
+  planStays: GuestStayRecordWithLink[];
   presenceByStayId?: Record<string, 'vacant' | 'still_here'>;
 }) {
   const { departures, departurePhase, checkOutTimeLabel } = snapshot;
@@ -160,6 +197,7 @@ function DeparturesSection({
       stays={departures}
       resolveBedLabel={resolveBedLabel}
       onViewStay={onViewStay}
+      planStays={planStays}
       resolveSecondary={(stay, bedLabel) => {
         const base = checkOutTimeLabel ? `${bedLabel} · by ${checkOutTimeLabel}` : bedLabel;
         const presence = housekeepingStayPresenceDeskLabel(presenceByStayId?.[stay.id]);
@@ -205,6 +243,7 @@ export function ReceptionHubView({
   snapshot,
   resolveBedLabel,
   onViewStay,
+  planStays = [],
   onOpenFreeBeds,
   operationalDayUpdatedNotice = false,
   presenceByStayId,
@@ -272,6 +311,7 @@ export function ReceptionHubView({
         snapshot={snapshot}
         resolveBedLabel={resolveBedLabel}
         onViewStay={onViewStay}
+        planStays={planStays}
         presenceByStayId={presenceByStayId}
       />
 
@@ -280,6 +320,7 @@ export function ReceptionHubView({
           stays={snapshot.expectedToday}
           resolveBedLabel={resolveBedLabel}
           onViewStay={onViewStay}
+          planStays={planStays}
           emptyLabel="No check-ins expected for this operational day."
         />
       </HubSection>
@@ -290,6 +331,7 @@ export function ReceptionHubView({
             stays={snapshot.stillExpected}
             resolveBedLabel={resolveBedLabel}
             onViewStay={onViewStay}
+            planStays={planStays}
           />
         </HubSection>
       ) : null}
@@ -325,6 +367,7 @@ export function ReceptionHubView({
             stays={snapshot.keyNotIssued}
             resolveBedLabel={resolveBedLabel}
             onViewStay={onViewStay}
+            planStays={planStays}
           />
         </HubSection>
       ) : null}
@@ -339,6 +382,7 @@ export function ReceptionHubView({
               stays={snapshot.noShow}
               resolveBedLabel={resolveBedLabel}
               onViewStay={onViewStay}
+              planStays={planStays}
             />
           </div>
         </details>
