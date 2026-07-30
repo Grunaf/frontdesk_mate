@@ -14,7 +14,13 @@ export { Spinner, type SpinnerSize } from './spinner';
 export { useActionFeedback, useLinkPressFeedback } from './action-feedback';
 export { AppLink, RoutePendingProvider, useAppNavigation, useRoutePending } from './navigation';
 export { PressableTileButton, PressableAnchor, pressablePendingClass, pressableTileActiveClass, pressableTileClassName } from './pressable';
-export { SegmentedChipBar, type SegmentedChipBarProps, type SegmentedChipItem } from './SegmentedChipBar';
+export {
+  SegmentedChipBar,
+  type SegmentedChipActiveAppearance,
+  type SegmentedChipBarProps,
+  type SegmentedChipItem,
+} from './SegmentedChipBar';
+export { NumberStepper, type NumberStepperProps } from './NumberStepper';
 export { StepRingProgress } from './StepRingProgress';
 export { BaseHeader } from './BaseHeader/BaseHeader';
 export { AppHeaderShell } from './BaseHeader/AppHeaderShell';
@@ -25,12 +31,33 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent } from './car
 export { Alert, AlertTitle, AlertDescription, AlertAction } from './alert';
 export { Badge, badgeVariants } from './badge';
 export { Input } from './input';
+export {
+  DateTextField,
+  appendDateDigit,
+  digitsToDisplay,
+  displayDateToIso,
+  EMPTY_DATE_SEGMENTS,
+  extractDateDigits,
+  feedDateDigits,
+  isoDateToDisplay,
+  isoToSegments,
+  removeLastDateDigit,
+  segmentsToDigits,
+  segmentsToDisplay,
+  type DateSegments,
+  type DateTextFieldProps,
+} from './DateTextField';
 export { Label } from './label';
 export {
   BedRoomGroupedSelect,
   type BedRoomGroupedSelectProps,
   type BedRoomOptionGroup,
 } from './BedRoomGroupedSelect';
+export {
+  SearchableSelect,
+  type SearchableSelectOption,
+  type SearchableSelectProps,
+} from './SearchableSelect';
 export { FieldLabelHelp } from './FieldLabelHelp';
 export { Icon } from './icon';
 export { IconBackActionsRow } from './IconBackActionsRow';

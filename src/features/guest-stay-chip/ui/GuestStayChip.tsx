@@ -8,8 +8,7 @@ import {
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
 import { useTranslations } from '@/shared/i18n';
-import { cn } from '@/shared/lib/utils';
-import { badgeVariants, Icon } from '@/shared/ui';
+import { Button, Icon } from '@/shared/ui';
 import { UserRound } from 'lucide-react';
 import { GuestStaySheet } from './GuestStaySheet';
 
@@ -33,17 +32,16 @@ export function GuestStayChip() {
 
   return (
     <>
-      <button
+      <Button
         type="button"
-        className={cn(
-          badgeVariants({ variant: 'outline' }),
-          'size-11 shrink-0 p-0 active:bg-muted/60'
-        )}
+        variant="ghost"
+        size="icon-sm"
+        className="shrink-0"
         onClick={() => setSheetOpen(true)}
         aria-label={t('openDetail', { summary: chipLabel })}
       >
-        <Icon icon={UserRound} size={22} className="text-foreground" />
-      </button>
+        <Icon icon={UserRound} className="size-5 text-foreground" />
+      </Button>
 
       <GuestStaySheet
         open={sheetOpen}

@@ -1,22 +1,32 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { resolveGuestExtrasForGuest } from '@/entities/guest-extra';
+import {
+  canGuestClearStayPresence,
+  canGuestMarkStayVacant,
+} from '@/entities/housekeeping';
 import { resolveGuestStayPlan, useHostelConfig, useTenant } from '@/entities/tenant';
 import { shouldShowPreTripLuggage } from '@/entities/tenant/lib/resolveGuestFieldPresentation';
 import { useGuestSession } from '@/features/guest-check-in';
-import { GuestExtraSheet } from '@/features/guest-services/ui/GuestExtraSheet';
-import { formatGuestExtraPriceLine } from '@/features/guest-services/lib/formatGuestExtraPriceLine';
+import {
+  GuestExtraDetailsActions,
+  GuestExtraDetailsBody,
+  trackGuestExtraDetailsOpen,
+  useGuestExtraDetails,
+} from '@/features/guest-services';
 import {
   formatGuestStayCheckoutShort,
   formatStayReference,
   resolveGuestStayBedLabel,
 } from '@/features/guest-stay-chip';
 import { useLocale, useTranslations } from '@/shared/i18n';
+import { cn } from '@/shared/lib/utils';
 import {
   BottomSheet,
   BottomSheetBody,
   BottomSheetContent,
+  BottomSheetFooter,
   BottomSheetHeader,
   BottomSheetTitle,
   BOTTOM_SHEET_SIZES,
@@ -24,7 +34,16 @@ import {
   Icon,
   Separator,
 } from '@/shared/ui';
-import { Briefcase, Clock, Moon, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Briefcase, Clock, LogOut, Moon, type LucideIcon } from 'lucide-react';
+import {
+  clearGuestStayVacantAction,
+  getGuestStayPresenceAction,
+  markGuestStayVacantAction,
+  type GuestStayPresenceSnapshot,
+} from '../actions/guestStayPresenceActions';
+
+type CheckoutSheetStep = 'info' | 'confirmLeft' | 'lateCheckout';
+type SheetSlideFrom = 'left' | 'right';
 
 interface StayEssentialsCheckoutSheetProps {
   open: boolean;
@@ -53,23 +72,71 @@ function InfoRow({ icon, title, description, action }: InfoRowProps) {
   );
 }
 
+function sheetStepMotionClass(slideFrom: SheetSlideFrom): string {
+  return cn(
+    'animate-in fade-in-0 duration-200 motion-reduce:animate-none',
+    slideFrom === 'right' ? 'slide-in-from-right-8' : 'slide-in-from-left-8'
+  );
+}
+
 export function StayEssentialsCheckoutSheet({
   open,
   onOpenChange,
 }: StayEssentialsCheckoutSheetProps) {
   const t = useTranslations('components.stayEssentials');
   const checkoutT = useTranslations('components.stayEssentials.checkout');
-  const guestExtrasT = useTranslations('components.guestExtras');
+  const leftT = useTranslations('components.stayEssentials.checkout.leftEarly');
   const commonT = useTranslations('domains.hostel.common');
   const tBed = useTranslations('components.findYourBed');
-  const { settings } = useTenant();
+  const { settings, slug } = useTenant();
   const hostel = useHostelConfig();
   const locale = useLocale();
   const { session, checkOutAt } = useGuestSession();
-  const [lateExtraOpen, setLateExtraOpen] = useState(false);
+  const [presence, setPresence] = useState<GuestStayPresenceSnapshot>(null);
+  const [presenceBusy, setPresenceBusy] = useState(false);
+  const [step, setStep] = useState<CheckoutSheetStep>('info');
+  const [slideFrom, setSlideFrom] = useState<SheetSlideFrom>('right');
 
   const checkOutTime = hostel.checkOutTime?.trim();
   const showLuggage = shouldShowPreTripLuggage(settings);
+  const stayId = session?.stayId ?? null;
+  const bedId = session?.bedId ?? null;
+  const canUsePresence = Boolean(slug?.trim() && stayId && bedId);
+
+  const refreshPresence = useCallback(async () => {
+    if (!slug?.trim() || !stayId || !bedId) {
+      setPresence(null);
+      return;
+    }
+
+    const result = await getGuestStayPresenceAction(slug);
+    if (result.ok) {
+      setPresence(result.presence);
+    }
+  }, [bedId, slug, stayId]);
+
+  useEffect(() => {
+    if (!canUsePresence) {
+      return;
+    }
+
+    void refreshPresence();
+  }, [canUsePresence, refreshPresence]);
+
+  useEffect(() => {
+    if (!open || !canUsePresence) {
+      return;
+    }
+
+    void refreshPresence();
+  }, [canUsePresence, open, refreshPresence]);
+
+  useEffect(() => {
+    if (!open) {
+      setStep('info');
+      setSlideFrom('right');
+    }
+  }, [open]);
 
   const lateCheckoutExtra = useMemo(
     () =>
@@ -77,28 +144,6 @@ export function StayEssentialsCheckoutSheet({
       null,
     [settings]
   );
-
-  const lateCheckoutLinkLabel = useMemo(() => {
-    if (!lateCheckoutExtra) {
-      return null;
-    }
-
-    const price = lateCheckoutExtra.priceLabel?.trim();
-    if (!price) {
-      return checkoutT('lateCheckoutLink');
-    }
-
-    const priceLine = formatGuestExtraPriceLine(
-      (key, values) => guestExtrasT(key, values),
-      price
-    );
-
-    return checkoutT('lateCheckoutLinkWithPrice', { price: priceLine });
-  }, [checkoutT, guestExtrasT, lateCheckoutExtra]);
-
-  const personalCheckout = checkOutAt
-    ? formatGuestStayCheckoutShort(checkOutAt, locale)
-    : null;
 
   const plan = useMemo(
     () => resolveGuestStayPlan(settings, session?.bedId),
@@ -117,6 +162,86 @@ export function StayEssentialsCheckoutSheet({
 
   const stayRef = session?.stayId ? formatStayReference(session.stayId) : null;
 
+  const lateCheckoutDetails = useGuestExtraDetails({
+    extra: lateCheckoutExtra,
+    bedLabel,
+    stayRef,
+  });
+
+  const lateCheckoutLinkLabel = useMemo(() => {
+    if (!lateCheckoutExtra || !lateCheckoutDetails) {
+      return null;
+    }
+
+    if (!lateCheckoutExtra.priceLabel?.trim()) {
+      return checkoutT('lateCheckoutLink');
+    }
+
+    return checkoutT('lateCheckoutLinkWithPrice', { price: lateCheckoutDetails.priceLine });
+  }, [checkoutT, lateCheckoutDetails, lateCheckoutExtra]);
+
+  const personalCheckout = checkOutAt
+    ? formatGuestStayCheckoutShort(checkOutAt, locale)
+    : null;
+
+  const showMarked = canUsePresence && presence?.status === 'vacant';
+  const showMarkCta = canUsePresence && !showMarked && canGuestMarkStayVacant(presence);
+  const showUndo = showMarked && canGuestClearStayPresence(presence);
+
+  const goConfirmLeft = useCallback(() => {
+    setSlideFrom('right');
+    setStep('confirmLeft');
+  }, []);
+
+  const goLateCheckout = useCallback(() => {
+    if (!lateCheckoutDetails) {
+      return;
+    }
+
+    setSlideFrom('right');
+    setStep('lateCheckout');
+    trackGuestExtraDetailsOpen(lateCheckoutDetails.presetId);
+  }, [lateCheckoutDetails]);
+
+  const goBackToInfo = useCallback(() => {
+    setSlideFrom('left');
+    setStep('info');
+  }, []);
+
+  const handleConfirmLeft = useCallback(async () => {
+    if (!slug?.trim() || presenceBusy) {
+      return;
+    }
+
+    setPresenceBusy(true);
+    try {
+      const result = await markGuestStayVacantAction(slug);
+      if (result.ok) {
+        setPresence(result.presence);
+        setSlideFrom('left');
+        setStep('info');
+      }
+    } finally {
+      setPresenceBusy(false);
+    }
+  }, [presenceBusy, slug]);
+
+  const handleUndo = useCallback(async () => {
+    if (!slug?.trim() || presenceBusy) {
+      return;
+    }
+
+    setPresenceBusy(true);
+    try {
+      const result = await clearGuestStayVacantAction(slug);
+      if (result.ok) {
+        setPresence(null);
+      }
+    } finally {
+      setPresenceBusy(false);
+    }
+  }, [presenceBusy, slug]);
+
   const rows: ReactNode[] = [];
 
   if (checkOutTime) {
@@ -132,7 +257,7 @@ export function StayEssentialsCheckoutSheet({
               type="button"
               variant="link"
               className="h-auto px-0 text-sm"
-              onClick={() => setLateExtraOpen(true)}
+              onClick={goLateCheckout}
             >
               {lateCheckoutLinkLabel}
             </Button>
@@ -179,27 +304,120 @@ export function StayEssentialsCheckoutSheet({
     );
   }
 
+  if (canUsePresence && (showMarked || showMarkCta)) {
+    rows.push(<Separator key="sep-left-early" />);
+    if (showMarked) {
+      rows.push(
+        <InfoRow
+          key="left-marked"
+          icon={LogOut}
+          title={leftT('markedTitle')}
+          description={leftT('markedDescription')}
+          action={
+            showUndo ? (
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto px-0 text-sm"
+                disabled={presenceBusy}
+                onClick={() => void handleUndo()}
+              >
+                {leftT('undo')}
+              </Button>
+            ) : null
+          }
+        />
+      );
+    } else {
+      rows.push(
+        <InfoRow
+          key="left-cta"
+          icon={LogOut}
+          title={leftT('title')}
+          description={leftT('description')}
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-1"
+              disabled={presenceBusy}
+              onClick={goConfirmLeft}
+            >
+              {leftT('cta')}
+            </Button>
+          }
+        />
+      );
+    }
+  }
+
+  const isPushedStep = step === 'confirmLeft' || step === 'lateCheckout';
+  const pushedTitle =
+    step === 'confirmLeft'
+      ? leftT('confirmTitle')
+      : step === 'lateCheckout' && lateCheckoutDetails
+        ? lateCheckoutDetails.title
+        : t('bridges.checkout');
+
   return (
-    <>
-      <BottomSheet open={open} onOpenChange={onOpenChange}>
-        <BottomSheetContent size={BOTTOM_SHEET_SIZES.medium} className="flex flex-col">
-          <BottomSheetHeader>
+    <BottomSheet open={open} onOpenChange={onOpenChange}>
+      <BottomSheetContent size={BOTTOM_SHEET_SIZES.large} className="flex flex-col">
+        <BottomSheetHeader className={cn(isPushedStep && 'pr-12')}>
+          {isPushedStep ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="-ml-1.5 shrink-0"
+                onClick={goBackToInfo}
+                aria-label={leftT('back')}
+              >
+                <Icon icon={ArrowLeft} className="size-4" />
+              </Button>
+              <BottomSheetTitle className="min-w-0 flex-1 truncate text-left">
+                {pushedTitle}
+              </BottomSheetTitle>
+            </div>
+          ) : (
             <BottomSheetTitle>{t('bridges.checkout')}</BottomSheetTitle>
-          </BottomSheetHeader>
+          )}
+        </BottomSheetHeader>
 
-          <BottomSheetBody className="flex flex-1 flex-col pb-2">
-            <div className="space-y-4">{rows}</div>
-          </BottomSheetBody>
-        </BottomSheetContent>
-      </BottomSheet>
+        <BottomSheetBody className="flex min-h-0 flex-1 flex-col overflow-hidden pb-2">
+          <div key={step} className={cn('min-h-0 flex-1', sheetStepMotionClass(slideFrom))}>
+            {step === 'confirmLeft' ? (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {leftT('confirmDescription')}
+              </p>
+            ) : step === 'lateCheckout' && lateCheckoutDetails ? (
+              <GuestExtraDetailsBody details={lateCheckoutDetails} />
+            ) : (
+              <div className="space-y-4">{rows}</div>
+            )}
+          </div>
+        </BottomSheetBody>
 
-      <GuestExtraSheet
-        extra={lateCheckoutExtra}
-        open={lateExtraOpen}
-        onOpenChange={setLateExtraOpen}
-        bedLabel={bedLabel}
-        stayRef={stayRef}
-      />
-    </>
+        {step === 'confirmLeft' ? (
+          <BottomSheetFooter>
+            <Button
+              type="button"
+              className="w-full"
+              disabled={presenceBusy}
+              onClick={() => void handleConfirmLeft()}
+            >
+              {leftT('confirmLabel')}
+            </Button>
+          </BottomSheetFooter>
+        ) : null}
+
+        {step === 'lateCheckout' && lateCheckoutDetails?.hasActions ? (
+          <BottomSheetFooter>
+            <GuestExtraDetailsActions details={lateCheckoutDetails} />
+          </BottomSheetFooter>
+        ) : null}
+      </BottomSheetContent>
+    </BottomSheet>
   );
 }

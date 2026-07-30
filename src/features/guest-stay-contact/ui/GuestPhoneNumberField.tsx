@@ -10,7 +10,6 @@ import {
   validatePhoneNumberLength,
   type CountryCode,
 } from 'libphonenumber-js/min';
-import { useLocale } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 import {
   Badge,
@@ -46,6 +45,8 @@ type GuestPhoneNumberFieldProps = {
   label: string;
   /** Accessible label for the country picker trigger (defaults to `label`). */
   countryLabel?: string;
+  /** BCP 47 locale for region labels. Defaults to en (safe for reception without next-intl). */
+  locale?: string;
   /** ISO-3166 alpha-2 default when value is empty / unparseable. */
   defaultCountry?: CountryCode;
   savedBadge?: string;
@@ -204,12 +205,12 @@ export function GuestPhoneNumberField({
   invalid = false,
   label,
   countryLabel,
+  locale = 'en',
   defaultCountry = FALLBACK_DEFAULT_COUNTRY,
   savedBadge,
 }: GuestPhoneNumberFieldProps) {
   const labelId = useId();
   const searchId = useId();
-  const locale = useLocale();
   const resolvedDefault = defaultCountry || FALLBACK_DEFAULT_COUNTRY;
 
   const detectedCountry = detectCountryFromValue(value);

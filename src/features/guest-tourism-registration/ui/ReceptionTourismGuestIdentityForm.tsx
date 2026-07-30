@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
 import type { GuestProfile } from '@/entities/guest';
 import { buildCitizenshipOptions } from '../lib/citizenshipOptions';
 import { guestProfileToTourismFormValues } from '../lib/guestProfileToTourismFormValues';
 import { searchGuestProfilesForTourismAction } from '../actions/searchGuestProfilesForTourismAction';
 import {
   isUnderageOnCheckIn,
+  isValidDateOfBirth,
   isValidPassportNumber,
   normalizePassportNumber,
   normalizePlaceOfBirth,
@@ -20,18 +19,11 @@ import {
   Alert,
   AlertDescription,
   Button,
-  Calendar,
+  DateTextField,
   FieldLabelHelp,
   Input,
   Label,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  SearchableSelect,
 } from '@/shared/ui';
 
 const MAX_NAME_LENGTH = 120;
@@ -76,12 +68,6 @@ type ReceptionTourismGuestIdentityFormProps = {
   onSubmit: (values: ReceptionTourismGuestIdentityValues) => void;
 };
 
-function toCalendarDate(isoDay: string): Date | undefined {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDay)) return undefined;
-  const date = new Date(`${isoDay}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
 export function ReceptionTourismGuestIdentityForm({
   checkInDate,
   tenantSlug,
@@ -94,17 +80,19 @@ export function ReceptionTourismGuestIdentityForm({
   onSubmit,
 }: ReceptionTourismGuestIdentityFormProps) {
   const citizenshipOptions = useMemo(() => buildCitizenshipOptions('en'), []);
+  const countrySelectOptions = useMemo(
+    () => citizenshipOptions.map((option) => ({ value: option.code, label: option.label })),
+    [citizenshipOptions]
+  );
   const suggestionsListId = useId();
   const nameSearchRef = useRef<HTMLDivElement>(null);
   const [firstName, setFirstName] = useState(initialValues?.firstName ?? '');
   const [lastName, setLastName] = useState(initialValues?.lastName ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(initialValues?.dateOfBirth ?? '');
-  const [countryOfBirth, setCountryOfBirth] = useState(
-    initialValues?.countryOfBirth ?? initialValues?.citizenship ?? 'ME'
-  );
+  const [countryOfBirth, setCountryOfBirth] = useState(initialValues?.countryOfBirth ?? '');
   const [placeOfBirth, setPlaceOfBirth] = useState(initialValues?.placeOfBirth ?? '');
   const [gender, setGender] = useState<TourismGuestGender | ''>(initialValues?.gender ?? '');
-  const [citizenship, setCitizenship] = useState(initialValues?.citizenship ?? 'ME');
+  const [citizenship, setCitizenship] = useState(initialValues?.citizenship ?? '');
   const [documentType, setDocumentType] = useState<TourismGuestDocumentType>(
     initialValues?.documentType ?? 'passport'
   );
@@ -116,8 +104,17 @@ export function ReceptionTourismGuestIdentityForm({
   const [suggestions, setSuggestions] = useState<GuestProfile[]>([]);
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
   const [suggestionsPending, startSuggestionsTransition] = useTransition();
-  const [dobPopoverOpen, setDobPopoverOpen] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const handleCountryOfBirthChange = (nextCountry: string) => {
+    setCitizenship((previousCitizenship) => {
+      if (!previousCitizenship || previousCitizenship === countryOfBirth) {
+        return nextCountry;
+      }
+      return previousCitizenship;
+    });
+    setCountryOfBirth(nextCountry);
+  };
 
   const searchQuery = `${firstName} ${lastName}`.trim();
 
@@ -194,7 +191,7 @@ export function ReceptionTourismGuestIdentityForm({
     if (!trimmedLast || trimmedLast.length > MAX_NAME_LENGTH) {
       errors.lastName = 'Enter a last name (max 120 characters).';
     }
-    if (!dateOfBirth) {
+    if (!dateOfBirth || !isValidDateOfBirth(dateOfBirth)) {
       errors.dateOfBirth = 'Select a date of birth.';
     }
     if (!countryOfBirth) {
@@ -242,14 +239,13 @@ export function ReceptionTourismGuestIdentityForm({
     });
   };
 
-  const selectedDob = toCalendarDate(dateOfBirth);
   const fieldsDisabled = disabled || isPending;
   const canSubmit =
     Boolean(firstName.trim()) &&
     firstName.trim().length <= MAX_NAME_LENGTH &&
     Boolean(lastName.trim()) &&
     lastName.trim().length <= MAX_NAME_LENGTH &&
-    Boolean(dateOfBirth) &&
+    isValidDateOfBirth(dateOfBirth) &&
     Boolean(countryOfBirth) &&
     Boolean(placeOfBirth.trim()) &&
     placeOfBirth.trim().length <= MAX_PLACE_OF_BIRTH_LENGTH &&
@@ -264,45 +260,16 @@ export function ReceptionTourismGuestIdentityForm({
         <Label htmlFor="reception-tourism-date-of-birth" className="text-xs">
           Date of birth
         </Label>
-        <Popover open={dobPopoverOpen} onOpenChange={setDobPopoverOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              id="reception-tourism-date-of-birth"
-              type="button"
-              variant="outline"
-              disabled={fieldsDisabled}
-              aria-invalid={Boolean(fieldErrors.dateOfBirth)}
-              className={cn(
-                'h-8 w-full justify-start text-xs font-normal',
-                !selectedDob && 'text-muted-foreground'
-              )}
-            >
-              <CalendarIcon className="size-3.5" aria-hidden />
-              {selectedDob ? format(selectedDob, 'dd.MM.yyyy') : 'Select date'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-auto p-0"
-            align="start"
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            onCloseAutoFocus={(e) => e.preventDefault()}
-          >
-            <Calendar
-              mode="single"
-              captionLayout="dropdown"
-              selected={selectedDob}
-              defaultMonth={selectedDob}
-              startMonth={new Date(1920, 0)}
-              endMonth={new Date()}
-              onSelect={(date) => {
-                if (!date) return;
-                setDateOfBirth(format(date, 'yyyy-MM-dd'));
-                setDobPopoverOpen(false);
-              }}
-              disabled={{ after: new Date() }}
-            />
-          </PopoverContent>
-        </Popover>
+        <DateTextField
+          id="reception-tourism-date-of-birth"
+          value={dateOfBirth}
+          onValueChange={setDateOfBirth}
+          disabled={fieldsDisabled}
+          aria-invalid={Boolean(fieldErrors.dateOfBirth)}
+          placeholder="dd.mm.yyyy"
+          calendarAriaLabel="Select date"
+          inputClassName="h-8 text-xs"
+        />
         {fieldErrors.dateOfBirth ? (
           <p className="text-[11px] text-destructive">{fieldErrors.dateOfBirth}</p>
         ) : null}
@@ -434,26 +401,16 @@ export function ReceptionTourismGuestIdentityForm({
         <Label htmlFor="reception-tourism-country-of-birth" className="text-xs">
           Country of birth
         </Label>
-        <Select
-          value={countryOfBirth || undefined}
-          onValueChange={setCountryOfBirth}
+        <SearchableSelect
+          id="reception-tourism-country-of-birth"
+          value={countryOfBirth}
+          onValueChange={handleCountryOfBirthChange}
+          options={countrySelectOptions}
+          placeholder="Select country"
           disabled={fieldsDisabled}
-        >
-          <SelectTrigger
-            id="reception-tourism-country-of-birth"
-            className="h-8 w-full text-xs"
-            aria-invalid={Boolean(fieldErrors.countryOfBirth)}
-          >
-            <SelectValue placeholder="Select country" />
-          </SelectTrigger>
-          <SelectContent>
-            {citizenshipOptions.map((option) => (
-              <SelectItem key={option.code} value={option.code}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          aria-invalid={Boolean(fieldErrors.countryOfBirth)}
+          triggerClassName="h-8 text-xs"
+        />
         {fieldErrors.countryOfBirth ? (
           <p className="text-[11px] text-destructive">{fieldErrors.countryOfBirth}</p>
         ) : null}
@@ -510,26 +467,16 @@ export function ReceptionTourismGuestIdentityForm({
         <Label htmlFor="reception-tourism-citizenship" className="text-xs">
           Citizenship
         </Label>
-        <Select
-          value={citizenship || undefined}
+        <SearchableSelect
+          id="reception-tourism-citizenship"
+          value={citizenship}
           onValueChange={setCitizenship}
+          options={countrySelectOptions}
+          placeholder="Select country"
           disabled={fieldsDisabled}
-        >
-          <SelectTrigger
-            id="reception-tourism-citizenship"
-            className="h-8 w-full text-xs"
-            aria-invalid={Boolean(fieldErrors.citizenship)}
-          >
-            <SelectValue placeholder="Select country" />
-          </SelectTrigger>
-          <SelectContent>
-            {citizenshipOptions.map((option) => (
-              <SelectItem key={option.code} value={option.code}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          aria-invalid={Boolean(fieldErrors.citizenship)}
+          triggerClassName="h-8 text-xs"
+        />
         {fieldErrors.citizenship ? (
           <p className="text-[11px] text-destructive">{fieldErrors.citizenship}</p>
         ) : null}

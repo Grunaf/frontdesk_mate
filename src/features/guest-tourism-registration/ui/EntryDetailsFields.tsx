@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import type { EntryTransportType } from '@/entities/guest-tourism-registration';
 import { ENTRY_TRANSPORT_TYPES } from '@/entities/guest-tourism-registration';
 import { cn } from '@/shared/lib/utils';
-import { Input, Label } from '@/shared/ui';
+import { Input, Label, SearchableSelect } from '@/shared/ui';
 import type { TourismEntryPointsCatalog } from '../lib/tourismEntryPointsCatalog';
 
 export type EntryTransportPointCopy = {
@@ -15,6 +15,8 @@ export type EntryTransportPointCopy = {
   entryPointPlaceHint: string;
   entryPointAirportPlaceholder: string;
   entryPointPlacePlaceholder: string;
+  entryPointPlaceSearchPlaceholder: string;
+  entryPointPlaceEmpty: string;
 };
 
 export type EntryStampPageCopy = {
@@ -54,14 +56,24 @@ export function EntryTransportPointFields({
   const fieldsDisabled = disabled || locked;
   const isPlane = transportType === 'plane';
   const airportOptions = catalog?.airports ?? [];
-  const placeSuggestions = useMemo(() => {
-    const q = entryPointLabel.trim().toLowerCase();
-    const suggestions = catalog?.placeSuggestions ?? [];
-    if (!q) return suggestions.slice(0, 8);
-    return suggestions
-      .filter((item) => item.label.toLowerCase().includes(q))
-      .slice(0, 8);
-  }, [catalog?.placeSuggestions, entryPointLabel]);
+  const placeOptions = useMemo(
+    () =>
+      (catalog?.placeSuggestions ?? []).map((place) => ({
+        value: place.id,
+        label: place.label,
+      })),
+    [catalog?.placeSuggestions]
+  );
+
+  const selectedPlaceId = useMemo(() => {
+    if (entryPointCode && placeOptions.some((option) => option.value === entryPointCode)) {
+      return entryPointCode;
+    }
+    const byLabel = placeOptions.find(
+      (option) => option.label.toLowerCase() === entryPointLabel.trim().toLowerCase()
+    );
+    return byLabel?.value ?? '';
+  }, [entryPointCode, entryPointLabel, placeOptions]);
 
   return (
     <div className={cn('space-y-5', className)}>
@@ -122,22 +134,23 @@ export function EntryTransportPointFields({
             </>
           ) : (
             <>
-              <Input
+              <SearchableSelect
                 id="entry-point-field"
-                list="entry-point-suggestions"
-                value={entryPointLabel}
-                disabled={fieldsDisabled}
+                value={selectedPlaceId}
+                options={placeOptions}
+                disabled={fieldsDisabled || placeOptions.length === 0}
                 aria-invalid={Boolean(fieldError)}
                 placeholder={copy.entryPointPlacePlaceholder}
-                onChange={(event) => {
-                  onEntryPointChange({ code: '', label: event.target.value });
+                searchPlaceholder={copy.entryPointPlaceSearchPlaceholder}
+                emptyMessage={copy.entryPointPlaceEmpty}
+                onValueChange={(id) => {
+                  const place = placeOptions.find((option) => option.value === id);
+                  onEntryPointChange({
+                    code: id,
+                    label: place?.label ?? '',
+                  });
                 }}
               />
-              <datalist id="entry-point-suggestions">
-                {placeSuggestions.map((item) => (
-                  <option key={item.id} value={item.label} />
-                ))}
-              </datalist>
               <p className="text-xs text-muted-foreground">{copy.entryPointPlaceHint}</p>
             </>
           )}

@@ -1,13 +1,12 @@
-/** Whether the guest provided a stay contact (new field or legacy tourism whatsapp). */
+/** Whether the stay has a confirmed phone contact. */
 export function isStayContactComplete(input: {
-  stayContactWhatsapp?: string | null;
+  contactPhone?: string | null;
+  /** Soft fallback for stays that only filled tourism WhatsApp. */
   legacyTourismContactWhatsapp?: string | null;
 }): boolean {
-  const primary = input.stayContactWhatsapp?.trim();
-  if (primary) {
+  if (input.contactPhone?.trim()) {
     return true;
   }
 
-  const legacy = input.legacyTourismContactWhatsapp?.trim();
-  return Boolean(legacy);
+  return Boolean(input.legacyTourismContactWhatsapp?.trim());
 }

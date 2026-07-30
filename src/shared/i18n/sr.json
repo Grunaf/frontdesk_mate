@@ -1667,8 +1667,8 @@
         "dismiss": "Got it"
       },
       "passportGate": {
-        "title": "Show your passport at reception",
-        "description": "To finish check-in and get your bed number, please show your original passport to reception staff.",
+        "title": "Show passport at reception",
+        "description": "Your bed number unlocks after reception verifies your passport.",
         "dismiss": "Got it"
       },
       "tabs": {
@@ -1677,6 +1677,7 @@
         "identity": "Podaci iz pasoša",
         "entryDate": "Detalji ulaska",
         "contact": "Contact",
+        "doneBadge": "Done",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
         "settlement": "Settlement"
@@ -1687,7 +1688,8 @@
         "continueSettlingIn": "Continue settling in",
         "completeHint": "Guest registration and contact details are complete.",
         "incompleteHint": "Complete guest registration and contact details on the registration page.",
-        "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+        "passportWaitingTitle": "Show passport at reception",
+        "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
       },
       "register": {
         "actionButton": "Nastavi na datum ulaska",
@@ -1722,7 +1724,7 @@
           "citizenshipPlaceholder": "Select country",
           "passportNumber": "Passport number",
           "dateOfBirth": "Date of birth",
-          "dateOfBirthPlaceholder": "Select date",
+          "dateOfBirthPlaceholder": "dd.mm.yyyy",
           "dateOfBirthHelp": "Required for tourism registration. Age on check-in day is used for bed allocation planning — guests under 18 are flagged for reception review.",
           "gender": "Gender",
           "genderHelp": "Required for tourism registration and may be used when allocating beds by gender policy.",
@@ -1760,7 +1762,8 @@
         "complete": {
           "summaryTitle": "Registration complete",
           "continue": "Nastavi na datum ulaska",
-          "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+          "passportWaitingTitle": "Show passport at reception",
+          "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
         },
         "fieldErrors": {
           "firstName": "Enter a first name (max 120 characters).",
@@ -1839,9 +1842,11 @@
         },
         "entryPointLabel": "Mesto ulaska",
         "entryPointAirportHint": "Izaberite aerodrom sa liste.",
-        "entryPointPlaceHint": "Unesite granični prelaz, stanicu ili luku — predlozi se pojavljuju tokom kucanja.",
+        "entryPointPlaceHint": "Izaberite sa liste — kucajte da filtrirate granične prelaze, stanice ili luke.",
         "entryPointAirportPlaceholder": "Izaberite aerodrom",
-        "entryPointPlacePlaceholder": "npr. Debeli Brijeg",
+        "entryPointPlacePlaceholder": "Izaberite ulaznu tačku",
+        "entryPointPlaceSearchPlaceholder": "Pretraži listu…",
+        "entryPointPlaceEmpty": "Nema poklapanja u listi",
         "dateLabel": "Datum ulaska",
         "modeLegend": "Da li su svi stigli istog dana?",
         "modeSame": "Isti dan za sve",
@@ -1995,7 +2000,8 @@
       "directionsToRoom": "Directions to room",
       "fallback": "Your bed assignment is not configured yet. Ask at reception or message us on WhatsApp.",
       "viewFullGuide": "Room map & directions",
-      "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+      "passportWaitingTitle": "Show passport at reception",
+      "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
     },
     "taxi": {
       "needHelpTitle": "Need help?",
@@ -2053,7 +2059,20 @@
         "luggageTitle": "Luggage after checkout",
         "lateCheckoutHint": "Need a later checkout? Ask at reception.",
         "lateCheckoutLink": "Late checkout details",
-        "lateCheckoutLinkWithPrice": "Late checkout details · {price}"
+        "lateCheckoutLinkWithPrice": "Late checkout details · {price}",
+        "leftEarly": {
+          "title": "Leaving early?",
+          "description": "Tell us you’ve left the bed so we can strip linen. This does not check you out at reception.",
+          "cta": "I’ve left",
+          "markedTitle": "Marked as left",
+          "markedDescription": "Housekeeping can prepare your bed. Your booking stays active until reception checks you out.",
+          "undo": "Undo",
+          "confirmTitle": "Have you left the bed?",
+          "confirmDescription": "Only confirm if you’ve taken your things and left. Reception checkout is separate.",
+          "confirmLabel": "Yes, I’ve left",
+          "cancelLabel": "Cancel",
+          "back": "Back"
+        }
       },
       "reception": {
         "hoursTitle": "Reception hours",
@@ -2104,19 +2123,22 @@
     },
     "guestStayChip": {
       "chipLabel": "My stay",
+      "bookingLabel": "Booking",
+      "bookingAnchorAria": "Booking {summary} — open stay details",
       "sheetTitle": "Your stay",
       "openDetail": "{summary} — open stay details",
       "receptionHeading": "For reception",
-      "receptionHint": "Show this screen if reception asks who you are.",
+      "receptionHint": "Show this QR code at the desk so reception can open your booking.",
+      "yourContactHeading": "Your contact",
+      "yourContactPhoneLabel": "Phone",
+      "yourContactEmailLabel": "Email",
       "stayRefLabel": "Ref",
       "registeredAsLabel": "Registered as",
-      "copyForReception": "Copy for reception",
-      "copiedForReception": "Copied",
-      "copyLineHostel": "{hostelName}",
-      "copyLineBed": "Bed: {bedLine}",
-      "copyLineDates": "Stay: {dateRange}",
-      "copyLineRef": "Ref: #{stayRef}",
-      "copyLineName": "Name: {guestName}",
+      "showReceptionQr": "Show QR for reception",
+      "receptionQrTitle": "For reception",
+      "receptionQrHint": "Ask reception to scan this code to open your booking.",
+      "receptionQrImageAlt": "QR code that opens this stay in reception",
+      "receptionQrBack": "Back",
       "showRoomMapLink": "Show room map & directions",
       "bedLockedUntilCheckIn": "Your bed and directions unlock from {time} on your check-in day.",
       "bedLockedUntilRegistration": "Complete registration to see your bed assignment.",

@@ -20,6 +20,15 @@ export type StaySetupStatus = {
   contactComplete: boolean;
   /** Desk admitted guest to settle in (`passport_checked_at` set). */
   passportVerified: boolean;
+  /** Confirmed phone (E.164), or tourism fallback for display/prefill. */
+  contactPhone: string | null;
+  /** Guest-proposed phone awaiting desk confirm. */
+  contactPhonePending: string | null;
+  /** Reception-set email (guest cannot edit). */
+  contactEmail: string | null;
+  /**
+   * @deprecated Prefer `contactPhone`. Kept for existing callers during rename.
+   */
   stayContactWhatsapp: string | null;
   completedSteps: number;
   totalSteps: number;
@@ -69,7 +78,9 @@ export async function resolveStaySetupStatus(
 
   const { data, error } = await admin
     .from('guest_reservations')
-    .select('stay_contact_whatsapp, tourism_contact_whatsapp, passport_checked_at')
+    .select(
+      'contact_phone, contact_phone_pending, contact_email, tourism_contact_whatsapp, passport_checked_at'
+    )
     .eq('id', session.stayId)
     .maybeSingle();
 
@@ -78,18 +89,21 @@ export async function resolveStaySetupStatus(
     return { ok: false, error: 'db_unavailable' };
   }
 
-  const stayContactWhatsapp = data?.stay_contact_whatsapp
-    ? String(data.stay_contact_whatsapp)
+  const contactPhone = data?.contact_phone ? String(data.contact_phone) : null;
+  const contactPhonePending = data?.contact_phone_pending
+    ? String(data.contact_phone_pending)
     : null;
+  const contactEmail = data?.contact_email ? String(data.contact_email) : null;
   const legacyTourismContact = data?.tourism_contact_whatsapp
     ? String(data.tourism_contact_whatsapp)
     : null;
 
   const contactComplete = isStayContactComplete({
-    stayContactWhatsapp,
+    contactPhone,
     legacyTourismContactWhatsapp: legacyTourismContact,
   });
   const passportVerified = Boolean(data?.passport_checked_at);
+  const displayPhone = contactPhone ?? legacyTourismContact;
 
   const totalSteps = tourismRequired ? 3 : 2;
   let completedSteps = 0;
@@ -113,7 +127,10 @@ export async function resolveStaySetupStatus(
       entryStampDate,
       contactComplete,
       passportVerified,
-      stayContactWhatsapp: stayContactWhatsapp ?? legacyTourismContact,
+      contactPhone: displayPhone,
+      contactPhonePending,
+      contactEmail,
+      stayContactWhatsapp: displayPhone,
       completedSteps,
       totalSteps,
     },

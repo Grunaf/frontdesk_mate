@@ -12,7 +12,6 @@ import {
   Button,
   FieldLabelHelp,
   IconBackActionsRow,
-  Label,
 } from '@/shared/ui';
 import { completeTourismRegistrationAction } from '../actions/completeTourismRegistrationAction';
 import {
@@ -30,7 +29,7 @@ import {
 import { AddTourismGuestSheet } from './AddTourismGuestSheet';
 import { FinishTourismGuestDraftSheet } from './FinishTourismGuestDraftSheet';
 import { TourismGuestList } from './TourismGuestList';
-import { TourismRegistrationPanelSkeleton, TourismPassportVerifyWaitingCopy } from './TourismRegistrationPanelSkeleton';
+import { TourismRegistrationPanelSkeleton } from './TourismRegistrationPanelSkeleton';
 import { TourismRegistrationPrivacyPolicySheet } from './TourismRegistrationPrivacyPolicySheet';
 import { TourismRegistrationPrivacySheet } from './TourismRegistrationPrivacySheet';
 
@@ -40,8 +39,6 @@ type TourismGuestsRegistrationPanelProps = {
   interactionEnabled?: boolean;
   navigationMode?: 'standalone' | 'wizard';
   showIntroHeading?: boolean;
-  /** Show desk-admit waiting copy (tourism+contact done, passport not verified). */
-  showPassportWaiting?: boolean;
   /** SSR guest list — skips initial client fetch / skeleton. */
   initialGuests?: TourismGuestListItem[];
   initialRegistrationComplete?: boolean;
@@ -56,7 +53,6 @@ export function TourismGuestsRegistrationPanel({
   onComplete,
   interactionEnabled = true,
   showIntroHeading = true,
-  showPassportWaiting = false,
   initialGuests,
   initialRegistrationComplete = false,
   onGuestsChange,
@@ -94,10 +90,7 @@ export function TourismGuestsRegistrationPanel({
   const [isGuestUploadPending, setIsGuestUploadPending] = useState(false);
   const [isCompleting, startCompleteTransition] = useTransition();
 
-  const reservationName = session?.guestName?.trim() ?? '';
-  // Pinned chrome on both /registration and stay-setup registration step.
-  const pinActionsToBottom = true;
-  // When accordion header sits above, keep content flush (pt-0).
+  // Accordion middle scrolls; panel height follows content (no flex gap before next labels).
   const panelTopPadding = showIntroHeading ? 'pt-5' : 'pt-0';
 
   const hasAdult = useMemo(
@@ -367,8 +360,8 @@ export function TourismGuestsRegistrationPanel({
 
   if (registrationComplete) {
     return (
-      <div className={cn('flex min-h-full flex-col', panelTopPadding, className)}>
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
+      <div className={cn('flex flex-col', panelTopPadding, className)}>
+        <div className="space-y-6">
           {showIntroHeading ? (
             <div className="space-y-2">
               <h2 className="text-lg font-semibold text-foreground">{t('complete.summaryTitle')}</h2>
@@ -382,17 +375,6 @@ export function TourismGuestsRegistrationPanel({
             </p>
           )}
 
-          {showPassportWaiting ? (
-            <TourismPassportVerifyWaitingCopy message={t('complete.passportWaiting')} />
-          ) : null}
-
-          {reservationName ? (
-            <div className="space-y-1">
-              <Label>{t('reservationName.label')}</Label>
-              <p className="text-sm font-medium text-foreground">{reservationName}</p>
-            </div>
-          ) : null}
-
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-foreground">{t('guestList.heading')}</h3>
             <TourismGuestList guests={guests} />
@@ -401,13 +383,8 @@ export function TourismGuestsRegistrationPanel({
 
         {privacySheets}
 
-        <div className="mt-auto shrink-0 space-y-4 pt-4">
+        <div className="shrink-0 space-y-4 pt-4 pb-2">
           {privacyCheckbox(true)}
-          <IconBackActionsRow>
-            <Button size="lg" onClick={onComplete}>
-              {t('complete.continue')}
-            </Button>
-          </IconBackActionsRow>
           {bottomAccessory}
         </div>
       </div>
@@ -415,30 +392,11 @@ export function TourismGuestsRegistrationPanel({
   }
 
   return (
-    <div
-      className={cn(
-        'flex flex-col',
-        pinActionsToBottom ? 'min-h-0 flex-1' : 'min-h-full',
-        panelTopPadding,
-        className
-      )}
-    >
-      <div
-        className={cn(
-          'space-y-6',
-          pinActionsToBottom && 'min-h-0 flex-1 overflow-y-auto'
-        )}
-      >
+    <div className={cn('flex flex-col', panelTopPadding, className)}>
+      <div className="space-y-6">
         {introBlock}
 
         {privacySheets}
-
-        {reservationName ? (
-          <div className="space-y-1 rounded-xl border bg-muted/20 p-4">
-            <Label>{t('reservationName.label')}</Label>
-            <p className="text-sm font-medium text-foreground">{reservationName}</p>
-          </div>
-        ) : null}
 
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">{t('guestList.heading')}</h3>
@@ -485,23 +443,7 @@ export function TourismGuestsRegistrationPanel({
           onContinue={openDraftForm}
         />
 
-        {!pinActionsToBottom ? (
-          <div className="space-y-4">
-            {privacyCheckbox(false)}
-            {guests.length > 0 && !hasAdult ? (
-              <p className="text-sm text-muted-foreground">{t('errors.needAdultGuest')}</p>
-            ) : null}
-            {completeError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{completeError}</AlertDescription>
-              </Alert>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      {pinActionsToBottom ? (
-        <div className="mt-auto shrink-0 space-y-4 pt-4">
+        <div className="space-y-4">
           {privacyCheckbox(false)}
           {guests.length > 0 && !hasAdult ? (
             <p className="text-sm text-muted-foreground">{t('errors.needAdultGuest')}</p>
@@ -511,12 +453,13 @@ export function TourismGuestsRegistrationPanel({
               <AlertDescription>{completeError}</AlertDescription>
             </Alert>
           ) : null}
-          {submitButton}
-          {bottomAccessory}
         </div>
-      ) : (
-        <IconBackActionsRow className="mt-auto pt-6">{submitButton}</IconBackActionsRow>
-      )}
+      </div>
+
+      <div className="shrink-0 space-y-4 pt-4 pb-2">
+        <IconBackActionsRow>{submitButton}</IconBackActionsRow>
+        {bottomAccessory}
+      </div>
     </div>
   );
 }

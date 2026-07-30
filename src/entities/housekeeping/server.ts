@@ -10,6 +10,7 @@ export {
 } from './api/housekeepingRepository';
 export {
   clearHousekeepingStayPresence,
+  getHousekeepingStayPresence,
   listHousekeepingStayPresence,
   upsertHousekeepingStayPresence,
 } from './api/presenceRepository';
@@ -27,6 +28,7 @@ export {
   HOUSEKEEPING_LAUNDRY_PROGRAM_LABELS,
   HOUSEKEEPING_LAUNDRY_RUN_STATUSES,
   HOUSEKEEPING_ROOM_STATUSES,
+  HOUSEKEEPING_STAY_PRESENCE_SOURCES,
   HOUSEKEEPING_STAY_PRESENCE_STATUSES,
 } from './model/types';
 export type {
@@ -41,6 +43,7 @@ export type {
   HousekeepingRoomStatus,
   HousekeepingRoomStatusRecord,
   HousekeepingStayPresenceRecord,
+  HousekeepingStayPresenceSource,
   HousekeepingStayPresenceStatus,
   StartLaundryRunInput,
   StartLaundryRunResult,

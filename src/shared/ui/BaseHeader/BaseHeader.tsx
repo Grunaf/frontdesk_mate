@@ -11,9 +11,15 @@ import {
   GuestCheckInChip,
   shouldShowGuestCheckInChip,
   useForeignGuestRegistration,
+  useGuestSession,
   useIsGuestRegistered,
 } from '@/features/guest-check-in';
-import { GuestStayChip, shouldShowGuestStayChip } from '@/features/guest-stay-chip';
+import {
+  GuestBookingAnchor,
+  GuestStayChip,
+  shouldShowGuestBookingAnchor,
+  shouldShowGuestStayChip,
+} from '@/features/guest-stay-chip';
 import { useTranslations } from '@/shared/i18n';
 import { Button } from '../button';
 import { Icon } from '../icon';
@@ -32,6 +38,7 @@ export function BaseHeader({ translatedTitles }: BaseHeaderProps) {
   const logoUrl = tenant?.settings.logoUrl;
   const isRegistered = useIsGuestRegistered();
   const foreignRegistration = useForeignGuestRegistration();
+  const { session } = useGuestSession();
 
   const cleanPath = getCleanPath(pathname);
   const headerMode = resolveAppHeaderMode(cleanPath);
@@ -39,6 +46,11 @@ export function BaseHeader({ translatedTitles }: BaseHeaderProps) {
   const showStayChip = shouldShowGuestStayChip({
     cleanPath,
     isRegistered,
+    hasForeignRegistration: Boolean(foreignRegistration),
+  });
+  const showBookingAnchor = shouldShowGuestBookingAnchor({
+    cleanPath,
+    hasSession: Boolean(session?.stayId),
     hasForeignRegistration: Boolean(foreignRegistration),
   });
   const showCheckInChip = shouldShowGuestCheckInChip({
@@ -107,14 +119,20 @@ export function BaseHeader({ translatedTitles }: BaseHeaderProps) {
           : null;
 
   return (
-    <header className="px-4 pt-5 pb-3">
+    <header className="px-4 pt-4 pb-2">
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {leadingSlot}
           {pageTitle}
         </div>
 
-        {showStayChip ? <GuestStayChip /> : showCheckInChip ? <GuestCheckInChip /> : null}
+        {showStayChip ? (
+          <GuestStayChip />
+        ) : showBookingAnchor ? (
+          <GuestBookingAnchor />
+        ) : showCheckInChip ? (
+          <GuestCheckInChip />
+        ) : null}
       </div>
     </header>
   );

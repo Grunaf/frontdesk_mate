@@ -191,6 +191,7 @@ export async function upsertHousekeepingStayPresenceAction(input: {
       stayId: input.stayId,
       bedId: input.bedId,
       status: input.status,
+      source: 'staff',
       setByReceptionUserId: resolved.staffId,
     });
     if (!result.ok) return result;

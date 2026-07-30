@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useGuestSession, useIsGuestRegistered } from '@/features/guest-check-in';
 import { useStaySetupStatus, type StaySetupStatus } from '@/features/guest-stay-contact';
 import { useTenant } from '@/entities/tenant';
@@ -11,6 +11,27 @@ import {
   resolveShowSettlementBanner,
 } from './resolveShowSettlementBanner';
 import { readStaySettlementBannerProgress } from '../model/staySettlementBannerProgressStorage';
+
+/** SSR + hydration: false; after hydrate: true (re-render). Avoids localStorage show/hide mismatch. */
+function subscribeToClientMount() {
+  return () => {};
+}
+
+function getClientMountSnapshot() {
+  return true;
+}
+
+function getServerMountSnapshot() {
+  return false;
+}
+
+function useCanReadSettlementStorage(): boolean {
+  return useSyncExternalStore(
+    subscribeToClientMount,
+    getClientMountSnapshot,
+    getServerMountSnapshot
+  );
+}
 
 export type StayEssentialsConciergeBannerProgress = {
   totalSteps: number;
@@ -60,6 +81,7 @@ function resolveSlotFromStatus(input: {
   checkInAt: string | null | undefined;
   propertyTimeZone?: string | null;
   registrationStatus: StayEssentialsConciergeRegistrationStatus;
+  canReadSettlementStorage: boolean;
 }): StayEssentialsConciergeBannerSlot {
   const { tourismRequired, tourismComplete, entryDateComplete, contactComplete } =
     input.registrationStatus;
@@ -92,6 +114,11 @@ function resolveSlotFromStatus(input: {
   const stayId = input.stayId?.trim();
   if (!stayId) {
     return { kind: 'hidden' };
+  }
+
+  // localStorage differs SSR vs client — wait for post-hydrate snapshot before show/hide.
+  if (!input.canReadSettlementStorage) {
+    return { kind: 'loading' };
   }
 
   const settlementProgress = readStaySettlementBannerProgress(input.slug!, stayId);
@@ -132,6 +159,7 @@ export function useStayEssentialsConciergeBannerSlot(): StayEssentialsConciergeB
   const { session, checkInAt } = useGuestSession();
   const stayId = session?.stayId ?? null;
   const { status, statusLoading } = useStaySetupStatus();
+  const canReadSettlementStorage = useCanReadSettlementStorage();
 
   return useMemo(() => {
     if (!isRegistered || !slug?.trim()) {
@@ -153,6 +181,7 @@ export function useStayEssentialsConciergeBannerSlot(): StayEssentialsConciergeB
       checkInAt,
       propertyTimeZone: hostel.propertyTimeZone,
       registrationStatus: toRegistrationStatus(status),
+      canReadSettlementStorage,
     });
   }, [
     isRegistered,
@@ -162,5 +191,6 @@ export function useStayEssentialsConciergeBannerSlot(): StayEssentialsConciergeB
     hostel.propertyTimeZone,
     status,
     statusLoading,
+    canReadSettlementStorage,
   ]);
 }

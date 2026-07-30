@@ -37,11 +37,37 @@ describe('receptionOriginUrl', () => {
     );
   });
 
+  it('keeps query string when pathname includes search', () => {
+    const request = makeRequest('vega.reception.localhost:3000');
+
+    expect(receptionOriginUrl(request, '/?tab=plan&stayId=abc').toString()).toBe(
+      'http://vega.reception.localhost:3000/?tab=plan&stayId=abc'
+    );
+  });
+
   it('adds login error query params from reception host', () => {
     const request = makeRequest('vega.reception.localhost:3000');
 
     expect(receptionLoginUrl(request, 'invalid_pin').toString()).toBe(
       'http://vega.reception.localhost:3000/login?error=invalid_pin'
+    );
+  });
+
+  it('preserves sanitized next on login URL', () => {
+    const request = makeRequest('vega.reception.localhost:3000');
+
+    expect(
+      receptionLoginUrl(request, 'invalid_credentials', '/?tab=plan&stayId=abc').toString()
+    ).toBe(
+      'http://vega.reception.localhost:3000/login?error=invalid_credentials&next=%2F%3Ftab%3Dplan%26stayId%3Dabc'
+    );
+  });
+
+  it('drops unsafe next on login URL', () => {
+    const request = makeRequest('vega.reception.localhost:3000');
+
+    expect(receptionLoginUrl(request, undefined, 'https://evil.com').toString()).toBe(
+      'http://vega.reception.localhost:3000/login'
     );
   });
 });

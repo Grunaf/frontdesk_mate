@@ -1,21 +1,48 @@
 import { describe, expect, it } from 'vitest';
 import {
-  housekeepingStayPresenceDeskLabel,
-  isHousekeepingStayPresenceStatus,
+  canGuestClearStayPresence,
+  canGuestMarkStayVacant,
+  isHousekeepingStayPresenceSource,
+  isValidGuestStayPresenceUpsert,
 } from './stayPresence';
 
-describe('isHousekeepingStayPresenceStatus', () => {
-  it('accepts vacant and still_here', () => {
-    expect(isHousekeepingStayPresenceStatus('vacant')).toBe(true);
-    expect(isHousekeepingStayPresenceStatus('still_here')).toBe(true);
-    expect(isHousekeepingStayPresenceStatus('ready')).toBe(false);
+describe('isHousekeepingStayPresenceSource', () => {
+  it('accepts guest and staff', () => {
+    expect(isHousekeepingStayPresenceSource('guest')).toBe(true);
+    expect(isHousekeepingStayPresenceSource('staff')).toBe(true);
+    expect(isHousekeepingStayPresenceSource('system')).toBe(false);
   });
 });
 
-describe('housekeepingStayPresenceDeskLabel', () => {
-  it('labels vacant for desk Departures', () => {
-    expect(housekeepingStayPresenceDeskLabel('vacant')).toBe('Cleaning: vacant');
-    expect(housekeepingStayPresenceDeskLabel('still_here')).toBe('Cleaning: still here');
-    expect(housekeepingStayPresenceDeskLabel(undefined)).toBeNull();
+describe('canGuestMarkStayVacant', () => {
+  it('allows when unset', () => {
+    expect(canGuestMarkStayVacant(null)).toBe(true);
+  });
+
+  it('blocks when already vacant from any source', () => {
+    expect(canGuestMarkStayVacant({ status: 'vacant', source: 'guest' })).toBe(false);
+    expect(canGuestMarkStayVacant({ status: 'vacant', source: 'staff' })).toBe(false);
+  });
+
+  it('allows when still_here', () => {
+    expect(canGuestMarkStayVacant({ status: 'still_here', source: 'staff' })).toBe(true);
+  });
+});
+
+describe('canGuestClearStayPresence', () => {
+  it('allows only guest-authored rows', () => {
+    expect(canGuestClearStayPresence({ status: 'vacant', source: 'guest' })).toBe(true);
+    expect(canGuestClearStayPresence({ status: 'vacant', source: 'staff' })).toBe(false);
+    expect(canGuestClearStayPresence(null)).toBe(false);
+  });
+});
+
+describe('isValidGuestStayPresenceUpsert', () => {
+  it('allows only vacant + guest', () => {
+    expect(isValidGuestStayPresenceUpsert({ status: 'vacant', source: 'guest' })).toBe(true);
+    expect(isValidGuestStayPresenceUpsert({ status: 'still_here', source: 'guest' })).toBe(
+      false
+    );
+    expect(isValidGuestStayPresenceUpsert({ status: 'vacant', source: 'staff' })).toBe(false);
   });
 });

@@ -34,13 +34,22 @@ export function resolveStaySetupPrimaryButtonKey(
 export function shouldShowStaySetupPrimaryButton(
   activeStepId: StaySetupStep,
   isRegistered: boolean,
-  completion: StaySetupCompletion
+  completion: StaySetupCompletion,
+  options?: { contactEditing?: boolean }
 ): boolean {
   if (!isRegistered) {
     return true;
   }
 
   if (activeStepId === 'registration' && !isStaySetupRegistrationComplete(completion)) {
+    return false;
+  }
+
+  if (activeStepId === 'registration' && !completion.passportVerified) {
+    return false;
+  }
+
+  if (activeStepId === 'registration' && options?.contactEditing) {
     return false;
   }
 

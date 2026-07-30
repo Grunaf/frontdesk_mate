@@ -52,10 +52,17 @@ export function TourismRegistrationPanelSkeleton({
 }
 
 /** Copy shown after tourism form complete while waiting for desk passport admit. */
-export function TourismPassportVerifyWaitingCopy({ message }: { message: string }) {
+export function TourismPassportVerifyWaitingCopy({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
-    <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-sm leading-relaxed text-foreground">
-      {message}
-    </p>
+    <div className="rounded-xl border border-border/60 bg-muted/30 px-3 py-3">
+      <p className="text-sm font-medium leading-snug text-foreground">{title}</p>
+      <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{description}</p>
+    </div>
   );
 }

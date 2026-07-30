@@ -1,5 +1,8 @@
 export type RegistrationAccordionItem = 'identity' | 'entryDate' | 'contact';
 
+/** Open accordion section, or `null` when all prerequisites are complete (collapsed). */
+export type RegistrationAccordionOpenValue = RegistrationAccordionItem | null;
+
 export type RegistrationAccordionCompletion = {
   tourismRequired: boolean;
   tourismComplete: boolean;
@@ -32,10 +35,11 @@ export function isRegistrationContactAccordionDisabled(
 
 /**
  * Accordion open state: identity → entryDate → contact when tourism required.
+ * Returns `null` when all visible sections are complete (collapsed headers).
  */
 export function resolveOpenRegistrationAccordionItem(
   completion: RegistrationAccordionCompletion
-): RegistrationAccordionItem {
+): RegistrationAccordionOpenValue {
   if (completion.tourismRequired && !completion.tourismComplete) {
     return 'identity';
   }
@@ -44,5 +48,9 @@ export function resolveOpenRegistrationAccordionItem(
     return 'entryDate';
   }
 
-  return 'contact';
+  if (!completion.contactComplete) {
+    return 'contact';
+  }
+
+  return null;
 }

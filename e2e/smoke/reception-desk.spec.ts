@@ -11,6 +11,16 @@ async function openIssueGuestAccessOverlay(page: import('@playwright/test').Page
   });
 }
 
+/** Required contact for create booking (phone or email). */
+async function fillIssueGuestContact(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: '+ Add another contact method' }).click();
+  await page.getByLabel('Email').fill(`e2e-${Date.now()}@example.com`);
+}
+
+function createBookingButton(page: import('@playwright/test').Page) {
+  return page.getByRole('button', { name: /Create booking|Issue access/ });
+}
+
 test.describe('reception desk smoke', () => {
   test.beforeEach(() => {
     test.skip(
@@ -37,13 +47,15 @@ test.describe('reception desk smoke', () => {
     await expect(page.getByRole('tab', { name: 'Cash' })).toBeVisible();
 
     await openIssueGuestAccessOverlay(page);
+    await expect(page.getByText('At least one contact is required')).toBeVisible();
   });
 
   test('issues tonight access and shows PIN once', async ({ page }) => {
     await loginToReceptionDesk(page, config);
     await openIssueGuestAccessOverlay(page);
+    await fillIssueGuestContact(page);
 
-    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    const issueButton = createBookingButton(page);
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
     await issueButton.click();
 
@@ -55,8 +67,9 @@ test.describe('reception desk smoke', () => {
   test('finds issued stay by guest ref on access tab', async ({ page }) => {
     await loginToReceptionDesk(page, config);
     await openIssueGuestAccessOverlay(page);
+    await fillIssueGuestContact(page);
 
-    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    const issueButton = createBookingButton(page);
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
     await issueButton.click();
     await expect(page.getByText('Paper PIN')).toBeVisible({ timeout: config.navTimeoutMs });
@@ -79,8 +92,9 @@ test.describe('reception desk smoke', () => {
   test('opens guest detail from desk without switching to access tab', async ({ page }) => {
     await loginToReceptionDesk(page, config);
     await openIssueGuestAccessOverlay(page);
+    await fillIssueGuestContact(page);
 
-    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    const issueButton = createBookingButton(page);
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
     await issueButton.click();
 
@@ -94,8 +108,9 @@ test.describe('reception desk smoke', () => {
   test('admits guest to check-in from stay detail', async ({ page }) => {
     await loginToReceptionDesk(page, config);
     await openIssueGuestAccessOverlay(page);
+    await fillIssueGuestContact(page);
 
-    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    const issueButton = createBookingButton(page);
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
     await issueButton.click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: config.navTimeoutMs });
@@ -108,6 +123,7 @@ test.describe('reception desk smoke', () => {
   test('moves guest to another bed in place', async ({ page }) => {
     await loginToReceptionDesk(page, config);
     await openIssueGuestAccessOverlay(page);
+    await fillIssueGuestContact(page);
 
     const bedSelect = page.locator('#bed-id');
     const options = bedSelect.locator('option');
@@ -119,7 +135,7 @@ test.describe('reception desk smoke', () => {
     expect(secondBedValue).toBeTruthy();
     expect(secondBedLabel).toBeTruthy();
 
-    const issueButton = page.getByRole('button', { name: 'Issue access' });
+    const issueButton = createBookingButton(page);
     await expect(issueButton).toBeEnabled({ timeout: config.navTimeoutMs });
     await issueButton.click();
     await expect(page.getByText('Paper PIN')).toBeVisible({ timeout: config.navTimeoutMs });

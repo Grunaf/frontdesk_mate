@@ -67,6 +67,7 @@ export {
 export {
   getTourismEntryPointsCatalog,
   findAirportInCatalog,
+  findPlaceSuggestionInCatalog,
   type TourismEntryAirport,
   type TourismEntryPlaceSuggestion,
   type TourismEntryPointsCatalog,

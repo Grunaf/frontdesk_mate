@@ -38,6 +38,8 @@ export function shouldIgnoreConflictingUrlStep(
 /**
  * Completion sync may update registration flags; it must not rewind wizard steps
  * because of a stale ?step= query still in the address bar.
+ * When settlement unlocks (registration complete + passport verified + check-in day),
+ * advance from registration → essentials.
  */
 export function reconcileStepAfterCompletionSync(
   step: StaySetupStep,
@@ -62,7 +64,11 @@ export function reconcileStepAfterCompletionSync(
     );
   }
 
-  if (step === 'registration' || isRoomOrEssentialsStep(step)) {
+  if (step === 'registration') {
+    return 'essentials';
+  }
+
+  if (isRoomOrEssentialsStep(step)) {
     return step;
   }
 

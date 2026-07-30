@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
 import { getCountries } from 'libphonenumber-js/min';
 import { resolveTourismRegistrationConfig, useTenant } from '@/entities/tenant';
-import { useTranslations } from '@/shared/i18n';
+import { useLocale, useTranslations } from '@/shared/i18n';
 import { cn } from '@/shared/lib/utils';
 import { Alert, AlertDescription, Button, IconBackActionsRow } from '@/shared/ui';
 import { validateTourismWhatsapp } from '@/features/guest-tourism-registration';
@@ -31,9 +31,16 @@ function resolveDefaultPhoneCountry(profileId: string | undefined): CountryCode 
 type StayContactStepPanelProps = {
   tenantSlug: string;
   initialContactWhatsapp?: string | null;
+  /** Guest-proposed number awaiting desk confirm (shown when unlocking again). */
+  initialContactPhonePending?: string | null;
   contactComplete?: boolean;
   onComplete: (savedWhatsapp: string) => void;
   onDraftChange?: (draft: string) => void;
+  /**
+   * Fired when guest unlocks a confirmed number for edit (`true`),
+   * and when they lock again / panel unmounts (`false`).
+   */
+  onEditingChange?: (editing: boolean) => void;
   interactionEnabled?: boolean;
   onBack?: () => void;
   navigationMode?: StayContactNavigationMode;
@@ -45,9 +52,11 @@ type StayContactStepPanelProps = {
 export function StayContactStepPanel({
   tenantSlug,
   initialContactWhatsapp,
+  initialContactPhonePending,
   contactComplete = false,
   onComplete,
   onDraftChange,
+  onEditingChange,
   interactionEnabled = true,
   onBack,
   navigationMode = 'standalone',
@@ -55,6 +64,7 @@ export function StayContactStepPanel({
   defaultCountry,
 }: StayContactStepPanelProps) {
   const t = useTranslations('pages.staySetup.contact');
+  const locale = useLocale();
   const { settings } = useTenant();
   const resolvedDefaultCountry = useMemo(() => {
     if (defaultCountry) {
@@ -63,17 +73,39 @@ export function StayContactStepPanel({
     const profileId = resolveTourismRegistrationConfig(settings)?.profileId;
     return resolveDefaultPhoneCountry(profileId);
   }, [defaultCountry, settings]);
-  const [contactWhatsapp, setContactWhatsapp] = useState(initialContactWhatsapp ?? '');
+
+  const confirmedPhone = initialContactWhatsapp?.trim() || '';
+  const pendingPhone = initialContactPhonePending?.trim() || '';
+  const hasConfirmed = contactComplete && Boolean(confirmedPhone);
+
+  const [unlocked, setUnlocked] = useState(false);
+  const [contactWhatsapp, setContactWhatsapp] = useState(
+    () => pendingPhone || confirmedPhone
+  );
   const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [pendingSubmitted, setPendingSubmitted] = useState(Boolean(pendingPhone));
   const [isSaving, startSaveTransition] = useTransition();
-  const isLocked = contactComplete && Boolean(initialContactWhatsapp?.trim());
+
+  const isLocked = hasConfirmed && !unlocked;
+  const contactEditing = hasConfirmed && unlocked;
 
   useEffect(() => {
-    if (!isLocked) {
-      setContactWhatsapp(initialContactWhatsapp ?? '');
+    onEditingChange?.(contactEditing);
+    return () => {
+      onEditingChange?.(false);
+    };
+  }, [contactEditing, onEditingChange]);
+
+  useEffect(() => {
+    if (isLocked) {
+      setContactWhatsapp(confirmedPhone);
+      return;
     }
-  }, [initialContactWhatsapp, isLocked]);
+    if (!unlocked) {
+      setContactWhatsapp(pendingPhone || confirmedPhone);
+    }
+  }, [confirmedPhone, isLocked, pendingPhone, unlocked]);
 
   const persistContact = useCallback(
     (raw: string): Promise<boolean> => {
@@ -103,6 +135,12 @@ export function StayContactStepPanel({
             return;
           }
 
+          if (result.mode === 'pending') {
+            setPendingSubmitted(true);
+            setUnlocked(false);
+            setContactWhatsapp(validation.e164);
+          }
+
           onComplete(validation.e164);
           resolve(true);
         });
@@ -128,13 +166,41 @@ export function StayContactStepPanel({
     void persistContact(contactWhatsapp);
   }, [contactComplete, contactWhatsapp, isLocked, navigationMode, persistContact]);
 
-  // Footer (chevron + primary) for pinned registration chrome on standalone and stay-setup.
+  const handleUnlock = useCallback(() => {
+    setUnlocked(true);
+    setContactWhatsapp(pendingPhone || confirmedPhone);
+    setWhatsappError(null);
+    setSaveError(null);
+  }, [confirmedPhone, pendingPhone]);
+
   const showFooter = !isLocked;
+  const isUnlockEdit = hasConfirmed && unlocked;
   const panelTopPadding = showIntroHeading ? 'pt-2' : 'pt-0';
+
+  const saveButton = (
+    <Button
+      size="lg"
+      variant={isUnlockEdit ? 'secondary' : 'default'}
+      className="w-full"
+      disabled={!interactionEnabled || isSaving}
+      onClick={handleSave}
+    >
+      {isSaving ? (
+        <>
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+          {t('saving')}
+        </>
+      ) : isUnlockEdit ? (
+        t('save')
+      ) : (
+        t('continue')
+      )}
+    </Button>
+  );
 
   return (
     <div
-      className={cn('flex min-h-full flex-col', panelTopPadding)}
+      className={cn('flex flex-col', panelTopPadding)}
       onBlur={navigationMode === 'wizard' && !showFooter ? handleWizardBlurSave : undefined}
     >
       <div className="space-y-6">
@@ -161,11 +227,47 @@ export function StayContactStepPanel({
           invalid={Boolean(whatsappError)}
           label={t('whatsappLabel')}
           countryLabel={t('countryLabel')}
+          locale={locale}
           defaultCountry={resolvedDefaultCountry}
-          savedBadge={isLocked ? t('savedBadge') : undefined}
+          savedBadge={
+            isLocked
+              ? pendingSubmitted || pendingPhone
+                ? t('pendingBadge')
+                : t('savedBadge')
+              : undefined
+          }
         />
         {whatsappError ? <p className="text-xs text-destructive">{whatsappError}</p> : null}
         {!isLocked ? <p className="text-xs text-muted-foreground">{t('hint')}</p> : null}
+        {isLocked && (pendingSubmitted || pendingPhone) ? (
+          <p className="text-xs text-muted-foreground">{t('pendingHint')}</p>
+        ) : null}
+
+        {hasConfirmed && !unlocked ? (
+          <button
+            type="button"
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
+            disabled={!interactionEnabled || isSaving}
+            onClick={handleUnlock}
+          >
+            {t('changeNumber')}
+          </button>
+        ) : null}
+        {hasConfirmed && unlocked ? (
+          <button
+            type="button"
+            className="text-sm font-medium text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
+            disabled={!interactionEnabled || isSaving}
+            onClick={() => {
+              setUnlocked(false);
+              setContactWhatsapp(confirmedPhone);
+              setWhatsappError(null);
+              setSaveError(null);
+            }}
+          >
+            {t('keepCurrentNumber')}
+          </button>
+        ) : null}
 
         {saveError ? (
           <Alert variant="destructive">
@@ -175,18 +277,13 @@ export function StayContactStepPanel({
       </div>
 
       {showFooter ? (
-        <IconBackActionsRow className="mt-auto pt-6" onBack={onBack}>
-          <Button size="lg" disabled={!interactionEnabled || isSaving} onClick={handleSave}>
-            {isSaving ? (
-              <>
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-                {t('saving')}
-              </>
-            ) : (
-              t('continue')
-            )}
-          </Button>
-        </IconBackActionsRow>
+        isUnlockEdit ? (
+          <div className="pt-6 pb-2">{saveButton}</div>
+        ) : (
+          <IconBackActionsRow className="pt-6 pb-2" onBack={onBack}>
+            {saveButton}
+          </IconBackActionsRow>
+        )
       ) : null}
     </div>
   );

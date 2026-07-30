@@ -28,6 +28,7 @@ import {
   resolveGlobalPartyCapacity,
 } from '../lib/resolveReceptionPartyPlacement';
 import { resolveReceptionOfferBalance } from '../lib/resolveReceptionOfferBalance';
+import { resolveIssueGuestContact } from '../lib/resolveIssueGuestContact';
 import { listWholeRoomBlockedBedIdsForDateRange } from '../lib/resolveRoomOccupancyBlocks';
 import { resolveStayOfferBookingUnit } from '@/entities/tenant/model/stayOffers';
 import {
@@ -282,6 +283,8 @@ export function ReceptionCheckInPanel({
   const [mode, setMode] = useState<GuestAccessFormMode>('custom');
   const [guestName, setGuestName] = useState('');
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
   const [bookingPlatformId, setBookingPlatformId] = useState('');
   const [bookingExternalId, setBookingExternalId] = useState('');
   const [bookingAmountDue, setBookingAmountDue] = useState('');
@@ -1044,6 +1047,8 @@ export function ReceptionCheckInPanel({
     setCheckOutDate(nextDates.checkOutDate);
     setGuestName('');
     setSelectedGuestId(null);
+    setContactPhone('');
+    setContactEmail('');
     setBookingPlatformId('');
     setBookingExternalId('');
     setBookingAmountDue('');
@@ -1125,6 +1130,12 @@ export function ReceptionCheckInPanel({
         return 'Each guest needs a different bed.';
       case 'empty_party':
         return 'Add at least one guest.';
+      case 'contact_required':
+        return 'Add a phone number or email.';
+      case 'invalid_phone':
+        return 'Enter a valid phone number.';
+      case 'invalid_email':
+        return 'Enter a valid email address.';
       case 'db_unavailable':
         return 'Database unavailable. Run migrations and check SUPABASE_SECRET_KEY.';
       case 'unknown':
@@ -1258,6 +1269,14 @@ export function ReceptionCheckInPanel({
       return;
     }
 
+    const contactResolution = editDraft
+      ? ({ ok: true as const, contactPhone: null, contactEmail: null })
+      : resolveIssueGuestContact({ contactPhone, contactEmail });
+    if (!contactResolution.ok) {
+      setError(createErrorMessage(contactResolution.error));
+      return;
+    }
+
     startTransition(async () => {
       try {
         if (editDraft) {
@@ -1301,6 +1320,8 @@ export function ReceptionCheckInPanel({
           bookingPlatformId: bookingPlatformId || undefined,
           bookingExternalId: bookingExternalId.trim() || undefined,
           bookingAmountDue,
+          contactPhone: contactResolution.contactPhone,
+          contactEmail: contactResolution.contactEmail,
         });
 
         if (!result.ok) {
@@ -1539,6 +1560,10 @@ export function ReceptionCheckInPanel({
           setGuestName(guest.display_name);
         }}
         onClearGuestProfile={() => setSelectedGuestId(null)}
+        contactPhone={contactPhone}
+        onContactPhoneChange={setContactPhone}
+        contactEmail={contactEmail}
+        onContactEmailChange={setContactEmail}
         bookingPlatformId={bookingPlatformId}
         onBookingPlatformIdChange={setBookingPlatformId}
         bookingExternalId={bookingExternalId}
@@ -1613,6 +1638,7 @@ export function ReceptionCheckInPanel({
               (id) => Boolean(id) && !hardOverlappingBedIds.has(id)
             )) &&
           Boolean(guestName.trim()) &&
+          (Boolean(editDraft) || resolveIssueGuestContact({ contactPhone, contactEmail }).ok) &&
           resolveReservationBookingBalance({
             settings: tenantSettings,
             bookingAmountDue,

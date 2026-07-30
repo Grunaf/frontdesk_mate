@@ -861,7 +861,7 @@
       },
       "passportGate": {
         "title": "Покажите паспорт на ресепшене",
-        "description": "Чтобы завершить заселение и получить номер кровати, предъявите оригинал паспорта сотруднику ресепшена.",
+        "description": "Номер кровати откроется после проверки паспорта на ресепшене.",
         "dismiss": "Понятно"
       },
       "tabs": {
@@ -870,6 +870,7 @@
         "identity": "Паспортные данные",
         "entryDate": "Детали въезда",
         "contact": "Контакт",
+        "doneBadge": "Готово",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
         "settlement": "Заселение"
@@ -880,7 +881,8 @@
         "continueSettlingIn": "Продолжить заселение",
         "completeHint": "Регистрация гостей и контактные данные заполнены.",
         "incompleteHint": "Завершите туристическую регистрацию и контактные данные на странице регистрации.",
-        "passportWaiting": "Чтобы завершить заселение и получить номер кровати, предъявите оригинал паспорта сотруднику ресепшена."
+        "passportWaitingTitle": "Покажите паспорт на ресепшене",
+        "passportWaitingDescription": "Номер кровати откроется после проверки паспорта на ресепшене."
       },
       "register": {
         "actionButton": "К дате въезда",
@@ -915,7 +917,7 @@
           "citizenshipPlaceholder": "Выберите страну",
           "passportNumber": "Номер паспорта",
           "dateOfBirth": "Дата рождения",
-          "dateOfBirthPlaceholder": "Выберите дату",
+          "dateOfBirthPlaceholder": "dd.mm.yyyy",
           "dateOfBirthHelp": "Нужна для туристической регистрации. Возраст на день заезда учитывается при планировании размещения — гости младше 18 лет помечаются для проверки на ресепшн.",
           "gender": "Пол",
           "genderHelp": "Нужен для туристической регистрации и может учитываться при распределении кроватей по полу.",
@@ -948,7 +950,8 @@
         "complete": {
           "summaryTitle": "Регистрация завершена",
           "continue": "Далее: дата въезда",
-          "passportWaiting": "Чтобы завершить заселение и получить номер кровати, предъявите оригинал паспорта сотруднику ресепшена."
+          "passportWaitingTitle": "Покажите паспорт на ресепшене",
+          "passportWaitingDescription": "Номер кровати откроется после проверки паспорта на ресепшене."
         },
         "fieldErrors": {
           "firstName": "Укажите имя (до 120 символов).",
@@ -1026,9 +1029,11 @@
         },
         "entryPointLabel": "Пункт въезда",
         "entryPointAirportHint": "Выберите аэропорт из списка.",
-        "entryPointPlaceHint": "Введите КПП, вокзал или порт — подсказки появятся при вводе.",
+        "entryPointPlaceHint": "Выберите из списка — начните ввод, чтобы отфильтровать КПП, вокзалы или порты.",
         "entryPointAirportPlaceholder": "Выберите аэропорт",
-        "entryPointPlacePlaceholder": "например, Debeli Brijeg",
+        "entryPointPlacePlaceholder": "Выберите пункт въезда",
+        "entryPointPlaceSearchPlaceholder": "Поиск по списку…",
+        "entryPointPlaceEmpty": "В списке нет совпадений",
         "dateLabel": "Дата въезда",
         "modeLegend": "Все прибыли в один день?",
         "modeSame": "Одна дата для всех",
@@ -1989,7 +1994,8 @@
       "directionsToRoom": "Как дойти до комнаты",
       "fallback": "Кровать ещё не назначена. Спросите на ресепшене или напишите нам в WhatsApp.",
       "viewFullGuide": "Схема комнаты и маршрут",
-      "passportWaiting": "Чтобы завершить заселение и получить номер кровати, предъявите оригинал паспорта сотруднику ресепшена."
+      "passportWaitingTitle": "Покажите паспорт на ресепшене",
+      "passportWaitingDescription": "Номер кровати откроется после проверки паспорта на ресепшене."
     },
     "taxi": {
       "needHelpTitle": "Нужна помощь?",
@@ -2047,7 +2053,20 @@
         "luggageTitle": "Багаж после выезда",
         "lateCheckoutHint": "Нужен поздний выезд? Спросите на ресепшене.",
         "lateCheckoutLink": "Подробнее о позднем выезде",
-        "lateCheckoutLinkWithPrice": "Поздний выезд · {price}"
+        "lateCheckoutLinkWithPrice": "Поздний выезд · {price}",
+        "leftEarly": {
+          "title": "Уезжаете раньше?",
+          "description": "Сообщите, что освободили кровать — так мы сможем снять бельё. Это не выезд на ресепшене.",
+          "cta": "Я уже уехал",
+          "markedTitle": "Отмечено: уехал",
+          "markedDescription": "Housekeeping может подготовить кровать. Бронь активна, пока ресепшен не оформит выезд.",
+          "undo": "Отменить",
+          "confirmTitle": "Вы уже освободили кровать?",
+          "confirmDescription": "Подтверждайте только если забрали вещи и ушли. Выезд на ресепшене — отдельно.",
+          "confirmLabel": "Да, я уехал",
+          "cancelLabel": "Отмена",
+          "back": "Назад"
+        }
       },
       "reception": {
         "hoursTitle": "Часы работы ресепшена",
@@ -2098,19 +2117,22 @@
     },
     "guestStayChip": {
       "chipLabel": "Проживание",
+      "bookingLabel": "Бронь",
+      "bookingAnchorAria": "Бронь {summary} — подробности проживания",
       "sheetTitle": "Ваше проживание",
       "openDetail": "{summary} — подробности проживания",
       "receptionHeading": "Для ресепшена",
-      "receptionHint": "Покажите этот экран, если на стойке спрашивают, кто вы.",
+      "receptionHint": "Покажите этот QR-код на стойке, чтобы ресепшен открыл вашу бронь.",
+      "yourContactHeading": "Ваш контакт",
+      "yourContactPhoneLabel": "Телефон",
+      "yourContactEmailLabel": "Email",
       "stayRefLabel": "Ref",
       "registeredAsLabel": "В системе",
-      "copyForReception": "Скопировать для ресепшена",
-      "copiedForReception": "Скопировано",
-      "copyLineHostel": "{hostelName}",
-      "copyLineBed": "Кровать: {bedLine}",
-      "copyLineDates": "Срок: {dateRange}",
-      "copyLineRef": "Ref: #{stayRef}",
-      "copyLineName": "Имя: {guestName}",
+      "showReceptionQr": "Показать QR для ресепшена",
+      "receptionQrTitle": "Для ресепшена",
+      "receptionQrHint": "Попросите на стойке отсканировать код — откроется ваша бронь.",
+      "receptionQrImageAlt": "QR-код, который открывает это проживание на ресепшене",
+      "receptionQrBack": "Назад",
       "showRoomMapLink": "Карта комнаты и маршрут",
       "bedLockedUntilCheckIn": "Кровать и маршрут откроются с {time} в день заселения.",
       "bedLockedUntilRegistration": "Завершите регистрацию, чтобы увидеть назначение кровати.",

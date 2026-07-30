@@ -12,14 +12,33 @@ export async function ensureStayContactSaved(input: {
   draftValue: string;
 }): Promise<EnsureStayContactSavedResult> {
   const saved = input.savedE164?.trim();
+  const trimmedDraft = input.draftValue.trim();
+
   if (input.contactComplete && saved) {
     const existing = validateTourismWhatsapp(saved);
     if (existing.ok) {
-      return { ok: true, e164: existing.e164, skipped: true };
+      if (!trimmedDraft || trimmedDraft === saved) {
+        return { ok: true, e164: existing.e164, skipped: true };
+      }
+
+      const draftValidation = validateTourismWhatsapp(trimmedDraft);
+      if (!draftValidation.ok) {
+        return { ok: false, error: 'invalid_whatsapp' };
+      }
+
+      if (draftValidation.e164 === existing.e164) {
+        return { ok: true, e164: existing.e164, skipped: true };
+      }
+
+      const result = await saveStayContactAction(input.tenantSlug, trimmedDraft);
+      if (!result.ok) {
+        return { ok: false, error: 'save_failed' };
+      }
+
+      return { ok: true, e164: draftValidation.e164, skipped: false };
     }
   }
 
-  const trimmedDraft = input.draftValue.trim();
   if (!trimmedDraft) {
     return { ok: false, error: 'empty' };
   }
