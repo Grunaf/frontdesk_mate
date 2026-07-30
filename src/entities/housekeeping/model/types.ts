@@ -87,17 +87,24 @@ export type FinishLaundryRunResult =
   | { ok: true; run: HousekeepingLaundryRunRecord }
   | { ok: false; error: 'not_found' | 'not_running' | 'db_unavailable' };
 
-/** Soft Cleaning → desk signal. Not checkout. Absence of row = unset. */
+/** Soft presence signal for linen/desk. Not checkout. Absence of row = unset. */
 export const HOUSEKEEPING_STAY_PRESENCE_STATUSES = ['vacant', 'still_here'] as const;
 
 export type HousekeepingStayPresenceStatus =
   (typeof HOUSEKEEPING_STAY_PRESENCE_STATUSES)[number];
+
+/** Who set the presence signal: guest self-report or staff Cleaning/desk. */
+export const HOUSEKEEPING_STAY_PRESENCE_SOURCES = ['guest', 'staff'] as const;
+
+export type HousekeepingStayPresenceSource =
+  (typeof HOUSEKEEPING_STAY_PRESENCE_SOURCES)[number];
 
 export interface HousekeepingStayPresenceRecord {
   tenant_id: string;
   stay_id: string;
   bed_id: string;
   status: HousekeepingStayPresenceStatus;
+  source: HousekeepingStayPresenceSource;
   set_by_reception_user_id: string | null;
   set_at: string;
 }
@@ -107,10 +114,13 @@ export type UpsertHousekeepingStayPresenceInput = {
   stayId: string;
   bedId: string;
   status: HousekeepingStayPresenceStatus;
+  source: HousekeepingStayPresenceSource;
   setByReceptionUserId?: string | null;
 };
 
 export type ClearHousekeepingStayPresenceInput = {
   tenantId: string;
   stayId: string;
+  /** When set, delete only if the row's source matches (guest undo vs staff Clear). */
+  expectedSource?: HousekeepingStayPresenceSource;
 };

@@ -1,7 +1,11 @@
 import 'server-only';
 
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
-import { isHousekeepingStayPresenceStatus } from '../lib/stayPresence';
+import {
+  isHousekeepingStayPresenceSource,
+  isHousekeepingStayPresenceStatus,
+  isValidGuestStayPresenceUpsert,
+} from '../lib/stayPresence';
 import type {
   ClearHousekeepingStayPresenceInput,
   HousekeepingStayPresenceRecord,
@@ -10,15 +14,17 @@ import type {
 } from '../model/types';
 
 const COLUMNS =
-  'tenant_id, stay_id, bed_id, status, set_by_reception_user_id, set_at';
+  'tenant_id, stay_id, bed_id, status, source, set_by_reception_user_id, set_at';
 
 function mapRow(row: Record<string, unknown>): HousekeepingStayPresenceRecord | null {
   if (!isHousekeepingStayPresenceStatus(row.status)) return null;
+  if (!isHousekeepingStayPresenceSource(row.source)) return null;
   return {
     tenant_id: String(row.tenant_id),
     stay_id: String(row.stay_id),
     bed_id: String(row.bed_id),
     status: row.status,
+    source: row.source,
     set_by_reception_user_id: row.set_by_reception_user_id
       ? String(row.set_by_reception_user_id)
       : null,
@@ -47,10 +53,43 @@ export async function listHousekeepingStayPresence(
     .filter((row): row is HousekeepingStayPresenceRecord => row !== null);
 }
 
+export async function getHousekeepingStayPresence(
+  tenantId: string,
+  stayId: string
+): Promise<HousekeepingStayPresenceRecord | null> {
+  const id = stayId.trim();
+  if (!id) return null;
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+
+  const { data, error } = await admin
+    .from('housekeeping_stay_presence')
+    .select(COLUMNS)
+    .eq('tenant_id', tenantId)
+    .eq('stay_id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('getHousekeepingStayPresence:', error.message);
+    return null;
+  }
+
+  if (!data) return null;
+  return mapRow(data as Record<string, unknown>);
+}
+
 export async function upsertHousekeepingStayPresence(
   input: UpsertHousekeepingStayPresenceInput
 ): Promise<UpsertHousekeepingStatusResult> {
   if (!isHousekeepingStayPresenceStatus(input.status)) {
+    return { ok: false, error: 'invalid_status' };
+  }
+  if (!isHousekeepingStayPresenceSource(input.source)) {
+    return { ok: false, error: 'invalid_status' };
+  }
+
+  if (input.source === 'guest' && !isValidGuestStayPresenceUpsert(input)) {
     return { ok: false, error: 'invalid_status' };
   }
 
@@ -65,13 +104,17 @@ export async function upsertHousekeepingStayPresence(
     return { ok: false, error: 'db_unavailable' };
   }
 
+  const setBy =
+    input.source === 'staff' ? (input.setByReceptionUserId ?? null) : null;
+
   const { error } = await admin.from('housekeeping_stay_presence').upsert(
     {
       tenant_id: input.tenantId,
       stay_id: stayId,
       bed_id: bedId,
       status: input.status,
-      set_by_reception_user_id: input.setByReceptionUserId ?? null,
+      source: input.source,
+      set_by_reception_user_id: setBy,
       set_at: new Date().toISOString(),
     },
     { onConflict: 'tenant_id,stay_id' }
@@ -96,6 +139,16 @@ export async function clearHousekeepingStayPresence(
   const admin = getSupabaseAdmin();
   if (!admin) {
     return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (input.expectedSource) {
+    const current = await getHousekeepingStayPresence(input.tenantId, stayId);
+    if (!current) {
+      return { ok: true };
+    }
+    if (current.source !== input.expectedSource) {
+      return { ok: false, error: 'invalid_status' };
+    }
   }
 
   const { error } = await admin

@@ -2053,7 +2053,20 @@
         "luggageTitle": "Багаж после выезда",
         "lateCheckoutHint": "Нужен поздний выезд? Спросите на ресепшене.",
         "lateCheckoutLink": "Подробнее о позднем выезде",
-        "lateCheckoutLinkWithPrice": "Поздний выезд · {price}"
+        "lateCheckoutLinkWithPrice": "Поздний выезд · {price}",
+        "leftEarly": {
+          "title": "Уезжаете раньше?",
+          "description": "Сообщите, что освободили кровать — так мы сможем снять бельё. Это не выезд на ресепшене.",
+          "cta": "Я уже уехал",
+          "markedTitle": "Отмечено: уехал",
+          "markedDescription": "Housekeeping может подготовить кровать. Бронь активна, пока ресепшен не оформит выезд.",
+          "undo": "Отменить",
+          "confirmTitle": "Вы уже освободили кровать?",
+          "confirmDescription": "Подтверждайте только если забрали вещи и ушли. Выезд на ресепшене — отдельно.",
+          "confirmLabel": "Да, я уехал",
+          "cancelLabel": "Отмена",
+          "back": "Назад"
+        }
       },
       "reception": {
         "hoursTitle": "Часы работы ресепшена",

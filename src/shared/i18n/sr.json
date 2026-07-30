@@ -2059,7 +2059,20 @@
         "luggageTitle": "Luggage after checkout",
         "lateCheckoutHint": "Need a later checkout? Ask at reception.",
         "lateCheckoutLink": "Late checkout details",
-        "lateCheckoutLinkWithPrice": "Late checkout details · {price}"
+        "lateCheckoutLinkWithPrice": "Late checkout details · {price}",
+        "leftEarly": {
+          "title": "Leaving early?",
+          "description": "Tell us you’ve left the bed so we can strip linen. This does not check you out at reception.",
+          "cta": "I’ve left",
+          "markedTitle": "Marked as left",
+          "markedDescription": "Housekeeping can prepare your bed. Your booking stays active until reception checks you out.",
+          "undo": "Undo",
+          "confirmTitle": "Have you left the bed?",
+          "confirmDescription": "Only confirm if you’ve taken your things and left. Reception checkout is separate.",
+          "confirmLabel": "Yes, I’ve left",
+          "cancelLabel": "Cancel",
+          "back": "Back"
+        }
       },
       "reception": {
         "hoursTitle": "Reception hours",
