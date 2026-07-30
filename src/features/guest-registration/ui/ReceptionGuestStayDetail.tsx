@@ -6,7 +6,6 @@ import type { GuestTourismGuest, GuestTourismRegistrationSummary } from '@/entit
 import type { TenantSettings } from '@/entities/tenant';
 import {
   formatReceptionBookingSourceSummary,
-  resolveBookingComHotelId,
 } from '@/entities/tenant';
 import {
   compressImageForUpload,
@@ -33,7 +32,7 @@ import {
   guestAccessStatusLabel,
   resolveGuestAccessStatus,
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
-import { buildBookingComReservationUrl } from '../lib/buildBookingComReservationUrl';
+import { resolveBookingSourceOpenTarget } from '../lib/resolveBookingSourceOpenTarget';
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
 import {
   isStayCheckoutOverdue,
@@ -843,50 +842,48 @@ function ReceptionTourismGuestDocuments({
   );
 }
 
-function StayBookingComOpenBlock({
+function StayBookingSourceOpenBlock({
   stay,
   tenantSettings,
 }: {
   stay: GuestStayRecordWithLink;
   tenantSettings?: TenantSettings;
 }) {
-  const hotelId = resolveBookingComHotelId(tenantSettings);
-  const reservationId = stay.booking_external_id?.trim() ?? '';
-  const openUrl = buildBookingComReservationUrl({
-    reservationId,
-    hotelId: hotelId ?? '',
+  const target = resolveBookingSourceOpenTarget({
+    platformId: stay.booking_platform_id,
+    externalId: stay.booking_external_id,
+    tenantSettings,
   });
-  const canOpen = Boolean(openUrl);
+
+  if (!target) {
+    return null;
+  }
 
   const handleOpen = () => {
-    if (!openUrl) return;
-    window.open(openUrl, '_blank', 'noopener,noreferrer');
+    if (!target.openUrl) return;
+    window.open(target.openUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
     <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Booking.com
+        {target.label}
       </p>
-      {reservationId ? (
-        <p className="text-sm font-mono">#{reservationId}</p>
+      {target.referenceDisplay ? (
+        <p className="text-sm font-mono">#{target.referenceDisplay}</p>
       ) : (
         <p className="text-xs text-muted-foreground">No booking reference</p>
       )}
-      {!hotelId ? (
-        <p className="text-xs text-muted-foreground">
-          Set Booking.com hotel ID in admin to open reservations.
-        </p>
-      ) : null}
+      {target.hint ? <p className="text-xs text-muted-foreground">{target.hint}</p> : null}
       <Button
         type="button"
         size="sm"
         variant="outline"
         className="h-8"
-        disabled={!canOpen}
+        disabled={!target.openUrl}
         onClick={handleOpen}
       >
-        Open in Booking
+        {target.buttonLabel}
       </Button>
     </div>
   );
@@ -1870,7 +1867,7 @@ export function ReceptionGuestStayDetail({
   const tabsBody = (
     <>
       <TabsContent value="stay" className="mt-0 space-y-4 outline-none">
-        <StayBookingComOpenBlock stay={stay} tenantSettings={tenantSettings} />
+        <StayBookingSourceOpenBlock stay={stay} tenantSettings={tenantSettings} />
         {resolvedPartyStays.length > 1 && onSelectPartyStay ? (
           <StayPartyBlock
             stay={stay}
