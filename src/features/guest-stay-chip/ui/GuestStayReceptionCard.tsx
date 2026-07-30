@@ -2,24 +2,22 @@
 
 import { useTranslations } from '@/shared/i18n';
 import { Button, Icon } from '@/shared/ui';
-import { CalendarRange, Check, Copy } from 'lucide-react';
+import { CalendarRange, QrCode } from 'lucide-react';
 
 interface GuestStayReceptionCardProps {
   dateRange: string;
   stayRef: string | null;
   guestName: string | null;
-  receptionCopyText: string | null;
-  copied: boolean;
-  onCopy: () => void;
+  canShowQr: boolean;
+  onShowQr: () => void;
 }
 
 export function GuestStayReceptionCard({
   dateRange,
   stayRef,
   guestName,
-  receptionCopyText,
-  copied,
-  onCopy,
+  canShowQr,
+  onShowQr,
 }: GuestStayReceptionCardProps) {
   const t = useTranslations('components.guestStayChip');
   const hint = t('receptionHint');
@@ -30,17 +28,17 @@ export function GuestStayReceptionCard({
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {t('receptionHeading')}
         </p>
-        {receptionCopyText ? (
+        {canShowQr ? (
           <Button
             type="button"
             size="icon"
             variant="outline"
             className="size-8 shrink-0"
-            aria-label={copied ? t('copiedForReception') : t('copyForReception')}
+            aria-label={t('showReceptionQr')}
             aria-describedby="guest-stay-reception-hint"
-            onClick={onCopy}
+            onClick={onShowQr}
           >
-            <Icon icon={copied ? Check : Copy} className="h-3.5 w-3.5" />
+            <Icon icon={QrCode} className="h-3.5 w-3.5" />
           </Button>
         ) : null}
       </div>

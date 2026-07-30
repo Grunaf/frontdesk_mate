@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import type { GuestStayPlan } from '@/entities/tenant';
 import { resolveReceptionContact } from '@/entities/tenant/lib/resolveReceptionContact';
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
-import { formatBedLocationLine } from '@/features/find-your-bed/lib/formatBedLocation';
 import { useStaySetupBedMapStep } from '@/features/find-your-bed/ui/FindYourBedCard';
 import { resolveGuestStaySetupPath } from '@/features/guest-check-in/lib/resolveGuestStaySetupPath';
 import { useStaySetupStatus } from '@/features/guest-stay-contact';
 import { listTourismGuestsForSessionAction } from '@/features/guest-tourism-registration';
 import { ReceptionContactActions, useReceptionContactLabels } from '@/features/reception-contact';
 import { useTranslations, useLocale } from '@/shared/i18n';
+import { cn } from '@/shared/lib/utils';
 import {
   BottomSheet,
   BottomSheetBody,
@@ -20,9 +21,11 @@ import {
   BottomSheetFooter,
   BottomSheetHeader,
   BottomSheetTitle,
+  Button,
+  Icon,
 } from '@/shared/ui';
 import { useGuestIssueReport } from '@/features/guest-issue-report';
-import { buildReceptionCopyText } from '../lib/buildReceptionCopyText';
+import { buildReceptionStayDetailUrl } from '../lib/buildReceptionStayDetailUrl';
 import {
   buildExtendStayWhatsappMessage,
   resolveGuestStayBedLabel,
@@ -32,10 +35,14 @@ import { resolveTourismSummaryFromStaySetupStatus } from '../lib/resolveTourismS
 import { formatStayReference, isStayCheckInStarted } from '@/entities/guest-stay';
 import { GuestStayBedLocationCard } from './GuestStayBedLocationCard';
 import { GuestStayReceptionCard } from './GuestStayReceptionCard';
+import { GuestStayReceptionQrPanel } from './GuestStayReceptionQrPanel';
 import {
   GuestStayTourismSummaryCard,
   type GuestStayTourismSummaryState,
 } from './GuestStayTourismSummaryCard';
+
+type GuestStaySheetStep = 'info' | 'receptionQr';
+type SheetSlideFrom = 'left' | 'right';
 
 interface GuestStaySheetProps {
   open: boolean;
@@ -49,6 +56,13 @@ interface GuestStaySheetProps {
   checkOutDate: string;
   /** Hub stay actions (extend / report). Off during settling-in onboarding. */
   showStayActions?: boolean;
+}
+
+function sheetStepMotionClass(slideFrom: SheetSlideFrom): string {
+  return cn(
+    'animate-in fade-in-0 duration-200 motion-reduce:animate-none',
+    slideFrom === 'right' ? 'slide-in-from-right-8' : 'slide-in-from-left-8'
+  );
 }
 
 export function GuestStaySheet({
@@ -73,7 +87,8 @@ export function GuestStaySheet({
   const receptionLabels = useReceptionContactLabels();
   const { openReportSheet } = useGuestIssueReport();
   const { status: staySetupStatus, statusLoading: staySetupStatusLoading } = useStaySetupStatus();
-  const [copied, setCopied] = useState(false);
+  const [step, setStep] = useState<GuestStaySheetStep>('info');
+  const [slideFrom, setSlideFrom] = useState<SheetSlideFrom>('right');
   const [tourismSummaryFallback, setTourismSummaryFallback] =
     useState<GuestStayTourismSummaryState | null>(null);
   const [tourismSummaryFallbackLoaded, setTourismSummaryFallbackLoaded] = useState(false);
@@ -86,6 +101,7 @@ export function GuestStaySheet({
   const trimmedGuestName = guestName?.trim() || null;
   const staySetupBedMap = useStaySetupBedMapStep(true);
   const tourismRegistrationRequired = resolveTourismRegistrationRequired(settings);
+  const isReceptionQrStep = step === 'receptionQr';
 
   const tourismSummaryFromStatus =
     staySetupStatus && tourismRegistrationRequired
@@ -130,8 +146,6 @@ export function GuestStaySheet({
         ? ('registration' as const)
         : null
       : ('before_check_in' as const);
-
-  const hideBedFromGuest = !checkInStarted || bedLocationLocked;
 
   const settlementPath = resolveGuestStaySetupPath({
     locale: routeLocale,
@@ -209,32 +223,30 @@ export function GuestStaySheet({
     };
   }, [open, slug, tourismRegistrationRequired, staySetupStatus, staySetupStatusLoading]);
 
-  const bedLine = useMemo(
-    () =>
-      plan.bedId
-        ? formatBedLocationLine(
-            (key, values) => tBed(key, values as Record<string, string | number> | undefined),
-            plan,
-            { omitFloor: true }
-          )
-        : '',
-    [plan, tBed]
+  useEffect(() => {
+    if (!open) {
+      setStep('info');
+      setSlideFrom('right');
+    }
+  }, [open]);
+
+  const receptionStayDetailUrl = useMemo(
+    () => (slug && stayId ? buildReceptionStayDetailUrl(slug, stayId, locale) : ''),
+    [locale, slug, stayId]
   );
 
-  const receptionCopyText = useMemo(() => {
-    if (!dateRange) {
-      return null;
+  const goReceptionQr = useCallback(() => {
+    if (!receptionStayDetailUrl) {
+      return;
     }
+    setSlideFrom('right');
+    setStep('receptionQr');
+  }, [receptionStayDetailUrl]);
 
-    return buildReceptionCopyText({
-      hostelName: name,
-      bedLine: hideBedFromGuest ? '—' : bedLine || '—',
-      dateRange,
-      stayRef,
-      guestName: trimmedGuestName,
-      compose: (key, values) => t(key, values),
-    });
-  }, [bedLine, hideBedFromGuest, dateRange, name, stayRef, t, trimmedGuestName]);
+  const goBackToInfo = useCallback(() => {
+    setSlideFrom('left');
+    setStep('info');
+  }, []);
 
   const extendContact = useMemo(() => {
     const bedLabel = resolveGuestStayBedLabel(plan, (key, values) =>
@@ -269,101 +281,119 @@ export function GuestStaySheet({
     trimmedGuestName,
   ]);
 
-  const handleCopyForReception = async () => {
-    if (!receptionCopyText) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(receptionCopyText);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  };
-
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
       <BottomSheetContent size={BOTTOM_SHEET_SIZES.large} className="flex flex-col px-0 pb-0">
-        <BottomSheetHeader className="px-6 pb-3">
-          <BottomSheetTitle className="pr-8 text-base leading-snug">{t('sheetTitle')}</BottomSheetTitle>
+        <BottomSheetHeader className={cn('px-6 pb-3', isReceptionQrStep && 'pr-12')}>
+          {isReceptionQrStep ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="-ml-1.5 shrink-0"
+                onClick={goBackToInfo}
+                aria-label={t('receptionQrBack')}
+              >
+                <Icon icon={ArrowLeft} className="size-4" />
+              </Button>
+              <BottomSheetTitle className="min-w-0 flex-1 truncate text-left text-base leading-snug">
+                {t('receptionQrTitle')}
+              </BottomSheetTitle>
+            </div>
+          ) : (
+            <BottomSheetTitle className="pr-8 text-base leading-snug">
+              {t('sheetTitle')}
+            </BottomSheetTitle>
+          )}
         </BottomSheetHeader>
 
-        <BottomSheetBody className="space-y-4 pb-4">
-          {dateRange ? (
-            <GuestStayReceptionCard
-              dateRange={dateRange}
-              stayRef={stayRef}
-              guestName={trimmedGuestName}
-              receptionCopyText={receptionCopyText}
-              copied={copied}
-              onCopy={handleCopyForReception}
-            />
-          ) : null}
+        <BottomSheetBody className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4">
+          <div key={step} className={cn('min-h-0 flex-1', sheetStepMotionClass(slideFrom))}>
+            {isReceptionQrStep ? (
+              <GuestStayReceptionQrPanel
+                active={isReceptionQrStep}
+                stayDetailUrl={receptionStayDetailUrl}
+              />
+            ) : (
+              <div className="space-y-4">
+                {dateRange ? (
+                  <GuestStayReceptionCard
+                    dateRange={dateRange}
+                    stayRef={stayRef}
+                    guestName={trimmedGuestName}
+                    canShowQr={Boolean(receptionStayDetailUrl)}
+                    onShowQr={goReceptionQr}
+                  />
+                ) : null}
 
-          {staySetupStatus?.contactPhone || staySetupStatus?.contactEmail ? (
-            <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {t('yourContactHeading')}
-              </p>
-              {staySetupStatus.contactPhone ? (
-                <div className="space-y-0.5">
-                  <p className="text-xs text-muted-foreground">{t('yourContactPhoneLabel')}</p>
-                  <p className="text-sm text-foreground">{staySetupStatus.contactPhone}</p>
-                </div>
-              ) : null}
-              {staySetupStatus.contactEmail ? (
-                <div className="space-y-0.5">
-                  <p className="text-xs text-muted-foreground">{t('yourContactEmailLabel')}</p>
-                  <p className="text-sm text-foreground">{staySetupStatus.contactEmail}</p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+                {staySetupStatus?.contactPhone || staySetupStatus?.contactEmail ? (
+                  <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      {t('yourContactHeading')}
+                    </p>
+                    {staySetupStatus.contactPhone ? (
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground">{t('yourContactPhoneLabel')}</p>
+                        <p className="text-sm text-foreground">{staySetupStatus.contactPhone}</p>
+                      </div>
+                    ) : null}
+                    {staySetupStatus.contactEmail ? (
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground">{t('yourContactEmailLabel')}</p>
+                        <p className="text-sm text-foreground">{staySetupStatus.contactEmail}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
-          <GuestStayBedLocationCard
-            plan={plan}
-            lockReason={bedLocationLockReason}
-            checkInTimeLabel={checkInTimeLabel}
-            navigatePath={bedNavigatePath}
-            navigateLoading={bedNavigateLoading}
-          />
+                <GuestStayBedLocationCard
+                  plan={plan}
+                  lockReason={bedLocationLockReason}
+                  checkInTimeLabel={checkInTimeLabel}
+                  navigatePath={bedNavigatePath}
+                  navigateLoading={bedNavigateLoading}
+                />
 
-          {tourismSummaryForDisplay ? (
-            <GuestStayTourismSummaryCard
-              state={tourismSummaryForDisplay}
-              registerPath={registerPath}
-            />
-          ) : null}
+                {tourismSummaryForDisplay ? (
+                  <GuestStayTourismSummaryCard
+                    state={tourismSummaryForDisplay}
+                    registerPath={registerPath}
+                  />
+                ) : null}
 
-          {showStayActions ? (
-            <>
-              <div className="space-y-1.5 rounded-xl border bg-muted/30 p-3">
-                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  {t('extendStayHeading')}
-                </p>
-                <p className="text-sm leading-relaxed text-muted-foreground">{t('extendStayNotice')}</p>
+                {showStayActions ? (
+                  <>
+                    <div className="space-y-1.5 rounded-xl border bg-muted/30 p-3">
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        {t('extendStayHeading')}
+                      </p>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {t('extendStayNotice')}
+                      </p>
+                    </div>
+
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {tIssue('myStayPrompt')}{' '}
+                      <button
+                        type="button"
+                        className="font-medium text-primary underline decoration-primary/35 underline-offset-[3px] hover:decoration-primary/70"
+                        onClick={() => {
+                          onOpenChange(false);
+                          openReportSheet();
+                        }}
+                      >
+                        {tIssue('myStayLink')}
+                      </button>
+                    </p>
+                  </>
+                ) : null}
               </div>
-
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {tIssue('myStayPrompt')}{' '}
-                <button
-                  type="button"
-                  className="font-medium text-primary underline decoration-primary/35 underline-offset-[3px] hover:decoration-primary/70"
-                  onClick={() => {
-                    onOpenChange(false);
-                    openReportSheet();
-                  }}
-                >
-                  {tIssue('myStayLink')}
-                </button>
-              </p>
-            </>
-          ) : null}
+            )}
+          </div>
         </BottomSheetBody>
 
-        {showStayActions && extendContact ? (
+        {!isReceptionQrStep && showStayActions && extendContact ? (
           <BottomSheetFooter className="border-t border-border/60">
             <ReceptionContactActions
               contact={extendContact}

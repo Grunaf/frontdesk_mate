@@ -1,14 +1,16 @@
 import { redirect } from 'next/navigation';
 import { getTenantRecord, resolveTenantSlug } from '@/entities/tenant/server';
 import { isReceptionAuthenticated, isReceptionSessionSecretConfigured } from '@/app/reception/lib/receptionSession';
+import { sanitizeReceptionLoginNext } from '@/app/reception/lib/sanitizeReceptionLoginNext';
 import { ReceptionUnknownHostelContent } from '@/views/reception/ui/ReceptionUnknownHostelContent';
 
 interface ReceptionLoginPageProps {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }
 
 export default async function ReceptionLoginPage({ searchParams }: ReceptionLoginPageProps) {
-  const { error } = await searchParams;
+  const { error, next: nextRaw } = await searchParams;
+  const next = sanitizeReceptionLoginNext(nextRaw);
   const tenantSlug = await resolveTenantSlug();
 
   if (!tenantSlug) {
@@ -24,7 +26,7 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
   }
 
   if (await isReceptionAuthenticated(tenantSlug)) {
-    redirect('/');
+    redirect(next ?? '/');
   }
 
   const tenant = await getTenantRecord(tenantSlug);
@@ -78,6 +80,7 @@ export default async function ReceptionLoginPage({ searchParams }: ReceptionLogi
         action="/api/reception/login"
         className="space-y-4 rounded-xl border bg-background p-6"
       >
+        {next ? <input type="hidden" name="next" value={next} /> : null}
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Login</span>
           <input
