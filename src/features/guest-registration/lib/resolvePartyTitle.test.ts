@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { resolvePartyLeadName, resolvePartyTitle } from './resolvePartyTitle';
 
 describe('resolvePartyTitle', () => {
-  it('uses lead name with apostrophe-s', () => {
-    expect(resolvePartyTitle('Maria', 3)).toBe("Maria's party");
+  it('uses lead name and bed count', () => {
+    expect(resolvePartyTitle('Maria', 3)).toBe('Maria · 3 beds');
   });
 
   it('falls back without lead name', () => {
-    expect(resolvePartyTitle('  ', 2)).toBe('Party · 2 beds');
+    expect(resolvePartyTitle('  ', 2)).toBe('Guest · 2 beds');
+  });
+
+  it('singular bed label', () => {
+    expect(resolvePartyTitle('Alex', 1)).toBe('Alex · 1 bed');
   });
 });
 

@@ -13,6 +13,7 @@ import {
   BottomSheetTitle,
   Button,
 } from '@/shared/ui';
+import { cn } from '@/shared/lib/utils';
 
 export const RECEPTION_STAY_DETAIL_TITLE_ID = 'reception-stay-detail-title';
 export const RECEPTION_ISSUE_ACCESS_TITLE_ID = 'reception-issue-access-title';
@@ -41,6 +42,13 @@ export interface ReceptionStayDetailShellProps {
   accessibleTitle: string;
   /** Optional native `title` tooltip on the primary heading. */
   accessibleTitleTooltip?: string;
+  /**
+   * Mobile nav control (e.g. party Back). When set without edit chrome,
+   * rendered in a dedicated nav row with Close on the same line.
+   */
+  titleLeading?: ReactNode;
+  /** Optional icon/prefix inline before the title text. */
+  titlePrefix?: ReactNode;
   header: ReactNode;
   body: ReactNode;
   footer: ReactNode;
@@ -120,6 +128,8 @@ function DesktopStayDetailDialog({
   onClose,
   accessibleTitle,
   accessibleTitleTooltip,
+  titleLeading,
+  titlePrefix,
   header,
   body,
   bodyTop,
@@ -198,15 +208,22 @@ function DesktopStayDetailDialog({
               <span className="sr-only">Close</span>
             </Button>
           </div>
-          <div className="space-y-1">
-            <h2
-              id={labelledBy}
-              className={RECEPTION_SHELL_TITLE_CLASS}
-              title={accessibleTitleTooltip}
-            >
-              {accessibleTitle}
-            </h2>
-            {header}
+          <div className="space-y-2">
+            {titleLeading ? <div className="pr-10">{titleLeading}</div> : null}
+            <div className="space-y-1">
+              <h2
+                id={labelledBy}
+                className={cn(
+                  RECEPTION_SHELL_TITLE_CLASS,
+                  titlePrefix && 'flex min-w-0 items-center gap-1.5'
+                )}
+                title={accessibleTitleTooltip}
+              >
+                {titlePrefix}
+                <span className="min-w-0 truncate">{accessibleTitle}</span>
+              </h2>
+              {header}
+            </div>
           </div>
         </div>
 
@@ -229,6 +246,8 @@ function MobileStayDetailSheet({
   onClose,
   accessibleTitle,
   accessibleTitleTooltip,
+  titleLeading,
+  titlePrefix,
   header,
   body,
   bodyTop,
@@ -243,6 +262,9 @@ function MobileStayDetailSheet({
   // Vaul→Radix Dialog owns titleId; overriding it triggers DialogTitle a11y warnings.
   const leadingCount = countLeadingHeaderActions({ onEdit, headerExtra, headerOverflow });
   const hasEditChrome = leadingCount > 0;
+  const hasTitleLeading = Boolean(titleLeading);
+  /** Back + Close on one row under the drag handle (party stack). */
+  const useNavRow = hasTitleLeading && !hasEditChrome;
 
   return (
     <BottomSheet
@@ -256,7 +278,7 @@ function MobileStayDetailSheet({
         size={BOTTOM_SHEET_SIZES.large}
         className="flex flex-col px-0 pb-0"
         aria-describedby={undefined}
-        showCloseButton={!hasEditChrome}
+        showCloseButton={!hasEditChrome && !useNavRow}
         onPointerDownOutside={(event) => {
           if (dismissBlocked) event.preventDefault();
         }}
@@ -290,12 +312,33 @@ function MobileStayDetailSheet({
             </div>
           </>
         ) : null}
-        <BottomSheetHeader className={mobileHeaderPaddingClass(leadingCount)}>
+        {useNavRow ? (
+          <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-0.5">
+            <div className="min-w-0">{titleLeading}</div>
+            <BottomSheetClose asChild>
+              <Button variant="ghost" size="icon-sm" className="shrink-0">
+                <X />
+                <span className="sr-only">Close</span>
+              </Button>
+            </BottomSheetClose>
+          </div>
+        ) : null}
+        <BottomSheetHeader
+          className={cn(
+            mobileHeaderPaddingClass(leadingCount),
+            useNavRow && 'pt-1'
+          )}
+        >
+          {titleLeading && hasEditChrome ? <div className="mb-2">{titleLeading}</div> : null}
           <BottomSheetTitle
-            className={RECEPTION_SHELL_TITLE_CLASS}
+            className={cn(
+              RECEPTION_SHELL_TITLE_CLASS,
+              titlePrefix && 'flex min-w-0 items-center gap-1.5'
+            )}
             title={accessibleTitleTooltip}
           >
-            {accessibleTitle}
+            {titlePrefix}
+            <span className="min-w-0 truncate">{accessibleTitle}</span>
           </BottomSheetTitle>
           {header}
         </BottomSheetHeader>
@@ -318,6 +361,8 @@ export function ReceptionStayDetailShell({
   onClose,
   accessibleTitle,
   accessibleTitleTooltip,
+  titleLeading,
+  titlePrefix,
   header,
   body,
   bodyTop,
@@ -343,6 +388,8 @@ export function ReceptionStayDetailShell({
         onClose={onClose}
         accessibleTitle={accessibleTitle}
         accessibleTitleTooltip={accessibleTitleTooltip}
+        titleLeading={titleLeading}
+        titlePrefix={titlePrefix}
         header={header}
         body={body}
         bodyTop={bodyTop}
@@ -363,6 +410,8 @@ export function ReceptionStayDetailShell({
       onClose={onClose}
       accessibleTitle={accessibleTitle}
       accessibleTitleTooltip={accessibleTitleTooltip}
+      titleLeading={titleLeading}
+      titlePrefix={titlePrefix}
       header={header}
       body={body}
       bodyTop={bodyTop}

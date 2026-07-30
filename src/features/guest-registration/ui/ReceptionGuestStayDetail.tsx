@@ -52,7 +52,14 @@ import {
 import { MagicLinkCard } from './MagicLinkCard';
 import { ReceptionArrivalDatesBlock } from './ReceptionArrivalDatesBlock';
 import { ReceptionStayDetailShell, RECEPTION_STAY_DETAIL_TITLE_ID, useIsReceptionStayDetailBelowLg } from './ReceptionStayDetailShell';
-import { StayPartyPeek, StayPartyBalanceControls } from './StayPartyPeek';
+import {
+  StayPartyPeek,
+  StayPartyBookingTab,
+  StayPartyBedsTab,
+  StayPartySheetTabsList,
+  type PartySheetTabId,
+} from './StayPartyPeek';
+import { BookingGroupIcon } from './BookingGroupIcon';
 import {
   Button,
   ConfirmDialog,
@@ -1105,129 +1112,35 @@ function isStayAdmitted(stay: GuestStayRecordWithLink): boolean {
   return Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
 }
 
-function StayPartyRootView({
-  partyStays,
-  balanceStay,
-  resolveBedLabel,
-  onSelectStay,
-  activeStayId,
-  tenantSlug,
-  onStayBookingBalanceChange,
-  onBackToChild,
-  showCheckInParty,
-  checkInPartyDisabled,
-  checkInPartyPending,
-  checkInPartyError,
-  onCheckInParty,
-}: {
-  partyStays: GuestStayRecordWithLink[];
-  balanceStay: GuestStayRecordWithLink;
-  resolveBedLabel: (bedId: string) => string;
-  onSelectStay: (stayId: string) => void;
-  activeStayId: string;
-  tenantSlug?: string;
-  onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
-  onBackToChild?: () => void;
-  showCheckInParty?: boolean;
-  checkInPartyDisabled?: boolean;
-  checkInPartyPending?: boolean;
-  checkInPartyError?: string | null;
-  onCheckInParty?: () => void;
-}) {
-  if (partyStays.length <= 1) return null;
-
-  return (
-    <div className="space-y-4">
-      {onBackToChild ? (
-        <button
-          type="button"
-          onClick={onBackToChild}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="size-4" />
-          Back to booking
-        </button>
-      ) : null}
-
-      {tenantSlug ? (
-        <StayPartyBalanceControls
-          balanceStay={balanceStay}
-          tenantSlug={tenantSlug}
-          onStayUpdated={onStayBookingBalanceChange}
-        />
-      ) : null}
-
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beds</p>
-        <ul className="space-y-1.5">
-          {partyStays.map((member, index) => {
-            const guestLabel = member.guest_name?.trim() || `Guest ${index + 1}`;
-            const bedLabel = resolveBedLabel(member.bed_id);
-            const ref = formatStayReference(member.id);
-            const isActive = member.id === activeStayId;
-            const admitted = isStayAdmitted(member);
-            return (
-              <li key={member.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelectStay(member.id)}
-                  className={cn(
-                    'flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm',
-                    isActive
-                      ? 'border-primary/40 bg-primary/5'
-                      : 'bg-card hover:bg-muted/40'
-                  )}
-                >
-                  <span className="min-w-0 truncate font-medium">
-                    {guestLabel}
-                    <span className="font-normal text-muted-foreground"> · {bedLabel}</span>
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {admitted ? 'In' : 'Expected'}
-                    {ref ? ` · #${ref}` : ''}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      {showCheckInParty && onCheckInParty ? (
-        <div className="space-y-1.5">
-          {checkInPartyError ? (
-            <p className="text-xs text-destructive">{checkInPartyError}</p>
-          ) : null}
-          <Button
-            type="button"
-            className="w-full"
-            disabled={checkInPartyDisabled || checkInPartyPending}
-            onClick={onCheckInParty}
-          >
-            {checkInPartyPending ? 'Checking in…' : 'Check in party'}
-          </Button>
-        </div>
-      ) : null}
-    </div>
+function resolvePartyContactStay(
+  partyStays: GuestStayRecordWithLink[]
+): GuestStayRecordWithLink | null {
+  if (partyStays.length === 0) return null;
+  const sorted = [...partyStays].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const withContact = sorted.find(
+    (member) =>
+      Boolean(member.contact_phone?.trim()) ||
+      Boolean(member.contact_phone_pending?.trim()) ||
+      Boolean(member.contact_email?.trim())
   );
+  return withContact ?? sorted[0] ?? null;
 }
 
 function StayPartyChildBanner({
   partyTitle,
-  bedCount,
   onOpenParty,
 }: {
   partyTitle: string;
-  bedCount: number;
   onOpenParty: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 bg-muted/20 px-3 py-2.5">
-      <p className="text-xs text-muted-foreground">
-        Part of {partyTitle} · {bedCount} beds
+      <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+        <BookingGroupIcon />
+        <span className="truncate">Part of {partyTitle}</span>
       </p>
       <Button type="button" size="sm" variant="outline" className="h-7" onClick={onOpenParty}>
-        Open party
+        View beds
       </Button>
     </div>
   );
@@ -1744,8 +1657,12 @@ export function ReceptionGuestStayDetail({
   const [activeTab, setActiveTab] = useState<StayDetailTabId>(initialTab);
   const [partyLevelOpen, setPartyLevelOpen] = useState(initialPartyView);
   const [enteredChildFromParty, setEnteredChildFromParty] = useState(false);
+  const [partySheetTab, setPartySheetTab] = useState<PartySheetTabId>('booking');
   const [deskQrFocusKey, setDeskQrFocusKey] = useState(0);
   const [tourismStatus, setTourismStatus] = useState<TourismStatusBadge | null>(null);
+  const [partyTourismByStayId, setPartyTourismByStayId] = useState<
+    Record<string, TourismStatusBadge>
+  >({});
   const [tourismAccessReady, setTourismAccessReady] = useState(false);
   const [canAddTourismGuest, setCanAddTourismGuest] = useState(false);
   const [skipTourismConfirmOpen, setSkipTourismConfirmOpen] = useState(false);
@@ -1829,7 +1746,7 @@ export function ReceptionGuestStayDetail({
               ? 'You do not have permission to skip the tourism gate.'
               : result.error === 'tourism_incomplete' || result.error === 'missing_documents'
                 ? 'Complete tourism registration and upload passport photos for all pending guests.'
-                : 'Could not check in the party.'
+                : 'Could not check in all guests.'
         );
         return;
       }
@@ -1855,8 +1772,10 @@ export function ReceptionGuestStayDetail({
     setActiveTab(initialTab);
     setPartyLevelOpen(initialPartyView);
     setEnteredChildFromParty(false);
+    setPartySheetTab('booking');
     setDeskQrFocusKey(0);
     setTourismStatus(showTourismTab ? 'not_started' : null);
+    setPartyTourismByStayId({});
     setTourismAccessReady(false);
     setSkipTourismConfirmOpen(false);
     setSkipTourismConfirmMode('single');
@@ -1879,12 +1798,15 @@ export function ReceptionGuestStayDetail({
     }).then((result) => {
       if (cancelled) return;
       if (result.ok) {
-        setTourismStatus(resolveTourismStatusBadge(result.registration));
+        const status = resolveTourismStatusBadge(result.registration);
+        setTourismStatus(status);
         setTourismAccessReady(isTourismReadyForAccess(result.registration));
+        setPartyTourismByStayId((current) => ({ ...current, [stay.id]: status }));
         return;
       }
       setTourismStatus('not_started');
       setTourismAccessReady(false);
+      setPartyTourismByStayId((current) => ({ ...current, [stay.id]: 'not_started' }));
     });
 
     return () => {
@@ -1929,12 +1851,12 @@ export function ReceptionGuestStayDetail({
     resolvedPartyStays.find(
       (member) => member.booking_amount_due_minor != null && member.booking_amount_currency
     ) ?? stay;
+  const contactStay = resolvePartyContactStay(resolvedPartyStays) ?? stay;
   const isParty = resolvedPartyStays.length > 1 && Boolean(onSelectPartyStay);
   const partyLeadName = isParty ? resolvePartyLeadName(resolvedPartyStays) : '';
   const partyTitle = isParty
     ? resolvePartyTitle(partyLeadName || guestLabel, resolvedPartyStays.length)
     : guestLabel;
-  const balanceSummary = formatReservationBookingBalanceSummary(balanceStay);
   const pendingPartyCheckIns = resolvedPartyStays.filter(
     (member) => !isStayAdmitted(member) && !isReceptionStayPastCheckOut(member, operationalDate)
   );
@@ -1944,6 +1866,50 @@ export function ReceptionGuestStayDetail({
   const showDesktopPartyPeek = !isBelowLg && isParty;
   /** Mobile only: party root replaces child body. */
   const showPartyRoot = isBelowLg && isParty && partyLevelOpen;
+  const showPartyBack =
+    showPartyRoot && (enteredChildFromParty || !initialPartyView);
+  const partyBackLabel = bedLabel.trim() || guestLabel || 'Back';
+  const partyStayIdsKey = resolvedPartyStays
+    .map((member) => member.id)
+    .sort()
+    .join(',');
+
+  useEffect(() => {
+    if (!showTourismTab || !tenantSlug || !isParty || !partyStayIdsKey) {
+      return;
+    }
+
+    let cancelled = false;
+    const stayIds = partyStayIdsKey.split(',').filter(Boolean);
+
+    void Promise.all(
+      stayIds.map(async (stayId) => {
+        const result = await loadTourismRegistrationForReceptionAction({
+          tenantSlug,
+          stayId,
+        });
+        return {
+          stayId,
+          status: (result.ok
+            ? resolveTourismStatusBadge(result.registration)
+            : 'not_started') as TourismStatusBadge,
+        };
+      })
+    ).then((rows) => {
+      if (cancelled) return;
+      setPartyTourismByStayId((current) => {
+        const next = { ...current };
+        for (const row of rows) {
+          next[row.stayId] = row.status;
+        }
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showTourismTab, tenantSlug, isParty, partyStayIdsKey]);
 
   const handleSelectPartyBed = (stayId: string) => {
     setEnteredChildFromParty(true);
@@ -1953,79 +1919,101 @@ export function ReceptionGuestStayDetail({
     onSelectPartyStay?.(stayId);
   };
 
-  const header = (
+  const partyContactSlot =
+    tenantSlug && isParty ? (
+      <StayContactBlock
+        stay={contactStay}
+        tenantSlug={tenantSlug}
+        onStayUpdated={onReceptionNoteChange}
+      />
+    ) : null;
+
+  const partyNoteSlot =
+    tenantSlug && isParty ? (
+      <StayReceptionNoteBlock
+        stay={balanceStay}
+        tenantSlug={tenantSlug}
+        onStayUpdated={onReceptionNoteChange}
+      />
+    ) : null;
+
+  const header = showPartyRoot ? null : (
     <header className="space-y-1">
-      {showPartyRoot ? (
-        <>
-          <p className="text-sm font-medium text-foreground">{partyTitle}</p>
-          <p className="text-xs text-muted-foreground">
-            {resolvedPartyStays.length} beds
-            {' · '}
-            {balanceSummary ?? 'No balance'}
-          </p>
-        </>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {bedLabel}
-          {stayRef ? (
-            <span className="font-mono">
-              {' '}
-              · #{stayRef}
-            </span>
-          ) : null}
-        </p>
-      )}
-      {!showPartyRoot ? (
-        <p className="text-xs text-muted-foreground">
-          {formatDisplayDate(checkInDay)} → {formatDisplayDate(checkOutDay)} ·{' '}
-          {guestAccessStatusLabel(status)}
-        </p>
-      ) : null}
-      {!showPartyRoot && overdueCheckout ? (
+      <p className="text-sm text-muted-foreground">
+        {bedLabel}
+        {stayRef ? (
+          <span className="font-mono">
+            {' '}
+            · #{stayRef}
+          </span>
+        ) : null}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {formatDisplayDate(checkInDay)} → {formatDisplayDate(checkOutDay)} ·{' '}
+        {guestAccessStatusLabel(status)}
+      </p>
+      {overdueCheckout ? (
         <p className="text-xs font-medium text-amber-800">
           Checkout overdue — confirm the guest has left
         </p>
       ) : null}
-      {!showPartyRoot && accessGrantedAt ? (
+      {accessGrantedAt ? (
         <p className="text-xs font-medium text-emerald-800">
           Access granted · {formatReceptionDateTime(accessGrantedAt)}
         </p>
       ) : null}
-      {!showPartyRoot && bookingSourceLine ? (
+      {bookingSourceLine ? (
         <p className="text-xs text-muted-foreground">{bookingSourceLine}</p>
       ) : null}
     </header>
   );
 
-  const footer = showPartyRoot ? (
-    <div />
-  ) : (
-    <ReceptionGuestStayDetailActions
-      stay={stay}
-      isPending={isPending || access.isPending}
-      onCancelOrCheckout={onCancelOrCheckout}
-      operationalDate={operationalDate}
-      showAddTourismGuest={activeTab === 'tourism' && showTourismTab && !stayEnded}
-      onAddTourismGuest={() => tourismAddGuestRef.current?.()}
-      addTourismGuestDisabled={!canAddTourismGuest}
-      showCheckIn={Boolean(tenantSlug) && !access.accessGranted && !stayEnded}
-      onCheckIn={requestGrantAccess}
-      checkInDisabled={primaryGrantBlocked}
-      checkInHint={
-        primaryGrantBlocked
-          ? 'Complete tourism registration and upload passport photos before check-in.'
-          : null
-      }
-      checkInError={access.actionError}
-      showGrantAccess={
-        activeTab === 'access' && Boolean(tenantSlug) && !access.accessGranted && !stayEnded
-      }
-      onGrantAccess={requestGrantAccess}
-      grantAccessDisabled={primaryGrantBlocked}
-    />
-  );
+  const footer =
+    showPartyRoot
+      ? showCheckInParty && partySheetTab === 'booking'
+        ? (
+            <div className="space-y-1.5">
+              {partyCheckInError ? (
+                <p className="text-xs text-destructive">{partyCheckInError}</p>
+              ) : null}
+              <Button
+                type="button"
+                className="w-full"
+                disabled={partyCheckInDisabled}
+                onClick={requestCheckInParty}
+              >
+                {partyCheckInPending ? 'Checking in…' : 'Check in all'}
+              </Button>
+            </div>
+          )
+        : null
+      : (
+        <ReceptionGuestStayDetailActions
+          stay={stay}
+          isPending={isPending || access.isPending}
+          onCancelOrCheckout={onCancelOrCheckout}
+          operationalDate={operationalDate}
+          showAddTourismGuest={activeTab === 'tourism' && showTourismTab && !stayEnded}
+          onAddTourismGuest={() => tourismAddGuestRef.current?.()}
+          addTourismGuestDisabled={!canAddTourismGuest}
+          showCheckIn={Boolean(tenantSlug) && !access.accessGranted && !stayEnded}
+          onCheckIn={requestGrantAccess}
+          checkInDisabled={primaryGrantBlocked}
+          checkInHint={
+            primaryGrantBlocked
+              ? 'Complete tourism registration and upload passport photos before check-in.'
+              : null
+          }
+          checkInError={access.actionError}
+          showGrantAccess={
+            activeTab === 'access' && Boolean(tenantSlug) && !access.accessGranted && !stayEnded
+          }
+          onGrantAccess={requestGrantAccess}
+          grantAccessDisabled={primaryGrantBlocked}
+        />
+      );
 
-  const tabsList = (
+  const childTabsList = (
     <TabsList variant="line" className="w-full justify-start">
       <TabsTrigger value="stay">Stay</TabsTrigger>
       {showTourismTab ? (
@@ -2043,25 +2031,30 @@ export function ReceptionGuestStayDetail({
 
   const partyRootBody =
     isBelowLg && isParty && onSelectPartyStay ? (
-      <StayPartyRootView
-        partyStays={resolvedPartyStays}
-        balanceStay={balanceStay}
-        resolveBedLabel={resolveBedLabel}
-        onSelectStay={handleSelectPartyBed}
-        activeStayId={stay.id}
-        tenantSlug={tenantSlug}
-        onStayBookingBalanceChange={onStayBookingBalanceChange}
-        onBackToChild={
-          enteredChildFromParty || !initialPartyView
-            ? () => setPartyLevelOpen(false)
-            : undefined
-        }
-        showCheckInParty={showCheckInParty}
-        checkInPartyDisabled={partyCheckInDisabled}
-        checkInPartyPending={partyCheckInPending}
-        checkInPartyError={partyCheckInError}
-        onCheckInParty={requestCheckInParty}
-      />
+      partySheetTab === 'booking' ? (
+        <StayPartyBookingTab
+          partyStays={resolvedPartyStays}
+          balanceStay={balanceStay}
+          checkInDate={checkInDay}
+          checkOutDate={checkOutDay}
+          bookingSourceLine={bookingSourceLine}
+          tenantSlug={tenantSlug}
+          onStayBookingBalanceChange={onStayBookingBalanceChange}
+          contactSlot={partyContactSlot}
+          noteSlot={partyNoteSlot}
+          showTourismSummary={showTourismTab}
+          tourismByStayId={partyTourismByStayId}
+        />
+      ) : (
+        <StayPartyBedsTab
+          partyStays={resolvedPartyStays}
+          activeStayId={stay.id}
+          resolveBedLabel={resolveBedLabel}
+          onSelectStay={handleSelectPartyBed}
+          showTourismSummary={showTourismTab}
+          tourismByStayId={partyTourismByStayId}
+        />
+      )
     ) : null;
 
   const tabsBody = (
@@ -2071,8 +2064,10 @@ export function ReceptionGuestStayDetail({
         {isBelowLg && isParty ? (
           <StayPartyChildBanner
             partyTitle={partyTitle}
-            bedCount={resolvedPartyStays.length}
-            onOpenParty={() => setPartyLevelOpen(true)}
+            onOpenParty={() => {
+              setPartySheetTab('beds');
+              setPartyLevelOpen(true);
+            }}
           />
         ) : null}
         {tenantSlug ? (
@@ -2086,11 +2081,13 @@ export function ReceptionGuestStayDetail({
                 onStayUpdated={onStayBookingBalanceChange}
               />
             ) : null}
-            <StayContactBlock
-              stay={stay}
-              tenantSlug={tenantSlug}
-              onStayUpdated={onReceptionNoteChange}
-            />
+            {!isParty ? (
+              <StayContactBlock
+                stay={stay}
+                tenantSlug={tenantSlug}
+                onStayUpdated={onReceptionNoteChange}
+              />
+            ) : null}
             <StayReceptionNoteBlock
               stay={stay}
               tenantSlug={tenantSlug}
@@ -2119,7 +2116,13 @@ export function ReceptionGuestStayDetail({
               tenantSlug={tenantSlug}
               reviewOnly={stayEnded}
               onTourismExportedAtChange={onTourismExportedAtChange}
-              onTourismStatusChange={setTourismStatus}
+              onTourismStatusChange={(status) => {
+                setTourismStatus(status);
+                setPartyTourismByStayId((current) => ({
+                  ...current,
+                  [stay.id]: status,
+                }));
+              }}
               onTourismAccessReadyChange={setTourismAccessReady}
               onAddGuestControlsChange={handleTourismAddGuestControlsChange}
             />
@@ -2157,12 +2160,7 @@ export function ReceptionGuestStayDetail({
     </>
   );
 
-  return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(value) => setActiveTab(value as StayDetailTabId)}
-      className="contents"
-    >
+  const shell = (
       <ReceptionStayDetailShell
         open={open}
         onClose={() => {
@@ -2171,8 +2169,23 @@ export function ReceptionGuestStayDetail({
         }}
         dismissBlocked={skipTourismConfirmOpen}
         accessibleTitle={showPartyRoot ? partyTitle : guestLabel}
+        titlePrefix={
+          showPartyRoot ? <BookingGroupIcon className="text-foreground/70" /> : undefined
+        }
+        titleLeading={
+          showPartyBack ? (
+            <button
+              type="button"
+              onClick={() => setPartyLevelOpen(false)}
+              className="inline-flex h-8 max-w-[min(100%,14rem)] items-center gap-0.5 rounded-md px-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <ChevronLeft className="size-4 shrink-0" />
+              <span className="truncate">{partyBackLabel}</span>
+            </button>
+          ) : undefined
+        }
         header={header}
-        bodyTop={showPartyRoot ? undefined : tabsList}
+        bodyTop={showPartyRoot ? <StayPartySheetTabsList /> : childTabsList}
         body={showPartyRoot ? partyRootBody : tabsBody}
         footer={footer}
         sidePanel={
@@ -2181,10 +2194,17 @@ export function ReceptionGuestStayDetail({
               partyStays={resolvedPartyStays}
               activeStayId={stay.id}
               balanceStay={balanceStay}
+              checkInDate={checkInDay}
+              checkOutDate={checkOutDay}
+              bookingSourceLine={bookingSourceLine}
               resolveBedLabel={resolveBedLabel}
               onSelectStay={handleSelectPartyBed}
               tenantSlug={tenantSlug}
               onStayBookingBalanceChange={onStayBookingBalanceChange}
+              contactSlot={partyContactSlot}
+              noteSlot={partyNoteSlot}
+              showTourismSummary={showTourismTab}
+              tourismByStayId={partyTourismByStayId}
               showCheckInParty={showCheckInParty}
               checkInPartyDisabled={partyCheckInDisabled}
               checkInPartyPending={partyCheckInPending}
@@ -2225,12 +2245,15 @@ export function ReceptionGuestStayDetail({
           )
         }
       />
+  );
+
+  const confirmDialog = (
       <ConfirmDialog
         open={skipTourismConfirmOpen}
         title="Tourism registration incomplete"
         description={
           skipTourismConfirmMode === 'party'
-            ? 'One or more guests have incomplete tourism registration / passport photos. Check in the whole party anyway?'
+            ? 'One or more guests have incomplete tourism registration / passport photos. Check in all of them anyway?'
             : 'Guest tourism registration / passport photos are incomplete. Check in / grant access anyway?'
         }
         cancelLabel="Cancel"
@@ -2239,6 +2262,22 @@ export function ReceptionGuestStayDetail({
         onCancel={() => setSkipTourismConfirmOpen(false)}
         onConfirm={confirmSkipTourismGrant}
       />
+  );
+
+  return (
+    <Tabs
+      value={showPartyRoot ? partySheetTab : activeTab}
+      onValueChange={(value) => {
+        if (showPartyRoot) {
+          setPartySheetTab(value as PartySheetTabId);
+          return;
+        }
+        setActiveTab(value as StayDetailTabId);
+      }}
+      className="contents"
+    >
+      {shell}
+      {confirmDialog}
     </Tabs>
   );
 }

@@ -6,6 +6,7 @@ import { formatDisplayDate } from '../lib/guestAccessDates';
 import { countBookingGroupMembers } from '../lib/collapseStaysByBookingGroup';
 import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
 import { formatMoneyFromMinor } from '@/shared/lib/currency';
+import { BookingGroupIcon } from './BookingGroupIcon';
 import { cn } from '@/shared/lib/utils';
 
 type ReceptionCashViewProps = {
@@ -95,15 +96,20 @@ export function ReceptionCashView({
               const guestLabel = cashStayLabel(item.stay, planStays);
               const bedLabel = resolveBedLabel(item.stay.bed_id);
               const partySize = countBookingGroupMembers(planStays, item.stay.booking_group_id);
+              const isGroup = partySize > 1;
               const amountLabel =
                 item.hasPrice && item.amountMinor != null && item.currency
                   ? formatMoneyFromMinor(item.amountMinor, item.currency, locale)
                   : 'No price set';
               const statusLabel = item.admitted ? 'In-house' : 'Not admitted';
-              const placeLabel = partySize > 1 ? `${partySize} beds` : bedLabel;
-              const metaLabel = item.leavesTomorrow
-                ? `${placeLabel} · ${statusLabel} · Leaves tomorrow`
-                : `${placeLabel} · ${statusLabel}`;
+              const placeLabel = isGroup ? null : bedLabel;
+              const metaLabel = [
+                placeLabel,
+                statusLabel,
+                item.leavesTomorrow ? 'Leaves tomorrow' : null,
+              ]
+                .filter(Boolean)
+                .join(' · ');
 
               return (
                 <li key={item.stay.id}>
@@ -116,7 +122,10 @@ export function ReceptionCashView({
                     )}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-medium">{guestLabel}</span>
+                      <span className="flex items-center gap-1.5">
+                        {isGroup ? <BookingGroupIcon /> : null}
+                        <span className="truncate font-medium">{guestLabel}</span>
+                      </span>
                       <span className="block truncate text-xs text-muted-foreground">
                         {metaLabel}
                       </span>

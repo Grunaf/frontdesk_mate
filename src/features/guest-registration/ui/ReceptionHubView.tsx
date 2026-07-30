@@ -9,6 +9,7 @@ import { countBookingGroupMembers } from '../lib/collapseStaysByBookingGroup';
 import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
 import type { DepartureSectionPhase } from '../lib/resolveDepartureSectionPhase';
 import type { ReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
+import { BookingGroupIcon } from './BookingGroupIcon';
 import { cn } from '@/shared/lib/utils';
 
 interface ReceptionHubViewProps {
@@ -69,7 +70,8 @@ function hubStaySecondaryLabel(
   const groupId = stay.booking_group_id?.trim();
   const size = countBookingGroupMembers(planStays, groupId);
   if (groupId && size > 1) {
-    return `${size} beds`;
+    // Primary already has `Lead · N beds` — secondary is arrival date only.
+    return formatDisplayDate(stayRecordCheckInDate(stay));
   }
   return resolveSecondary?.(stay, bedLabel) ?? `${bedLabel} · ${formatDisplayDate(stayRecordCheckInDate(stay))}`;
 }
@@ -101,6 +103,9 @@ function HubArrivalList({
         const bedLabel = resolveBedLabel(stay.bed_id);
         const guestLabel = hubStayPrimaryLabel(stay, planStays);
         const secondary = hubStaySecondaryLabel(stay, bedLabel, planStays, resolveSecondary);
+        const isGroup =
+          countBookingGroupMembers(planStays, stay.booking_group_id) > 1 &&
+          Boolean(stay.booking_group_id?.trim());
 
         return (
           <li key={stay.id}>
@@ -112,7 +117,10 @@ function HubArrivalList({
                 'hover:bg-muted/40'
               )}
             >
-              <span className="min-w-0 truncate font-medium">{guestLabel}</span>
+              <span className="flex min-w-0 items-center gap-1.5">
+                {isGroup ? <BookingGroupIcon /> : null}
+                <span className="truncate font-medium">{guestLabel}</span>
+              </span>
               <span className="shrink-0 text-xs text-muted-foreground">{secondary}</span>
             </button>
           </li>
