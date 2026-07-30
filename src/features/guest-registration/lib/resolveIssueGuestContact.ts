@@ -1,5 +1,5 @@
-import { validateContactEmail } from '@/entities/guest-stay';
-import { validateTourismWhatsapp } from '@/features/guest-tourism-registration';
+import { validateContactEmail } from '@/entities/guest-stay/lib/validateContactEmail';
+import { validateTourismWhatsapp } from '@/features/guest-tourism-registration/lib/validateTourismWhatsapp';
 
 export type ResolveIssueGuestContactResult =
   | { ok: true; contactPhone: string | null; contactEmail: string | null }
@@ -9,13 +9,18 @@ export type ResolveIssueGuestContactResult =
     };
 
 /**
- * Reception issue access: require at least one of phone or email.
- * Empty phone/email are ignored; partial invalid values fail.
+ * Reception issue access: require at least one of phone or email,
+ * unless staff explicitly skips (no usable contact on the OTA booking).
  */
 export function resolveIssueGuestContact(input: {
   contactPhone?: string | null;
   contactEmail?: string | null;
+  contactSkipped?: boolean;
 }): ResolveIssueGuestContactResult {
+  if (input.contactSkipped) {
+    return { ok: true, contactPhone: null, contactEmail: null };
+  }
+
   const rawPhone = input.contactPhone?.trim() ?? '';
   const rawEmail = input.contactEmail?.trim() ?? '';
 

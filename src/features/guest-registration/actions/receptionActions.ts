@@ -21,7 +21,13 @@ import {
 import { clearHousekeepingStayPresence } from '@/entities/housekeeping/server';
 import { getGuestById, searchGuests, type GuestProfile } from '@/entities/guest/server';
 import { seedTourismGuestFromGuestProfile } from '@/entities/guest-tourism-registration/server';
-import { getTenantRecord } from '@/entities/tenant/server';
+import { getTenantRecord, upsertTenant } from '@/entities/tenant/server';
+import {
+  normalizeHostelworldBookingPrefix,
+  normalizeReceptionBookingForSave,
+  resolveHostelworldBookingPrefix,
+} from '@/entities/tenant';
+import { toDateInputValue } from '@/entities/tenant/lib/resolveTenantLifecycle';
 import type {
   CreateGuestStayPartyResult,
   CreateGuestStayResult,
@@ -501,6 +507,8 @@ export async function updateGuestReservationAction(input: {
   bookingPlatformId?: string;
   bookingExternalId?: string;
   bookingAmountDue?: string;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
 }): Promise<UpdateGuestReservationActionResult> {
   const staff = await requireCheckInStaff(input.tenantSlug);
   if (!staff.ok) {
@@ -519,6 +527,8 @@ export async function updateGuestReservationAction(input: {
       bookingPlatformId: input.bookingPlatformId,
       bookingExternalId: input.bookingExternalId,
       bookingAmountDue: input.bookingAmountDue,
+      contactPhone: input.contactPhone,
+      contactEmail: input.contactEmail,
     });
 
     if (result.ok) {
@@ -604,6 +614,83 @@ export async function setGuestReservationReceptionNoteAction(input: {
     return result;
   } catch (error) {
     console.error('setGuestReservationReceptionNoteAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type SaveHostelworldBookingPrefixActionResult =
+  | { ok: true; prefix: string }
+  | {
+      ok: false;
+      error:
+        | 'unauthorized'
+        | 'forbidden'
+        | 'invalid_prefix'
+        | 'already_set'
+        | 'tenant_not_found'
+        | 'db_unavailable'
+        | 'unknown';
+    };
+
+/** Bootstrap Hostelworld 6-digit property prefix from first reception booking. */
+export async function saveHostelworldBookingPrefixAction(input: {
+  tenantSlug: string;
+  prefix: string;
+}): Promise<SaveHostelworldBookingPrefixActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  const normalized = normalizeHostelworldBookingPrefix(input.prefix);
+  if (!normalized) {
+    return { ok: false, error: 'invalid_prefix' };
+  }
+
+  try {
+    const previous = await getTenantRecord(input.tenantSlug);
+    if (!previous) {
+      return { ok: false, error: 'tenant_not_found' };
+    }
+
+    const existing = resolveHostelworldBookingPrefix(previous.settings);
+    if (existing) {
+      if (existing === normalized) {
+        return { ok: true, prefix: existing };
+      }
+      return { ok: false, error: 'already_set' };
+    }
+
+    const receptionBooking = normalizeReceptionBookingForSave({
+      platforms: previous.settings.receptionBooking?.platforms ?? [],
+      bookingComHotelId: previous.settings.receptionBooking?.bookingComHotelId,
+      hostelworldBookingPrefix: normalized,
+    });
+
+    const nextSettings = {
+      ...previous.settings,
+      ...(receptionBooking ? { receptionBooking } : {}),
+    };
+
+    const result = await upsertTenant({
+      slug: previous.slug,
+      originalSlug: previous.slug,
+      name: previous.name,
+      cityPackId: previous.city_pack_id,
+      settings: nextSettings,
+      subscriptionStartsAt: toDateInputValue(previous.subscription_starts_at ?? ''),
+      subscriptionEndsAt: toDateInputValue(previous.subscription_ends_at ?? ''),
+    });
+
+    if (!result.ok) {
+      console.error('saveHostelworldBookingPrefixAction:', result.error);
+      return { ok: false, error: 'db_unavailable' };
+    }
+
+    revalidatePath('/');
+    return { ok: true, prefix: normalized };
+  } catch (error) {
+    console.error('saveHostelworldBookingPrefixAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }
