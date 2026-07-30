@@ -52,3 +52,18 @@ export function findAirportInCatalog(
   const normalized = code.trim().toUpperCase();
   return catalog.airports.find((airport) => airport.code.toUpperCase() === normalized);
 }
+
+export function findPlaceSuggestionInCatalog(
+  catalog: TourismEntryPointsCatalog,
+  input: { id?: string | null; label?: string | null }
+): TourismEntryPlaceSuggestion | undefined {
+  const id = input.id?.trim() ?? '';
+  if (id) {
+    const byId = catalog.placeSuggestions.find((place) => place.id === id);
+    if (byId) return byId;
+  }
+
+  const label = input.label?.trim().toLowerCase() ?? '';
+  if (!label) return undefined;
+  return catalog.placeSuggestions.find((place) => place.label.toLowerCase() === label);
+}

@@ -5,12 +5,18 @@ import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import { validateTourismWhatsapp } from '@/features/guest-tourism-registration/lib/validateTourismWhatsapp';
 
 export type SaveStayContactActionResult =
-  | { ok: true }
+  | { ok: true; mode: 'confirmed' | 'pending' }
   | {
       ok: false;
       error: 'unauthorized' | 'invalid_whatsapp' | 'db_unavailable';
     };
 
+/**
+ * Guest stay contact save:
+ * - No confirmed phone yet → write `contact_phone` (first fill).
+ * - Confirmed phone exists → write `contact_phone_pending` (guest change request).
+ * Repeated edits overwrite pending only.
+ */
 export async function saveStayContactAction(
   tenantSlug: string,
   contactWhatsapp: string
@@ -35,13 +41,33 @@ export async function saveStayContactAction(
     return { ok: false, error: 'db_unavailable' };
   }
 
+  const { data: existing, error: loadError } = await admin
+    .from('guest_reservations')
+    .select('contact_phone')
+    .eq('id', session.stayId)
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('saveStayContactAction load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const hasConfirmed = Boolean(existing?.contact_phone && String(existing.contact_phone).trim());
   const updatedAt = new Date().toISOString();
+  const patch = hasConfirmed
+    ? {
+        contact_phone_pending: whatsappResult.e164,
+        updated_at: updatedAt,
+      }
+    : {
+        contact_phone: whatsappResult.e164,
+        contact_phone_pending: null,
+        updated_at: updatedAt,
+      };
+
   const { error } = await admin
     .from('guest_reservations')
-    .update({
-      stay_contact_whatsapp: whatsappResult.e164,
-      updated_at: updatedAt,
-    })
+    .update(patch)
     .eq('id', session.stayId);
 
   if (error) {
@@ -49,5 +75,5 @@ export async function saveStayContactAction(
     return { ok: false, error: 'db_unavailable' };
   }
 
-  return { ok: true };
+  return { ok: true, mode: hasConfirmed ? 'pending' : 'confirmed' };
 }

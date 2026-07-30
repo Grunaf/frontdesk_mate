@@ -15,6 +15,8 @@ import {
   updateGuestReservation,
   setGuestReservationBookingPaid,
   setGuestReservationReceptionNote,
+  confirmGuestStayContactPhone,
+  rejectGuestStayContactPhone,
 } from '@/entities/guest-stay/server';
 import { clearHousekeepingStayPresence } from '@/entities/housekeeping/server';
 import { getGuestById, searchGuests, type GuestProfile } from '@/entities/guest/server';
@@ -30,6 +32,8 @@ import type {
   UpdateGuestReservationResult,
   SetGuestReservationBookingPaidResult,
   SetGuestReservationReceptionNoteResult,
+  ConfirmGuestStayContactPhoneResult,
+  RejectGuestStayContactPhoneResult,
 } from '@/entities/guest-stay/server';
 import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEvent';
 import {
@@ -75,6 +79,8 @@ export async function createGuestStayAction(input: {
   bookingPlatformId?: string;
   bookingExternalId?: string;
   bookingAmountDue?: string;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
   locale?: string;
 }): Promise<CreateGuestStayActionResult> {
   const staff = await requireCheckInStaff(input.tenantSlug);
@@ -94,6 +100,8 @@ export async function createGuestStayAction(input: {
         bookingPlatformId: input.bookingPlatformId,
         bookingExternalId: input.bookingExternalId,
         bookingAmountDue: input.bookingAmountDue,
+        contactPhone: input.contactPhone,
+        contactEmail: input.contactEmail,
       },
       input.locale ?? 'en'
     );
@@ -133,6 +141,8 @@ export async function createGuestStayPartyAction(input: {
   bookingPlatformId?: string;
   bookingExternalId?: string;
   bookingAmountDue?: string;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
   locale?: string;
 }): Promise<CreateGuestStayPartyActionResult> {
   const staff = await requireCheckInStaff(input.tenantSlug);
@@ -150,6 +160,8 @@ export async function createGuestStayPartyAction(input: {
         bookingPlatformId: input.bookingPlatformId,
         bookingExternalId: input.bookingExternalId,
         bookingAmountDue: input.bookingAmountDue,
+        contactPhone: input.contactPhone,
+        contactEmail: input.contactEmail,
       },
       input.locale ?? 'en'
     );
@@ -592,6 +604,66 @@ export async function setGuestReservationReceptionNoteAction(input: {
     return result;
   } catch (error) {
     console.error('setGuestReservationReceptionNoteAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type ConfirmGuestStayContactPhoneActionResult =
+  | ConfirmGuestStayContactPhoneResult
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
+
+export async function confirmGuestStayContactPhoneAction(input: {
+  tenantSlug: string;
+  stayId: string;
+}): Promise<ConfirmGuestStayContactPhoneActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  try {
+    const result = await confirmGuestStayContactPhone({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+    });
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('confirmGuestStayContactPhoneAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type RejectGuestStayContactPhoneActionResult =
+  | RejectGuestStayContactPhoneResult
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
+
+export async function rejectGuestStayContactPhoneAction(input: {
+  tenantSlug: string;
+  stayId: string;
+}): Promise<RejectGuestStayContactPhoneActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  try {
+    const result = await rejectGuestStayContactPhone({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+    });
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('rejectGuestStayContactPhoneAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

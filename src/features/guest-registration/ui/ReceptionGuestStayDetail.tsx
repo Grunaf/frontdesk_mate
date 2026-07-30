@@ -35,7 +35,6 @@ import {
 } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import { buildBookingComReservationUrl } from '../lib/buildBookingComReservationUrl';
 import { formatDisplayDate, formatReceptionDateTime } from '../lib/guestAccessDates';
-import { getGuestProfileAction } from '../actions/receptionActions';
 import {
   isStayCheckoutOverdue,
   resolveStayCancelCheckoutAction,
@@ -68,14 +67,16 @@ import {
 import { receptionStaffCanSkipTourismGate } from '@/entities/reception-user';
 import { cn } from '@/shared/lib/utils';
 import { EllipsisVertical, QrCode } from 'lucide-react';
-import { setGuestReservationBookingPaidAction, setGuestReservationReceptionNoteAction } from '../actions/receptionActions';
+import { buildWhatsappMeHref } from '@/shared/lib';
+import {
+  getGuestProfileAction,
+  setGuestReservationBookingPaidAction,
+  setGuestReservationReceptionNoteAction,
+  confirmGuestStayContactPhoneAction,
+  rejectGuestStayContactPhoneAction,
+} from '../actions/receptionActions';
 
 export { RECEPTION_STAY_DETAIL_TITLE_ID };
-
-function buildTourismWhatsappHref(e164: string): string {
-  const digits = e164.replace(/\D/g, '');
-  return `https://wa.me/${digits}`;
-}
 
 function StayDetailTabToneDot({ tone }: { tone: StayDetailTabBadgeTone }) {
   if (tone === 'none') return null;
@@ -585,7 +586,7 @@ function StayTourismRegistrationBlock({
             <dd>
               <a
                 className="font-medium text-primary underline-offset-2 hover:underline"
-                href={buildTourismWhatsappHref(registration!.tourism_contact_whatsapp!)}
+                href={buildWhatsappMeHref(registration!.tourism_contact_whatsapp!) ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -1229,6 +1230,169 @@ function StayReceptionNoteBlock({
   );
 }
 
+function StayContactBlock({
+  stay,
+  tenantSlug,
+  onStayUpdated,
+}: {
+  stay: GuestStayRecordWithLink;
+  tenantSlug: string;
+  onStayUpdated?: (stay: GuestStayRecordWithLink) => void;
+}) {
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isPending, startAction] = useTransition();
+  const confirmedPhone = stay.contact_phone?.trim() || '';
+  const pendingPhone = stay.contact_phone_pending?.trim() || '';
+  const email = stay.contact_email?.trim() || '';
+  const whatsappHref = confirmedPhone ? buildWhatsappMeHref(confirmedPhone) : null;
+  const pendingWhatsappHref = pendingPhone ? buildWhatsappMeHref(pendingPhone) : null;
+  const mailtoHref = email ? `mailto:${email}` : null;
+
+  if (!confirmedPhone && !pendingPhone && !email) {
+    return (
+      <div className="space-y-1 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Contact
+        </p>
+        <p className="text-sm text-muted-foreground">No phone or email on this booking.</p>
+      </div>
+    );
+  }
+
+  const handleConfirm = () => {
+    startAction(async () => {
+      setActionError(null);
+      const result = await confirmGuestStayContactPhoneAction({
+        tenantSlug,
+        stayId: stay.id,
+      });
+      if (!result.ok) {
+        setActionError(
+          result.error === 'unauthorized'
+            ? 'Sign in again at reception desk.'
+            : result.error === 'no_pending'
+              ? 'No guest phone change to confirm.'
+              : 'Could not confirm phone.'
+        );
+        return;
+      }
+      onStayUpdated?.({
+        ...stay,
+        ...result.stay,
+        magicLinkUrl: stay.magicLinkUrl,
+      });
+    });
+  };
+
+  const handleReject = () => {
+    startAction(async () => {
+      setActionError(null);
+      const result = await rejectGuestStayContactPhoneAction({
+        tenantSlug,
+        stayId: stay.id,
+      });
+      if (!result.ok) {
+        setActionError(
+          result.error === 'unauthorized'
+            ? 'Sign in again at reception desk.'
+            : result.error === 'no_pending'
+              ? 'No guest phone change to dismiss.'
+              : 'Could not dismiss phone change.'
+        );
+        return;
+      }
+      onStayUpdated?.({
+        ...stay,
+        ...result.stay,
+        magicLinkUrl: stay.magicLinkUrl,
+      });
+    });
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Contact</p>
+
+      {pendingPhone ? (
+        <div className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+          <p className="text-xs font-medium text-amber-900">Guest proposed a new number</p>
+          {pendingWhatsappHref ? (
+            <a
+              href={pendingWhatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {pendingPhone}
+            </a>
+          ) : (
+            <p className="text-sm font-medium">{pendingPhone}</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="h-8"
+              disabled={isPending}
+              onClick={handleConfirm}
+            >
+              Confirm new number
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8"
+              disabled={isPending}
+              onClick={handleReject}
+            >
+              Keep current
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {confirmedPhone ? (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">
+            {pendingPhone ? 'Current confirmed phone' : 'Phone'}
+          </p>
+          {whatsappHref ? (
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {confirmedPhone}
+            </a>
+          ) : (
+            <p className="text-sm">{confirmedPhone}</p>
+          )}
+        </div>
+      ) : null}
+
+      {email ? (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">Email</p>
+          {mailtoHref ? (
+            <a
+              href={mailtoHref}
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {email}
+            </a>
+          ) : (
+            <p className="text-sm">{email}</p>
+          )}
+        </div>
+      ) : null}
+
+      {actionError ? <p className="text-xs text-destructive">{actionError}</p> : null}
+    </div>
+  );
+}
+
 export interface ReceptionGuestStayDetailProps {
   open: boolean;
   onClose: () => void;
@@ -1723,6 +1887,11 @@ export function ReceptionGuestStayDetail({
               isPartySibling={isPartySibling}
               tenantSlug={tenantSlug}
               onStayUpdated={onStayBookingBalanceChange}
+            />
+            <StayContactBlock
+              stay={stay}
+              tenantSlug={tenantSlug}
+              onStayUpdated={onReceptionNoteChange}
             />
             <StayReceptionNoteBlock
               stay={stay}

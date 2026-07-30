@@ -23,6 +23,8 @@ export {
   updateGuestReservation,
   setGuestReservationBookingPaid,
   setGuestReservationReceptionNote,
+  confirmGuestStayContactPhone,
+  rejectGuestStayContactPhone,
   setPassportCheckedAt,
 } from './api/guestStayRepository';
 export {
@@ -51,5 +53,7 @@ export type {
   UpdateGuestReservationResult,
   SetGuestReservationBookingPaidResult,
   SetGuestReservationReceptionNoteResult,
+  ConfirmGuestStayContactPhoneResult,
+  RejectGuestStayContactPhoneResult,
   SetPassportCheckedAtResult,
 } from './model/types';

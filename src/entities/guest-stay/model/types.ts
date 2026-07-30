@@ -25,7 +25,12 @@ export interface GuestStayRecord {
   /** Defaults to guest when column missing (pre-migration rows). */
   stay_kind?: GuestStayKind;
   tourism_contact_whatsapp?: string | null;
-  stay_contact_whatsapp?: string | null;
+  /** Confirmed guest phone (E.164). */
+  contact_phone?: string | null;
+  /** Guest-proposed phone awaiting desk confirm. */
+  contact_phone_pending?: string | null;
+  /** Reception-only email; guest cannot edit. */
+  contact_email?: string | null;
   tourism_registration_completed_at?: string | null;
   tourism_exported_at?: string | null;
   booking_platform_id?: string | null;
@@ -94,6 +99,10 @@ export type CreateGuestStayInput = {
   bookingGroupId?: string | null;
   /** When false, skip booking_amount_* (sibling party rows). Defaults to true. */
   recordBookingBalance?: boolean;
+  /** Confirmed phone (E.164). Optional for volunteer / non-desk paths. */
+  contactPhone?: string | null;
+  /** Reception-only email. */
+  contactEmail?: string | null;
 };
 
 export type CreateGuestStayResult =
@@ -127,6 +136,8 @@ export type CreateGuestStayPartyInput = {
   /** Group total — stored on lead (first guest) only. */
   bookingAmountDue?: string | number;
   stayKind?: GuestStayKind;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
 };
 
 export type CreateGuestStayPartyResult =
@@ -218,6 +229,30 @@ export type SetGuestReservationReceptionNoteResult =
   | {
       ok: false;
       error: 'not_found' | 'tenant_not_found' | 'invalid_note' | 'db_unavailable';
+    };
+
+export type ConfirmGuestStayContactPhoneInput = {
+  tenantSlug: string;
+  stayId: string;
+};
+
+export type ConfirmGuestStayContactPhoneResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'not_found' | 'tenant_not_found' | 'no_pending' | 'db_unavailable';
+    };
+
+export type RejectGuestStayContactPhoneInput = {
+  tenantSlug: string;
+  stayId: string;
+};
+
+export type RejectGuestStayContactPhoneResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'not_found' | 'tenant_not_found' | 'no_pending' | 'db_unavailable';
     };
 
 export type ReissueGuestStayResult =

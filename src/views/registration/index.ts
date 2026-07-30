@@ -4,4 +4,5 @@ export { useRegistrationStepState } from './model/useRegistrationStepState';
 export {
   resolveOpenRegistrationAccordionItem,
   type RegistrationAccordionItem,
+  type RegistrationAccordionOpenValue,
 } from './lib/resolveRegistrationAccordionItem';

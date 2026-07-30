@@ -47,6 +47,8 @@ interface GuestStaySheetProps {
   checkOutAt: string;
   checkInDate: string;
   checkOutDate: string;
+  /** Hub stay actions (extend / report). Off during settling-in onboarding. */
+  showStayActions?: boolean;
 }
 
 export function GuestStaySheet({
@@ -59,6 +61,7 @@ export function GuestStaySheet({
   checkOutAt,
   checkInDate,
   checkOutDate,
+  showStayActions = true,
 }: GuestStaySheetProps) {
   const { name, hostel, slug, settings } = useTenant();
   const locale = useLocale();
@@ -299,6 +302,26 @@ export function GuestStaySheet({
             />
           ) : null}
 
+          {staySetupStatus?.contactPhone || staySetupStatus?.contactEmail ? (
+            <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {t('yourContactHeading')}
+              </p>
+              {staySetupStatus.contactPhone ? (
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">{t('yourContactPhoneLabel')}</p>
+                  <p className="text-sm text-foreground">{staySetupStatus.contactPhone}</p>
+                </div>
+              ) : null}
+              {staySetupStatus.contactEmail ? (
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">{t('yourContactEmailLabel')}</p>
+                  <p className="text-sm text-foreground">{staySetupStatus.contactEmail}</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <GuestStayBedLocationCard
             plan={plan}
             lockReason={bedLocationLockReason}
@@ -314,29 +337,33 @@ export function GuestStaySheet({
             />
           ) : null}
 
-          <div className="space-y-1.5 rounded-xl border bg-muted/30 p-3">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              {t('extendStayHeading')}
-            </p>
-            <p className="text-sm leading-relaxed text-muted-foreground">{t('extendStayNotice')}</p>
-          </div>
+          {showStayActions ? (
+            <>
+              <div className="space-y-1.5 rounded-xl border bg-muted/30 p-3">
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  {t('extendStayHeading')}
+                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{t('extendStayNotice')}</p>
+              </div>
 
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {tIssue('myStayPrompt')}{' '}
-            <button
-              type="button"
-              className="font-medium text-primary underline decoration-primary/35 underline-offset-[3px] hover:decoration-primary/70"
-              onClick={() => {
-                onOpenChange(false);
-                openReportSheet();
-              }}
-            >
-              {tIssue('myStayLink')}
-            </button>
-          </p>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {tIssue('myStayPrompt')}{' '}
+                <button
+                  type="button"
+                  className="font-medium text-primary underline decoration-primary/35 underline-offset-[3px] hover:decoration-primary/70"
+                  onClick={() => {
+                    onOpenChange(false);
+                    openReportSheet();
+                  }}
+                >
+                  {tIssue('myStayLink')}
+                </button>
+              </p>
+            </>
+          ) : null}
         </BottomSheetBody>
 
-        {extendContact ? (
+        {showStayActions && extendContact ? (
           <BottomSheetFooter className="border-t border-border/60">
             <ReceptionContactActions
               contact={extendContact}

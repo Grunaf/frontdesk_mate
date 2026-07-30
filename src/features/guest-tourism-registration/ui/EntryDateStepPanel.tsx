@@ -235,7 +235,7 @@ export function EntryDateStepPanel({
       const result = await saveGuestEntryDetailsAction(tenantSlug, {
         intent: 'save',
         transportType,
-        entryPointCode: transportType === 'plane' ? entryPointCode : null,
+        entryPointCode: entryPointCode || null,
         entryPointLabel,
         dates: datesPayload,
       });
@@ -291,13 +291,9 @@ export function EntryDateStepPanel({
     });
   }, [interactionEnabled, isLocked, onComplete, t, tenantSlug]);
 
-  const handleContinueWhenLocked = useCallback(() => {
-    onComplete(resolveInitialSameDayDate(guests) || null);
-  }, [guests, onComplete]);
-
   return (
-    <div className={cn('flex min-h-0 flex-1 flex-col', panelTopPadding, className)}>
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
+    <div className={cn('flex flex-col', panelTopPadding, className)}>
+      <div className="space-y-6">
         {showIntroHeading ? (
           <div className="space-y-2">
             <h2 className="text-lg font-semibold text-foreground">{t('title')}</h2>
@@ -333,6 +329,8 @@ export function EntryDateStepPanel({
                 entryPointPlaceHint: t('entryPointPlaceHint'),
                 entryPointAirportPlaceholder: t('entryPointAirportPlaceholder'),
                 entryPointPlacePlaceholder: t('entryPointPlacePlaceholder'),
+                entryPointPlaceSearchPlaceholder: t('entryPointPlaceSearchPlaceholder'),
+                entryPointPlaceEmpty: t('entryPointPlaceEmpty'),
               }}
               disabled={!interactionEnabled || isSaving}
               locked={isLocked}
@@ -404,33 +402,37 @@ export function EntryDateStepPanel({
         ) : null}
       </div>
 
-      <div className="mt-auto shrink-0 space-y-3 pt-4">
-        <IconBackActionsRow onBack={onBack}>
-          <Button
-            size="lg"
-            disabled={!interactionEnabled || isSaving || isLoading || guests.length === 0}
-            onClick={isLocked ? handleContinueWhenLocked : handleSave}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-                {t('saving')}
-              </>
-            ) : (
-              t('continue')
-            )}
-          </Button>
-        </IconBackActionsRow>
-        {!isLocked && guests.length > 0 ? (
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            disabled={!interactionEnabled || isSaving || isLoading}
-            onClick={() => setSkipConfirmOpen(true)}
-          >
-            {t('skip')}
-          </Button>
+      <div className="shrink-0 space-y-3 pt-4 pb-2">
+        {!isLocked ? (
+          <>
+            <IconBackActionsRow onBack={onBack}>
+              <Button
+                size="lg"
+                disabled={!interactionEnabled || isSaving || isLoading || guests.length === 0}
+                onClick={handleSave}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    {t('saving')}
+                  </>
+                ) : (
+                  t('continue')
+                )}
+              </Button>
+            </IconBackActionsRow>
+            {guests.length > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                disabled={!interactionEnabled || isSaving || isLoading}
+                onClick={() => setSkipConfirmOpen(true)}
+              >
+                {t('skip')}
+              </Button>
+            ) : null}
+          </>
         ) : null}
         {bottomAccessory}
       </div>

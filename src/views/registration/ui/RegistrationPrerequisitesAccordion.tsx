@@ -8,11 +8,14 @@ import {
 } from '@/features/guest-tourism-registration';
 import { StayContactStepPanel } from '@/features/guest-stay-contact';
 import { useTranslations } from '@/shared/i18n';
-import { Button } from '@/shared/ui';
+import { Badge, Button } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowDown01Icon, ArrowUp01Icon } from '@hugeicons/core-free-icons';
-import type { RegistrationAccordionItem } from '../lib/resolveRegistrationAccordionItem';
+import type {
+  RegistrationAccordionItem,
+  RegistrationAccordionOpenValue,
+} from '../lib/resolveRegistrationAccordionItem';
 import {
   isRegistrationContactAccordionDisabled,
   isRegistrationEntryDateAccordionDisabled,
@@ -27,9 +30,8 @@ type RegistrationPrerequisitesAccordionProps = {
   tourismComplete: boolean;
   entryDateComplete: boolean;
   contactComplete: boolean;
-  passportVerified?: boolean;
-  value: RegistrationAccordionItem;
-  onValueChange: (value: RegistrationAccordionItem) => void;
+  value: RegistrationAccordionOpenValue;
+  onValueChange: (value: RegistrationAccordionOpenValue) => void;
   interactionEnabled: boolean;
   tenantSlug: string;
   stayContactWhatsapp: string | null;
@@ -40,6 +42,7 @@ type RegistrationPrerequisitesAccordionProps = {
   onEntryDateComplete: (savedDate: string | null) => void;
   onContactComplete: (savedWhatsapp: string) => void;
   onContactDraftChange?: (draft: string) => void;
+  onContactEditingChange?: (editing: boolean) => void;
   registrationSurface?: RegistrationSurface;
   className?: string;
 };
@@ -55,13 +58,18 @@ function AccordionSectionsRow({
   items,
   activeId,
   onValueChange,
+  allowCollapse,
   placement,
+  doneBadgeLabel,
 }: {
   items: AccordionSectionItem[];
-  activeId: RegistrationAccordionItem;
-  onValueChange: (value: RegistrationAccordionItem) => void;
+  activeId: RegistrationAccordionOpenValue;
+  onValueChange: (value: RegistrationAccordionOpenValue) => void;
+  /** When true, clicking the active header collapses all sections. */
+  allowCollapse: boolean;
   /** Top: previous + active; bottom: following sections. */
   placement: 'top' | 'next';
+  doneBadgeLabel: string;
 }) {
   if (items.length === 0) {
     return null;
@@ -69,7 +77,7 @@ function AccordionSectionsRow({
 
   return (
     <div
-      className={cn('shrink-0', placement === 'next' && 'pt-4')}
+      className="shrink-0"
       role="tablist"
       aria-label={
         placement === 'top' ? 'Registration sections' : 'Next registration sections'
@@ -86,12 +94,16 @@ function AccordionSectionsRow({
             variant="ghost"
             disabled={item.disabled}
             onClick={() => {
-              if (!isActive) {
-                onValueChange(item.id);
+              if (isActive) {
+                if (allowCollapse) {
+                  onValueChange(null);
+                }
+                return;
               }
+              onValueChange(item.id);
             }}
             className={cn(
-              'h-auto min-h-12 w-full justify-between gap-6 rounded-none border-0 border-t border-border/60 px-2 py-3 text-left text-base font-semibold hover:bg-transparent hover:no-underline',
+              'h-auto min-h-12 w-full justify-between gap-6 rounded-none border-0 border-t border-border/60 px-0 py-3 text-left text-base font-semibold hover:bg-transparent hover:no-underline lg:px-0',
               isActive
                 ? 'text-foreground'
                 : item.complete
@@ -100,7 +112,10 @@ function AccordionSectionsRow({
               placement === 'top' && 'first:border-t-0'
             )}
           >
-            <span>{item.label}</span>
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <span className="truncate">{item.label}</span>
+              {item.complete ? <Badge variant="muted">{doneBadgeLabel}</Badge> : null}
+            </span>
             <HugeiconsIcon
               icon={isActive ? ArrowUp01Icon : ArrowDown01Icon}
               strokeWidth={2}
@@ -119,7 +134,6 @@ export function RegistrationPrerequisitesAccordion({
   tourismComplete,
   entryDateComplete,
   contactComplete,
-  passportVerified = false,
   value,
   onValueChange,
   interactionEnabled,
@@ -131,6 +145,7 @@ export function RegistrationPrerequisitesAccordion({
   onEntryDateComplete,
   onContactComplete,
   onContactDraftChange,
+  onContactEditingChange,
   registrationSurface = 'standalone',
   className,
 }: RegistrationPrerequisitesAccordionProps) {
@@ -153,8 +168,12 @@ export function RegistrationPrerequisitesAccordion({
     entryDateComplete
   );
 
+  const collapsed = value === null;
   const showIdentityStep = showIdentity && value === 'identity';
   const showEntryDateStep = showEntryDate && value === 'entryDate';
+  const showContactStep = value === 'contact';
+  const allComplete =
+    contactComplete && (!tourismRequired || (tourismComplete && entryDateComplete));
 
   const entryDateBack = showIdentity ? () => onValueChange('identity') : undefined;
   const contactBack = showEntryDate
@@ -187,7 +206,7 @@ export function RegistrationPrerequisitesAccordion({
     complete: contactComplete,
   });
 
-  const activeIndex = sectionItems.findIndex((item) => item.id === value);
+  const activeIndex = collapsed ? -1 : sectionItems.findIndex((item) => item.id === value);
   const topItems = activeIndex >= 0 ? sectionItems.slice(0, activeIndex + 1) : sectionItems;
   const nextItems =
     activeIndex >= 0 && activeIndex < sectionItems.length - 1
@@ -199,7 +218,9 @@ export function RegistrationPrerequisitesAccordion({
       items={topItems}
       activeId={value}
       onValueChange={onValueChange}
+      allowCollapse={allComplete}
       placement="top"
+      doneBadgeLabel={t('doneBadge')}
     />
   );
   const nextRow = (
@@ -207,54 +228,58 @@ export function RegistrationPrerequisitesAccordion({
       items={nextItems}
       activeId={value}
       onValueChange={onValueChange}
+      allowCollapse={allComplete}
       placement="next"
+      doneBadgeLabel={t('doneBadge')}
     />
   );
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       {topRow}
-      {showIdentityStep ? (
-        <TourismGuestsRegistrationPanel
-          className="min-h-0 flex-1"
-          interactionEnabled={interactionEnabled}
-          navigationMode={navigationMode}
-          showIntroHeading={false}
-          showPassportWaiting={
-            tourismComplete && entryDateComplete && contactComplete && !passportVerified
-          }
-          initialGuests={tourismGuests}
-          initialRegistrationComplete={initialTourismComplete}
-          onGuestsChange={setTourismGuests}
-          onComplete={onTourismComplete}
-        />
-      ) : showEntryDateStep ? (
-        <EntryDateStepPanel
-          className="min-h-0 flex-1"
-          tenantSlug={tenantSlug}
-          entryDateComplete={entryDateComplete}
-          interactionEnabled={interactionEnabled}
-          navigationMode={navigationMode}
-          showIntroHeading={false}
-          guests={tourismGuests}
-          onComplete={onEntryDateComplete}
-          onBack={entryDateBack}
-        />
-      ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <StayContactStepPanel
-            tenantSlug={tenantSlug}
-            initialContactWhatsapp={stayContactWhatsapp}
-            contactComplete={contactComplete}
-            interactionEnabled={interactionEnabled}
-            navigationMode={navigationMode}
-            showIntroHeading={false}
-            onDraftChange={onContactDraftChange}
-            onComplete={onContactComplete}
-            onBack={contactBack}
-          />
+      <div className="relative min-h-0 flex-1">
+        <div className="h-full min-h-0 overflow-y-auto">
+          {showIdentityStep ? (
+            <TourismGuestsRegistrationPanel
+              interactionEnabled={interactionEnabled}
+              navigationMode={navigationMode}
+              showIntroHeading={false}
+              initialGuests={tourismGuests}
+              initialRegistrationComplete={initialTourismComplete}
+              onGuestsChange={setTourismGuests}
+              onComplete={onTourismComplete}
+            />
+          ) : showEntryDateStep ? (
+            <EntryDateStepPanel
+              tenantSlug={tenantSlug}
+              entryDateComplete={entryDateComplete}
+              interactionEnabled={interactionEnabled}
+              navigationMode={navigationMode}
+              showIntroHeading={false}
+              guests={tourismGuests}
+              onComplete={onEntryDateComplete}
+              onBack={entryDateBack}
+            />
+          ) : showContactStep ? (
+            <StayContactStepPanel
+              tenantSlug={tenantSlug}
+              initialContactWhatsapp={stayContactWhatsapp}
+              contactComplete={contactComplete}
+              interactionEnabled={interactionEnabled}
+              navigationMode={navigationMode}
+              showIntroHeading={false}
+              onDraftChange={onContactDraftChange}
+              onEditingChange={onContactEditingChange}
+              onComplete={onContactComplete}
+              onBack={contactBack}
+            />
+          ) : null}
         </div>
-      )}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-gradient-to-t from-background to-transparent"
+        />
+      </div>
       {nextRow}
     </div>
   );

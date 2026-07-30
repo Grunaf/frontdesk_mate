@@ -9,7 +9,7 @@ import {
 import type { GuestStayRecord } from '../model/types';
 
 export const GUEST_RESERVATION_COLUMNS =
-  'id, tenant_id, guest_id, guest_name, bed_id, check_in_at, check_out_at, check_in_date, check_out_date, status, stay_kind, desk_checked_in_at, key_issued_at, passport_checked_at, tax_collected_at, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, stay_contact_whatsapp, booking_platform_id, booking_external_id, booking_amount_due_minor, booking_amount_currency, booking_paid_at, booking_group_id, reception_note, is_archived, archived_at, archived_by_reception_user_id, archive_kind, archive_reason, original_reservation_id, created_at, updated_at';
+  'id, tenant_id, guest_id, guest_name, bed_id, check_in_at, check_out_at, check_in_date, check_out_date, status, stay_kind, desk_checked_in_at, key_issued_at, passport_checked_at, tax_collected_at, tourism_contact_whatsapp, tourism_registration_completed_at, tourism_exported_at, contact_phone, contact_phone_pending, contact_email, booking_platform_id, booking_external_id, booking_amount_due_minor, booking_amount_currency, booking_paid_at, booking_group_id, reception_note, is_archived, archived_at, archived_by_reception_user_id, archive_kind, archive_reason, original_reservation_id, created_at, updated_at';
 
 export const GUEST_ACCESS_GRANT_COLUMNS =
   'id, tenant_id, reservation_id, access_token_hash, access_token_encrypted, pin_hash, activated_at, revoked_at, created_at, updated_at';
@@ -54,9 +54,11 @@ export function mapReservationGrantToStayRecord(
     tourism_contact_whatsapp: reservation.tourism_contact_whatsapp
       ? String(reservation.tourism_contact_whatsapp)
       : null,
-    stay_contact_whatsapp: reservation.stay_contact_whatsapp
-      ? String(reservation.stay_contact_whatsapp)
+    contact_phone: reservation.contact_phone ? String(reservation.contact_phone) : null,
+    contact_phone_pending: reservation.contact_phone_pending
+      ? String(reservation.contact_phone_pending)
       : null,
+    contact_email: reservation.contact_email ? String(reservation.contact_email) : null,
     tourism_registration_completed_at: reservation.tourism_registration_completed_at
       ? String(reservation.tourism_registration_completed_at)
       : null,

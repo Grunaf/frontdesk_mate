@@ -50,19 +50,17 @@ export default async function StaySetupPage({ params }: StaySetupPageProps) {
       if (admin) {
         const { data } = await admin
           .from('guest_reservations')
-          .select('stay_contact_whatsapp, tourism_contact_whatsapp, passport_checked_at')
+          .select('contact_phone, contact_phone_pending, tourism_contact_whatsapp, passport_checked_at')
           .eq('id', session.stayId)
           .maybeSingle();
 
-        const stayContact = data?.stay_contact_whatsapp
-          ? String(data.stay_contact_whatsapp)
-          : null;
+        const stayContact = data?.contact_phone ? String(data.contact_phone) : null;
         const legacy = data?.tourism_contact_whatsapp
           ? String(data.tourism_contact_whatsapp)
           : null;
 
         contactComplete = isStayContactComplete({
-          stayContactWhatsapp: stayContact,
+          contactPhone: stayContact,
           legacyTourismContactWhatsapp: legacy,
         });
         stayContactWhatsapp = stayContact ?? legacy;

@@ -1,5 +1,5 @@
 export { useNightMode } from './useNightMode';
-export { createWhatsappLink } from './createWhatsappLink';
+export { createWhatsappLink, buildWhatsappMeHref } from './createWhatsappLink';
 export {
   formatPhoneDisplay,
   formatPhoneWithPreset,

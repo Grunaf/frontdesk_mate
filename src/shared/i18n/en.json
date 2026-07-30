@@ -854,8 +854,8 @@
         "dismiss": "Got it"
       },
       "passportGate": {
-        "title": "Show your passport at reception",
-        "description": "To finish check-in and get your bed number, please show your original passport to reception staff.",
+        "title": "Show passport at reception",
+        "description": "Your bed number unlocks after reception verifies your passport.",
         "dismiss": "Got it"
       },
       "tabs": {
@@ -864,6 +864,7 @@
         "identity": "Passport details",
         "entryDate": "Entry details",
         "contact": "Contact",
+        "doneBadge": "Done",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
         "settlement": "Settlement"
@@ -874,7 +875,8 @@
         "continueSettlingIn": "Continue settling in",
         "completeHint": "Guest registration and contact details are complete.",
         "incompleteHint": "Complete guest registration and contact details on the registration page.",
-        "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+        "passportWaitingTitle": "Show passport at reception",
+        "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
       },
       "register": {
         "actionButton": "Continue to entry date",
@@ -936,7 +938,7 @@
           "citizenshipPlaceholder": "Select country",
           "passportNumber": "Passport number",
           "dateOfBirth": "Date of birth",
-          "dateOfBirthPlaceholder": "Select date",
+          "dateOfBirthPlaceholder": "dd.mm.yyyy",
           "dateOfBirthHelp": "Required for tourism registration. Age on check-in day is used for bed allocation planning — guests under 18 are flagged for reception review.",
           "gender": "Gender",
           "genderHelp": "Required for tourism registration and may be used when allocating beds by gender policy.",
@@ -969,7 +971,8 @@
         "complete": {
           "summaryTitle": "Registration complete",
           "continue": "Continue to entry date",
-          "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+          "passportWaitingTitle": "Show passport at reception",
+          "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
         },
         "fieldErrors": {
           "firstName": "Enter a first name (max 120 characters).",
@@ -1020,9 +1023,11 @@
         },
         "entryPointLabel": "Entry point",
         "entryPointAirportHint": "Choose the airport from the list.",
-        "entryPointPlaceHint": "Type the border crossing, station, or port — suggestions appear as you type.",
+        "entryPointPlaceHint": "Choose from the list — type to filter border crossings, stations, or ports.",
         "entryPointAirportPlaceholder": "Select airport",
-        "entryPointPlacePlaceholder": "e.g. Debeli Brijeg",
+        "entryPointPlacePlaceholder": "Select entry point",
+        "entryPointPlaceSearchPlaceholder": "Search list…",
+        "entryPointPlaceEmpty": "No matches in the list",
         "dateLabel": "Date of entry",
         "modeLegend": "Did everyone arrive on the same day?",
         "modeSame": "Same day for everyone",
@@ -1070,6 +1075,10 @@
         "whatsappLabel": "WhatsApp number",
         "hint": "One WhatsApp number for the whole booking.",
         "savedBadge": "Saved",
+        "pendingBadge": "Awaiting confirm",
+        "pendingHint": "Reception will confirm your new number. You can still change it if needed.",
+        "changeNumber": "My number is different",
+        "keepCurrentNumber": "Keep current number",
         "save": "Save contact",
         "continue": "Continue to Wi‑Fi & rules",
         "saving": "Saving…",
@@ -1983,7 +1992,8 @@
       "directionsToRoom": "Directions to room",
       "fallback": "Your bed assignment is not configured yet. Ask at reception or message us on WhatsApp.",
       "viewFullGuide": "Room map & directions",
-      "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+      "passportWaitingTitle": "Show passport at reception",
+      "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
     },
     "taxi": {
       "needHelpTitle": "Need help?",
@@ -2092,10 +2102,15 @@
     },
     "guestStayChip": {
       "chipLabel": "My stay",
+      "bookingLabel": "Booking",
+      "bookingAnchorAria": "Booking {summary} — open stay details",
       "sheetTitle": "Your stay",
       "openDetail": "{summary} — open stay details",
       "receptionHeading": "For reception",
       "receptionHint": "Show this screen if reception asks who you are.",
+      "yourContactHeading": "Your contact",
+      "yourContactPhoneLabel": "Phone",
+      "yourContactEmailLabel": "Email",
       "stayRefLabel": "Ref",
       "registeredAsLabel": "Registered as",
       "copyForReception": "Copy for reception",

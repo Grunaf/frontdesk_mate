@@ -106,6 +106,8 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     registrationComplete,
     accordionValue,
     setAccordionValue,
+    contactEditing,
+    handleContactEditingChange,
     handleTourismComplete,
     handleEntryDateComplete,
     handleContactComplete,
@@ -123,6 +125,9 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
   const [essentialsStepPreviouslyCompleted, setEssentialsStepPreviouslyCompleted] = useState(false);
   const [contactSaveError, setContactSaveError] = useState(false);
   const userStepIntentRef = useRef<StaySetupStep | null>(null);
+  const contactEditingRef = useRef(contactEditing);
+  contactEditingRef.current = contactEditing;
+  const pendingPassportAdvanceRef = useRef(false);
 
   useEffect(() => {
     if (!slug || !stayId) {
@@ -171,6 +176,10 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         entryStampDate: status.entryStampDate,
       });
 
+      if (merged.passportVerified) {
+        setPassportGateSheetOpen(false);
+      }
+
       const nextCompletion: StaySetupCompletion = {
         tourismRequired: tourismRegistrationRequired,
         tourismComplete: merged.tourismComplete,
@@ -179,14 +188,25 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         passportVerified: merged.passportVerified,
       };
 
-      setCurrentStep((step) =>
-        reconcileStepAfterCompletionSync(
+      setCurrentStep((step) => {
+        const reconciled = reconcileStepAfterCompletionSync(
           step,
           tourismRegistrationRequired,
           nextCompletion,
           checkInStarted
-        )
-      );
+        );
+
+        if (step === 'registration' && reconciled === 'essentials') {
+          if (contactEditingRef.current) {
+            pendingPassportAdvanceRef.current = true;
+            return step;
+          }
+          pendingPassportAdvanceRef.current = false;
+          userStepIntentRef.current = 'essentials';
+        }
+
+        return reconciled;
+      });
     },
     [
       applyRegistrationStatus,
@@ -198,6 +218,24 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       passportVerified,
     ]
   );
+
+  useEffect(() => {
+    if (contactEditing) {
+      return;
+    }
+    if (!pendingPassportAdvanceRef.current) {
+      return;
+    }
+    if (!registrationComplete || !passportVerified || !checkInStarted) {
+      pendingPassportAdvanceRef.current = false;
+      return;
+    }
+
+    pendingPassportAdvanceRef.current = false;
+    setPassportGateSheetOpen(false);
+    userStepIntentRef.current = 'essentials';
+    setCurrentStep('essentials');
+  }, [contactEditing, registrationComplete, passportVerified, checkInStarted]);
 
   useStaySetupCompletionSync({
     slug,
@@ -388,6 +426,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
             onEntryDateComplete={handleEntryDateComplete}
             onContactComplete={handleContactComplete}
             onContactDraftChange={setContactDraftWhatsapp}
+            onContactEditingChange={handleContactEditingChange}
             showCompleteHint={false}
             registrationSurface="wizard"
           />
@@ -439,6 +478,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     handleTourismComplete,
     handleEntryDateComplete,
     handleContactComplete,
+    handleContactEditingChange,
     setContactDraftWhatsapp,
     essentialsRulesAcknowledged,
     essentialsHasHouseRules,
@@ -495,7 +535,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     }
 
     if (
-      (isRoomOrEssentialsStep(activeStep.id) || activeStep.id === 'registration') &&
+      isRoomOrEssentialsStep(activeStep.id) &&
       registrationComplete &&
       checkInStarted &&
       !passportVerified
@@ -563,7 +603,9 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     : 'settlement.actionButton';
 
   const showPrimaryButton = activeStep
-    ? shouldShowStaySetupPrimaryButton(activeStep.id, isRegistered, completion)
+    ? shouldShowStaySetupPrimaryButton(activeStep.id, isRegistered, completion, {
+        contactEditing,
+      })
     : false;
 
   const previousStep = activeStep
@@ -594,7 +636,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         />
       </ArrivalGuideStepsShell>
 
-      <main className="flex min-h-0 flex-1 flex-col px-4 pt-1 pb-4">
+      <main className="flex min-h-0 flex-1 flex-col px-4 pt-4 pb-4">
         <div
           className={cn(
             'min-h-0 flex-1',

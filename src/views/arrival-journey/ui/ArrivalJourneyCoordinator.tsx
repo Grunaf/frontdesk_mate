@@ -239,17 +239,22 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
   );
   const showPrimaryButton = !(activeStep.id === 'arrival' && arrivalHideMainPrimary);
 
+  const renderArrivalGuideChipBar = () => (
+    <SegmentedChipBar
+      bleed={false}
+      activeAppearance="outline"
+      className="mt-2 px-4 py-0.5"
+      items={chipItems}
+      value={currentStep}
+      onValueChange={handleStepChange}
+      onLockedClick={handleLockedChipClick}
+      ariaLabel="Arrival guide steps"
+    />
+  );
+
   const arrivalGuideChipsOverlay = (
-    <div className="bg-gradient-to-b from-black/70 via-black/45 to-transparent pb-5 pt-1">
-      <SegmentedChipBar
-        bleed={false}
-        className="mt-2 px-4 py-0.5"
-        items={chipItems}
-        value={currentStep}
-        onValueChange={handleStepChange}
-        onLockedClick={handleLockedChipClick}
-        ariaLabel="Arrival guide steps"
-      />
+    <div className="overflow-hidden bg-gradient-to-b from-black/70 via-black/45 to-transparent pb-5">
+      {renderArrivalGuideChipBar()}
     </div>
   );
 
@@ -264,15 +269,7 @@ export function ArrivalJourneyCoordinator({ isOnsite }: ArrivalJourneyCoordinato
     >
       {!isArrival ? (
         <ArrivalGuideStepsShell stepsLayout="scrollLinked">
-          <SegmentedChipBar
-            bleed={false}
-            className="mt-2 px-4 py-0.5"
-            items={chipItems}
-            value={currentStep}
-            onValueChange={handleStepChange}
-            onLockedClick={handleLockedChipClick}
-            ariaLabel="Arrival guide steps"
-          />
+          {renderArrivalGuideChipBar()}
         </ArrivalGuideStepsShell>
       ) : null}
 

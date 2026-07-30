@@ -41,7 +41,7 @@ describe('resolveRegistrationAccordionItem', () => {
     ).toBe('contact');
   });
 
-  it('opens contact when tourism not required', () => {
+  it('opens contact when tourism not required and contact incomplete', () => {
     expect(
       resolveOpenRegistrationAccordionItem({
         tourismRequired: false,
@@ -50,6 +50,26 @@ describe('resolveRegistrationAccordionItem', () => {
         contactComplete: false,
       })
     ).toBe('contact');
+  });
+
+  it('collapses to null when all visible sections are complete', () => {
+    expect(
+      resolveOpenRegistrationAccordionItem({
+        tourismRequired: true,
+        tourismComplete: true,
+        entryDateComplete: true,
+        contactComplete: true,
+      })
+    ).toBeNull();
+
+    expect(
+      resolveOpenRegistrationAccordionItem({
+        tourismRequired: false,
+        tourismComplete: false,
+        entryDateComplete: false,
+        contactComplete: true,
+      })
+    ).toBeNull();
   });
 
   it('locks entryDate until identity complete when required', () => {

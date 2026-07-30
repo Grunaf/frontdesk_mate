@@ -50,6 +50,8 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     registrationComplete,
     accordionValue,
     setAccordionValue,
+    contactEditing,
+    handleContactEditingChange,
     handleTourismComplete,
     handleEntryDateComplete,
     handleContactComplete,
@@ -190,10 +192,11 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
             onEntryDateComplete={handleEntryDateComplete}
             onContactComplete={onContactComplete}
             onContactDraftChange={setContactDraftWhatsapp}
+            onContactEditingChange={handleContactEditingChange}
             registrationSurface="standalone"
           />
         </div>
-        {footerLabel ? (
+        {footerLabel && !contactEditing ? (
           <div className="mt-3 shrink-0">
             <Button size="lg" className="w-full" onClick={handleFooterPrimary}>
               {footerLabel}

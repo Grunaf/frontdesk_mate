@@ -1667,8 +1667,8 @@
         "dismiss": "Got it"
       },
       "passportGate": {
-        "title": "Show your passport at reception",
-        "description": "To finish check-in and get your bed number, please show your original passport to reception staff.",
+        "title": "Show passport at reception",
+        "description": "Your bed number unlocks after reception verifies your passport.",
         "dismiss": "Got it"
       },
       "tabs": {
@@ -1677,6 +1677,7 @@
         "identity": "Podaci iz pasoša",
         "entryDate": "Detalji ulaska",
         "contact": "Contact",
+        "doneBadge": "Done",
         "essentials": "Wi‑Fi & rules",
         "room": "Your room",
         "settlement": "Settlement"
@@ -1687,7 +1688,8 @@
         "continueSettlingIn": "Continue settling in",
         "completeHint": "Guest registration and contact details are complete.",
         "incompleteHint": "Complete guest registration and contact details on the registration page.",
-        "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+        "passportWaitingTitle": "Show passport at reception",
+        "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
       },
       "register": {
         "actionButton": "Nastavi na datum ulaska",
@@ -1722,7 +1724,7 @@
           "citizenshipPlaceholder": "Select country",
           "passportNumber": "Passport number",
           "dateOfBirth": "Date of birth",
-          "dateOfBirthPlaceholder": "Select date",
+          "dateOfBirthPlaceholder": "dd.mm.yyyy",
           "dateOfBirthHelp": "Required for tourism registration. Age on check-in day is used for bed allocation planning — guests under 18 are flagged for reception review.",
           "gender": "Gender",
           "genderHelp": "Required for tourism registration and may be used when allocating beds by gender policy.",
@@ -1760,7 +1762,8 @@
         "complete": {
           "summaryTitle": "Registration complete",
           "continue": "Nastavi na datum ulaska",
-          "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+          "passportWaitingTitle": "Show passport at reception",
+          "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
         },
         "fieldErrors": {
           "firstName": "Enter a first name (max 120 characters).",
@@ -1839,9 +1842,11 @@
         },
         "entryPointLabel": "Mesto ulaska",
         "entryPointAirportHint": "Izaberite aerodrom sa liste.",
-        "entryPointPlaceHint": "Unesite granični prelaz, stanicu ili luku — predlozi se pojavljuju tokom kucanja.",
+        "entryPointPlaceHint": "Izaberite sa liste — kucajte da filtrirate granične prelaze, stanice ili luke.",
         "entryPointAirportPlaceholder": "Izaberite aerodrom",
-        "entryPointPlacePlaceholder": "npr. Debeli Brijeg",
+        "entryPointPlacePlaceholder": "Izaberite ulaznu tačku",
+        "entryPointPlaceSearchPlaceholder": "Pretraži listu…",
+        "entryPointPlaceEmpty": "Nema poklapanja u listi",
         "dateLabel": "Datum ulaska",
         "modeLegend": "Da li su svi stigli istog dana?",
         "modeSame": "Isti dan za sve",
@@ -1995,7 +2000,8 @@
       "directionsToRoom": "Directions to room",
       "fallback": "Your bed assignment is not configured yet. Ask at reception or message us on WhatsApp.",
       "viewFullGuide": "Room map & directions",
-      "passportWaiting": "To finish check-in and get your bed number, please show your original passport to reception staff."
+      "passportWaitingTitle": "Show passport at reception",
+      "passportWaitingDescription": "Your bed number unlocks after reception verifies your passport."
     },
     "taxi": {
       "needHelpTitle": "Need help?",
@@ -2104,6 +2110,8 @@
     },
     "guestStayChip": {
       "chipLabel": "My stay",
+      "bookingLabel": "Booking",
+      "bookingAnchorAria": "Booking {summary} — open stay details",
       "sheetTitle": "Your stay",
       "openDetail": "{summary} — open stay details",
       "receptionHeading": "For reception",

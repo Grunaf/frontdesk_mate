@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useLocale, useTranslations } from '@/shared/i18n';
+import { useTranslations } from '@/shared/i18n';
 import {
   Alert,
   AlertDescription,
@@ -15,7 +15,6 @@ import {
   BottomSheetTitle,
   Button,
 } from '@/shared/ui';
-import { localeToDefaultCitizenship } from '../lib/citizenshipOptions';
 import {
   isTourismGuestFormDirty,
   type TourismGuestFormValues,
@@ -24,6 +23,12 @@ import {
   ADD_TOURISM_GUEST_FORM_ID,
   AddTourismGuestForm,
 } from './AddTourismGuestForm';
+
+const EMPTY_COUNTRY_DEFAULTS = {
+  countryOfBirth: '',
+  citizenship: '',
+  documentType: 'passport' as const,
+};
 
 type AddTourismGuestSheetProps = {
   open: boolean;
@@ -58,8 +63,6 @@ export function AddTourismGuestSheet({
   onDraftClear,
 }: AddTourismGuestSheetProps) {
   const t = useTranslations('pages.staySetup.register');
-  const locale = useLocale();
-  const defaultCountry = localeToDefaultCitizenship(locale);
 
   const [isPending, setIsPending] = useState(false);
   const [canSubmit, setCanSubmit] = useState(false);
@@ -74,12 +77,11 @@ export function AddTourismGuestSheet({
 
     if (!nextOpen) {
       const values = latestValuesRef.current;
-      const defaults = {
-        countryOfBirth: defaultCountry,
-        citizenship: defaultCountry,
-        documentType: 'passport' as const,
-      };
-      if (!submittedRef.current && values && isTourismGuestFormDirty(values, defaults)) {
+      if (
+        !submittedRef.current &&
+        values &&
+        isTourismGuestFormDirty(values, EMPTY_COUNTRY_DEFAULTS)
+      ) {
         onDraftSave?.(values);
       }
       setIsPending(false);

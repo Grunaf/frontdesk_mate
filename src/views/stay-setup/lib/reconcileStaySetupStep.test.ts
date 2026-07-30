@@ -16,10 +16,21 @@ describe('reconcileStepAfterCompletionSync', () => {
     passportVerified: true,
   };
 
-  it('keeps registration step when sync runs on registration', () => {
+  it('advances registration to essentials when settlement unlocks', () => {
     expect(reconcileStepAfterCompletionSync('registration', true, complete, true)).toBe(
-      'registration'
+      'essentials'
     );
+  });
+
+  it('keeps registration when passport not verified yet', () => {
+    expect(
+      reconcileStepAfterCompletionSync(
+        'registration',
+        true,
+        { ...complete, passportVerified: false },
+        true
+      )
+    ).toBe('registration');
   });
 
   it('does not rewind room to essentials when sync runs after forward nav', () => {

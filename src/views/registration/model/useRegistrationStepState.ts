@@ -5,7 +5,7 @@ import { getStaySetupStatusAction } from '@/features/guest-stay-contact';
 import { resolveTourismRegistrationRequired, useTenant } from '@/entities/tenant';
 import type { StaySetupInitialState } from '@/views/stay-setup';
 import { isStaySetupRegistrationComplete } from '@/views/stay-setup/lib/resolveStaySetupSteps';
-import type { RegistrationAccordionItem } from '../lib/resolveRegistrationAccordionItem';
+import type { RegistrationAccordionOpenValue } from '../lib/resolveRegistrationAccordionItem';
 import { resolveOpenRegistrationAccordionItem } from '../lib/resolveRegistrationAccordionItem';
 
 type UseRegistrationStepStateInput = {
@@ -30,7 +30,8 @@ export function useRegistrationStepState({
   const [passportVerified, setPassportVerified] = useState(initial.passportVerified);
   const [stayContactWhatsapp, setStayContactWhatsapp] = useState(initial.stayContactWhatsapp);
   const [contactDraftWhatsapp, setContactDraftWhatsapp] = useState(initial.stayContactWhatsapp ?? '');
-  const [accordionValue, setAccordionValue] = useState<RegistrationAccordionItem>(() =>
+  const [contactEditing, setContactEditing] = useState(false);
+  const [accordionValue, setAccordionValue] = useState<RegistrationAccordionOpenValue>(() =>
     resolveOpenRegistrationAccordionItem({
       tourismRequired,
       tourismComplete: initial.tourismComplete,
@@ -38,6 +39,17 @@ export function useRegistrationStepState({
       contactComplete: initial.contactComplete,
     })
   );
+
+  const handleAccordionValueChange = useCallback((value: RegistrationAccordionOpenValue) => {
+    if (value !== 'contact') {
+      setContactEditing(false);
+    }
+    setAccordionValue(value);
+  }, []);
+
+  const handleContactEditingChange = useCallback((editing: boolean) => {
+    setContactEditing(editing);
+  }, []);
 
   useEffect(() => {
     setTourismComplete(initial.tourismComplete);
@@ -94,12 +106,14 @@ export function useRegistrationStepState({
 
   const handleTourismComplete = useCallback(() => {
     setTourismComplete(true);
+    setContactEditing(false);
     setAccordionValue('entryDate');
   }, []);
 
   const handleEntryDateComplete = useCallback((savedDate: string | null) => {
     setEntryStampDate(savedDate);
     setEntryDateComplete(true);
+    setContactEditing(false);
     setAccordionValue('contact');
   }, []);
 
@@ -107,6 +121,8 @@ export function useRegistrationStepState({
     setStayContactWhatsapp(savedWhatsapp);
     setContactDraftWhatsapp(savedWhatsapp);
     setContactComplete(true);
+    setContactEditing(false);
+    setAccordionValue(null);
   }, []);
 
   const applyRegistrationStatus = useCallback(
@@ -144,7 +160,9 @@ export function useRegistrationStepState({
     completion,
     registrationComplete,
     accordionValue,
-    setAccordionValue,
+    setAccordionValue: handleAccordionValueChange,
+    contactEditing,
+    handleContactEditingChange,
     handleTourismComplete,
     handleEntryDateComplete,
     handleContactComplete,

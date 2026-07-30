@@ -6,6 +6,7 @@ import {
 } from '@/entities/guest-tourism-registration';
 import {
   findAirportInCatalog,
+  findPlaceSuggestionInCatalog,
   getTourismEntryPointsCatalog,
 } from './tourismEntryPointsCatalog';
 
@@ -75,7 +76,15 @@ export function validateEntryDetailsSave(
     entryPointCode = airport.code;
     entryPointLabel = airport.label;
   } else {
-    entryPointCode = null;
+    const place = findPlaceSuggestionInCatalog(catalog, {
+      id: input.entryPointCode,
+      label,
+    });
+    if (!place) {
+      return { ok: false, error: 'invalid_entry_point' };
+    }
+    entryPointCode = place.id;
+    entryPointLabel = place.label;
   }
 
   if (input.assignments.length === 0) {

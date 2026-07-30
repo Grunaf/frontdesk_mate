@@ -61,6 +61,10 @@ import type {
   SetGuestReservationBookingPaidResult,
   SetGuestReservationReceptionNoteInput,
   SetGuestReservationReceptionNoteResult,
+  ConfirmGuestStayContactPhoneInput,
+  ConfirmGuestStayContactPhoneResult,
+  RejectGuestStayContactPhoneInput,
+  RejectGuestStayContactPhoneResult,
 } from '../model/types';
 
 const OPERATIONAL_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -357,6 +361,8 @@ export async function createGuestStay(
   }
 
   const bookingGroupId = input.bookingGroupId?.trim() || null;
+  const contactPhone = input.contactPhone?.trim() || null;
+  const contactEmail = input.contactEmail?.trim() || null;
 
   const nowIso = new Date().toISOString();
   const { data: reservation, error: reservationError } = await admin
@@ -377,6 +383,9 @@ export async function createGuestStay(
       booking_amount_currency: balanceFields.currency,
       booking_paid_at: null,
       booking_group_id: bookingGroupId,
+      contact_phone: contactPhone,
+      contact_phone_pending: null,
+      contact_email: contactEmail,
       status: 'planned',
       created_at: nowIso,
       updated_at: nowIso,
@@ -470,6 +479,8 @@ export async function createGuestStayParty(
         bookingExternalId: input.bookingExternalId,
         bookingAmountDue: input.bookingAmountDue,
         stayKind: input.stayKind,
+        contactPhone: input.contactPhone,
+        contactEmail: input.contactEmail,
       },
       locale
     );
@@ -515,6 +526,8 @@ export async function createGuestStayParty(
         stayKind: input.stayKind,
         bookingGroupId,
         recordBookingBalance: isLead,
+        contactPhone: input.contactPhone,
+        contactEmail: input.contactEmail,
       },
       locale
     );
@@ -817,6 +830,149 @@ export async function setGuestReservationReceptionNote(
 
   if (updateError || !updated) {
     console.error('setGuestReservationReceptionNote update:', updateError?.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const stay = mapReservationGrantToStayRecord(
+    updated as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
+  if (!stay) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  return { ok: true, stay };
+}
+
+export async function confirmGuestStayContactPhone(
+  input: ConfirmGuestStayContactPhoneInput
+): Promise<ConfirmGuestStayContactPhoneResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'tenant_not_found' };
+  }
+
+  const { data: existing, error: loadError } = await admin
+    .from('guest_reservations')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('confirmGuestStayContactPhone load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const pending = existing.contact_phone_pending
+    ? String(existing.contact_phone_pending).trim()
+    : '';
+  if (!pending) {
+    return { ok: false, error: 'no_pending' };
+  }
+
+  const grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
+  if (!grant) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const { data: updated, error: updateError } = await admin
+    .from('guest_reservations')
+    .update({
+      contact_phone: pending,
+      contact_phone_pending: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .maybeSingle();
+
+  if (updateError || !updated) {
+    console.error('confirmGuestStayContactPhone update:', updateError?.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const stay = mapReservationGrantToStayRecord(
+    updated as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
+  if (!stay) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  return { ok: true, stay };
+}
+
+export async function rejectGuestStayContactPhone(
+  input: RejectGuestStayContactPhoneInput
+): Promise<RejectGuestStayContactPhoneResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'tenant_not_found' };
+  }
+
+  const { data: existing, error: loadError } = await admin
+    .from('guest_reservations')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('rejectGuestStayContactPhone load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const pending = existing.contact_phone_pending
+    ? String(existing.contact_phone_pending).trim()
+    : '';
+  if (!pending) {
+    return { ok: false, error: 'no_pending' };
+  }
+
+  const grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
+  if (!grant) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const { data: updated, error: updateError } = await admin
+    .from('guest_reservations')
+    .update({
+      contact_phone_pending: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .maybeSingle();
+
+  if (updateError || !updated) {
+    console.error('rejectGuestStayContactPhone update:', updateError?.message);
     return { ok: false, error: 'db_unavailable' };
   }
 

@@ -55,15 +55,7 @@ export interface DoorAccessSlideDockProps {
   className?: string;
 }
 
-function SlideNavIconButton({
-  direction,
-  action,
-}: {
-  direction: 'back' | 'forward';
-  action: DoorAccessSlideDockIconAction;
-}) {
-  const Icon = direction === 'back' ? ChevronLeft : ChevronRight;
-
+function SlideNavBackButton({ action }: { action: DoorAccessSlideDockIconAction }) {
   return (
     <Button
       type="button"
@@ -74,7 +66,23 @@ function SlideNavIconButton({
       onClick={action.onClick}
       disabled={action.disabled}
     >
-      <Icon className="size-6" aria-hidden />
+      <ChevronLeft className="size-6" aria-hidden />
+    </Button>
+  );
+}
+
+function SlideNavForwardButton({ action }: { action: DoorAccessSlideDockIconAction }) {
+  return (
+    <Button
+      type="button"
+      variant="default"
+      size="icon-lg"
+      className="rounded-full"
+      aria-label={action.ariaLabel}
+      onClick={action.onClick}
+      disabled={action.disabled}
+    >
+      <ChevronRight className="size-6" aria-hidden />
     </Button>
   );
 }
@@ -190,9 +198,7 @@ export function DoorAccessSlideDock({
             hasBodySection ? 'pt-0' : 'pt-4'
           )}
         >
-          {footerAction.back ? (
-            <SlideNavIconButton direction="back" action={footerAction.back} />
-          ) : null}
+          {footerAction.back ? <SlideNavBackButton action={footerAction.back} /> : null}
           <Button
             size="lg"
             className={cn('min-w-0', footerAction.back ? 'flex-1' : 'w-full')}
@@ -207,17 +213,17 @@ export function DoorAccessSlideDock({
       {footerAction?.variant === 'slideNav' ? (
         <div
           className={cn(
-            'flex items-center justify-between px-6 pb-5',
+            'flex items-center justify-between gap-3 px-6 pb-5',
             hasBodySection ? 'pt-0' : 'pt-4'
           )}
         >
           {footerAction.back ? (
-            <SlideNavIconButton direction="back" action={footerAction.back} />
+            <SlideNavBackButton action={footerAction.back} />
           ) : (
             <div className="size-12 shrink-0" aria-hidden />
           )}
           {footerAction.forward ? (
-            <SlideNavIconButton direction="forward" action={footerAction.forward} />
+            <SlideNavForwardButton action={footerAction.forward} />
           ) : (
             <div className="size-12 shrink-0" aria-hidden />
           )}

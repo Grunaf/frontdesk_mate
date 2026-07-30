@@ -15,3 +15,4 @@ export {
   type StaySetupStatusContextValue,
 } from './ui/StaySetupStatusProvider';
 export { StayContactStepPanel } from './ui/StayContactStepPanel';
+export { GuestPhoneNumberField } from './ui/GuestPhoneNumberField';

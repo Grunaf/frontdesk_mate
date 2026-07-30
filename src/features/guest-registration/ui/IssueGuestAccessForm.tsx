@@ -4,10 +4,20 @@ import { useEffect, useState } from 'react';
 import type { GuestAccessFormMode } from '../lib/guestAccessDates';
 import { GuestAccessDateRange } from './GuestAccessDateRange';
 import { GuestProfilePicker } from './GuestProfilePicker';
-import { Button, Input, Label, SegmentedChipBar, BedRoomGroupedSelect } from '@/shared/ui';
+import {
+  Button,
+  Input,
+  Label,
+  NumberStepper,
+  SegmentedChipBar,
+  BedRoomGroupedSelect,
+} from '@/shared/ui';
 import type { BedRoomOptionGroup } from '@/shared/ui';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MessageCircle } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import { buildWhatsappMeHref } from '@/shared/lib';
+import { GuestPhoneNumberField } from '@/features/guest-stay-contact';
+import { validateTourismWhatsapp } from '@/features/guest-tourism-registration';
 
 export interface StayOfferFormOption {
   id: string;
@@ -38,6 +48,11 @@ export interface IssueGuestAccessFormProps {
     display_name: string;
   }) => void;
   onClearGuestProfile?: () => void;
+  /** Confirmed phone draft (E.164-ish). Required with email: at least one. */
+  contactPhone?: string;
+  onContactPhoneChange?: (value: string) => void;
+  contactEmail?: string;
+  onContactEmailChange?: (value: string) => void;
   bookingPlatformId: string;
   onBookingPlatformIdChange: (value: string) => void;
   bookingExternalId: string;
@@ -106,6 +121,10 @@ export function IssueGuestAccessFormFields({
   selectedGuestId = null,
   onSelectGuestProfile,
   onClearGuestProfile,
+  contactPhone = '',
+  onContactPhoneChange,
+  contactEmail = '',
+  onContactEmailChange,
   bookingPlatformId,
   onBookingPlatformIdChange,
   bookingExternalId,
@@ -147,6 +166,10 @@ export function IssueGuestAccessFormFields({
   | 'selectedGuestId'
   | 'onSelectGuestProfile'
   | 'onClearGuestProfile'
+  | 'contactPhone'
+  | 'onContactPhoneChange'
+  | 'contactEmail'
+  | 'onContactEmailChange'
   | 'bookingPlatformId'
   | 'onBookingPlatformIdChange'
   | 'bookingExternalId'
@@ -187,12 +210,23 @@ export function IssueGuestAccessFormFields({
   const [advancedOpen, setAdvancedOpen] = useState(
     advancedBedOpenDefault || editIntent === 'moveBed' || !offerFirst
   );
+  const [emailFieldOpen, setEmailFieldOpen] = useState(() => Boolean(contactEmail.trim()));
 
   useEffect(() => {
     if (advancedBedOpenDefault || editIntent === 'moveBed') {
       setAdvancedOpen(true);
     }
   }, [advancedBedOpenDefault, editIntent]);
+
+  useEffect(() => {
+    if (contactEmail.trim()) {
+      setEmailFieldOpen(true);
+    }
+  }, [contactEmail]);
+
+  const showContactFields = !isEditingReservation && onContactPhoneChange;
+  const phoneValid = validateTourismWhatsapp(contactPhone).ok;
+  const whatsappHref = phoneValid ? buildWhatsappMeHref(contactPhone) : null;
 
   const selectedOffer = stayOfferOptions.find((option) => option.id === offerId);
   const offerHasNoBeds =
@@ -231,27 +265,14 @@ export function IssueGuestAccessFormFields({
       }))
       .filter((group) => group.beds.length > 0);
 
-  const singleBedSelect = (
-    <BedRoomGroupedSelect
-      label={offerFirst ? 'Specific bed' : 'Bed'}
-      hint={
-        offerFirst
-          ? 'Overrides auto-assign. Beds held by a whole-room booking need confirmation.'
-          : null
-      }
-      bedId={bedId}
-      onBedIdChange={onBedIdChange}
-      bedsByRoom={bedsByRoom}
-    />
-  );
-
-  const multiBedSelects = (
-    <div className="space-y-3">
+  const bedSelect = multiGuest ? (
+    <div key="beds-multi" className="space-y-3">
       {resolvedBedIds.map((slotBedId, index) => {
         const taken = new Set(resolvedBedIds.filter((id, i) => i !== index && Boolean(id)));
         return (
           <BedRoomGroupedSelect
             key={`guest-bed-${index}`}
+            id={`guest-bed-${index}`}
             label={index === 0 ? 'Guest 1 bed' : `Guest ${index + 1} bed`}
             hint={index === 0 ? 'Lead guest bed.' : null}
             bedId={slotBedId}
@@ -267,9 +288,21 @@ export function IssueGuestAccessFormFields({
         );
       })}
     </div>
+  ) : (
+    <BedRoomGroupedSelect
+      key="beds-single"
+      id="bed-id"
+      label={offerFirst ? 'Specific bed' : 'Bed'}
+      hint={
+        offerFirst
+          ? 'Overrides auto-assign. Beds held by a whole-room booking need confirmation.'
+          : null
+      }
+      bedId={bedId}
+      onBedIdChange={onBedIdChange}
+      bedsByRoom={bedsByRoom}
+    />
   );
-
-  const bedSelect = multiGuest ? multiBedSelects : singleBedSelect;
 
   const fieldsGrid = (
     <div
@@ -305,6 +338,60 @@ export function IssueGuestAccessFormFields({
         )}
       </div>
 
+      {showContactFields ? (
+        <div className="space-y-3 lg:col-span-2">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                At least one contact is required — phone or email.
+              </p>
+              {whatsappHref ? (
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  <MessageCircle className="size-4" aria-hidden />
+                  Open WhatsApp
+                </a>
+              ) : null}
+            </div>
+            <GuestPhoneNumberField
+              id="contact-phone"
+              countrySelectId="contact-phone-country"
+              value={contactPhone}
+              onChange={(next) => onContactPhoneChange?.(next)}
+              label="Phone (WhatsApp)"
+              countryLabel="Country"
+              locale="en"
+            />
+          </div>
+
+          {emailFieldOpen && onContactEmailChange ? (
+            <div className="space-y-1">
+              <Label htmlFor="contact-email">Email</Label>
+              <Input
+                id="contact-email"
+                type="email"
+                value={contactEmail}
+                onChange={(event) => onContactEmailChange(event.target.value)}
+                placeholder="guest@example.com"
+                autoComplete="off"
+              />
+            </div>
+          ) : onContactEmailChange ? (
+            <button
+              type="button"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+              onClick={() => setEmailFieldOpen(true)}
+            >
+              + Add another contact method
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="space-y-1 lg:col-span-2">
         <GuestAccessDateRange
           compact
@@ -316,22 +403,19 @@ export function IssueGuestAccessFormFields({
 
       {!isEditingReservation && onGuestCountChange ? (
         <div className="space-y-1">
-          <Label htmlFor="guest-count">Guests</Label>
+          <Label id="guest-count-label">Guests</Label>
           <p className="text-xs text-muted-foreground">
             One bed per guest. Extra guests can be named later in tourism.
+            {maxGuestCount > 1 ? ` Max ${maxGuestCount} for these dates.` : null}
           </p>
-          <select
+          <NumberStepper
             id="guest-count"
+            ariaLabel="Guests"
             value={partySize}
-            onChange={(event) => onGuestCountChange(Number(event.target.value))}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          >
-            {Array.from({ length: maxGuestCount }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
+            min={1}
+            max={maxGuestCount}
+            onValueChange={onGuestCountChange}
+          />
           {guestsReducedMessage ? (
             <p className="text-xs text-muted-foreground">{guestsReducedMessage}</p>
           ) : null}

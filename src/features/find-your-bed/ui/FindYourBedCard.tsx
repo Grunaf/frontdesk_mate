@@ -101,8 +101,13 @@ export function FindYourBedCard() {
           {t('title')}
         </span>
         {awaitingPassport ? (
-          <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">
-            {t('passportWaiting')}
+          <span className="mt-0.5 block min-w-0">
+            <span className="block text-sm font-medium leading-snug text-foreground">
+              {t('passportWaitingTitle')}
+            </span>
+            <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+              {t('passportWaitingDescription')}
+            </span>
           </span>
         ) : (
           <FindYourBedSummary plan={plan} variant="inline" />

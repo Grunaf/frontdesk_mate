@@ -31,3 +31,5 @@ export {
 } from './lib/resolveReservationStayPeriod';
 export type { ReservationStayPeriod } from './lib/resolveReservationStayPeriod';
 export type { GuestSessionPayload, GuestStayKind, GuestStayRecord, GuestStayRecordWithLink, GuestReservationArchiveListItem, GuestReservationTrashListItem, ResolvedGuestSession } from './model/types';
+export { validateContactEmail } from './lib/validateContactEmail';
+export type { ValidateContactEmailResult } from './lib/validateContactEmail';

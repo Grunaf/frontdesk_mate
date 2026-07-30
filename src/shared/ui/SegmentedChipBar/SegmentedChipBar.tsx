@@ -14,6 +14,8 @@ export interface SegmentedChipItem {
   locked?: boolean;
 }
 
+export type SegmentedChipActiveAppearance = 'filled' | 'outline';
+
 export interface SegmentedChipBarProps {
   items: SegmentedChipItem[];
   value: string;
@@ -24,6 +26,8 @@ export interface SegmentedChipBarProps {
   bleed?: boolean;
   /** Wrap chips onto next lines instead of horizontal scroll. */
   wrap?: boolean;
+  /** Active chip: filled (default) or outline without fill. */
+  activeAppearance?: SegmentedChipActiveAppearance;
   className?: string;
 }
 
@@ -35,6 +39,7 @@ export function SegmentedChipBar({
   ariaLabel,
   bleed = true,
   wrap = false,
+  activeAppearance = 'filled',
   className,
 }: SegmentedChipBarProps) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -98,7 +103,9 @@ export function SegmentedChipBar({
             className={cn(
               'h-auto min-h-[44px] shrink-0 rounded-full border px-4 py-2 text-xs font-medium whitespace-nowrap transition-colors',
               isActive
-                ? 'border-primary bg-primary text-primary-foreground'
+                ? activeAppearance === 'outline'
+                  ? 'border-primary bg-background text-foreground'
+                  : 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-background text-muted-foreground hover:bg-muted/40 hover:text-foreground',
               isLocked && 'opacity-70',
               item.disabled && 'pointer-events-none opacity-40'
