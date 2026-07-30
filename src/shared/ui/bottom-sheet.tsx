@@ -183,15 +183,18 @@ function BottomSheetHeader({ className, ...props }: React.ComponentProps<'div'>)
 
 function BottomSheetScrollFade({
   position,
+  visible,
 }: {
   position: 'top' | 'bottom';
+  visible: boolean;
 }) {
   return (
     <div
       aria-hidden="true"
       data-slot={`bottom-sheet-scroll-fade-${position}`}
       className={cn(
-        'pointer-events-none absolute inset-x-0 z-10 h-8 motion-reduce:transition-none',
+        'pointer-events-none absolute inset-x-0 z-10 h-8 transition-opacity motion-reduce:transition-none',
+        visible ? 'opacity-100' : 'opacity-0',
         position === 'top'
           ? 'top-0 bg-gradient-to-b from-popover via-popover/80 to-transparent'
           : 'bottom-0 bg-gradient-to-t from-popover via-popover/80 to-transparent'
@@ -211,7 +214,8 @@ function BottomSheetBody({
   showTopScrollFade?: boolean;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const { canScrollUp, canScrollDown } = useBottomSheetScrollFade(scrollRef, showScrollFade, children);
+  // Remeasure via observers/scroll only — never pass `children` (new identity each render).
+  const { canScrollUp, canScrollDown } = useBottomSheetScrollFade(scrollRef, showScrollFade);
 
   return (
     <div className="relative min-h-0 flex-1">
@@ -220,17 +224,18 @@ function BottomSheetBody({
         data-slot="bottom-sheet-body"
         className={cn(
           'h-full overflow-y-auto overscroll-contain px-6 pt-4',
-          canScrollDown && 'pb-2',
+          // Avoid toggling padding from measure — it feeds ResizeObserver feedback loops.
           className
         )}
         {...props}
       >
         {children}
       </div>
-      {showScrollFade && showTopScrollFade && canScrollUp ? (
-        <BottomSheetScrollFade position="top" />
+      {/* Always mounted: opacity only — mount/unmount must not affect scroll metrics. */}
+      {showScrollFade && showTopScrollFade ? (
+        <BottomSheetScrollFade position="top" visible={canScrollUp} />
       ) : null}
-      {showScrollFade && canScrollDown ? <BottomSheetScrollFade position="bottom" /> : null}
+      {showScrollFade ? <BottomSheetScrollFade position="bottom" visible={canScrollDown} /> : null}
     </div>
   );
 }

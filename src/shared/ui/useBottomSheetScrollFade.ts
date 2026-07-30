@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 const SCROLL_THRESHOLD_PX = 2;
 
@@ -18,30 +18,57 @@ function measureScrollFade(element: HTMLElement): BottomSheetScrollFadeState {
   };
 }
 
+function sameScrollFadeState(
+  a: BottomSheetScrollFadeState,
+  b: BottomSheetScrollFadeState
+): boolean {
+  return a.canScrollUp === b.canScrollUp && a.canScrollDown === b.canScrollDown;
+}
+
+/**
+ * Tracks whether a bottom-sheet body can scroll, for top/bottom fade hints.
+ *
+ * Remeasure via scroll + ResizeObserver on the container and MutationObserver
+ * for content changes. Do not drive this from React `children` identity — that
+ * retriggers every parent render and can loop with layout.
+ */
 export function useBottomSheetScrollFade(
   scrollRef: RefObject<HTMLDivElement | null>,
-  enabled: boolean,
-  contentDependency?: unknown
+  enabled: boolean
 ): BottomSheetScrollFadeState {
   const [state, setState] = useState<BottomSheetScrollFadeState>({
     canScrollUp: false,
     canScrollDown: false,
   });
+  const rafRef = useRef<number | null>(null);
 
-  const update = useCallback(() => {
+  const applyMeasure = useCallback(() => {
     const element = scrollRef.current;
 
     if (!element || !enabled) {
-      setState({ canScrollUp: false, canScrollDown: false });
+      setState((prev) =>
+        sameScrollFadeState(prev, { canScrollUp: false, canScrollDown: false })
+          ? prev
+          : { canScrollUp: false, canScrollDown: false }
+      );
       return;
     }
 
-    setState(measureScrollFade(element));
+    const next = measureScrollFade(element);
+    setState((prev) => (sameScrollFadeState(prev, next) ? prev : next));
   }, [enabled, scrollRef]);
 
+  const scheduleUpdate = useCallback(() => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      applyMeasure();
+    });
+  }, [applyMeasure]);
+
   useLayoutEffect(() => {
-    update();
-  }, [update, contentDependency]);
+    applyMeasure();
+  }, [applyMeasure]);
 
   useEffect(() => {
     if (!enabled) {
@@ -54,20 +81,30 @@ export function useBottomSheetScrollFade(
       return;
     }
 
-    element.addEventListener('scroll', update, { passive: true });
+    element.addEventListener('scroll', scheduleUpdate, { passive: true });
 
-    const resizeObserver = new ResizeObserver(update);
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
     resizeObserver.observe(element);
 
-    for (const child of element.children) {
-      resizeObserver.observe(child);
-    }
+    // Content growth often keeps the container border-box fixed; watch DOM
+    // mutations instead of observing every child (avoids churn on re-render).
+    const mutationObserver = new MutationObserver(scheduleUpdate);
+    mutationObserver.observe(element, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
 
     return () => {
-      element.removeEventListener('scroll', update);
+      element.removeEventListener('scroll', scheduleUpdate);
       resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
-  }, [contentDependency, enabled, scrollRef, update]);
+  }, [enabled, scheduleUpdate, scrollRef]);
 
   return state;
 }

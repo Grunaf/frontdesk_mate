@@ -315,6 +315,7 @@ export function ReceptionCheckInPanel({
     'stay'
   );
   const [stayDetailPartyView, setStayDetailPartyView] = useState(false);
+  const [stayDetailFocusStayId, setStayDetailFocusStayId] = useState<string | null>(null);
   const [stayPins, setStayPins] = useState<Record<string, string>>({});
   const [pendingArchiveStay, setPendingArchiveStay] = useState<{
     stayId: string;
@@ -696,41 +697,65 @@ export function ReceptionCheckInPanel({
   const openStayDetail = useCallback(
     (
       stayId: string,
-      options?: { initialTab?: 'access' | 'stay' | 'tourism'; partyView?: boolean }
+      options?: {
+        initialTab?: 'access' | 'stay' | 'tourism';
+        partyView?: boolean;
+        /** Child-origin entry: floating CTA on party root targets this stay. */
+        focusStayId?: string;
+      }
     ) => {
       setStayDetailInitialTab(options?.initialTab ?? 'stay');
       setStayDetailPartyView(Boolean(options?.partyView));
+      setStayDetailFocusStayId(options?.focusStayId?.trim() || null);
       setSelectedStayOverride(null);
       setSelectedStayId(stayId);
     },
     []
   );
 
-  const openHubOrCashStay = useCallback(
+  const resolvePartySize = useCallback(
     (stayId: string) => {
       const stay =
         planStays.find((entry) => entry.id === stayId) ??
         stays.find((entry) => entry.id === stayId) ??
         null;
       const groupId = stay?.booking_group_id?.trim();
-      const partySize = groupId
-        ? planStays.filter((entry) => entry.booking_group_id === groupId).length
-        : 1;
-      openStayDetail(stayId, { partyView: partySize > 1 });
+      if (!groupId) return 1;
+      return planStays.filter((entry) => entry.booking_group_id === groupId).length;
     },
-    [openStayDetail, planStays, stays]
+    [planStays, stays]
   );
 
-  const selectPartyStay = useCallback(
+  const openHubOrCashStay = useCallback(
     (stayId: string) => {
-      openStayDetail(stayId, { partyView: false });
+      openStayDetail(stayId, { partyView: resolvePartySize(stayId) > 1 });
     },
-    [openStayDetail]
+    [openStayDetail, resolvePartySize]
   );
+
+  /** Plan / Access / Issues / Transfers: party root + focus CTA for the clicked child. */
+  const openStayFromChildSurface = useCallback(
+    (stayId: string, options?: { initialTab?: 'access' | 'stay' | 'tourism' }) => {
+      const partySize = resolvePartySize(stayId);
+      openStayDetail(stayId, {
+        initialTab: options?.initialTab,
+        partyView: partySize > 1,
+        focusStayId: partySize > 1 ? stayId : undefined,
+      });
+    },
+    [openStayDetail, resolvePartySize]
+  );
+
+  /** In-sheet party → child push: swap stay only, keep party session (no remount). */
+  const selectPartyStay = useCallback((stayId: string) => {
+    setSelectedStayOverride(null);
+    setSelectedStayId(stayId);
+  }, []);
 
   const openStayDetailRecord = useCallback((stay: GuestStayRecordWithLink) => {
     setStayDetailInitialTab('stay');
     setStayDetailPartyView(false);
+    setStayDetailFocusStayId(null);
     setSelectedStayOverride(stay);
     setSelectedStayId(stay.id);
   }, []);
@@ -740,6 +765,7 @@ export function ReceptionCheckInPanel({
     setSelectedStayOverride(null);
     setStayDetailInitialTab('stay');
     setStayDetailPartyView(false);
+    setStayDetailFocusStayId(null);
   }, []);
 
   const hardOverlappingBedIds = useMemo(() => {
@@ -1398,7 +1424,7 @@ export function ReceptionCheckInPanel({
         }
 
         await refresh();
-        openStayDetail(result.stay.id);
+        openStayFromChildSurface(result.stay.id);
         clearEditDraft();
         return;
       }
@@ -1431,7 +1457,7 @@ export function ReceptionCheckInPanel({
       const lead = result.stays[0];
       await refresh();
       if (lead) {
-        openStayDetail(lead.stay.id, { initialTab: 'access' });
+        openStayFromChildSurface(lead.stay.id, { initialTab: 'access' });
         setStayPins((current) => {
           const next = { ...current };
           for (const entry of result.stays) {
@@ -1503,7 +1529,7 @@ export function ReceptionCheckInPanel({
       }
 
       await refresh();
-      openStayDetail(stayId);
+      openStayFromChildSurface(stayId);
       setStayPins((current) => ({ ...current, [stayId]: result.guestPin }));
       setPendingReissueAccessStay(null);
     });
@@ -1541,7 +1567,7 @@ export function ReceptionCheckInPanel({
 
   const openStayDetailFromRefSearch = (stayId: string) => {
     setIssuedAccessFilter('all');
-    openStayDetail(stayId);
+    openStayFromChildSurface(stayId);
   };
 
   const handleSelectFreeNight = (nextBedId: string, nightDate: string) => {
@@ -1649,6 +1675,7 @@ export function ReceptionCheckInPanel({
           operationalDate={hubSnapshot.operational.operationalDate}
           initialTab={stayDetailInitialTab}
           initialPartyView={stayDetailPartyView}
+          initialFocusStayId={stayDetailFocusStayId}
           onTourismExportedAtChange={() => {
             void refresh();
           }}
@@ -1919,7 +1946,7 @@ export function ReceptionCheckInPanel({
                 tenantSlug={tenantSlug}
                 settings={tenantSettings}
                 stays={planStays}
-                onViewStay={openStayDetail}
+                onViewStay={openStayFromChildSurface}
                 onSelectFreeNight={handleSelectFreeNight}
                 onSelectBlockedNight={canCheckIn ? handleSelectBlockedNight : undefined}
                 bedStatuses={bedStatuses}
@@ -1940,7 +1967,7 @@ export function ReceptionCheckInPanel({
                 stays={stays}
                 filter={issuedAccessFilter}
                 onFilterChange={setIssuedAccessFilter}
-                onOpenStayDetail={openStayDetail}
+                onOpenStayDetail={openStayFromChildSurface}
                 revokeError={revokeError}
                 resolveBedLabel={resolveBedLabel}
                 tenantSettings={tenantSettings}
@@ -1960,7 +1987,7 @@ export function ReceptionCheckInPanel({
               <IssuesList
                 tenantSlug={tenantSlug}
                 openIssues={openIssues}
-                onFocusStay={openStayDetail}
+                onFocusStay={openStayFromChildSurface}
                 isActive={deskTab === 'issues'}
                 onOperationalRefresh={refresh}
               />
@@ -1971,7 +1998,7 @@ export function ReceptionCheckInPanel({
                 tenantSlug={tenantSlug}
                 openTransfers={openTransfers}
                 resolveBedLabel={resolveBedLabel}
-                onFocusStay={openStayDetail}
+                onFocusStay={openStayFromChildSurface}
                 isActive={deskTab === 'transfers'}
                 onOperationalRefresh={refresh}
               />

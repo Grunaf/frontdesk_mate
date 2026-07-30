@@ -72,6 +72,17 @@ export function formatDisplayDate(isoDate: string): string {
   });
 }
 
+/** Party sheet chrome under title: platform/ref · short dates (not inside the title). */
+export function formatPartySheetMeta(
+  checkInDate: string,
+  checkOutDate: string,
+  bookingSourceLine?: string | null
+): string {
+  const dates = `${formatDisplayDate(checkInDate)} → ${formatDisplayDate(checkOutDate)}`;
+  const source = bookingSourceLine?.trim();
+  return source ? `${source} · ${dates}` : dates;
+}
+
 /** Reception desk arrival timestamp (full ISO, local time + date). */
 export function formatReceptionDateTime(isoTimestamp: string): string {
   const date = new Date(isoTimestamp);

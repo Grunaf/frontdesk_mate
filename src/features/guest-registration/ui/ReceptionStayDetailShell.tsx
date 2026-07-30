@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pencil, X } from 'lucide-react';
 import {
   BOTTOM_SHEET_SIZES,
@@ -49,6 +49,8 @@ export interface ReceptionStayDetailShellProps {
   titleLeading?: ReactNode;
   /** Optional icon/prefix inline before the title text. */
   titlePrefix?: ReactNode;
+  /** Optional trailing control beside the title (e.g. status badge). */
+  titleTrailing?: ReactNode;
   header: ReactNode;
   body: ReactNode;
   footer: ReactNode;
@@ -58,6 +60,13 @@ export interface ReceptionStayDetailShellProps {
    */
   bodyTop?: ReactNode;
   /**
+   * Wraps sticky {@link bodyTop} + scrollable body (not header/footer).
+   * Use for Tabs / stack slide so the sheet/dialog root never remounts.
+   * Prefer `className="contents"` on the wrapper when it must not break flex layout,
+   * or return a `flex min-h-0 flex-1 flex-col` column.
+   */
+  wrapBodyRegion?: (region: ReactNode) => ReactNode;
+  /**
    * Desktop only: panel to the left of the stay dialog (e.g. party peek).
    * Ignored on mobile bottom sheet.
    */
@@ -66,7 +75,7 @@ export interface ReceptionStayDetailShellProps {
   titleId?: string;
   /**
    * When set, stay-detail chrome shows Edit (pencil).
-   * Mobile: close on the left; pencil (+ optional overflow) on the right.
+   * Mobile: in-flow toolbar — close left, pencil (+ optional overflow) right.
    * Desktop: pencil left of overflow/close (close stays top-right).
    */
   onEdit?: () => void;
@@ -104,12 +113,8 @@ function desktopHeaderActionsPaddingClass(leadingCount: number): string {
   return 'pr-14';
 }
 
-function mobileHeaderPaddingClass(leadingCount: number): string {
-  if (leadingCount >= 3) return 'space-y-1 px-14 pb-3 pt-10 pr-36';
-  if (leadingCount === 2) return 'space-y-1 px-14 pb-3 pt-10 pr-28';
-  if (leadingCount === 1) return 'space-y-1 px-14 pb-3 pt-10';
-  return 'space-y-1 px-6 pb-3';
-}
+/** Shared horizontal inset for mobile stay sheet chrome + tabs + body + footer. */
+const MOBILE_STAY_SHEET_INSET_X = 'px-4';
 
 function countLeadingHeaderActions(input: {
   onEdit?: () => void;
@@ -130,9 +135,11 @@ function DesktopStayDetailDialog({
   accessibleTitleTooltip,
   titleLeading,
   titlePrefix,
+  titleTrailing,
   header,
   body,
   bodyTop,
+  wrapBodyRegion,
   footer,
   sidePanel,
   titleId = RECEPTION_STAY_DETAIL_TITLE_ID,
@@ -159,6 +166,15 @@ function DesktopStayDetailDialog({
   if (!open) {
     return null;
   }
+
+  const bodyRegion = (
+    <>
+      {bodyTop ? (
+        <div className="shrink-0 border-b border-border/60 px-6 pt-3 pb-2">{bodyTop}</div>
+      ) : null}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">{body}</div>
+    </>
+  );
 
   return (
     <div
@@ -215,23 +231,20 @@ function DesktopStayDetailDialog({
                 id={labelledBy}
                 className={cn(
                   RECEPTION_SHELL_TITLE_CLASS,
-                  titlePrefix && 'flex min-w-0 items-center gap-1.5'
+                  (titlePrefix || titleTrailing) && 'flex min-w-0 items-center gap-1.5'
                 )}
                 title={accessibleTitleTooltip}
               >
                 {titlePrefix}
                 <span className="min-w-0 truncate">{accessibleTitle}</span>
+                {titleTrailing}
               </h2>
               {header}
             </div>
           </div>
         </div>
 
-        {bodyTop ? (
-          <div className="shrink-0 border-b border-border/60 px-6 pt-3 pb-2">{bodyTop}</div>
-        ) : null}
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">{body}</div>
+        {wrapBodyRegion ? wrapBodyRegion(bodyRegion) : bodyRegion}
 
         {footer ? (
           <div className="shrink-0 border-t border-border/60 px-6 py-4">{footer}</div>
@@ -248,9 +261,11 @@ function MobileStayDetailSheet({
   accessibleTitleTooltip,
   titleLeading,
   titlePrefix,
+  titleTrailing,
   header,
   body,
   bodyTop,
+  wrapBodyRegion,
   footer,
   onEdit,
   editDisabled = false,
@@ -266,19 +281,48 @@ function MobileStayDetailSheet({
   /** Back + Close on one row under the drag handle (party stack). */
   const useNavRow = hasTitleLeading && !hasEditChrome;
 
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen && dismissBlocked) return;
+      if (!nextOpen) onClose();
+    },
+    [dismissBlocked, onClose]
+  );
+
+  const closeButton = (
+    <BottomSheetClose asChild>
+      <Button variant="ghost" size="icon" className="shrink-0">
+        <X />
+        <span className="sr-only">Close</span>
+      </Button>
+    </BottomSheetClose>
+  );
+
+  const bodyRegion = (
+    <>
+      {bodyTop ? (
+        <div
+          className={cn(
+            'shrink-0 border-b border-border/60 pt-1 pb-2',
+            MOBILE_STAY_SHEET_INSET_X
+          )}
+        >
+          {bodyTop}
+        </div>
+      ) : null}
+      <BottomSheetBody className={cn('space-y-4 pb-4', MOBILE_STAY_SHEET_INSET_X)}>
+        {body}
+      </BottomSheetBody>
+    </>
+  );
+
   return (
-    <BottomSheet
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen && dismissBlocked) return;
-        if (!nextOpen) onClose();
-      }}
-    >
+    <BottomSheet open={open} onOpenChange={handleOpenChange}>
       <BottomSheetContent
         size={BOTTOM_SHEET_SIZES.large}
         className="flex flex-col px-0 pb-0"
         aria-describedby={undefined}
-        showCloseButton={!hasEditChrome && !useNavRow}
+        showCloseButton={false}
         onPointerDownOutside={(event) => {
           if (dismissBlocked) event.preventDefault();
         }}
@@ -286,68 +330,62 @@ function MobileStayDetailSheet({
           if (dismissBlocked) event.preventDefault();
         }}
       >
-        {hasEditChrome ? (
-          <>
-            <BottomSheetClose asChild>
-              <Button variant="ghost" className="absolute top-3 left-3 z-10" size="icon">
-                <X />
-                <span className="sr-only">Close</span>
-              </Button>
-            </BottomSheetClose>
-            <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
-              {onEdit ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  disabled={editDisabled}
-                  onClick={onEdit}
-                >
-                  <Pencil />
-                  <span className="sr-only">Edit</span>
-                </Button>
-              ) : null}
-              {headerExtra}
-              {headerOverflow}
-            </div>
-          </>
-        ) : null}
-        {useNavRow ? (
-          <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-0.5">
-            <div className="min-w-0">{titleLeading}</div>
-            <BottomSheetClose asChild>
-              <Button variant="ghost" size="icon-sm" className="shrink-0">
-                <X />
-                <span className="sr-only">Close</span>
-              </Button>
-            </BottomSheetClose>
-          </div>
-        ) : null}
-        <BottomSheetHeader
+        {/* In-flow chrome row: same inset as title / tabs / body (no absolute close). */}
+        <div
           className={cn(
-            mobileHeaderPaddingClass(leadingCount),
-            useNavRow && 'pt-1'
+            'flex shrink-0 items-center justify-between gap-2 pb-0.5',
+            MOBILE_STAY_SHEET_INSET_X
           )}
         >
+          <div className="flex min-w-0 items-center">
+            {hasEditChrome ? closeButton : useNavRow ? titleLeading : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {hasEditChrome ? (
+              <>
+                {onEdit ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={editDisabled}
+                    onClick={onEdit}
+                  >
+                    <Pencil />
+                    <span className="sr-only">Edit</span>
+                  </Button>
+                ) : null}
+                {headerExtra}
+                {headerOverflow}
+              </>
+            ) : (
+              closeButton
+            )}
+          </div>
+        </div>
+        <BottomSheetHeader className={cn('space-y-1 pb-3 pt-1', MOBILE_STAY_SHEET_INSET_X)}>
           {titleLeading && hasEditChrome ? <div className="mb-2">{titleLeading}</div> : null}
           <BottomSheetTitle
             className={cn(
               RECEPTION_SHELL_TITLE_CLASS,
-              titlePrefix && 'flex min-w-0 items-center gap-1.5'
+              (titlePrefix || titleTrailing) && 'flex min-w-0 items-center gap-1.5'
             )}
             title={accessibleTitleTooltip}
           >
             {titlePrefix}
             <span className="min-w-0 truncate">{accessibleTitle}</span>
+            {titleTrailing}
           </BottomSheetTitle>
           {header}
         </BottomSheetHeader>
-        {bodyTop ? (
-          <div className="shrink-0 border-b border-border/60 px-6 pt-1 pb-2">{bodyTop}</div>
-        ) : null}
-        <BottomSheetBody className="space-y-4 pb-4">{body}</BottomSheetBody>
+        {wrapBodyRegion ? wrapBodyRegion(bodyRegion) : bodyRegion}
         {footer ? (
-          <BottomSheetFooter className="border-t border-border/60 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <BottomSheetFooter
+            className={cn(
+              'border-t border-border/60 pb-[max(1rem,env(safe-area-inset-bottom))]',
+              MOBILE_STAY_SHEET_INSET_X
+            )}
+          >
             {footer}
           </BottomSheetFooter>
         ) : null}
@@ -363,9 +401,11 @@ export function ReceptionStayDetailShell({
   accessibleTitleTooltip,
   titleLeading,
   titlePrefix,
+  titleTrailing,
   header,
   body,
   bodyTop,
+  wrapBodyRegion,
   footer,
   sidePanel,
   titleId,
@@ -390,9 +430,11 @@ export function ReceptionStayDetailShell({
         accessibleTitleTooltip={accessibleTitleTooltip}
         titleLeading={titleLeading}
         titlePrefix={titlePrefix}
+        titleTrailing={titleTrailing}
         header={header}
         body={body}
         bodyTop={bodyTop}
+        wrapBodyRegion={wrapBodyRegion}
         footer={footer}
         titleId={titleId}
         onEdit={onEdit}
@@ -412,9 +454,11 @@ export function ReceptionStayDetailShell({
       accessibleTitleTooltip={accessibleTitleTooltip}
       titleLeading={titleLeading}
       titlePrefix={titlePrefix}
+      titleTrailing={titleTrailing}
       header={header}
       body={body}
       bodyTop={bodyTop}
+      wrapBodyRegion={wrapBodyRegion}
       footer={footer}
       sidePanel={sidePanel}
       titleId={titleId}

@@ -6,11 +6,7 @@ import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
 import { formatReservationBookingBalanceSummary } from '@/entities/guest-stay/lib/formatReservationBookingBalance';
 import { setGuestReservationBookingPaidAction } from '../actions/receptionActions';
-import {
-  countAccessNights,
-  formatAccessNightsLabel,
-  formatDisplayDate,
-} from '../lib/guestAccessDates';
+import { formatPartySheetMeta } from '../lib/guestAccessDates';
 import { resolvePartyBookingBlockers } from '../lib/resolvePartyBookingBlockers';
 import {
   resolveTourismTabBadge,
@@ -121,9 +117,6 @@ export function StayPartySheetTabsList() {
 export type StayPartyBookingTabProps = {
   partyStays: GuestStayRecordWithLink[];
   balanceStay: GuestStayRecordWithLink;
-  checkInDate: string;
-  checkOutDate: string;
-  bookingSourceLine?: string | null;
   tenantSlug?: string;
   onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
   contactSlot?: ReactNode;
@@ -132,13 +125,10 @@ export type StayPartyBookingTabProps = {
   tourismByStayId?: Record<string, TourismStatusBadge>;
 };
 
-/** Group booking overview (no beds list). */
+/** Group booking overview (no beds list). Dates/source live under party title chrome. */
 export function StayPartyBookingTab({
   partyStays,
   balanceStay,
-  checkInDate,
-  checkOutDate,
-  bookingSourceLine,
   tenantSlug,
   onStayBookingBalanceChange,
   contactSlot,
@@ -148,7 +138,6 @@ export function StayPartyBookingTab({
 }: StayPartyBookingTabProps) {
   if (partyStays.length <= 1) return null;
 
-  const nights = countAccessNights(checkInDate, checkOutDate);
   const accessInCount = partyStays.filter(isStayAdmitted).length;
   const tourismReadyCount = partyStays.filter(
     (member) => tourismByStayId[member.id] === 'complete'
@@ -161,22 +150,6 @@ export function StayPartyBookingTab({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1.5 rounded-md border border-border/70 bg-muted/20 px-3 py-2.5">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Stay
-        </p>
-        <p className="text-sm">
-          {formatDisplayDate(checkInDate)} → {formatDisplayDate(checkOutDate)}
-          {nights >= 1 ? ` · ${formatAccessNightsLabel(nights)}` : null}
-        </p>
-        {bookingSourceLine ? (
-          <p className="text-sm text-muted-foreground">{bookingSourceLine}</p>
-        ) : null}
-        <p className="text-sm text-muted-foreground">
-          {partyStays.length} {partyStays.length === 1 ? 'bed' : 'beds'}
-        </p>
-      </div>
-
       {tenantSlug ? (
         <StayPartyBalanceControls
           balanceStay={balanceStay}
@@ -277,6 +250,66 @@ export function StayPartyBedsTab({
   );
 }
 
+export type StayPartyMobilePanelProps = StayPartyBookingTabProps &
+  StayPartyBedsTabProps & {
+    tab: PartySheetTabId;
+    onTabChange: (tab: PartySheetTabId) => void;
+  };
+
+/**
+ * Mobile party root: own Tabs root (Booking | Beds).
+ * Must not share the child stay Tabs namespace (stay/tourism/access).
+ */
+export function StayPartyMobilePanel({
+  tab,
+  onTabChange,
+  partyStays,
+  activeStayId,
+  balanceStay,
+  resolveBedLabel,
+  onSelectStay,
+  tenantSlug,
+  onStayBookingBalanceChange,
+  contactSlot,
+  noteSlot,
+  showTourismSummary = false,
+  tourismByStayId = {},
+}: StayPartyMobilePanelProps) {
+  if (partyStays.length <= 1) return null;
+
+  return (
+    <Tabs
+      value={tab}
+      onValueChange={(value) => onTabChange(value as PartySheetTabId)}
+      className="flex flex-col gap-3"
+    >
+      <StayPartySheetTabsList />
+      <TabsContent value="booking" className="mt-0 outline-none">
+        <StayPartyBookingTab
+          partyStays={partyStays}
+          balanceStay={balanceStay}
+          tenantSlug={tenantSlug}
+          onStayBookingBalanceChange={onStayBookingBalanceChange}
+          contactSlot={contactSlot}
+          noteSlot={noteSlot}
+          showTourismSummary={showTourismSummary}
+          tourismByStayId={tourismByStayId}
+        />
+      </TabsContent>
+      <TabsContent value="beds" className="mt-0 outline-none">
+        <StayPartyBedsTab
+          partyStays={partyStays}
+          activeStayId={activeStayId}
+          resolveBedLabel={resolveBedLabel}
+          onSelectStay={onSelectStay}
+          showTourismSummary={showTourismSummary}
+          tourismByStayId={tourismByStayId}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 export type StayPartyPeekProps = {
   partyStays: GuestStayRecordWithLink[];
   activeStayId: string;
@@ -328,6 +361,7 @@ export function StayPartyPeek({
 
   const leadName = resolvePartyLeadName(partyStays) || 'Guest';
   const partyTitle = resolvePartyTitle(leadName, partyStays.length);
+  const partyMeta = formatPartySheetMeta(checkInDate, checkOutDate, bookingSourceLine);
   const showFooter = showCheckInParty && tab === 'booking';
 
   return (
@@ -340,6 +374,7 @@ export function StayPartyPeek({
           <BookingGroupIcon className="text-foreground/70" />
           <span className="truncate">{partyTitle}</span>
         </p>
+        <p className="truncate text-xs text-muted-foreground">{partyMeta}</p>
       </div>
 
       <Tabs
@@ -356,9 +391,6 @@ export function StayPartyPeek({
             <StayPartyBookingTab
               partyStays={partyStays}
               balanceStay={balanceStay}
-              checkInDate={checkInDate}
-              checkOutDate={checkOutDate}
-              bookingSourceLine={bookingSourceLine}
               tenantSlug={tenantSlug}
               onStayBookingBalanceChange={onStayBookingBalanceChange}
               contactSlot={contactSlot}

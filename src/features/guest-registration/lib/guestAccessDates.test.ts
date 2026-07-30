@@ -9,6 +9,7 @@ import {
   filterIssuedAccess,
   formatAccessNightsLabel,
   formatAccessPeriodSummary,
+  formatPartySheetMeta,
   groupIssuedAccess,
   isValidAccessRange,
 } from './guestAccessDates';
@@ -40,6 +41,13 @@ describe('guestAccessDates', () => {
   it('formats night labels', () => {
     expect(formatAccessNightsLabel(1)).toBe('1 night');
     expect(formatAccessNightsLabel(3)).toBe('3 nights');
+  });
+
+  it('formats party sheet meta under title', () => {
+    expect(formatPartySheetMeta('2026-06-22', '2026-06-25')).toBe('Jun 22 → Jun 25');
+    expect(formatPartySheetMeta('2026-06-22', '2026-06-25', 'Booking.com · #ABC')).toBe(
+      'Booking.com · #ABC · Jun 22 → Jun 25'
+    );
   });
 
   it('defaults walk-in to today and tomorrow', () => {
