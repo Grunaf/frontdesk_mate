@@ -44,6 +44,7 @@ export function ReceptionGuestStayDetailActions({
   checkInDisabled,
   checkInHint,
   checkInError,
+  checkInVariant = 'default',
 }: {
   stay: GuestStayRecordWithLink;
   isPending: boolean;
@@ -57,6 +58,8 @@ export function ReceptionGuestStayDetailActions({
   checkInDisabled: boolean;
   checkInHint: string | null;
   checkInError: string | null;
+  /** Desktop party: demote when peek shows Check in all. */
+  checkInVariant?: 'default' | 'outline';
 }) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -101,6 +104,7 @@ export function ReceptionGuestStayDetailActions({
           {checkInError ? <p className="text-xs text-destructive">{checkInError}</p> : null}
           <Button
             type="button"
+            variant={checkInVariant}
             size="default"
             className="w-full"
             disabled={busy || checkInDisabled}

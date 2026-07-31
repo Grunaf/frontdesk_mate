@@ -707,6 +707,9 @@ export function ReceptionGuestStayDetail({
           checkInDisabled={checkInDisabled}
           checkInHint={checkInHint}
           checkInError={access.actionError}
+          checkInVariant={
+            !isBelowLg && isParty && showCheckInParty ? 'outline' : 'default'
+          }
         />
       );
 
