@@ -2047,9 +2047,9 @@ export function ReceptionCheckInPanel({
                   chromeAction: (
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="default"
                       size="sm"
-                      className="min-h-11 px-2 font-medium"
+                      className="min-h-11 min-w-[4.5rem] px-3 font-medium"
                       onClick={handleSubmit}
                       disabled={isPending || !canSubmitBooking || !rangeValid}
                     >
