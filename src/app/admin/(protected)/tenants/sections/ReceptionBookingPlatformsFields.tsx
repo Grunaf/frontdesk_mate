@@ -10,13 +10,24 @@ import { useTenantFormDraft } from '../ui/TenantFormDraftContext';
 
 interface ReceptionBookingPlatformsFieldsProps {
   settings?: TenantSettings;
+  /** Admin tenant form vs owner portal — picks gated download URL. */
+  surface?: 'platform' | 'owner';
 }
 
 function emptyPlatform(index: number): BookingPlatformOption {
   return { id: `platform-${index + 1}`, label: '' };
 }
 
-export function ReceptionBookingPlatformsFields({ settings }: ReceptionBookingPlatformsFieldsProps) {
+function extensionDownloadHref(surface: 'platform' | 'owner'): string {
+  return surface === 'owner'
+    ? '/api/owner/extensions/booking-com-sync'
+    : '/admin/downloads/booking-com-sync';
+}
+
+export function ReceptionBookingPlatformsFields({
+  settings,
+  surface = 'platform',
+}: ReceptionBookingPlatformsFieldsProps) {
   const { updateDraft } = useTenantFormDraft();
   const platforms = useMemo(
     () => settings?.receptionBooking?.platforms ?? [],
@@ -24,6 +35,7 @@ export function ReceptionBookingPlatformsFields({ settings }: ReceptionBookingPl
   );
   const bookingComHotelId = settings?.receptionBooking?.bookingComHotelId ?? '';
   const hostelworldBookingPrefix = settings?.receptionBooking?.hostelworldBookingPrefix ?? '';
+  const downloadHref = extensionDownloadHref(surface);
 
   const patchReceptionBooking = (next: {
     platforms?: BookingPlatformOption[];
@@ -100,6 +112,22 @@ export function ReceptionBookingPlatformsFields({ settings }: ReceptionBookingPl
           className="w-full max-w-xs rounded-md border px-2.5 py-1.5 font-mono text-sm"
         />
       </label>
+
+      <div className="space-y-2 rounded-md border bg-background px-3 py-2.5">
+        <p className="text-sm font-medium">Booking.com Chrome extension</p>
+        <p className="text-xs text-muted-foreground">
+          Private package (not Chrome Web Store). Download ZIP → unzip → Chrome → Extensions →
+          Load unpacked. In the popup set webhook{' '}
+          <code className="text-[11px]">/api/integrations/booking-com/webhook</code> on this app
+          host and the server <code className="text-[11px]">BOOKING_COM_SYNC_SECRET</code>.
+        </p>
+        <a
+          href={downloadHref}
+          className="inline-flex rounded-md border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted/50"
+        >
+          Download extension ZIP
+        </a>
+      </div>
 
       <label className="block space-y-1">
         <span className="text-sm font-medium">Hostelworld booking prefix</span>
