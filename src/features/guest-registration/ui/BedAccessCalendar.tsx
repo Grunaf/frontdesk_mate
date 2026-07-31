@@ -41,6 +41,9 @@ import {
   isPlanStayCellInactive,
   isPlanStayUnpaid,
 } from '../lib/resolvePlanStayCalendarPresentation';
+import {
+  resolvePlanStayGuestLabel,
+} from '../lib/resolvePartyTitle';
 import { RECEPTION_PLAN_TOOLBAR_SLOT_ID } from '../lib/receptionStickyChrome';
 import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
 import { Button, SegmentedChipBar } from '@/shared/ui';
@@ -333,6 +336,14 @@ export function BedAccessCalendar({
     () => resolveBedDayCalendar(settings, stays, effectiveView, anchorDate),
     [anchorDate, effectiveView, settings, stays]
   );
+
+  const guestLabelByStayId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const stay of stays) {
+      map.set(stay.id, resolvePlanStayGuestLabel(stay, stays));
+    }
+    return map;
+  }, [stays]);
 
   const quickFilteredRoomGroups = useMemo(
     () => filterPlanRoomGroupsByQuickFilters(snapshot.roomGroups, settings, quickFilters),
@@ -629,8 +640,12 @@ export function BedAccessCalendar({
                                         inactive && 'text-muted-foreground'
                                       )}
                                     >
-                                      {cell.stay?.guest_name ||
-                                        (cell.status === 'scheduled' ? 'Soon' : 'Guest')}
+                                      {cell.stay
+                                        ? guestLabelByStayId.get(cell.stay.id) ??
+                                          resolvePlanStayGuestLabel(cell.stay, stays)
+                                        : cell.status === 'scheduled'
+                                          ? 'Soon'
+                                          : 'Guest'}
                                     </span>
                                     {unpaidSymbol ? (
                                       <span

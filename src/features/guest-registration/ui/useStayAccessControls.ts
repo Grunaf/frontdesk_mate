@@ -38,6 +38,17 @@ export function isReceptionStayPastCheckOut(
   return Boolean(stay.is_archived) || operationalDate >= stayRecordCheckOutDate(stay);
 }
 
+/**
+ * Edit dates / bed / booking fields: live stays always; ended only with past-edit permission.
+ * Does not unlock grant / tourism / reissue.
+ */
+export function canEditReceptionStayOccupancy(input: {
+  stayEnded: boolean;
+  canEditPastStays: boolean;
+}): boolean {
+  return !input.stayEnded || input.canEditPastStays;
+}
+
 export function useStayAccessControls({
   stay,
   tenantSlug,

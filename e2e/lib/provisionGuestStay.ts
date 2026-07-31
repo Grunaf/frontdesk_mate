@@ -82,6 +82,33 @@ function resolveSmokeCheckInDate(
   return checkInStartedToday ? todayLocal : addStayCalendarDays(todayLocal, -1);
 }
 
+/**
+ * Guest bed map / room-map link require housekeeping `ready`.
+ * Without this, smoke stays flake when the bed is unset / needs_strip / stripped.
+ */
+async function markSmokeBedReady(
+  admin: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
+  tenantId: string,
+  bedId: string
+): Promise<boolean> {
+  const { error } = await admin.from('housekeeping_bed_statuses').upsert(
+    {
+      tenant_id: tenantId,
+      bed_id: bedId,
+      status: 'ready',
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'tenant_id,bed_id' }
+  );
+
+  if (error) {
+    console.error('[e2e provision] mark bed ready failed:', error.message);
+    return false;
+  }
+
+  return true;
+}
+
 async function loadTenant(slug: string): Promise<TenantRow | null> {
   const admin = getSupabaseAdmin();
   if (!admin) return null;
@@ -263,6 +290,11 @@ export async function provisionGuestStayForSmoke(input: {
 
   if (!bedId) {
     console.error('[e2e provision] no free bed for smoke stay');
+    return null;
+  }
+
+  // Room-map / bed card link needs ready + check-in gate (date resolved above).
+  if (!(await markSmokeBedReady(admin, tenant.id, bedId))) {
     return null;
   }
 

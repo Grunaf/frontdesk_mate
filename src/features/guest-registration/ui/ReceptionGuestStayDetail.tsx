@@ -67,11 +67,15 @@ import {
   ReceptionGuestStayDetailOverflowMenu,
 } from './ReceptionGuestStayDetailChrome';
 import {
+  canEditReceptionStayOccupancy,
   isReceptionStayPastCheckOut,
   useStayAccessControls,
 } from './useStayAccessControls';
 import { Badge, Button, ConfirmDialog, Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
-import { receptionStaffCanSkipTourismGate } from '@/entities/reception-user';
+import {
+  receptionStaffCanEditPastStays,
+  receptionStaffCanSkipTourismGate,
+} from '@/entities/reception-user';
 import { cn } from '@/shared/lib/utils';
 import { ChevronLeft, QrCode } from 'lucide-react';
 
@@ -222,6 +226,7 @@ export function ReceptionGuestStayDetail({
   const tourismAddGuestRef = useRef<(() => void) | null>(null);
   const showTourismTab = tourismRegistrationRequired && Boolean(tenantSlug);
   const canSkipTourismGate = receptionStaffCanSkipTourismGate(staffPermissions);
+  const canEditPastStays = receptionStaffCanEditPastStays(staffPermissions);
 
   const openDeskQr = () => {
     setActiveTab('access');
@@ -256,6 +261,10 @@ export function ReceptionGuestStayDetail({
   });
 
   const stayEnded = isReceptionStayPastCheckOut(stay, operationalDate);
+  const canEditOccupancy = canEditReceptionStayOccupancy({
+    stayEnded,
+    canEditPastStays,
+  });
   const overdueCheckout = isStayCheckoutOverdue({
     passport_checked_at: stay.passport_checked_at,
     desk_checked_in_at: stay.desk_checked_in_at,
@@ -1021,13 +1030,13 @@ export function ReceptionGuestStayDetail({
               checkoutPartyOverdue={partyCheckoutOverdue}
               onCheckoutParty={requestCheckoutParty}
               onEditParty={
-                stayEnded
-                  ? undefined
-                  : () =>
+                canEditOccupancy
+                  ? () =>
                       onEditStay(balanceStay, {
                         intent: 'changeDates',
                         partyStays: resolvedPartyStays,
                       })
+                  : undefined
               }
               editPartyDisabled={isPending}
             />
@@ -1035,7 +1044,7 @@ export function ReceptionGuestStayDetail({
             : undefined
         }
         onEdit={
-          showEdit || stayEnded
+          showEdit || !canEditOccupancy
             ? undefined
             : showPartyRoot
               ? () =>
@@ -1086,7 +1095,7 @@ export function ReceptionGuestStayDetail({
                   : 'Bed is not marked ready — confirm readiness before unlocking.'
               }
               onUnlockBed={requestUnlockBed}
-              showMoveBed={isParty && !stayEnded}
+              showMoveBed={isParty && canEditOccupancy}
               onMoveBed={() => onEditStay(stay, { intent: 'moveBed' })}
             />
           )

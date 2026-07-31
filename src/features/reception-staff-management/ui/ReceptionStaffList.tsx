@@ -30,6 +30,7 @@ import type {
 import {
   DESK_CHECK_IN_PERMISSION,
   DESK_CLEANING_PERMISSION,
+  DESK_EDIT_PAST_STAYS_PERMISSION,
   DESK_SKIP_TOURISM_GATE_PERMISSION,
   RECEPTION_STAFF_PERMISSIONS,
   resolveEffectiveReceptionStaffPermissions,
@@ -51,6 +52,10 @@ const PERMISSION_BADGE_LABELS: Record<ReceptionStaffPermission, PermissionLabelM
     platform: 'Skip tourism',
     ownerKey: 'permissions.badgeSkipTourismGate',
   },
+  [DESK_EDIT_PAST_STAYS_PERMISSION]: {
+    platform: 'Edit past',
+    ownerKey: 'permissions.badgeEditPastStays',
+  },
 };
 
 const PERMISSION_EDIT_LABELS: Record<ReceptionStaffPermission, PermissionLabelMeta> = {
@@ -66,6 +71,10 @@ const PERMISSION_EDIT_LABELS: Record<ReceptionStaffPermission, PermissionLabelMe
     platform:
       'Skip tourism gate (check-in / grant with warning when registration incomplete)',
     ownerKey: 'permissions.skipTourismGate',
+  },
+  [DESK_EDIT_PAST_STAYS_PERMISSION]: {
+    platform: 'Edit past stays (dates / bed / booking on ended or checked-out)',
+    ownerKey: 'permissions.editPastStays',
   },
 };
 export interface ReceptionStaffManagementProps {

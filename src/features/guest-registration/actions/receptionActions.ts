@@ -21,7 +21,7 @@ import {
   setDeskCheckedInAt,
 } from '@/entities/guest-stay/server';
 import { clearHousekeepingStayPresence, listHousekeepingBedStatuses } from '@/entities/housekeeping/server';
-import { isBedReadyForGuestVisibility } from '@/entities/guest-stay';
+import { isBedReadyForGuestVisibility, stayRecordCheckOutDate } from '@/entities/guest-stay';
 import { getGuestById, searchGuests, type GuestProfile } from '@/entities/guest/server';
 import { seedTourismGuestFromGuestProfile } from '@/entities/guest-tourism-registration/server';
 import {
@@ -54,6 +54,7 @@ import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEv
 import { resolveStayCancelCheckoutAction } from '../lib/resolveStayCancelCheckoutAction';
 import {
   assertReceptionCheckInAccess,
+  assertReceptionEditPastStaysAccess,
   resolveReceptionStaffContext,
   type ReceptionStaffContext,
 } from '../lib/resolveReceptionStaffContext';
@@ -635,10 +636,27 @@ export async function updateGuestReservationAction(input: {
   bookingAmountDue?: string;
   contactPhone?: string | null;
   contactEmail?: string | null;
+  /** Operational calendar day — gates past-edit and unarchive-after-edit. */
+  operationalDate: string;
 }): Promise<UpdateGuestReservationActionResult> {
   const staff = await requireCheckInStaff(input.tenantSlug);
   if (!staff.ok) {
     return { ok: false, error: staff.error };
+  }
+
+  const existing = await getGuestReservationForDesk(input.tenantSlug, input.stayId);
+  if (!existing) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const stayEnded =
+    Boolean(existing.is_archived) || input.operationalDate >= stayRecordCheckOutDate(existing);
+  const allowPastEdit = stayEnded;
+  if (allowPastEdit) {
+    const pastGate = assertReceptionEditPastStaysAccess(staff.ctx);
+    if (!pastGate.ok) {
+      return { ok: false, error: pastGate.error };
+    }
   }
 
   try {
@@ -655,6 +673,8 @@ export async function updateGuestReservationAction(input: {
       bookingAmountDue: input.bookingAmountDue,
       contactPhone: input.contactPhone,
       contactEmail: input.contactEmail,
+      allowPastEdit,
+      operationalDate: input.operationalDate,
     });
 
     if (result.ok) {

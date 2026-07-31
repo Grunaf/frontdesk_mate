@@ -69,3 +69,33 @@ export function resolvePartyMemberOrdinal(
   const index = sorted.findIndex((member) => member.id === stayId);
   return index >= 0 ? index + 1 : 1;
 }
+
+type PlanStayGuestLabelFields = {
+  id: string;
+  guest_name?: string | null;
+  created_at: string;
+  booking_group_id?: string | null;
+  booking_amount_due_minor?: number | null;
+};
+
+/**
+ * Plan calendar / list label for a stay: real name, else party `Lead (N)`, else `Guest`.
+ */
+export function resolvePlanStayGuestLabel(
+  stay: PlanStayGuestLabelFields,
+  planStays: PlanStayGuestLabelFields[]
+): string {
+  const groupId = stay.booking_group_id?.trim();
+  if (!groupId) {
+    return resolveMeaningfulGuestName(stay.guest_name) || 'Guest';
+  }
+  const party = planStays.filter((entry) => entry.booking_group_id === groupId);
+  if (party.length <= 1) {
+    return resolveMeaningfulGuestName(stay.guest_name) || 'Guest';
+  }
+  return resolvePartyMemberTitle({
+    guestName: stay.guest_name,
+    leadName: resolvePartyLeadName(party),
+    ordinal: resolvePartyMemberOrdinal(party, stay.id),
+  });
+}

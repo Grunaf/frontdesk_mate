@@ -802,6 +802,16 @@ export function ReceptionCheckInPanel({
     [inventory]
   );
 
+  const hubRooms = useMemo(
+    () =>
+      inventory.roomGroups.map((room) => ({
+        roomId: room.roomId,
+        roomLabel: room.roomLabel,
+        bedIds: room.beds.map((bed) => bed.bedId),
+      })),
+    [inventory]
+  );
+
   const selectedStay = useMemo(() => {
     if (!selectedStayId) return null;
     const fromPlan = planStays.find((stay) => stay.id === selectedStayId) ?? null;
@@ -1337,7 +1347,7 @@ export function ReceptionCheckInPanel({
       case 'tenant_not_found':
         return 'Hostel not found.';
       case 'not_found':
-        return 'Access not found or already revoked.';
+        return 'Reservation not found.';
       case 'already_revoked':
         return 'Access was revoked — cannot mark arrival.';
       case 'invalid_booking_source':
@@ -1647,6 +1657,7 @@ export function ReceptionCheckInPanel({
             contactEmail: isLead
               ? input.contactResolution.contactEmail
               : memberStay?.contact_email ?? null,
+            operationalDate: hubSnapshot.operational.operationalDate,
           });
 
           if (!result.ok) {
@@ -2396,6 +2407,7 @@ export function ReceptionCheckInPanel({
               <ReceptionHubView
                 snapshot={hubSnapshot}
                 resolveBedLabel={resolveBedLabel}
+                hubRooms={hubRooms}
                 planStays={planStays}
                 onViewStay={openHubOrCashStay}
                 onOpenFreeBeds={openPlanFreeBeds}

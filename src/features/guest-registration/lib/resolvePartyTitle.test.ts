@@ -4,6 +4,7 @@ import {
   resolvePartyLeadName,
   resolvePartyMemberOrdinal,
   resolvePartyMemberTitle,
+  resolvePlanStayGuestLabel,
   resolvePartyTitle,
 } from './resolvePartyTitle';
 
@@ -100,5 +101,34 @@ describe('resolvePartyMemberOrdinal', () => {
     ];
     expect(resolvePartyMemberOrdinal(party, 'a')).toBe(1);
     expect(resolvePartyMemberOrdinal(party, 'b')).toBe(2);
+  });
+});
+
+describe('resolvePlanStayGuestLabel', () => {
+  const base = { created_at: '2026-01-01T00:00:00Z' };
+
+  it('uses real name for solo stays', () => {
+    expect(
+      resolvePlanStayGuestLabel({ id: '1', guest_name: 'Alex', ...base }, [])
+    ).toBe('Alex');
+  });
+
+  it('uses Lead (N) for unnamed party members', () => {
+    const party = [
+      {
+        id: 'a',
+        guest_name: 'Maria',
+        booking_group_id: 'g1',
+        created_at: '2026-01-01T00:00:00Z',
+        booking_amount_due_minor: 100,
+      },
+      {
+        id: 'b',
+        guest_name: 'Guest 2',
+        booking_group_id: 'g1',
+        created_at: '2026-01-02T00:00:00Z',
+      },
+    ];
+    expect(resolvePlanStayGuestLabel(party[1]!, party)).toBe('Maria (2)');
   });
 });

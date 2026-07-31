@@ -6,6 +6,10 @@ import { stayRecordCheckInDate } from '@/entities/guest-stay';
 import { housekeepingStayPresenceDeskLabel } from '@/entities/housekeeping';
 import { formatDisplayDate } from '../lib/guestAccessDates';
 import { countBookingGroupMembers } from '../lib/collapseStaysByBookingGroup';
+import {
+  groupHubStaysByRoom,
+  type HubRoomRef,
+} from '../lib/groupHubStaysByRoom';
 import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
 import type { DepartureSectionPhase } from '../lib/resolveDepartureSectionPhase';
 import type { ReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
@@ -15,6 +19,8 @@ import { cn } from '@/shared/lib/utils';
 interface ReceptionHubViewProps {
   snapshot: ReceptionHubSnapshot;
   resolveBedLabel: (bedId: string) => string;
+  /** Inventory rooms — hub stay lists group by these (order preserved). */
+  hubRooms: readonly HubRoomRef[];
   /** Full operational stays — party size for hub row labels. */
   planStays?: GuestStayRecordWithLink[];
   onViewStay: (stayId: string) => void;
@@ -91,6 +97,7 @@ function hubStaySecondaryLabel(
 function HubArrivalList({
   stays,
   planStays,
+  hubRooms,
   resolveBedLabel,
   onViewStay,
   emptyLabel,
@@ -98,6 +105,7 @@ function HubArrivalList({
 }: {
   stays: GuestStayRecordWithLink[];
   planStays: GuestStayRecordWithLink[];
+  hubRooms: readonly HubRoomRef[];
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
   emptyLabel?: string;
@@ -109,36 +117,45 @@ function HubArrivalList({
     ) : null;
   }
 
-  return (
-    <ul className="space-y-1.5">
-      {stays.map((stay) => {
-        const bedLabel = resolveBedLabel(stay.bed_id);
-        const guestLabel = hubStayPrimaryLabel(stay, planStays);
-        const secondary = hubStaySecondaryLabel(stay, bedLabel, planStays, resolveSecondary);
-        const isGroup =
-          countBookingGroupMembers(planStays, stay.booking_group_id) > 1 &&
-          Boolean(stay.booking_group_id?.trim());
+  const roomGroups = groupHubStaysByRoom({ stays, rooms: hubRooms });
 
-        return (
-          <li key={stay.id}>
-            <button
-              type="button"
-              onClick={() => onViewStay(stay.id)}
-              className={cn(
-                'flex w-full items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2 text-left text-sm',
-                'hover:bg-muted/40'
-              )}
-            >
-              <span className="flex min-w-0 items-center gap-1.5">
-                {isGroup ? <BookingGroupIcon /> : null}
-                <span className="truncate font-medium">{guestLabel}</span>
-              </span>
-              <span className="shrink-0 text-xs text-muted-foreground">{secondary}</span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+  return (
+    <div className="space-y-3">
+      {roomGroups.map((group) => (
+        <div key={group.roomId} className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">{group.roomLabel}</p>
+          <ul className="space-y-1.5">
+            {group.stays.map((stay) => {
+              const bedLabel = resolveBedLabel(stay.bed_id);
+              const guestLabel = hubStayPrimaryLabel(stay, planStays);
+              const secondary = hubStaySecondaryLabel(stay, bedLabel, planStays, resolveSecondary);
+              const isGroup =
+                countBookingGroupMembers(planStays, stay.booking_group_id) > 1 &&
+                Boolean(stay.booking_group_id?.trim());
+
+              return (
+                <li key={stay.id}>
+                  <button
+                    type="button"
+                    onClick={() => onViewStay(stay.id)}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2 text-left text-sm',
+                      'hover:bg-muted/40'
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      {isGroup ? <BookingGroupIcon /> : null}
+                      <span className="truncate font-medium">{guestLabel}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{secondary}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -198,12 +215,14 @@ function departureSectionTitle(phase: DepartureSectionPhase, count: number): str
 function DeparturesSection({
   snapshot,
   planStays,
+  hubRooms,
   resolveBedLabel,
   onViewStay,
   presenceByStayId,
 }: {
   snapshot: ReceptionHubSnapshot;
   planStays: GuestStayRecordWithLink[];
+  hubRooms: readonly HubRoomRef[];
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
   presenceByStayId?: Record<string, 'vacant' | 'still_here'>;
@@ -216,6 +235,7 @@ function DeparturesSection({
     <HubArrivalList
       stays={departures}
       planStays={planStays}
+      hubRooms={hubRooms}
       resolveBedLabel={resolveBedLabel}
       onViewStay={onViewStay}
       resolveSecondary={(stay, bedLabel) => {
@@ -262,6 +282,7 @@ function DeparturesSection({
 export function ReceptionHubView({
   snapshot,
   resolveBedLabel,
+  hubRooms,
   planStays = [],
   onViewStay,
   onOpenFreeBeds,
@@ -349,6 +370,7 @@ export function ReceptionHubView({
       <DeparturesSection
         snapshot={snapshot}
         planStays={planStays}
+        hubRooms={hubRooms}
         resolveBedLabel={resolveBedLabel}
         onViewStay={onViewStay}
         presenceByStayId={presenceByStayId}
@@ -358,6 +380,7 @@ export function ReceptionHubView({
         <HubArrivalList
           stays={snapshot.expectedToday}
           planStays={planStays}
+          hubRooms={hubRooms}
           resolveBedLabel={resolveBedLabel}
           onViewStay={onViewStay}
           emptyLabel="No check-ins expected for this operational day."
@@ -369,6 +392,7 @@ export function ReceptionHubView({
           <HubArrivalList
             stays={snapshot.stillExpected}
             planStays={planStays}
+            hubRooms={hubRooms}
             resolveBedLabel={resolveBedLabel}
             onViewStay={onViewStay}
           />
@@ -405,6 +429,7 @@ export function ReceptionHubView({
           <HubArrivalList
             stays={snapshot.keyNotIssued}
             planStays={planStays}
+            hubRooms={hubRooms}
             resolveBedLabel={resolveBedLabel}
             onViewStay={onViewStay}
           />
@@ -420,6 +445,7 @@ export function ReceptionHubView({
             <HubArrivalList
               stays={snapshot.noShow}
               planStays={planStays}
+              hubRooms={hubRooms}
               resolveBedLabel={resolveBedLabel}
               onViewStay={onViewStay}
             />

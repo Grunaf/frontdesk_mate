@@ -5,6 +5,7 @@ import {
   findReceptionUserById,
   receptionStaffCanCheckIn,
   receptionStaffCanClean,
+  receptionStaffCanEditPastStays,
   receptionStaffCanManageHousekeeping,
   receptionStaffHasPermission,
   type ReceptionStaffPermission,
@@ -66,11 +67,25 @@ export function staffCanManageHousekeeping(ctx: ReceptionStaffContext): boolean 
   return receptionStaffCanManageHousekeeping(ctx.permissions);
 }
 
+export function staffCanEditPastStays(ctx: ReceptionStaffContext): boolean {
+  return receptionStaffCanEditPastStays(ctx.permissions);
+}
+
 /** Check-in desk mutations (Plan / Access / Cash / Archive / …). */
 export function assertReceptionCheckInAccess(
   ctx: ReceptionStaffContext
 ): { ok: true } | { ok: false; error: 'forbidden' } {
   if (!staffCanCheckIn(ctx)) {
+    return { ok: false, error: 'forbidden' };
+  }
+  return { ok: true };
+}
+
+/** Edit dates/bed/booking on ended or checked-out archived stays. */
+export function assertReceptionEditPastStaysAccess(
+  ctx: ReceptionStaffContext
+): { ok: true } | { ok: false; error: 'forbidden' } {
+  if (!staffCanEditPastStays(ctx)) {
     return { ok: false, error: 'forbidden' };
   }
   return { ok: true };
