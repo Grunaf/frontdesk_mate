@@ -42,6 +42,7 @@ function isReceptionOperationalContext(value: unknown): value is ReceptionOperat
     (record.planStays === undefined || Array.isArray(record.planStays)) &&
     Array.isArray(record.openIssues) &&
     Array.isArray(record.openTransfers) &&
+    (record.openBookingInbox === undefined || Array.isArray(record.openBookingInbox)) &&
     (record.staffPermissions === undefined || Array.isArray(record.staffPermissions))
   );
 }

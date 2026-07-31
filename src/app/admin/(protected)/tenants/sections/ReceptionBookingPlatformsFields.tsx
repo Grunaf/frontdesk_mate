@@ -88,7 +88,8 @@ export function ReceptionBookingPlatformsFields({ settings }: ReceptionBookingPl
       <label className="block space-y-1">
         <span className="text-sm font-medium">Booking.com hotel ID</span>
         <p className="text-xs text-muted-foreground">
-          Used by reception to open reservations in Booking.com extranet.
+          Used by reception to open reservations in Booking.com extranet, and to map Chrome
+          extension sync (webhook resolves tenant by this hotel ID).
         </p>
         <input
           value={bookingComHotelId}

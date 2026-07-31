@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { listBookingComExternalBookings } from '@/entities/booking-com-external-booking/server';
 import { listGuestHubTransfers } from '@/entities/guest-hub-transfer/server';
 import { listGuestIssues } from '@/entities/guest-issue/server';
 import { listActiveGuestStays, listPlanGuestReservations } from '@/entities/guest-stay/server';
@@ -19,14 +20,16 @@ export async function buildReceptionOperationalContext(
 ): Promise<ReceptionOperationalContext> {
   const now = new Date();
 
-  const [tenant, stays, planStays, openIssues, openTransfers, staff] = await Promise.all([
-    getTenantRecord(tenantSlug),
-    listActiveGuestStays(tenantSlug, locale),
-    listPlanGuestReservations(tenantSlug, locale),
-    listGuestIssues(tenantSlug, 'open'),
-    listGuestHubTransfers(tenantSlug, 'open'),
-    resolveReceptionStaffContext(tenantSlug),
-  ]);
+  const [tenant, stays, planStays, openIssues, openTransfers, openBookingInbox, staff] =
+    await Promise.all([
+      getTenantRecord(tenantSlug),
+      listActiveGuestStays(tenantSlug, locale),
+      listPlanGuestReservations(tenantSlug, locale),
+      listGuestIssues(tenantSlug, 'open'),
+      listGuestHubTransfers(tenantSlug, 'open'),
+      listBookingComExternalBookings(tenantSlug, 'open'),
+      resolveReceptionStaffContext(tenantSlug),
+    ]);
 
   const operationalDayStartTime = resolveOperationalDayStartTime(tenant?.settings);
   const operationalWindow = resolveOperationalDay(now, operationalDayStartTime);
@@ -58,6 +61,7 @@ export async function buildReceptionOperationalContext(
     planStays,
     openIssues,
     openTransfers,
+    openBookingInbox,
     staffPermissions: staff.ok ? staff.ctx.permissions : [],
   };
 }

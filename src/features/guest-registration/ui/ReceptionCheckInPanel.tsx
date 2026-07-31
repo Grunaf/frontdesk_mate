@@ -125,7 +125,10 @@ import { ReceptionCashView } from './ReceptionCashView';
 import { IssuedAccessList } from './IssuedAccessList';
 import { IssuesList } from './IssuesList';
 import { ReceptionTransfersTab } from './ReceptionTransfersTab';
+import { ReceptionBookingInboxTab } from './ReceptionBookingInboxTab';
 import { ReceptionArchiveTab } from './ReceptionArchiveTab';
+import { markBookingComExternalBookingIssuedAction } from '../actions/bookingComExternalBookingActions';
+import type { BookingComExternalBookingRecord } from '@/entities/booking-com-external-booking';
 import {
   ReceptionBottomNav,
   RECEPTION_BOTTOM_NAV_CONTENT_PAD,
@@ -234,9 +237,10 @@ export function ReceptionCheckInPanel({
 
   const { context, refresh } = useReceptionOperationalSync(initialContext, tenantSlug);
   const deskContext = context as ReceptionOperationalContext;
-  const { stays, planStays: planStaysFromContext, openIssues, openTransfers, operational } =
+  const { stays, planStays: planStaysFromContext, openIssues, openTransfers, openBookingInbox, operational } =
     deskContext;
   const planStays = planStaysFromContext ?? stays;
+  const bookingInbox = openBookingInbox ?? [];
   const signedInAsLabel = deskContext.actorDisplayName ?? FALLBACK_RECEPTION_ACTOR_LABEL;
   const staffPermissions = deskContext.staffPermissions ?? [];
   const staffPermissionsKey = staffPermissions.join(',');
@@ -257,7 +261,8 @@ export function ReceptionCheckInPanel({
   const moreBadgeCount = resolveMoreBadgeCount(
     staffPermissions,
     openIssues.length,
-    openTransfers.length
+    openTransfers.length,
+    bookingInbox.length
   );
 
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
@@ -295,6 +300,9 @@ export function ReceptionCheckInPanel({
   }, [operationalDayUpdatedNotice]);
 
   const [issueOverlayOpen, setIssueOverlayOpen] = useState(false);
+  const [pendingExternalBookingRowId, setPendingExternalBookingRowId] = useState<string | null>(
+    null
+  );
   const [deskTab, setDeskTab] = useState<DeskTab>(() =>
     resolveDefaultDeskTab(initialContext.staffPermissions)
   );
@@ -1269,6 +1277,7 @@ export function ReceptionCheckInPanel({
     setWholeRoomOverrideBedIds([]);
     setPendingWholeRoomOverride(null);
     setOpenAdvancedBeds(false);
+    setPendingExternalBookingRowId(null);
     setOfferId(preferredDefaultOfferId);
     if (stayOfferOptions.length > 0) {
       const picked = pickAvailableBedsForStayOffer({
@@ -1311,6 +1320,30 @@ export function ReceptionCheckInPanel({
     resetCreateIssueForm();
     setIssueOverlayOpen(false);
   }, [editDraft, clearEditDraft, resetCreateIssueForm]);
+
+  const beginIssueFromExternalBooking = useCallback(
+    (booking: BookingComExternalBookingRecord) => {
+      resetCreateIssueForm();
+      setPendingExternalBookingRowId(booking.id);
+      setMode('custom');
+      setGuestName(booking.guest_name?.trim() ?? '');
+      setContactPhone(booking.phone_number?.trim() ?? '');
+      setBookingPlatformId('booking-com');
+      setBookingExternalId(booking.booking_id);
+      if (booking.check_in) setCheckInDate(booking.check_in);
+      if (booking.check_out) setCheckOutDate(booking.check_out);
+      const adults = booking.adults ?? 0;
+      const children = booking.children ?? 0;
+      const partySize = Math.max(1, adults + children);
+      setGuestCount(partySize);
+      if (booking.amount != null) {
+        setBookingAmountDue(String(booking.amount));
+        setBookingAmountTouched(true);
+      }
+      setIssueOverlayOpen(true);
+    },
+    [resetCreateIssueForm]
+  );
 
   const handleModeChange = (nextMode: GuestAccessFormMode) => {
     if (editDraft) return;
@@ -1688,6 +1721,13 @@ export function ReceptionCheckInPanel({
       }
 
       const lead = result.stays[0];
+      if (pendingExternalBookingRowId && lead) {
+        await markBookingComExternalBookingIssuedAction({
+          tenantSlug,
+          bookingRowId: pendingExternalBookingRowId,
+          issuedStayId: lead.stay.id,
+        });
+      }
       await refresh();
       if (lead) {
         openStayFromChildSurface(lead.stay.id, { initialTab: 'access' });
@@ -2295,6 +2335,7 @@ export function ReceptionCheckInPanel({
             items={moreMenuTabs}
             openIssuesCount={openIssues.length}
             openTransfersCount={openTransfers.length}
+            openBookingInboxCount={bookingInbox.length}
             onSelect={(tab) => navigateDeskTab(tab, { clearStayId: true })}
           />
         ) : (
@@ -2427,6 +2468,16 @@ export function ReceptionCheckInPanel({
                 onFocusStay={openStayFromChildSurface}
                 isActive={deskTab === 'transfers'}
                 onOperationalRefresh={refresh}
+              />
+            </TabsContent>
+
+            <TabsContent value="booking-inbox">
+              <ReceptionBookingInboxTab
+                tenantSlug={tenantSlug}
+                openBookings={bookingInbox}
+                isActive={deskTab === 'booking-inbox'}
+                onOperationalRefresh={refresh}
+                onIssueAccess={beginIssueFromExternalBooking}
               />
             </TabsContent>
 

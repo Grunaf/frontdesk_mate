@@ -12,6 +12,7 @@ export const CHECK_IN_DESK_TABS = [
   'cash',
   'issues',
   'transfers',
+  'booking-inbox',
   'archive',
 ] as const;
 
@@ -23,7 +24,14 @@ export const BOOKINGS_CONTEXT_TABS = ['plan', 'access', 'cash'] as const;
 export type BookingsContextTab = (typeof BOOKINGS_CONTEXT_TABS)[number];
 
 /** Interrupt + utility screens reached from More (or Today shortcuts). */
-export const MORE_MENU_TABS = ['schedule', 'issues', 'transfers', 'archive', 'cleaning'] as const;
+export const MORE_MENU_TABS = [
+  'schedule',
+  'issues',
+  'transfers',
+  'booking-inbox',
+  'archive',
+  'cleaning',
+] as const;
 export type MoreMenuTab = (typeof MORE_MENU_TABS)[number];
 
 export type ReceptionPrimaryNav =
@@ -54,7 +62,7 @@ function resolveCandidateMoreMenuTabs(
     tabs.push('schedule');
   }
   if (canCheckIn) {
-    tabs.push('issues', 'transfers', 'archive');
+    tabs.push('issues', 'transfers', 'booking-inbox', 'archive');
   }
   if (canClean && canCheckIn) {
     // Cleaning-only staff uses Cleaning as primary, not More.
@@ -145,17 +153,19 @@ export function resolveMoreMenuTabs(
 }
 
 /**
- * Open Issues/Transfers count for the More badge — only tabs visible in More.
+ * Open Issues/Transfers/Booking inbox count for the More badge — only tabs visible in More.
  */
 export function resolveMoreBadgeCount(
   permissions: readonly string[] | null | undefined,
   openIssuesCount: number,
-  openTransfersCount: number
+  openTransfersCount: number,
+  openBookingInboxCount = 0
 ): number {
   const tabs = resolveMoreMenuTabs(permissions);
   let count = 0;
   if (tabs.includes('issues')) count += openIssuesCount;
   if (tabs.includes('transfers')) count += openTransfersCount;
+  if (tabs.includes('booking-inbox')) count += openBookingInboxCount;
   return count;
 }
 
