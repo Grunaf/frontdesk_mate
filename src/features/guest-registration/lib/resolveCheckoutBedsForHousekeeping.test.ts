@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   collectCheckoutBedIdsToMark,
+  collectEmptyBedIdsToMark,
   isCheckoutNightStay,
   shouldMarkBedNeedsStrip,
   type CheckoutHousekeepingStay,
@@ -94,5 +95,18 @@ describe('collectCheckoutBedIdsToMark', () => {
         b3: 'needs_strip',
       })
     ).toEqual(['b1']);
+  });
+});
+
+describe('collectEmptyBedIdsToMark', () => {
+  it('marks empty unset/ready beds and skips occupied or in-progress', () => {
+    const occupied = new Set(['b2']);
+    expect(
+      collectEmptyBedIdsToMark(['b1', 'b2', 'b3', 'b4'], occupied, {
+        b1: 'ready',
+        b3: 'stripped',
+        // b4 unset
+      })
+    ).toEqual(['b1', 'b4']);
   });
 });

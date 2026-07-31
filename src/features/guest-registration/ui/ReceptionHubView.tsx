@@ -5,6 +5,8 @@ import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { stayRecordCheckInDate } from '@/entities/guest-stay';
 import { housekeepingStayPresenceDeskLabel } from '@/entities/housekeeping';
 import { formatDisplayDate } from '../lib/guestAccessDates';
+import { countBookingGroupMembers } from '../lib/collapseStaysByBookingGroup';
+import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
 import type { DepartureSectionPhase } from '../lib/resolveDepartureSectionPhase';
 import type { ReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
 import { cn } from '@/shared/lib/utils';
@@ -12,11 +14,21 @@ import { cn } from '@/shared/lib/utils';
 interface ReceptionHubViewProps {
   snapshot: ReceptionHubSnapshot;
   resolveBedLabel: (bedId: string) => string;
+  /** Full operational stays — party size for hub row labels. */
+  planStays?: GuestStayRecordWithLink[];
   onViewStay: (stayId: string) => void;
   onOpenFreeBeds?: () => void;
   operationalDayUpdatedNotice?: boolean;
   /** Cleaning soft presence (Vacant / Still here) by stay id. */
   presenceByStayId?: Record<string, 'vacant' | 'still_here'>;
+  /** desk.check_in: Start operational day control next to operational caption. */
+  housekeepingDayStart?: {
+    kind: 'ready' | 'before_start' | 'already_rolled' | 'loading';
+    startTimeLabel: string;
+    targetOperationalDate: string;
+    busy?: boolean;
+    onStart: () => void;
+  } | null;
   /** When set, Payment due becomes a compact callout into Cash. */
   paymentDueCallout?: {
     unpaidCount: number;
@@ -33,20 +45,57 @@ interface ReceptionHubViewProps {
   } | null;
 }
 
-function formatOperationalDayCaption(snapshot: ReceptionHubSnapshot): string {
+function formatOperationalDayCaption(
+  snapshot: ReceptionHubSnapshot,
+  options?: { dayStarted?: boolean }
+): string {
   const { operationalDate } = snapshot.operational;
   const startLabel = snapshot.operationalDayStartTime;
-  return `Operational day · ${formatDisplayDate(operationalDate)} · starts ${startLabel}`;
+  const base = `Operational day · ${formatDisplayDate(operationalDate)} · starts ${startLabel}`;
+  return options?.dayStarted ? `${base} · Operational day started` : base;
+}
+
+function hubStayPrimaryLabel(
+  stay: GuestStayRecordWithLink,
+  planStays: GuestStayRecordWithLink[]
+): string {
+  const groupId = stay.booking_group_id?.trim();
+  if (!groupId) {
+    return stay.guest_name?.trim() || 'Guest';
+  }
+  const members = planStays.filter((entry) => entry.booking_group_id === groupId);
+  const size = members.length > 0 ? members.length : countBookingGroupMembers(planStays, groupId);
+  if (size <= 1) {
+    return stay.guest_name?.trim() || 'Guest';
+  }
+  const leadName = resolvePartyLeadName(members.length > 0 ? members : [stay]);
+  return resolvePartyTitle(leadName || stay.guest_name?.trim() || '', size);
+}
+
+function hubStaySecondaryLabel(
+  stay: GuestStayRecordWithLink,
+  bedLabel: string,
+  planStays: GuestStayRecordWithLink[],
+  resolveSecondary?: (stay: GuestStayRecordWithLink, bedLabel: string) => string
+): string {
+  const groupId = stay.booking_group_id?.trim();
+  const size = countBookingGroupMembers(planStays, groupId);
+  if (groupId && size > 1) {
+    return `${size} beds`;
+  }
+  return resolveSecondary?.(stay, bedLabel) ?? `${bedLabel} · ${formatDisplayDate(stayRecordCheckInDate(stay))}`;
 }
 
 function HubArrivalList({
   stays,
+  planStays,
   resolveBedLabel,
   onViewStay,
   emptyLabel,
   resolveSecondary,
 }: {
   stays: GuestStayRecordWithLink[];
+  planStays: GuestStayRecordWithLink[];
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
   emptyLabel?: string;
@@ -61,11 +110,9 @@ function HubArrivalList({
   return (
     <ul className="space-y-1.5">
       {stays.map((stay) => {
-        const checkInDay = stayRecordCheckInDate(stay);
-        const guestLabel = stay.guest_name?.trim() || 'Guest';
         const bedLabel = resolveBedLabel(stay.bed_id);
-        const secondary =
-          resolveSecondary?.(stay, bedLabel) ?? `${bedLabel} · ${formatDisplayDate(checkInDay)}`;
+        const guestLabel = hubStayPrimaryLabel(stay, planStays);
+        const secondary = hubStaySecondaryLabel(stay, bedLabel, planStays, resolveSecondary);
 
         return (
           <li key={stay.id}>
@@ -142,11 +189,13 @@ function departureSectionTitle(phase: DepartureSectionPhase, count: number): str
 
 function DeparturesSection({
   snapshot,
+  planStays,
   resolveBedLabel,
   onViewStay,
   presenceByStayId,
 }: {
   snapshot: ReceptionHubSnapshot;
+  planStays: GuestStayRecordWithLink[];
   resolveBedLabel: (bedId: string) => string;
   onViewStay: (stayId: string) => void;
   presenceByStayId?: Record<string, 'vacant' | 'still_here'>;
@@ -158,6 +207,7 @@ function DeparturesSection({
   const list = (
     <HubArrivalList
       stays={departures}
+      planStays={planStays}
       resolveBedLabel={resolveBedLabel}
       onViewStay={onViewStay}
       resolveSecondary={(stay, bedLabel) => {
@@ -204,10 +254,12 @@ function DeparturesSection({
 export function ReceptionHubView({
   snapshot,
   resolveBedLabel,
+  planStays = [],
   onViewStay,
   onOpenFreeBeds,
   operationalDayUpdatedNotice = false,
   presenceByStayId,
+  housekeepingDayStart = null,
   paymentDueCallout = null,
   interruptCallouts = null,
 }: ReceptionHubViewProps) {
@@ -223,7 +275,25 @@ export function ReceptionHubView({
           Operational day updated
         </p>
       ) : null}
-      <p className="text-xs text-muted-foreground">{formatOperationalDayCaption(snapshot)}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          {formatOperationalDayCaption(snapshot, {
+            dayStarted: housekeepingDayStart?.kind === 'already_rolled',
+          })}
+        </p>
+        {housekeepingDayStart && housekeepingDayStart.kind !== 'already_rolled' ? (
+          <button
+            type="button"
+            disabled={housekeepingDayStart.busy || housekeepingDayStart.kind === 'loading'}
+            onClick={housekeepingDayStart.onStart}
+            className="shrink-0 text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-60"
+          >
+            {housekeepingDayStart.kind === 'before_start'
+              ? 'Start operational day early…'
+              : 'Start operational day'}
+          </button>
+        ) : null}
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
         <OccupancyStatBlock
@@ -270,6 +340,7 @@ export function ReceptionHubView({
 
       <DeparturesSection
         snapshot={snapshot}
+        planStays={planStays}
         resolveBedLabel={resolveBedLabel}
         onViewStay={onViewStay}
         presenceByStayId={presenceByStayId}
@@ -278,6 +349,7 @@ export function ReceptionHubView({
       <HubSection title="Expected arrivals">
         <HubArrivalList
           stays={snapshot.expectedToday}
+          planStays={planStays}
           resolveBedLabel={resolveBedLabel}
           onViewStay={onViewStay}
           emptyLabel="No check-ins expected for this operational day."
@@ -288,6 +360,7 @@ export function ReceptionHubView({
         <HubSection title="Still expected">
           <HubArrivalList
             stays={snapshot.stillExpected}
+            planStays={planStays}
             resolveBedLabel={resolveBedLabel}
             onViewStay={onViewStay}
           />
@@ -323,6 +396,7 @@ export function ReceptionHubView({
         <HubSection title="Key not issued">
           <HubArrivalList
             stays={snapshot.keyNotIssued}
+            planStays={planStays}
             resolveBedLabel={resolveBedLabel}
             onViewStay={onViewStay}
           />
@@ -337,6 +411,7 @@ export function ReceptionHubView({
           <div className="mt-2">
             <HubArrivalList
               stays={snapshot.noShow}
+              planStays={planStays}
               resolveBedLabel={resolveBedLabel}
               onViewStay={onViewStay}
             />

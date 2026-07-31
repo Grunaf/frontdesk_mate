@@ -122,7 +122,7 @@ export function CleaningBedRow({
           </div>
           {presenceStatus === 'still_here' ? (
             <p className="text-xs text-muted-foreground">
-              Linen change — guest may still be here. Use Strip; this is not checkout.
+              Checkout day — guest may still be here. Mark Vacant when they leave so linen can go early.
             </p>
           ) : null}
         </div>

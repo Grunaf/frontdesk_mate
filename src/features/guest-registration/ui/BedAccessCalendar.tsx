@@ -5,9 +5,9 @@ import { createPortal } from 'react-dom';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
   HOUSEKEEPING_BED_STATUS_LABELS,
+  HOUSEKEEPING_BED_STATUSES,
   HOUSEKEEPING_ROOM_STATUSES,
   isHousekeepingBedNeedsWork,
-  resolveHousekeepingBedPrimaryAction,
   type HousekeepingBedStatus,
   type HousekeepingRoomStatus,
 } from '@/entities/housekeeping';
@@ -165,6 +165,58 @@ function isSyntheticRoomId(roomId: string): boolean {
 
 function roomStatusNeedsWork(status: HousekeepingRoomStatus): boolean {
   return status === 'not_cleaned';
+}
+
+function HousekeepingBedStatusSelect({
+  status,
+  disabled,
+  locked,
+  onChange,
+}: {
+  status: HousekeepingBedStatus | undefined;
+  disabled?: boolean;
+  /** Ready is locked on Plan — change via Cleaning if needed. */
+  locked?: boolean;
+  onChange: (status: HousekeepingBedStatus) => void;
+}) {
+  const needsWork = isHousekeepingBedNeedsWork(status);
+  const unset = !status;
+
+  return (
+    <select
+      aria-label="Bed cleaning status"
+      disabled={disabled || locked}
+      value={status ?? ''}
+      onClick={(event) => event.stopPropagation()}
+      onChange={(event) => {
+        event.stopPropagation();
+        const value = event.target.value;
+        if (
+          value === 'needs_strip' ||
+          value === 'stripped' ||
+          value === 'ready'
+        ) {
+          onChange(value);
+        }
+      }}
+      className={cn(
+        'max-w-[7.5rem] shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight',
+        unset && 'border-border bg-background text-muted-foreground',
+        !unset && needsWork && 'border-amber-200 bg-amber-50 text-amber-900',
+        !unset && !needsWork && 'border-transparent bg-muted text-muted-foreground',
+        (disabled || locked) && 'pointer-events-none opacity-60'
+      )}
+    >
+      <option value="" disabled={Boolean(status)}>
+        Unset
+      </option>
+      {HOUSEKEEPING_BED_STATUSES.map((choice) => (
+        <option key={choice} value={choice}>
+          {HOUSEKEEPING_BED_STATUS_LABELS[choice]}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 function HousekeepingChip({
@@ -470,10 +522,6 @@ export function BedAccessCalendar({
                   {group.rows.map((row) => {
                     const bedStatus = bedStatuses?.[row.bedId];
                     const showBedChip = housekeepingEnabled && onSetBedStatus;
-                    const primary = resolveHousekeepingBedPrimaryAction(bedStatus);
-                    const bedChipLabel =
-                      primary?.label ??
-                      (bedStatus ? HOUSEKEEPING_BED_STATUS_LABELS[bedStatus] : 'Strip');
 
                     return (
                       <tr key={row.bedId}>
@@ -481,15 +529,11 @@ export function BedAccessCalendar({
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="font-medium text-foreground">{row.displayLabel}</span>
                             {showBedChip ? (
-                              <HousekeepingChip
-                                label={bedChipLabel}
-                                needsWork={isHousekeepingBedNeedsWork(bedStatus)}
-                                unset={!bedStatus}
-                                disabled={housekeepingBusy || !primary}
-                                onClick={() => {
-                                  if (!primary) return;
-                                  onSetBedStatus(row.bedId, primary.nextStatus);
-                                }}
+                              <HousekeepingBedStatusSelect
+                                status={bedStatus}
+                                disabled={housekeepingBusy}
+                                locked={bedStatus === 'ready'}
+                                onChange={(status) => onSetBedStatus(row.bedId, status)}
                               />
                             ) : null}
                           </div>

@@ -13,19 +13,19 @@ const base = {
 };
 
 describe('resolveBedStayPresenceLinks', () => {
-  it('maps admitted stay covering night to bed', () => {
-    expect(resolveBedStayPresenceLinks([base], '2026-07-23')).toEqual({
+  it('maps admitted checkout-day stay to bed', () => {
+    expect(resolveBedStayPresenceLinks([base], '2026-07-24')).toEqual({
       b1: { stayId: 's1', guestName: 'Ada' },
     });
   });
 
-  it('skips not admitted and non-covering nights', () => {
+  it('skips mid-stay nights and not admitted', () => {
+    expect(resolveBedStayPresenceLinks([base], '2026-07-23')).toEqual({});
     expect(
       resolveBedStayPresenceLinks(
         [{ ...base, passport_checked_at: null, desk_checked_in_at: null }],
-        '2026-07-23'
+        '2026-07-24'
       )
     ).toEqual({});
-    expect(resolveBedStayPresenceLinks([base], '2026-07-24')).toEqual({});
   });
 });

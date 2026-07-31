@@ -197,6 +197,8 @@ export type ReceptionCleaningPanelProps = {
   /** Earliest upcoming check-in date (YYYY-MM-DD) per bed — prioritizes To do. */
   nextCheckInByBedId?: Record<string, string>;
   operationalDate?: string;
+  /** Mid-stay occupied beds — hidden from Guide / All todo counts. */
+  excludeBedIds?: ReadonlySet<string> | readonly string[];
   bedPresenceByBedId?: Record<string, CleaningBedPresenceLink>;
   presenceByStayId?: Record<string, HousekeepingStayPresenceStatus>;
   onSetBedStatus: (bedId: string, status: HousekeepingBedStatus) => void;
@@ -222,6 +224,7 @@ export function ReceptionCleaningPanel({
   activeLaundryRuns,
   nextCheckInByBedId,
   operationalDate,
+  excludeBedIds,
   bedPresenceByBedId,
   presenceByStayId,
   onSetBedStatus,
@@ -243,8 +246,9 @@ export function ReceptionCleaningPanel({
       resolveCleaningHubSnapshot(roomGroups, bedStatuses, roomStatuses, {
         nextCheckInByBedId,
         operationalDate,
+        excludeBedIds,
       }),
-    [roomGroups, bedStatuses, roomStatuses, nextCheckInByBedId, operationalDate]
+    [roomGroups, bedStatuses, roomStatuses, nextCheckInByBedId, operationalDate, excludeBedIds]
   );
 
   const guideQueue = useMemo(

@@ -260,4 +260,29 @@ describe('resolveReceptionHubSnapshot', () => {
 
     expect(snapshot.orphanStays).toEqual([orphan]);
   });
+
+  it('collapses party members to one unpaid hub row', () => {
+    const now = new Date('2026-07-09T10:00:00.000Z');
+    const lead = makeStay({
+      id: 'lead',
+      bed_id: 'bed-1',
+      guest_name: 'Maria',
+      booking_group_id: 'g1',
+      booking_amount_due_minor: 8000,
+      check_in_at: '2026-07-09T14:00:00.000Z',
+    });
+    const sibling = makeStay({
+      id: 'sib',
+      bed_id: 'bed-2',
+      guest_name: 'Maria 2',
+      booking_group_id: 'g1',
+      booking_amount_due_minor: null,
+      booking_amount_currency: null,
+      check_in_at: '2026-07-09T14:00:00.000Z',
+    });
+
+    const snapshot = resolveReceptionHubSnapshot(settings, [sibling, lead], now);
+
+    expect(snapshot.unpaid.map((entry) => entry.id)).toEqual(['lead']);
+  });
 });

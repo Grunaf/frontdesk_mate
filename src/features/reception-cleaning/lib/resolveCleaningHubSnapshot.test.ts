@@ -102,4 +102,25 @@ describe('resolveCleaningHubSnapshot', () => {
     expect(snapshot.todoRooms[1]?.beds.map((bed) => bed.bedId)).toEqual(['b1', 'b2']);
     expect(snapshot.todoRooms[1]?.beds[0]?.arrivalHint).toBe('Tomorrow');
   });
+
+  it('excludes occupied bed ids from counts and todo', () => {
+    const snapshot = resolveCleaningHubSnapshot(
+      rooms,
+      {
+        b1: 'needs_strip',
+        b2: 'stripped',
+        b3: 'ready',
+        b4: 'needs_strip',
+        b5: 'ready',
+      },
+      {},
+      { excludeBedIds: ['b1', 'b2'] }
+    );
+
+    expect(snapshot.stripCount).toBe(1);
+    expect(snapshot.makeCount).toBe(0);
+    expect(snapshot.doneCount).toBe(2);
+    expect(snapshot.todoRooms.map((room) => room.roomId)).toEqual(['r2']);
+    expect(snapshot.todoRooms[0]?.beds.map((bed) => bed.bedId)).toEqual(['b4']);
+  });
 });

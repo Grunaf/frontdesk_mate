@@ -1,4 +1,4 @@
-import { guestStayCoversNight } from '@/entities/guest-stay/lib/guestAccessIntervals';
+import { stayRecordCheckOutDate } from '@/entities/guest-stay';
 
 export type PresenceEligibleStay = {
   id: string;
@@ -24,12 +24,12 @@ function isAdmitted(stay: PresenceEligibleStay): boolean {
 }
 
 /**
- * Admitted stays covering `nightDate`, keyed by bed_id (first wins if clash).
- * Used by Cleaning to show Vacant / Still here only when a guest occupies the bed.
+ * Admitted stays checking out on `operationalDate` (exclusive checkout day), keyed by bed.
+ * Hostel does not mid-stay linen-change — Vacant / Still here only for early leave on departure day.
  */
 export function resolveBedStayPresenceLinks(
   stays: PresenceEligibleStay[],
-  nightDate: string
+  operationalDate: string
 ): Record<string, BedStayPresenceLink> {
   const byBed: Record<string, BedStayPresenceLink> = {};
 
@@ -39,20 +39,7 @@ export function resolveBedStayPresenceLinks(
     const bedId = stay.bed_id.trim();
     if (!bedId || byBed[bedId]) continue;
 
-    if (
-      !guestStayCoversNight(
-        {
-          check_in_at: stay.check_in_at,
-          check_out_at: stay.check_out_at,
-          check_in_date: stay.check_in_date,
-          check_out_date: stay.check_out_date,
-          is_archived: Boolean(stay.is_archived),
-        },
-        nightDate
-      )
-    ) {
-      continue;
-    }
+    if (stayRecordCheckOutDate(stay) !== operationalDate) continue;
 
     byBed[bedId] = {
       stayId: stay.id,
