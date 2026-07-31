@@ -293,9 +293,11 @@ export async function provisionGuestStayForSmoke(input: {
     return null;
   }
 
-  // Room-map / bed card link needs ready + check-in gate (date resolved above).
+  // Room-map / bed card link prefers HK ready — soft-fail so PIN smoke still gets a live stay.
   if (!(await markSmokeBedReady(admin, tenant.id, bedId))) {
-    return null;
+    console.warn(
+      `[e2e provision] bed ${bedId} not marked ready — continuing; room-map smoke may lock`
+    );
   }
 
   const guestName = createSmokeGuestName();

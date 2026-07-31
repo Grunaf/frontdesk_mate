@@ -27,7 +27,10 @@ export async function checkInWithPin(page: Page, config: E2eConfig): Promise<voi
   await page.getByLabel('Check-in PIN').fill(guestPin);
 
   const outcomeTimeoutMs = config.navTimeoutMs * 2;
-  const pinError = page.getByText(/PIN not recognized|Access revoked|Too many tries/i);
+  // All terminal PIN UI outcomes — missing any → opaque waitForURL timeout.
+  const pinError = page.getByText(
+    /PIN not recognized|Access revoked|Too many tries|Stay ended|Saved offline/i
+  );
   const activating = page.getByText(/Checking PIN/i);
 
   const navigated = page.waitForURL(/\/(check-in\/intent|welcome)/, {

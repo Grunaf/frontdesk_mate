@@ -25,6 +25,13 @@ export default async function globalSetup(): Promise<void> {
   });
 
   if (!session) {
+    // CI must not mask provision failure with a possibly expired E2E_GUEST_PIN.
+    if (process.env.CI === 'true') {
+      throw new Error(
+        'Smoke provision failed in CI. Fix Supabase keys / beds / provision logs; do not rely on E2E_GUEST_PIN fallback.'
+      );
+    }
+
     if (config.guestPin) {
       console.warn('[e2e provision] failed — falling back to E2E_GUEST_PIN from env');
       return;
