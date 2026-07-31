@@ -256,18 +256,13 @@ export function StayPartyBedsTab({
 }
 
 export type StayPartyMobilePanelProps = StayPartyBookingTabProps &
-  StayPartyBedsTabProps & {
-    tab: PartySheetTabId;
-    onTabChange: (tab: PartySheetTabId) => void;
-  };
+  StayPartyBedsTabProps;
 
 /**
- * Mobile party root: own Tabs root (Booking | Beds).
- * Must not share the child stay Tabs namespace (stay/tourism/access).
+ * Mobile party root body: Booking | Beds content only.
+ * TabsList must sit in shell `bodyTop` (fixed); Tabs root wraps the shell region.
  */
 export function StayPartyMobilePanel({
-  tab,
-  onTabChange,
   partyStays,
   activeStayId,
   balanceStay,
@@ -284,12 +279,7 @@ export function StayPartyMobilePanel({
   if (partyStays.length <= 1) return null;
 
   return (
-    <Tabs
-      value={tab}
-      onValueChange={(value) => onTabChange(value as PartySheetTabId)}
-      className="flex flex-col gap-3"
-    >
-      <StayPartySheetTabsList />
+    <>
       <TabsContent value="booking" className="mt-0 outline-none">
         <StayPartyBookingTab
           partyStays={partyStays}
@@ -313,7 +303,7 @@ export function StayPartyMobilePanel({
           tourismByStayId={tourismByStayId}
         />
       </TabsContent>
-    </Tabs>
+    </>
   );
 }
 

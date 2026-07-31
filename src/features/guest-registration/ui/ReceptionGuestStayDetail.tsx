@@ -34,6 +34,7 @@ import {
 import {
   StayPartyPeek,
   StayPartyMobilePanel,
+  StayPartySheetTabsList,
   type PartySheetTabId,
 } from './StayPartyPeek';
 import { BookingGroupIcon } from './BookingGroupIcon';
@@ -689,8 +690,6 @@ export function ReceptionGuestStayDetail({
   const partyRootBody =
     isBelowLg && isParty && onSelectPartyStay ? (
       <StayPartyMobilePanel
-        tab={partySheetTab}
-        onTabChange={setPartySheetTab}
         partyStays={resolvedPartyStays}
         activeStayId={stay.id}
         balanceStay={balanceStay}
@@ -866,7 +865,13 @@ export function ReceptionGuestStayDetail({
           ) : undefined
         }
         header={showEdit && editSurface ? editSurface.header : header}
-        bodyTop={showEdit || showPartyRoot ? undefined : childTabsList}
+        bodyTop={
+          showEdit
+            ? undefined
+            : showPartyRoot
+              ? <StayPartySheetTabsList />
+              : childTabsList
+        }
         body={
           showEdit && editSurface
             ? editSurface.body
@@ -886,10 +891,20 @@ export function ReceptionGuestStayDetail({
               {region}
             </div>
           );
-          // Party root / edit must not sit under the child Tabs root (stay/tourism/access):
-          // controlled value with zero matching triggers causes a setState loop in Radix.
-          if (showEdit || showPartyRoot) {
+          // Party / child Tabs must not share one namespace (Radix setState loop).
+          if (showEdit) {
             return stacked;
+          }
+          if (showPartyRoot) {
+            return (
+              <Tabs
+                value={partySheetTab}
+                onValueChange={(value) => setPartySheetTab(value as PartySheetTabId)}
+                className="contents"
+              >
+                {stacked}
+              </Tabs>
+            );
           }
           return (
             <Tabs
