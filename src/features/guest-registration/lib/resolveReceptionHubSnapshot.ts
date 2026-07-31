@@ -18,6 +18,7 @@ import {
   resolveDeparturesSectionPhase,
   type DepartureSectionPhase,
 } from './resolveDepartureSectionPhase';
+import { collapseStaysByBookingGroup } from './collapseStaysByBookingGroup';
 import {
   isBeforeTodaysOperationalRollover,
   resolveOperationalDay,

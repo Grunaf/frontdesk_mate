@@ -64,3 +64,38 @@ export function collectCheckoutBedIdsToMark(
 
   return [...bedIds];
 }
+
+export type GuestStayBedInventory = {
+  beds?: Array<{ id: string }> | null;
+};
+
+/** Physical bed ids from guestStay inventory. */
+export function listHousekeepingInventoryBedIds(
+  guestStay: GuestStayBedInventory | null | undefined
+): string[] {
+  const ids: string[] = [];
+  for (const bed of guestStay?.beds ?? []) {
+    const id = bed.id.trim();
+    if (id) ids.push(id);
+  }
+  return ids;
+}
+
+/**
+ * Empty tonight (not mid-stay occupied) beds that should become Needs strip.
+ * Keeps Strip→Make progress: never marks already needs_strip / stripped.
+ */
+export function collectEmptyBedIdsToMark(
+  inventoryBedIds: readonly string[],
+  occupiedBedIds: ReadonlySet<string>,
+  bedStatuses: Record<string, HousekeepingBedStatus | undefined> = {}
+): string[] {
+  const result: string[] = [];
+  for (const rawId of inventoryBedIds) {
+    const bedId = rawId.trim();
+    if (!bedId || occupiedBedIds.has(bedId)) continue;
+    if (!shouldMarkBedNeedsStrip(bedStatuses[bedId])) continue;
+    result.push(bedId);
+  }
+  return result;
+}

@@ -41,6 +41,8 @@ export type CleaningHubSnapshot = {
 export type ResolveCleaningHubSnapshotOptions = {
   nextCheckInByBedId?: Record<string, string>;
   operationalDate?: string;
+  /** Mid-stay occupied beds — omitted from hub counts and todo/done lists. */
+  excludeBedIds?: ReadonlySet<string> | readonly string[];
 };
 
 /** Hub "Strip": unset or needs_strip */
@@ -60,11 +62,19 @@ export function isTodoBedStatus(status: HousekeepingBedStatus | undefined): bool
   return isStripBedStatus(status) || isMakeBedStatus(status);
 }
 
+function toExcludeSet(
+  excludeBedIds: ResolveCleaningHubSnapshotOptions['excludeBedIds']
+): ReadonlySet<string> {
+  if (!excludeBedIds) return new Set();
+  return excludeBedIds instanceof Set ? excludeBedIds : new Set(excludeBedIds);
+}
+
 function filterRoomsByBedPredicate(
   roomGroups: readonly CleaningRoomGroup[],
   bedStatuses: Record<string, HousekeepingBedStatus>,
   roomStatuses: Record<string, HousekeepingRoomStatus>,
-  predicate: (status: HousekeepingBedStatus | undefined) => boolean
+  predicate: (status: HousekeepingBedStatus | undefined) => boolean,
+  excludeBedIds: ReadonlySet<string>
 ): CleaningRoomBucket[] {
   const result: CleaningRoomBucket[] = [];
 
@@ -75,7 +85,7 @@ function filterRoomsByBedPredicate(
         displayLabel: bed.displayLabel,
         status: bedStatuses[bed.bedId],
       }))
-      .filter((bed) => predicate(bed.status));
+      .filter((bed) => !excludeBedIds.has(bed.bedId) && predicate(bed.status));
 
     if (beds.length === 0) continue;
 
@@ -125,12 +135,14 @@ export function resolveCleaningHubSnapshot(
   roomStatuses: Record<string, HousekeepingRoomStatus> = {},
   options: ResolveCleaningHubSnapshotOptions = {}
 ): CleaningHubSnapshot {
+  const excludeBedIds = toExcludeSet(options.excludeBedIds);
   let stripCount = 0;
   let makeCount = 0;
   let doneCount = 0;
 
   for (const group of roomGroups) {
     for (const bed of group.beds) {
+      if (excludeBedIds.has(bed.bedId)) continue;
       const status = bedStatuses[bed.bedId];
       if (isStripBedStatus(status)) stripCount += 1;
       else if (isMakeBedStatus(status)) makeCount += 1;
@@ -142,7 +154,8 @@ export function resolveCleaningHubSnapshot(
     roomGroups,
     bedStatuses,
     roomStatuses,
-    isTodoBedStatus
+    isTodoBedStatus,
+    excludeBedIds
   );
   const nextCheckInByBedId = options.nextCheckInByBedId ?? {};
   const operationalDate = options.operationalDate?.trim();
@@ -155,6 +168,12 @@ export function resolveCleaningHubSnapshot(
     makeCount,
     doneCount,
     todoRooms,
-    doneRooms: filterRoomsByBedPredicate(roomGroups, bedStatuses, roomStatuses, isDoneBedStatus),
+    doneRooms: filterRoomsByBedPredicate(
+      roomGroups,
+      bedStatuses,
+      roomStatuses,
+      isDoneBedStatus,
+      excludeBedIds
+    ),
   };
 }

@@ -12,6 +12,7 @@ import {
 } from '@/entities/housekeeping';
 import {
   clearHousekeepingStayPresence,
+  hasHousekeepingBedRolloverRun,
   listActiveLaundryRuns,
   listHousekeepingBedStatuses,
   listHousekeepingRoomStatuses,
@@ -24,9 +25,13 @@ import { getTenantRecord } from '@/entities/tenant/server';
 import type { TenantSettings } from '@/entities/tenant';
 
 import {
+  assertReceptionCheckInAccess,
   assertReceptionHousekeepingAccess,
   resolveReceptionStaffContext,
 } from '../lib/resolveReceptionStaffContext';
+import { resolveManualHousekeepingDayStartView } from '../lib/resolveManualHousekeepingDayStart';
+import { runTenantHousekeepingDayRollover } from '../lib/runTenantHousekeepingDayRollover';
+import { resolveOperationalDayStartTime } from '../lib/resolveOperationalDay';
 
 export type HousekeepingStatusMaps = {
   beds: Record<string, HousekeepingBedStatus>;
@@ -218,6 +223,127 @@ export async function clearHousekeepingStayPresenceAction(input: {
     return { ok: true };
   } catch (error) {
     console.error('clearHousekeepingStayPresenceAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+export type HousekeepingDayStartStatusResult =
+  | {
+      ok: true;
+      kind: 'ready' | 'before_start' | 'already_rolled';
+      operationalDate: string;
+      calendarToday: string;
+      startTimeLabel: string;
+      targetOperationalDate: string;
+    }
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'not_found' | 'unknown' };
+
+export type StartHousekeepingDayResult =
+  | {
+      ok: true;
+      operationalDate: string;
+      markedBedCount: number;
+      markedRoomCount: number;
+    }
+  | {
+      ok: false;
+      error:
+        | 'unauthorized'
+        | 'forbidden'
+        | 'not_found'
+        | 'before_start'
+        | 'already_rolled'
+        | 'no_beds'
+        | 'db_unavailable'
+        | 'unknown';
+      startTimeLabel?: string;
+      operationalDate?: string;
+    };
+
+async function resolveCheckInTenant(tenantSlug: string) {
+  const staff = await resolveReceptionStaffContext(tenantSlug);
+  if (!staff.ok) {
+    return { ok: false as const, error: staff.error };
+  }
+
+  const gate = assertReceptionCheckInAccess(staff.ctx);
+  if (!gate.ok) {
+    return { ok: false as const, error: gate.error };
+  }
+
+  const tenant = await getTenantRecord(tenantSlug);
+  if (!tenant) {
+    return { ok: false as const, error: 'not_found' as const };
+  }
+
+  return { ok: true as const, tenant };
+}
+
+/** Hub status for Start operational day (desk.check_in only). */
+export async function getHousekeepingDayStartStatusAction(
+  tenantSlug: string
+): Promise<HousekeepingDayStartStatusResult> {
+  const resolved = await resolveCheckInTenant(tenantSlug);
+  if (!resolved.ok) return resolved;
+
+  try {
+    const startTimeLabel = resolveOperationalDayStartTime(resolved.tenant.settings);
+    const preview = resolveManualHousekeepingDayStartView({
+      now: new Date(),
+      operationalDayStartTime: startTimeLabel,
+      alreadyRolledForTarget: false,
+    });
+    const alreadyRolled = await hasHousekeepingBedRolloverRun(
+      resolved.tenant.id,
+      preview.targetOperationalDate
+    );
+    const view = resolveManualHousekeepingDayStartView({
+      now: new Date(),
+      operationalDayStartTime: startTimeLabel,
+      alreadyRolledForTarget: alreadyRolled,
+    });
+    return { ok: true, ...view };
+  } catch (error) {
+    console.error('getHousekeepingDayStartStatusAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+/** Manual Start operational day for current tenant (desk.check_in). */
+export async function startHousekeepingDayAction(input: {
+  tenantSlug: string;
+  forceEarly?: boolean;
+}): Promise<StartHousekeepingDayResult> {
+  const resolved = await resolveCheckInTenant(input.tenantSlug);
+  if (!resolved.ok) return resolved;
+
+  try {
+    const result = await runTenantHousekeepingDayRollover({
+      tenant: {
+        id: resolved.tenant.id,
+        slug: resolved.tenant.slug,
+        settings: resolved.tenant.settings,
+      },
+      forceEarly: Boolean(input.forceEarly),
+    });
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: result.error,
+        startTimeLabel: result.startTimeLabel,
+        operationalDate: result.operationalDate,
+      };
+    }
+
+    return {
+      ok: true,
+      operationalDate: result.operationalDate,
+      markedBedCount: result.markedBedCount,
+      markedRoomCount: result.markedRoomCount,
+    };
+  } catch (error) {
+    console.error('startHousekeepingDayAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
-import { listGuestStayBedIds, stayRecordCheckOutDate } from '@/entities/guest-stay';
+import {
+  listGuestStayBedIds,
+  resolvePartyGuestDisplayName,
+  stayRecordCheckOutDate,
+} from '@/entities/guest-stay';
 import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import type { TenantSettings } from '@/entities/tenant';
 import {
@@ -65,7 +69,9 @@ import {
 } from '../actions/receptionActions';
 import {
   clearHousekeepingStayPresenceAction,
+  getHousekeepingDayStartStatusAction,
   listHousekeepingStatusesAction,
+  startHousekeepingDayAction,
   upsertHousekeepingBedStatusAction,
   upsertHousekeepingRoomStatusAction,
   upsertHousekeepingStayPresenceAction,
@@ -104,6 +110,7 @@ import {
 } from '../lib/guestAccessDates';
 import { resolveBedInventory, flattenBedInventory } from '../lib/resolveBedInventory';
 import { resolveBedStayPresenceLinks } from '../lib/resolveBedStayPresenceLinks';
+import { resolveOccupiedCleaningBedIds } from '../lib/resolveOccupiedCleaningBedIds';
 import { resolveReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
 import { resolveReceptionCashSnapshot } from '../lib/resolveReceptionCashSnapshot';
 import type { PlanBedFilter } from '../lib/filterPlanRoomGroupsByFreeTonight';
@@ -256,6 +263,14 @@ export function ReceptionCheckInPanel({
   );
 
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
+  const [housekeepingDayStartKind, setHousekeepingDayStartKind] = useState<
+    'ready' | 'before_start' | 'already_rolled' | 'loading'
+  >('loading');
+  const [housekeepingDayStartMeta, setHousekeepingDayStartMeta] = useState({
+    startTimeLabel: '08:00',
+    targetOperationalDate: '',
+  });
+  const [housekeepingDayStartBusy, setHousekeepingDayStartBusy] = useState(false);
 
   useEffect(() => {
     void refresh();
@@ -388,6 +403,78 @@ export function ReceptionCheckInPanel({
     });
   }, [tenantSlug]);
 
+  const loadHousekeepingDayStartStatus = useCallback(async () => {
+    if (!canCheckIn) return;
+    const result = await getHousekeepingDayStartStatusAction(tenantSlug);
+    if (!result.ok) {
+      setHousekeepingDayStartKind('loading');
+      return;
+    }
+    setHousekeepingDayStartKind(result.kind);
+    setHousekeepingDayStartMeta({
+      startTimeLabel: result.startTimeLabel,
+      targetOperationalDate: result.targetOperationalDate,
+    });
+  }, [canCheckIn, tenantSlug]);
+
+  useEffect(() => {
+    void loadHousekeepingDayStartStatus();
+  }, [loadHousekeepingDayStartStatus, operational.operationalDate, rolloverEpoch]);
+
+  const handleStartCleaningDay = useCallback(() => {
+    if (!canCheckIn || housekeepingDayStartBusy) return;
+    if (housekeepingDayStartKind === 'already_rolled' || housekeepingDayStartKind === 'loading') {
+      return;
+    }
+
+    const forceEarly = housekeepingDayStartKind === 'before_start';
+    const confirmed = forceEarly
+      ? window.confirm(
+          `Operational day starts at ${housekeepingDayStartMeta.startTimeLabel} UTC. Start operational day early for ${housekeepingDayStartMeta.targetOperationalDate}? Empty beds will be marked Needs strip; rooms Not cleaned.`
+        )
+      : window.confirm(
+          `Start operational day for ${housekeepingDayStartMeta.targetOperationalDate}? Empty beds → Needs strip; rooms → Not cleaned.`
+        );
+    if (!confirmed) return;
+
+    setHousekeepingDayStartBusy(true);
+    startHousekeepingTransition(async () => {
+      const result = await startHousekeepingDayAction({
+        tenantSlug,
+        forceEarly,
+      });
+      setHousekeepingDayStartBusy(false);
+      if (!result.ok) {
+        if (result.error === 'before_start') {
+          window.alert(
+            `Operational day has not started yet (starts ${result.startTimeLabel ?? housekeepingDayStartMeta.startTimeLabel} UTC).`
+          );
+        } else if (result.error === 'already_rolled') {
+          window.alert('Operational day was already started for this date.');
+        } else {
+          window.alert('Could not start operational day. Try again.');
+        }
+        void loadHousekeepingDayStartStatus();
+        return;
+      }
+      window.alert(
+        `Operational day started (${result.operationalDate}): ${result.markedBedCount} beds · ${result.markedRoomCount} rooms.`
+      );
+      await Promise.all([loadHousekeepingStatuses(), loadHousekeepingDayStartStatus(), refresh()]);
+    });
+  }, [
+    canCheckIn,
+    housekeepingDayStartBusy,
+    housekeepingDayStartKind,
+    housekeepingDayStartMeta.startTimeLabel,
+    housekeepingDayStartMeta.targetOperationalDate,
+    loadHousekeepingDayStartStatus,
+    loadHousekeepingStatuses,
+    refresh,
+    startHousekeepingTransition,
+    tenantSlug,
+  ]);
+
   useEffect(() => {
     const tracksHousekeeping =
       deskTab === 'plan' || deskTab === 'cleaning' || deskTab === 'desk';
@@ -457,6 +544,11 @@ export function ReceptionCheckInPanel({
 
   const cleaningNextCheckInByBedId = useMemo(
     () => resolveNextCheckInByBedId(planStays, operational.operationalDate),
+    [planStays, operational.operationalDate]
+  );
+
+  const occupiedCleaningBedIds = useMemo(
+    () => resolveOccupiedCleaningBedIds(planStays, operational.operationalDate),
     [planStays, operational.operationalDate]
   );
 
@@ -2242,6 +2334,17 @@ export function ReceptionCheckInPanel({
                 onOpenFreeBeds={openPlanFreeBeds}
                 operationalDayUpdatedNotice={operationalDayUpdatedNotice}
                 presenceByStayId={presenceByStayId}
+                housekeepingDayStart={
+                  canCheckIn
+                    ? {
+                        kind: housekeepingDayStartKind,
+                        startTimeLabel: housekeepingDayStartMeta.startTimeLabel,
+                        targetOperationalDate: housekeepingDayStartMeta.targetOperationalDate,
+                        busy: housekeepingDayStartBusy,
+                        onStart: handleStartCleaningDay,
+                      }
+                    : null
+                }
                 paymentDueCallout={
                   cashSnapshot.unpaidCount > 0
                     ? {
@@ -2364,6 +2467,7 @@ export function ReceptionCheckInPanel({
                   activeLaundryRuns={activeLaundryRuns}
                   nextCheckInByBedId={cleaningNextCheckInByBedId}
                   operationalDate={operational.operationalDate}
+                  excludeBedIds={occupiedCleaningBedIds}
                   bedPresenceByBedId={bedPresenceByBedId}
                   presenceByStayId={presenceByStayId}
                   onSetBedStatus={handleSetBedStatus}
