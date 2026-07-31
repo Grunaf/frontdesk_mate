@@ -25,7 +25,6 @@ import {
   resolveOperationalDayStartTime,
   type OperationalDayWindow,
 } from './resolveOperationalDay';
-import { collapseStaysByBookingGroup } from './collapseStaysByBookingGroup';
 
 export interface ReceptionHubSnapshot {
   operationalDayStartTime: string;

@@ -82,37 +82,6 @@ function hubStaySecondaryLabel(
   const groupId = stay.booking_group_id?.trim();
   const size = countBookingGroupMembers(planStays, groupId);
   if (groupId && size > 1) {
-    return `${size} beds`;
-  }
-  return resolveSecondary?.(stay, bedLabel) ?? `${bedLabel} · ${formatDisplayDate(stayRecordCheckInDate(stay))}`;
-}
-
-function hubStayPrimaryLabel(
-  stay: GuestStayRecordWithLink,
-  planStays: GuestStayRecordWithLink[]
-): string {
-  const groupId = stay.booking_group_id?.trim();
-  if (!groupId) {
-    return stay.guest_name?.trim() || 'Guest';
-  }
-  const members = planStays.filter((entry) => entry.booking_group_id === groupId);
-  const size = members.length > 0 ? members.length : countBookingGroupMembers(planStays, groupId);
-  if (size <= 1) {
-    return stay.guest_name?.trim() || 'Guest';
-  }
-  const leadName = resolvePartyLeadName(members.length > 0 ? members : [stay]);
-  return resolvePartyTitle(leadName || stay.guest_name?.trim() || '', size);
-}
-
-function hubStaySecondaryLabel(
-  stay: GuestStayRecordWithLink,
-  bedLabel: string,
-  planStays: GuestStayRecordWithLink[],
-  resolveSecondary?: (stay: GuestStayRecordWithLink, bedLabel: string) => string
-): string {
-  const groupId = stay.booking_group_id?.trim();
-  const size = countBookingGroupMembers(planStays, groupId);
-  if (groupId && size > 1) {
     // Primary already has `Lead · N beds` — secondary is arrival date only.
     return formatDisplayDate(stayRecordCheckInDate(stay));
   }
@@ -124,7 +93,6 @@ function HubArrivalList({
   planStays,
   resolveBedLabel,
   onViewStay,
-  planStays,
   emptyLabel,
   resolveSecondary,
 }: {

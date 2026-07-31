@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
   listGuestStayBedIds,
-  resolvePartyGuestDisplayName,
   stayRecordCheckOutDate,
 } from '@/entities/guest-stay';
 import { stayOverlapsBedNightRange } from '@/entities/guest-stay/lib/guestAccessIntervals';
