@@ -2,6 +2,7 @@ import type { GuestHubTransferRecord } from '@/entities/guest-hub-transfer';
 import type { GuestIssueRecord } from '@/entities/guest-issue';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { ReceptionStaffPermission } from '@/entities/reception-user';
+import type { ManualHousekeepingDayStartView } from '@/features/guest-registration/lib/resolveManualHousekeepingDayStart';
 
 export type ReceptionOperationalContext = {
   generatedAt: string;
@@ -11,6 +12,11 @@ export type ReceptionOperationalContext = {
     startsAt: string;
     endsAt: string;
   };
+  /**
+   * Hub “Start operational day” gate — resolved on the server with the same clock
+   * as `operational` / `generatedAt` so SSR and hydrate match.
+   */
+  housekeepingDayStart: ManualHousekeepingDayStartView;
   stays: GuestStayRecordWithLink[];
   /**
    * Bed-night occupancy for Plan / free-bed inventory (planned + not archived).

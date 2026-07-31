@@ -68,7 +68,6 @@ import {
 } from '../actions/receptionActions';
 import {
   clearHousekeepingStayPresenceAction,
-  getHousekeepingDayStartStatusAction,
   listHousekeepingStatusesAction,
   startHousekeepingDayAction,
   upsertHousekeepingBedStatusAction,
@@ -262,14 +261,8 @@ export function ReceptionCheckInPanel({
   );
 
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
-  const [housekeepingDayStartKind, setHousekeepingDayStartKind] = useState<
-    'ready' | 'before_start' | 'already_rolled' | 'loading'
-  >('loading');
-  const [housekeepingDayStartMeta, setHousekeepingDayStartMeta] = useState({
-    startTimeLabel: '08:00',
-    targetOperationalDate: '',
-  });
   const [housekeepingDayStartBusy, setHousekeepingDayStartBusy] = useState(false);
+  const housekeepingDayStart = deskContext.housekeepingDayStart;
 
   useEffect(() => {
     void refresh();
@@ -393,46 +386,32 @@ export function ReceptionCheckInPanel({
   const rangeValid = isValidAccessRange(checkInDate, checkOutDate);
 
   const loadHousekeepingStatuses = useCallback(async () => {
-    const maps = await listHousekeepingStatusesAction(tenantSlug);
-    runWithPreservedWindowScroll(() => {
-      setBedStatuses(maps.beds);
-      setRoomStatuses(maps.rooms);
-      setActiveLaundryRuns(maps.activeLaundryRuns);
-      setPresenceByStayId(maps.presenceByStayId);
-    });
-  }, [tenantSlug]);
-
-  const loadHousekeepingDayStartStatus = useCallback(async () => {
-    if (!canCheckIn) return;
-    const result = await getHousekeepingDayStartStatusAction(tenantSlug);
-    if (!result.ok) {
-      setHousekeepingDayStartKind('loading');
-      return;
+    try {
+      const maps = await listHousekeepingStatusesAction(tenantSlug);
+      runWithPreservedWindowScroll(() => {
+        setBedStatuses(maps.beds);
+        setRoomStatuses(maps.rooms);
+        setActiveLaundryRuns(maps.activeLaundryRuns);
+        setPresenceByStayId(maps.presenceByStayId);
+      });
+    } catch {
+      // Transient network / HMR abort on server action — keep last known maps.
     }
-    setHousekeepingDayStartKind(result.kind);
-    setHousekeepingDayStartMeta({
-      startTimeLabel: result.startTimeLabel,
-      targetOperationalDate: result.targetOperationalDate,
-    });
-  }, [canCheckIn, tenantSlug]);
-
-  useEffect(() => {
-    void loadHousekeepingDayStartStatus();
-  }, [loadHousekeepingDayStartStatus, operational.operationalDate, rolloverEpoch]);
+  }, [tenantSlug]);
 
   const handleStartCleaningDay = useCallback(() => {
     if (!canCheckIn || housekeepingDayStartBusy) return;
-    if (housekeepingDayStartKind === 'already_rolled' || housekeepingDayStartKind === 'loading') {
+    if (housekeepingDayStart.kind === 'already_rolled') {
       return;
     }
 
-    const forceEarly = housekeepingDayStartKind === 'before_start';
+    const forceEarly = housekeepingDayStart.kind === 'before_start';
     const confirmed = forceEarly
       ? window.confirm(
-          `Operational day starts at ${housekeepingDayStartMeta.startTimeLabel} UTC. Start operational day early for ${housekeepingDayStartMeta.targetOperationalDate}? Empty beds will be marked Needs strip; rooms Not cleaned.`
+          `Operational day starts at ${housekeepingDayStart.startTimeLabel} UTC. Start operational day early for ${housekeepingDayStart.targetOperationalDate}? Empty beds will be marked Needs strip; rooms Not cleaned.`
         )
       : window.confirm(
-          `Start operational day for ${housekeepingDayStartMeta.targetOperationalDate}? Empty beds → Needs strip; rooms → Not cleaned.`
+          `Start operational day for ${housekeepingDayStart.targetOperationalDate}? Empty beds → Needs strip; rooms → Not cleaned.`
         );
     if (!confirmed) return;
 
@@ -446,28 +425,27 @@ export function ReceptionCheckInPanel({
       if (!result.ok) {
         if (result.error === 'before_start') {
           window.alert(
-            `Operational day has not started yet (starts ${result.startTimeLabel ?? housekeepingDayStartMeta.startTimeLabel} UTC).`
+            `Operational day has not started yet (starts ${result.startTimeLabel ?? housekeepingDayStart.startTimeLabel} UTC).`
           );
         } else if (result.error === 'already_rolled') {
           window.alert('Operational day was already started for this date.');
         } else {
           window.alert('Could not start operational day. Try again.');
         }
-        void loadHousekeepingDayStartStatus();
+        await refresh();
         return;
       }
       window.alert(
         `Operational day started (${result.operationalDate}): ${result.markedBedCount} beds · ${result.markedRoomCount} rooms.`
       );
-      await Promise.all([loadHousekeepingStatuses(), loadHousekeepingDayStartStatus(), refresh()]);
+      await Promise.all([loadHousekeepingStatuses(), refresh()]);
     });
   }, [
     canCheckIn,
+    housekeepingDayStart.kind,
+    housekeepingDayStart.startTimeLabel,
+    housekeepingDayStart.targetOperationalDate,
     housekeepingDayStartBusy,
-    housekeepingDayStartKind,
-    housekeepingDayStartMeta.startTimeLabel,
-    housekeepingDayStartMeta.targetOperationalDate,
-    loadHousekeepingDayStartStatus,
     loadHousekeepingStatuses,
     refresh,
     startHousekeepingTransition,
@@ -2357,9 +2335,9 @@ export function ReceptionCheckInPanel({
                 housekeepingDayStart={
                   canCheckIn
                     ? {
-                        kind: housekeepingDayStartKind,
-                        startTimeLabel: housekeepingDayStartMeta.startTimeLabel,
-                        targetOperationalDate: housekeepingDayStartMeta.targetOperationalDate,
+                        kind: housekeepingDayStart.kind,
+                        startTimeLabel: housekeepingDayStart.startTimeLabel,
+                        targetOperationalDate: housekeepingDayStart.targetOperationalDate,
                         busy: housekeepingDayStartBusy,
                         onStart: handleStartCleaningDay,
                       }

@@ -4,6 +4,21 @@ export type FetchReceptionOperationalContextResult =
   | { ok: true; context: ReceptionOperationalContext }
   | { ok: false; error: 'unauthorized' | 'invalid_response' | 'network' };
 
+function isHousekeepingDayStartView(value: unknown): boolean {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const view = value as Record<string, unknown>;
+  return (
+    (view.kind === 'ready' || view.kind === 'before_start' || view.kind === 'already_rolled') &&
+    typeof view.operationalDate === 'string' &&
+    typeof view.calendarToday === 'string' &&
+    typeof view.startTimeLabel === 'string' &&
+    typeof view.targetOperationalDate === 'string'
+  );
+}
+
 function isReceptionOperationalContext(value: unknown): value is ReceptionOperationalContext {
   if (!value || typeof value !== 'object') {
     return false;
@@ -22,6 +37,7 @@ function isReceptionOperationalContext(value: unknown): value is ReceptionOperat
     typeof (operational as Record<string, unknown>).operationalDate === 'string' &&
     typeof (operational as Record<string, unknown>).startsAt === 'string' &&
     typeof (operational as Record<string, unknown>).endsAt === 'string' &&
+    isHousekeepingDayStartView(record.housekeepingDayStart) &&
     Array.isArray(record.stays) &&
     (record.planStays === undefined || Array.isArray(record.planStays)) &&
     Array.isArray(record.openIssues) &&

@@ -3,7 +3,9 @@ import 'server-only';
 import { listGuestHubTransfers } from '@/entities/guest-hub-transfer/server';
 import { listGuestIssues } from '@/entities/guest-issue/server';
 import { listActiveGuestStays, listPlanGuestReservations } from '@/entities/guest-stay/server';
+import { hasHousekeepingBedRolloverRun } from '@/entities/housekeeping/server';
 import { getTenantRecord } from '@/entities/tenant/server';
+import { resolveManualHousekeepingDayStartView } from '@/features/guest-registration/lib/resolveManualHousekeepingDayStart';
 import {
   resolveOperationalDay,
   resolveOperationalDayStartTime,
@@ -29,6 +31,20 @@ export async function buildReceptionOperationalContext(
   const operationalDayStartTime = resolveOperationalDayStartTime(tenant?.settings);
   const operationalWindow = resolveOperationalDay(now, operationalDayStartTime);
 
+  const dayStartPreview = resolveManualHousekeepingDayStartView({
+    now,
+    operationalDayStartTime,
+    alreadyRolledForTarget: false,
+  });
+  const alreadyRolledForTarget = tenant
+    ? await hasHousekeepingBedRolloverRun(tenant.id, dayStartPreview.targetOperationalDate)
+    : false;
+  const housekeepingDayStart = resolveManualHousekeepingDayStartView({
+    now,
+    operationalDayStartTime,
+    alreadyRolledForTarget,
+  });
+
   return {
     generatedAt: now.toISOString(),
     operationalDayStartTime,
@@ -37,6 +53,7 @@ export async function buildReceptionOperationalContext(
       startsAt: operationalWindow.startsAt.toISOString(),
       endsAt: operationalWindow.endsAt.toISOString(),
     },
+    housekeepingDayStart,
     stays,
     planStays,
     openIssues,
