@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import type { TenantSettings } from '@/entities/tenant';
 import { formatReceptionBookingSourceSummary } from '@/entities/tenant';
@@ -40,7 +40,6 @@ import {
   StayBookingSourceOpenBlock,
   StayRoomKeyBlock,
   StayBookingBalanceBlock,
-  StayPartyChildBanner,
   StayReceptionNoteBlock,
   StayContactBlock,
   isStayAdmitted,
@@ -94,8 +93,14 @@ export interface ReceptionGuestStayDetailProps {
   onPassportCheckedAtChange?: (stay: GuestStayRecordWithLink) => void;
   /** Cancel (not admitted) or check out (admitted, still in-house) → Archive. */
   onCancelOrCheckout: (stayId: string, intent: 'cancel' | 'checkout') => void;
-  /** Opens unified edit (bed + dates). */
-  onEditStay: (stay: GuestStayRecordWithLink) => void;
+  /** Opens unified edit (bed + dates). Party root may pass all party stays for multi-bed edit. */
+  onEditStay: (
+    stay: GuestStayRecordWithLink,
+    options?: {
+      intent?: 'changeDates' | 'moveBed';
+      partyStays?: GuestStayRecordWithLink[];
+    }
+  ) => void;
   onReissueAccess: (stay: GuestStayRecordWithLink) => void;
   /** Prefill new booking from this stay (extend). */
   onExtendStay: (stay: GuestStayRecordWithLink) => void;
@@ -111,6 +116,23 @@ export interface ReceptionGuestStayDetailProps {
    * to open this stay. Cleared after drill-in.
    */
   initialFocusStayId?: string | null;
+  /**
+   * In-sheet edit push (same BottomSheet). When set, replaces party/child body
+   * with a horizontal slide — do not open a second sheet.
+   */
+  editSurface?: {
+    title: string;
+    header?: ReactNode;
+    body: ReactNode;
+    /** Top-right chrome action (e.g. Save text button). */
+    chromeAction?: ReactNode;
+    /** Back chevron — pop edit (may confirm if dirty). */
+    onBack: () => void;
+    /** Sheet dismiss while editing (may confirm if dirty, then close sheet). */
+    onDismiss?: () => void;
+  } | null;
+  /** Block sheet dismiss (e.g. discard-changes confirm open). */
+  editDismissBlocked?: boolean;
 }
 
 export function ReceptionGuestStayDetail({
@@ -141,6 +163,8 @@ export function ReceptionGuestStayDetail({
   initialTab = 'stay',
   initialPartyView = false,
   initialFocusStayId = null,
+  editSurface = null,
+  editDismissBlocked = false,
 }: ReceptionGuestStayDetailProps) {
   const isBelowLg = useIsReceptionStayDetailBelowLg();
   const [activeTab, setActiveTab] = useState<StayDetailTabId>(initialTab);
@@ -372,17 +396,32 @@ export function ReceptionGuestStayDetail({
   const showDesktopPartyPeek = !isBelowLg && isParty;
   /** Mobile only: party root replaces child body. */
   const showPartyRoot = isBelowLg && isParty && partyLevelOpen;
-  /** Child level after push from party (or party session entry): back → party root. */
-  const showBackToParty =
-    !showPartyRoot && isParty && (enteredChildFromParty || initialPartyView);
-  /** Party opened from child banner (no party session): back → child. */
-  const showBackToChild = showPartyRoot && !enteredChildFromParty && !initialPartyView;
-  const partyBackLabel = partyTitle;
-  const childBackLabel = bedLabel.trim() || guestLabel || 'Back';
+  const showEdit = Boolean(editSurface);
+  /** Child of a party: Back → Group (no Close). */
+  const showBackToParty = !showEdit && !showPartyRoot && isParty;
+  const partyBackLabel = 'Group';
+  const editBackLabel =
+    isParty && partyLevelOpen ? 'Group' : bedLabel.trim() || guestLabel || 'Back';
+  const stackLevelKey = showEdit ? 'edit' : showPartyRoot ? 'party' : `child-${stay.id}`;
   const partyStayIdsKey = resolvedPartyStays
     .map((member) => member.id)
     .sort()
     .join(',');
+
+  const wasEditOpenRef = useRef(false);
+  useEffect(() => {
+    if (showEdit) {
+      setPartyStackSlideFrom('right');
+      setPartyStackMotionEnabled(true);
+      wasEditOpenRef.current = true;
+      return;
+    }
+    if (wasEditOpenRef.current) {
+      setPartyStackSlideFrom('left');
+      setPartyStackMotionEnabled(true);
+      wasEditOpenRef.current = false;
+    }
+  }, [showEdit]);
 
   useEffect(() => {
     if (!showTourismTab || !tenantSlug || !isParty || !partyStayIdsKey) {
@@ -570,6 +609,9 @@ export function ReceptionGuestStayDetail({
         onStayBookingBalanceChange={onStayBookingBalanceChange}
         contactSlot={partyContactSlot}
         noteSlot={partyNoteSlot}
+        bookingSourceSlot={
+          <StayBookingSourceOpenBlock stay={balanceStay} tenantSettings={tenantSettings} />
+        }
         showTourismSummary={showTourismTab}
         tourismByStayId={partyTourismByStayId}
       />
@@ -578,17 +620,8 @@ export function ReceptionGuestStayDetail({
   const tabsBody = (
     <>
       <TabsContent value="stay" className="mt-0 space-y-4 outline-none">
-        <StayBookingSourceOpenBlock stay={stay} tenantSettings={tenantSettings} />
-        {isBelowLg && isParty ? (
-          <StayPartyChildBanner
-            partyTitle={partyTitle}
-            onOpenParty={() => {
-              setPartyStackSlideFrom('right');
-              setPartyStackMotionEnabled(true);
-              setPartySheetTab('beds');
-              setPartyLevelOpen(true);
-            }}
-          />
+        {!isParty ? (
+          <StayBookingSourceOpenBlock stay={stay} tenantSettings={tenantSettings} />
         ) : null}
         {tenantSlug ? (
           <>
@@ -679,22 +712,49 @@ export function ReceptionGuestStayDetail({
         open={open}
         onClose={() => {
           if (skipTourismConfirmOpen) return;
+          if (editSurface) {
+            (editSurface.onDismiss ?? editSurface.onBack)();
+            return;
+          }
           onClose();
         }}
-        dismissBlocked={skipTourismConfirmOpen}
-        accessibleTitle={showPartyRoot ? partyTitle : guestLabel}
+        dismissBlocked={skipTourismConfirmOpen || editDismissBlocked}
+        accessibleTitle={
+          showEdit && editSurface
+            ? editSurface.title
+            : showPartyRoot
+              ? partyTitle
+              : guestLabel
+        }
         titlePrefix={
-          showPartyRoot ? <BookingGroupIcon className="text-foreground/70" /> : undefined
+          showEdit
+            ? undefined
+            : showPartyRoot
+              ? <BookingGroupIcon className="text-foreground/70" />
+              : undefined
         }
         titleTrailing={
-          !showPartyRoot && overdueCheckout ? (
-            <Badge variant="warning" aria-label="Checkout overdue">
-              Overdue
-            </Badge>
-          ) : undefined
+          showEdit || showPartyRoot
+            ? undefined
+            : overdueCheckout
+              ? (
+                  <Badge variant="warning" aria-label="Checkout overdue">
+                    Overdue
+                  </Badge>
+                )
+              : undefined
         }
         titleLeading={
-          showBackToParty ? (
+          showEdit && editSurface ? (
+            <button
+              type="button"
+              onClick={editSurface.onBack}
+              className="inline-flex h-8 max-w-[min(100%,14rem)] items-center gap-0.5 rounded-md px-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <ChevronLeft className="size-4 shrink-0" />
+              <span className="truncate">{editBackLabel}</span>
+            </button>
+          ) : showBackToParty ? (
             <button
               type="button"
               onClick={() => {
@@ -707,28 +767,21 @@ export function ReceptionGuestStayDetail({
               <ChevronLeft className="size-4 shrink-0" />
               <span className="truncate">{partyBackLabel}</span>
             </button>
-          ) : showBackToChild ? (
-            <button
-              type="button"
-              onClick={() => {
-                setPartyStackSlideFrom('left');
-                setPartyStackMotionEnabled(true);
-                setPartyLevelOpen(false);
-              }}
-              className="inline-flex h-8 max-w-[min(100%,14rem)] items-center gap-0.5 rounded-md px-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <ChevronLeft className="size-4 shrink-0" />
-              <span className="truncate">{childBackLabel}</span>
-            </button>
           ) : undefined
         }
-        header={header}
-        bodyTop={showPartyRoot ? undefined : childTabsList}
-        body={showPartyRoot ? partyRootBody : tabsBody}
+        header={showEdit && editSurface ? editSurface.header : header}
+        bodyTop={showEdit || showPartyRoot ? undefined : childTabsList}
+        body={
+          showEdit && editSurface
+            ? editSurface.body
+            : showPartyRoot
+              ? partyRootBody
+              : tabsBody
+        }
         wrapBodyRegion={(region) => {
           const stacked = (
             <div
-              key={showPartyRoot ? 'party' : `child-${stay.id}`}
+              key={stackLevelKey}
               className={cn(
                 'flex min-h-0 flex-1 flex-col',
                 partyStackMotionEnabled && partyStackMotionClass(partyStackSlideFrom)
@@ -737,9 +790,9 @@ export function ReceptionGuestStayDetail({
               {region}
             </div>
           );
-          // Party root must not sit under the child Tabs root (stay/tourism/access):
+          // Party root / edit must not sit under the child Tabs root (stay/tourism/access):
           // controlled value with zero matching triggers causes a setState loop in Radix.
-          if (showPartyRoot) {
+          if (showEdit || showPartyRoot) {
             return stacked;
           }
           return (
@@ -752,9 +805,12 @@ export function ReceptionGuestStayDetail({
             </Tabs>
           );
         }}
-        footer={footer}
+        footer={showEdit ? null : footer}
         sidePanel={
-          showDesktopPartyPeek ? (
+          showEdit
+            ? undefined
+            : showDesktopPartyPeek
+              ? (
             <StayPartyPeek
               partyStays={resolvedPartyStays}
               activeStayId={stay.id}
@@ -768,6 +824,9 @@ export function ReceptionGuestStayDetail({
               onStayBookingBalanceChange={onStayBookingBalanceChange}
               contactSlot={partyContactSlot}
               noteSlot={partyNoteSlot}
+              bookingSourceSlot={
+                <StayBookingSourceOpenBlock stay={balanceStay} tenantSettings={tenantSettings} />
+              }
               showTourismSummary={showTourismTab}
               tourismByStayId={partyTourismByStayId}
               showCheckInParty={showCheckInParty}
@@ -776,26 +835,43 @@ export function ReceptionGuestStayDetail({
               checkInPartyError={partyCheckInError}
               onCheckInParty={requestCheckInParty}
             />
-          ) : undefined
+              )
+            : undefined
         }
-        onEdit={showPartyRoot || stayEnded ? undefined : () => onEditStay(stay)}
+        onEdit={
+          showEdit || stayEnded
+            ? undefined
+            : showPartyRoot || (isParty && !isBelowLg)
+              ? () =>
+                  onEditStay(balanceStay, {
+                    intent: 'changeDates',
+                    partyStays: resolvedPartyStays,
+                  })
+              : isParty
+                ? () => onEditStay(stay, { intent: 'moveBed' })
+                : () => onEditStay(stay, { intent: 'changeDates' })
+        }
         editDisabled={isPending}
         headerExtra={
-          showPartyRoot ? undefined : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            disabled={!stay.magicLinkUrl || isPending}
-            onClick={openDeskQr}
-          >
-            <QrCode />
-            <span className="sr-only">Show desk QR code</span>
-          </Button>
-          )
+          showEdit
+            ? editSurface?.chromeAction
+            : showPartyRoot
+              ? undefined
+              : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={!stay.magicLinkUrl || isPending}
+                    onClick={openDeskQr}
+                  >
+                    <QrCode />
+                    <span className="sr-only">Show desk QR code</span>
+                  </Button>
+                )
         }
         headerOverflow={
-          showPartyRoot || !tenantSlug ? undefined : (
+          showEdit || showPartyRoot || !tenantSlug ? undefined : (
             <ReceptionGuestStayDetailOverflowMenu
               stay={stay}
               isPending={isPending}

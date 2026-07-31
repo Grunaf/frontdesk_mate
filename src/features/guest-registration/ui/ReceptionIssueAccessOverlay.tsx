@@ -34,7 +34,7 @@ function IssueAccessOverlayHeader({
         : `Editing ${reissueGuestLabel} — PIN and link stay the same.`
       : isEditingReservation
         ? editIntent === 'moveBed'
-          ? 'Moving guest — PIN and link stay the same.'
+          ? 'Moving guest — PIN and link stay the same. Dates and booking details: edit from Group.'
           : 'Editing guest — PIN and link stay the same.'
         : null;
 
@@ -77,7 +77,13 @@ export function ReceptionIssueAccessOverlay({
     <ReceptionStayDetailShell
       open={open}
       onClose={onClose}
-      accessibleTitle={isEditingReservation ? 'Edit booking' : 'New booking'}
+      accessibleTitle={
+        isEditingReservation
+          ? editIntent === 'moveBed'
+            ? 'Move bed'
+            : 'Edit booking'
+          : 'New booking'
+      }
       accessibleTitleTooltip="Creates a booking and guest app access — not your booking system"
       titleId={RECEPTION_ISSUE_ACCESS_TITLE_ID}
       header={

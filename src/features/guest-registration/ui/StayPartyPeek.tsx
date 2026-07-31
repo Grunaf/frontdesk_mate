@@ -121,6 +121,8 @@ export type StayPartyBookingTabProps = {
   onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
   contactSlot?: ReactNode;
   noteSlot?: ReactNode;
+  /** Open in OTA — party root only. */
+  bookingSourceSlot?: ReactNode;
   showTourismSummary?: boolean;
   tourismByStayId?: Record<string, TourismStatusBadge>;
 };
@@ -133,6 +135,7 @@ export function StayPartyBookingTab({
   onStayBookingBalanceChange,
   contactSlot,
   noteSlot,
+  bookingSourceSlot,
   showTourismSummary = false,
   tourismByStayId = {},
 }: StayPartyBookingTabProps) {
@@ -150,6 +153,8 @@ export function StayPartyBookingTab({
 
   return (
     <div className="space-y-3">
+      {bookingSourceSlot}
+
       {tenantSlug ? (
         <StayPartyBalanceControls
           balanceStay={balanceStay}
@@ -272,6 +277,7 @@ export function StayPartyMobilePanel({
   onStayBookingBalanceChange,
   contactSlot,
   noteSlot,
+  bookingSourceSlot,
   showTourismSummary = false,
   tourismByStayId = {},
 }: StayPartyMobilePanelProps) {
@@ -292,6 +298,7 @@ export function StayPartyMobilePanel({
           onStayBookingBalanceChange={onStayBookingBalanceChange}
           contactSlot={contactSlot}
           noteSlot={noteSlot}
+          bookingSourceSlot={bookingSourceSlot}
           showTourismSummary={showTourismSummary}
           tourismByStayId={tourismByStayId}
         />
@@ -323,6 +330,7 @@ export type StayPartyPeekProps = {
   onStayBookingBalanceChange?: (stay: GuestStayRecordWithLink) => void;
   contactSlot?: ReactNode;
   noteSlot?: ReactNode;
+  bookingSourceSlot?: ReactNode;
   showTourismSummary?: boolean;
   tourismByStayId?: Record<string, TourismStatusBadge>;
   showCheckInParty: boolean;
@@ -346,6 +354,7 @@ export function StayPartyPeek({
   onStayBookingBalanceChange,
   contactSlot,
   noteSlot,
+  bookingSourceSlot,
   showTourismSummary = false,
   tourismByStayId = {},
   showCheckInParty,
@@ -395,6 +404,7 @@ export function StayPartyPeek({
               onStayBookingBalanceChange={onStayBookingBalanceChange}
               contactSlot={contactSlot}
               noteSlot={noteSlot}
+              bookingSourceSlot={bookingSourceSlot}
               showTourismSummary={showTourismSummary}
               tourismByStayId={tourismByStayId}
             />

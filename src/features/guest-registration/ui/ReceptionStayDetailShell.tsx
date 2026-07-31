@@ -43,8 +43,7 @@ export interface ReceptionStayDetailShellProps {
   /** Optional native `title` tooltip on the primary heading. */
   accessibleTitleTooltip?: string;
   /**
-   * Mobile nav control (e.g. party Back). When set without edit chrome,
-   * rendered in a dedicated nav row with Close on the same line.
+   * Mobile nav control (e.g. Back to Group). When set, replaces Close on the chrome row.
    */
   titleLeading?: ReactNode;
   /** Optional icon/prefix inline before the title text. */
@@ -278,8 +277,8 @@ function MobileStayDetailSheet({
   const leadingCount = countLeadingHeaderActions({ onEdit, headerExtra, headerOverflow });
   const hasEditChrome = leadingCount > 0;
   const hasTitleLeading = Boolean(titleLeading);
-  /** Back + Close on one row under the drag handle (party stack). */
-  const useNavRow = hasTitleLeading && !hasEditChrome;
+  /** Back to group replaces Close on child level — never show both. */
+  const showClose = !hasTitleLeading;
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -338,7 +337,7 @@ function MobileStayDetailSheet({
           )}
         >
           <div className="flex min-w-0 items-center">
-            {hasEditChrome ? closeButton : useNavRow ? titleLeading : null}
+            {hasTitleLeading ? titleLeading : showClose && hasEditChrome ? closeButton : null}
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {hasEditChrome ? (
@@ -358,13 +357,12 @@ function MobileStayDetailSheet({
                 {headerExtra}
                 {headerOverflow}
               </>
-            ) : (
+            ) : showClose ? (
               closeButton
-            )}
+            ) : null}
           </div>
         </div>
         <BottomSheetHeader className={cn('space-y-1 pb-3 pt-1', MOBILE_STAY_SHEET_INSET_X)}>
-          {titleLeading && hasEditChrome ? <div className="mb-2">{titleLeading}</div> : null}
           <BottomSheetTitle
             className={cn(
               RECEPTION_SHELL_TITLE_CLASS,

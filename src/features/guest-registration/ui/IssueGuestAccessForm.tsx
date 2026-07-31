@@ -74,10 +74,12 @@ export interface IssueGuestAccessFormProps {
   /** Lead / single bed (edit + Guests=1). */
   bedId: string;
   onBedIdChange: (value: string) => void;
-  /** Multi-guest bed slots (create only). Length should match guestCount. */
+  /** Multi-guest bed slots (create + party edit). Length should match guestCount. */
   bedIds?: string[];
   onBedIdAtIndexChange?: (index: number, bedId: string) => void;
-  /** Party size for create booking. Hidden while editing. */
+  /** Labels for party bed slots while editing a group (Guest name · current bed). */
+  partyBedLabels?: string[];
+  /** Party size for create booking. Hidden while editing (except party multi-bed). */
   guestCount?: number;
   onGuestCountChange?: (value: number) => void;
   maxGuestCount?: number;
@@ -92,6 +94,8 @@ export interface IssueGuestAccessFormProps {
   onDatesChange: (next: { checkInDate: string; checkOutDate: string }) => void;
   reissueGuestLabel?: string;
   editIntent?: 'moveBed' | 'changeDates';
+  /** Child of a party: hint that shared fields edit from Group. */
+  moveBedGroupHint?: boolean;
   onCancelReissue?: () => void;
   error: string | null;
   isPending: boolean;
@@ -106,14 +110,17 @@ export function resolveIssueGuestAccessSubmitLabel(props: {
   isPending: boolean;
   isEditingReservation: boolean;
   isReissue: boolean;
+  editIntent?: 'moveBed' | 'changeDates';
 }): string {
-  const { isPending, isEditingReservation, isReissue } = props;
+  const { isPending, isEditingReservation, isReissue, editIntent } = props;
   if (isPending) {
     if (isEditingReservation) return 'Saving…';
     if (isReissue) return 'Re-issuing…';
     return 'Creating…';
   }
-  if (isEditingReservation) return 'Save reservation';
+  if (isEditingReservation) {
+    return editIntent === 'moveBed' ? 'Save bed' : 'Save reservation';
+  }
   if (isReissue) return 'Save new access';
   return 'Create booking';
 }
@@ -149,6 +156,7 @@ export function IssueGuestAccessFormFields({
   onBedIdChange,
   bedIds,
   onBedIdAtIndexChange,
+  partyBedLabels,
   guestCount = 1,
   onGuestCountChange,
   maxGuestCount = DEFAULT_MAX_GUEST_COUNT,
@@ -162,6 +170,7 @@ export function IssueGuestAccessFormFields({
   onDatesChange,
   reissueGuestLabel,
   editIntent = 'changeDates',
+  moveBedGroupHint = false,
   onCancelReissue,
   error,
   isEditingReservation = false,
@@ -197,6 +206,7 @@ export function IssueGuestAccessFormFields({
   | 'onBedIdChange'
   | 'bedIds'
   | 'onBedIdAtIndexChange'
+  | 'partyBedLabels'
   | 'guestCount'
   | 'onGuestCountChange'
   | 'maxGuestCount'
@@ -210,6 +220,7 @@ export function IssueGuestAccessFormFields({
   | 'onDatesChange'
   | 'reissueGuestLabel'
   | 'editIntent'
+  | 'moveBedGroupHint'
   | 'onCancelReissue'
   | 'error'
   | 'isEditingReservation'
@@ -244,7 +255,10 @@ export function IssueGuestAccessFormFields({
   const offerHasNoBeds =
     offerFirst && Boolean(offerId) && (selectedOffer?.availableBedCount ?? 0) === 0;
   const partySize = Math.max(1, Math.min(guestCount, maxGuestCount));
-  const multiGuest = !isEditingReservation && partySize > 1;
+  const editingPartyBeds =
+    isEditingReservation && editIntent === 'changeDates' && (bedIds?.length ?? 0) > 1;
+  const multiGuest =
+    partySize > 1 && (!isEditingReservation || editingPartyBeds) && editIntent !== 'moveBed';
   const resolvedBedIds =
     bedIds && bedIds.length > 0
       ? bedIds
@@ -281,12 +295,21 @@ export function IssueGuestAccessFormFields({
     <div key="beds-multi" className="space-y-3">
       {resolvedBedIds.map((slotBedId, index) => {
         const taken = new Set(resolvedBedIds.filter((id, i) => i !== index && Boolean(id)));
+        const slotLabel =
+          partyBedLabels?.[index]?.trim() ||
+          (index === 0 ? 'Guest 1 bed' : `Guest ${index + 1} bed`);
         return (
           <BedRoomGroupedSelect
             key={`guest-bed-${index}`}
             id={`guest-bed-${index}`}
-            label={index === 0 ? 'Guest 1 bed' : `Guest ${index + 1} bed`}
-            hint={index === 0 ? 'Lead guest bed.' : null}
+            label={slotLabel}
+            hint={
+              editingPartyBeds
+                ? null
+                : index === 0
+                  ? 'Lead guest bed.'
+                  : null
+            }
             bedId={slotBedId}
             onBedIdChange={(next) => {
               if (onBedIdAtIndexChange) {
@@ -684,9 +707,22 @@ export function IssueGuestAccessFormFields({
         </div>
       ) : null}
 
-      {fieldsGrid}
-
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {isEditingReservation && editIntent === 'moveBed' ? (
+        <div className="space-y-3">
+          {moveBedGroupHint ? (
+            <p className="text-xs text-muted-foreground">
+              Dates, balance, contact, and booking source are edited from the Group sheet.
+            </p>
+          ) : null}
+          {bedSelect}
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        </div>
+      ) : (
+        <>
+          {fieldsGrid}
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        </>
+      )}
     </div>
   );
 }
@@ -707,6 +743,7 @@ export function IssueGuestAccessForm(props: IssueGuestAccessFormProps) {
     isPending,
     isEditingReservation,
     isReissue,
+    editIntent: fieldsProps.editIntent,
   });
 
   if (layout === 'shell') {

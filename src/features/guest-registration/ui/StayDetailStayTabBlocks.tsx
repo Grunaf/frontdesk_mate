@@ -12,7 +12,6 @@ import {
   confirmGuestStayContactPhoneAction,
   rejectGuestStayContactPhoneAction,
 } from '../actions/receptionActions';
-import { BookingGroupIcon } from './BookingGroupIcon';
 import { Button } from '@/shared/ui';
 import { buildWhatsappMeHref } from '@/shared/lib';
 
@@ -215,26 +214,6 @@ export function resolvePartyContactStay(
       Boolean(member.contact_email?.trim())
   );
   return withContact ?? sorted[0] ?? null;
-}
-
-export function StayPartyChildBanner({
-  partyTitle,
-  onOpenParty,
-}: {
-  partyTitle: string;
-  onOpenParty: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 bg-muted/20 px-3 py-2.5">
-      <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-        <BookingGroupIcon />
-        <span className="truncate">Part of {partyTitle}</span>
-      </p>
-      <Button type="button" size="sm" variant="outline" className="h-7" onClick={onOpenParty}>
-        View beds
-      </Button>
-    </div>
-  );
 }
 
 const RECEPTION_NOTE_MAX_LENGTH = 1000;

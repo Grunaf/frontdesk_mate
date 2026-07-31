@@ -110,6 +110,10 @@ import type { PlanBedFilter } from '../lib/filterPlanRoomGroupsByFreeTonight';
 import { resolveGuestAccessPeriod } from '../lib/resolveGuestAccessPeriod';
 import { BedAccessCalendar } from './BedAccessCalendar';
 import { ReceptionIssueAccessOverlay } from './ReceptionIssueAccessOverlay';
+import {
+  IssueGuestAccessFormFields,
+  resolveIssueGuestAccessSubmitLabel,
+} from './IssueGuestAccessForm';
 import { ReceptionIssueAccessFab } from './ReceptionIssueAccessFab';
 import { ReceptionHubView } from './ReceptionHubView';
 import { ReceptionCashView } from './ReceptionCashView';
@@ -133,7 +137,7 @@ import { prefetchMyReceptionSchedule } from '../lib/myReceptionScheduleCache';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { CancelBookingDialog } from './RevokeAccessDialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger, ConfirmDialog } from '@/shared/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger, ConfirmDialog, Button } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
 import { FALLBACK_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
@@ -162,6 +166,24 @@ interface EditReservationDraft {
   bookingExternalId: string;
   bookingAmountDue: string;
   intent: 'changeDates' | 'moveBed';
+  /** Party members in order — multi-bed edit when length > 1. */
+  partyStayIds?: string[];
+}
+
+/** Form fields snapshotted when opening in-sheet edit — for dirty discard. */
+interface EditFormSnapshot {
+  guestName: string;
+  selectedGuestId: string | null;
+  contactPhone: string;
+  contactEmail: string;
+  contactSkipped: boolean;
+  bookingPlatformId: string;
+  bookingExternalId: string;
+  bookingAmountDue: string;
+  checkInDate: string;
+  checkOutDate: string;
+  bedIds: string[];
+  offerId: string;
 }
 
 function pickDefaultBedId(bedOptions: string[], unavailableBedIds: Set<string>): string {
@@ -324,6 +346,9 @@ export function ReceptionCheckInPanel({
   const [pendingReissueAccessStay, setPendingReissueAccessStay] =
     useState<GuestStayRecordWithLink | null>(null);
   const [editDraft, setEditDraft] = useState<EditReservationDraft | null>(null);
+  const [editBaseline, setEditBaseline] = useState<EditFormSnapshot | null>(null);
+  const [discardEditConfirmOpen, setDiscardEditConfirmOpen] = useState(false);
+  const [discardEditIntent, setDiscardEditIntent] = useState<'pop' | 'closeSheet'>('pop');
   const [isPending, startTransition] = useTransition();
   const [housekeepingBusy, startHousekeepingTransition] = useTransition();
   const [bedStatuses, setBedStatuses] = useState<Record<string, HousekeepingBedStatus>>({});
@@ -768,27 +793,42 @@ export function ReceptionCheckInPanel({
     setStayDetailFocusStayId(null);
   }, []);
 
+  const editExcludedStayIds = useMemo(() => {
+    if (!editDraft) return null;
+    const ids =
+      editDraft.partyStayIds && editDraft.partyStayIds.length > 0
+        ? editDraft.partyStayIds
+        : [editDraft.stayId];
+    return new Set(ids);
+  }, [editDraft]);
+
   const hardOverlappingBedIds = useMemo(() => {
     const ids = new Set<string>();
     for (const id of bedOptions) {
       const overlaps = planStays.some((stay) => {
-        if (editDraft?.stayId === stay.id) return false;
+        if (editExcludedStayIds?.has(stay.id)) return false;
         return stayOverlapsBedNightRange(stay, id, accessPeriod.checkInAt, accessPeriod.checkOutAt);
       });
       if (overlaps) ids.add(id);
     }
     return ids;
-  }, [accessPeriod.checkInAt, accessPeriod.checkOutAt, bedOptions, editDraft?.stayId, planStays]);
+  }, [
+    accessPeriod.checkInAt,
+    accessPeriod.checkOutAt,
+    bedOptions,
+    editExcludedStayIds,
+    planStays,
+  ]);
 
   const wholeRoomBlockedBedIds = useMemo(
     () =>
       listWholeRoomBlockedBedIdsForDateRange({
         settings: tenantSettings,
-        stays: planStays.filter((stay) => editDraft?.stayId !== stay.id),
+        stays: planStays.filter((stay) => !editExcludedStayIds?.has(stay.id)),
         checkInDate,
         checkOutDate,
       }),
-    [checkInDate, checkOutDate, editDraft?.stayId, planStays, tenantSettings]
+    [checkInDate, checkOutDate, editExcludedStayIds, planStays, tenantSettings]
   );
 
   /** Beds confirmed for rare per-bed booking inside an occupied whole-room unit. */
@@ -916,13 +956,14 @@ export function ReceptionCheckInPanel({
   const inventoryCapacityZero = !editDraft && partyInventoryCapacity === 0;
 
   useEffect(() => {
+    if (editDraft) return;
     if (guestCount > maxGuestCount) {
       setGuestCount(maxGuestCount);
       setGuestsReducedMessage(
         `Guests reduced to ${maxGuestCount} — fewer beds for these dates.`
       );
     }
-  }, [guestCount, maxGuestCount]);
+  }, [editDraft, guestCount, maxGuestCount]);
 
   const preferredDefaultOfferId = useMemo(() => {
     const dorm = stayOfferOptions.find((option) => option.bookingUnit === 'bed');
@@ -949,7 +990,12 @@ export function ReceptionCheckInPanel({
       return;
     }
 
-    const count = editDraft ? 1 : guestCount;
+    const count =
+      editDraft?.intent === 'changeDates' && editDraft.partyStayIds && editDraft.partyStayIds.length > 1
+        ? editDraft.partyStayIds.length
+        : editDraft
+          ? 1
+          : guestCount;
     let picked: string[];
     if (stayOfferOptions.length > 0) {
       picked = pickAvailableBedsForStayOffer({
@@ -1157,9 +1203,16 @@ export function ReceptionCheckInPanel({
 
   const clearEditDraft = useCallback(() => {
     setEditDraft(null);
+    setEditBaseline(null);
+    setDiscardEditConfirmOpen(false);
     setIssueOverlayOpen(false);
     resetCreateIssueForm();
   }, [resetCreateIssueForm]);
+
+  useEffect(() => {
+    if (selectedStayId || !editDraft) return;
+    clearEditDraft();
+  }, [selectedStayId, editDraft, clearEditDraft]);
 
   const closeIssueOverlay = useCallback(() => {
     if (editDraft) {
@@ -1223,7 +1276,8 @@ export function ReceptionCheckInPanel({
 
   const beginEditDraft = (
     stay: GuestStayRecordWithLink,
-    intent: EditReservationDraft['intent']
+    intent: EditReservationDraft['intent'],
+    partyStays?: GuestStayRecordWithLink[]
   ) => {
     const platformId = stay.booking_platform_id ?? '';
     const externalId = stay.booking_external_id ?? '';
@@ -1233,34 +1287,64 @@ export function ReceptionCheckInPanel({
       isCurrencyCode(stay.booking_amount_currency)
         ? formatMinorAsDecimalInput(stay.booking_amount_due_minor, stay.booking_amount_currency)
         : '';
+    const partyMembers =
+      intent === 'changeDates' && partyStays && partyStays.length > 1
+        ? [...partyStays].sort((a, b) => a.created_at.localeCompare(b.created_at))
+        : null;
+    const nextGuestName = stay.guest_name ?? '';
+    const nextGuestId = stay.guest_id ?? null;
+    const nextPhone = stay.contact_phone?.trim() ?? '';
+    const nextEmail = stay.contact_email?.trim() ?? '';
+    const nextSkipped = !stay.contact_phone?.trim() && !stay.contact_email?.trim();
+    const nextCheckIn = toDateInput(stay.check_in_date || stay.check_in_at);
+    const nextCheckOut = toDateInput(stay.check_out_date || stay.check_out_at);
+    const nextBedIds = partyMembers
+      ? partyMembers.map((member) => member.bed_id)
+      : [stay.bed_id];
+    const nextOfferId = resolveOfferIdForBed(tenantSettings, stay.bed_id) ?? '';
+
     setEditDraft({
       stayId: stay.id,
-      guestName: stay.guest_name ?? '',
+      guestName: nextGuestName,
       bedId: stay.bed_id,
-      checkInDate: toDateInput(stay.check_in_date || stay.check_in_at),
-      checkOutDate: toDateInput(stay.check_out_date || stay.check_out_at),
+      checkInDate: nextCheckIn,
+      checkOutDate: nextCheckOut,
       bookingPlatformId: platformId,
       bookingExternalId: externalId,
       bookingAmountDue: balanceDue,
       intent,
+      partyStayIds: partyMembers?.map((member) => member.id),
     });
+    setEditBaseline({
+      guestName: nextGuestName,
+      selectedGuestId: nextGuestId,
+      contactPhone: nextPhone,
+      contactEmail: nextEmail,
+      contactSkipped: nextSkipped,
+      bookingPlatformId: platformId,
+      bookingExternalId: externalId,
+      bookingAmountDue: balanceDue,
+      checkInDate: nextCheckIn,
+      checkOutDate: nextCheckOut,
+      bedIds: nextBedIds,
+      offerId: nextOfferId,
+    });
+    setDiscardEditConfirmOpen(false);
     setMode('custom');
-    setGuestName(stay.guest_name ?? '');
-    setSelectedGuestId(stay.guest_id ?? null);
+    setGuestName(nextGuestName);
+    setSelectedGuestId(nextGuestId);
     setBookingPlatformId(platformId);
     setBookingExternalId(externalId);
-    setContactPhone(stay.contact_phone?.trim() ?? '');
-    setContactEmail(stay.contact_email?.trim() ?? '');
-    setContactSkipped(
-      !stay.contact_phone?.trim() && !stay.contact_email?.trim()
-    );
+    setContactPhone(nextPhone);
+    setContactEmail(nextEmail);
+    setContactSkipped(nextSkipped);
     setBookingAmountDue(balanceDue);
     setBookingAmountTouched(true);
-    setCheckInDate(toDateInput(stay.check_in_date || stay.check_in_at));
-    setCheckOutDate(toDateInput(stay.check_out_date || stay.check_out_at));
-    setBedIds([stay.bed_id]);
-    setGuestCount(1);
-    setOfferId(resolveOfferIdForBed(tenantSettings, stay.bed_id) ?? '');
+    setCheckInDate(nextCheckIn);
+    setCheckOutDate(nextCheckOut);
+    setBedIds(nextBedIds);
+    setGuestCount(nextBedIds.length);
+    setOfferId(nextOfferId);
     setBedPickMode('manual');
     setError(null);
   };
@@ -1316,6 +1400,22 @@ export function ReceptionCheckInPanel({
 
     if (!editDraft && guestCount > 1) {
       if (bedIds.length < guestCount || bedIds.some((id) => !id)) {
+        setError('Select a bed for each guest.');
+        return;
+      }
+      if (new Set(bedIds).size !== bedIds.length) {
+        setError('Each guest needs a different bed.');
+        return;
+      }
+    }
+
+    if (
+      editDraft?.intent === 'changeDates' &&
+      editDraft.partyStayIds &&
+      editDraft.partyStayIds.length > 1
+    ) {
+      const partyCount = editDraft.partyStayIds.length;
+      if (bedIds.length < partyCount || bedIds.some((id) => !id)) {
         setError('Select a bed for each guest.');
         return;
       }
@@ -1400,31 +1500,75 @@ export function ReceptionCheckInPanel({
   }) => {
     try {
       if (editDraft) {
+        const partyIds =
+          editDraft.intent === 'changeDates' &&
+          editDraft.partyStayIds &&
+          editDraft.partyStayIds.length > 1
+            ? editDraft.partyStayIds
+            : [editDraft.stayId];
+
+        let leadStayId = editDraft.stayId;
+        for (let index = 0; index < partyIds.length; index++) {
+          const memberId = partyIds[index]!;
+          const memberBedId = partyIds.length > 1 ? bedIds[index] ?? bedId : bedId;
+          const memberStay = planStays.find((entry) => entry.id === memberId);
+          const isLead = memberId === editDraft.stayId;
+          if (!isLead && !memberStay) {
+            setError('Could not update all beds in this group. Refresh and try again.');
+            return;
+          }
+          const memberBalanceDue =
+            isLead
+              ? bookingAmountDue
+              : memberStay?.booking_amount_due_minor != null &&
+                  memberStay.booking_amount_currency &&
+                  isCurrencyCode(memberStay.booking_amount_currency)
+                ? formatMinorAsDecimalInput(
+                    memberStay.booking_amount_due_minor,
+                    memberStay.booking_amount_currency
+                  )
+                : '';
+
           const result = await updateGuestReservationAction({
             tenantSlug,
-            stayId: editDraft.stayId,
-            bedId,
-            guestName: guestName.trim(),
-            guestId: selectedGuestId ?? undefined,
+            stayId: memberId,
+            bedId: memberBedId,
+            guestName: isLead
+              ? guestName.trim()
+              : memberStay?.guest_name?.trim() || undefined,
+            guestId: isLead
+              ? selectedGuestId ?? undefined
+              : memberStay?.guest_id ?? undefined,
             checkInDate,
             checkOutDate,
-            bookingPlatformId: bookingPlatformId || undefined,
-            bookingExternalId: input.bookingExternalId,
-            bookingAmountDue,
-            contactPhone: input.contactResolution.contactPhone,
-            contactEmail: input.contactResolution.contactEmail,
+            bookingPlatformId: isLead
+              ? bookingPlatformId || undefined
+              : memberStay?.booking_platform_id || undefined,
+            bookingExternalId: isLead
+              ? input.bookingExternalId
+              : memberStay?.booking_external_id || undefined,
+            bookingAmountDue: memberBalanceDue,
+            contactPhone: isLead
+              ? input.contactResolution.contactPhone
+              : memberStay?.contact_phone ?? null,
+            contactEmail: isLead
+              ? input.contactResolution.contactEmail
+              : memberStay?.contact_email ?? null,
           });
 
-        if (!result.ok) {
-          setError(createErrorMessage(result.error));
-          if (result.error === 'access_overlap') {
-            await refresh();
+          if (!result.ok) {
+            setError(createErrorMessage(result.error));
+            if (result.error === 'access_overlap') {
+              await refresh();
+            }
+            return;
           }
-          return;
+          if (isLead) {
+            leadStayId = result.stay.id;
+          }
         }
 
         await refresh();
-        openStayFromChildSurface(result.stay.id);
         clearEditDraft();
         return;
       }
@@ -1590,6 +1734,94 @@ export function ReceptionCheckInPanel({
     );
   }
 
+  const canSubmitBooking =
+    rangeValid &&
+    Boolean(bedId) &&
+    !hardOverlappingBedIds.has(bedId) &&
+    !inventoryCapacityZero &&
+    !bedPathNeedsPrivateRoom &&
+    !bedPathNotEnoughBeds &&
+    !roomPathTooSmall &&
+    (editDraft?.partyStayIds && editDraft.partyStayIds.length > 1
+      ? bedIds.slice(0, editDraft.partyStayIds.length).every(
+          (id) => Boolean(id) && !hardOverlappingBedIds.has(id)
+        )
+      : editDraft ||
+        guestCount <= 1 ||
+        bedIds.slice(0, guestCount).every(
+          (id) => Boolean(id) && !hardOverlappingBedIds.has(id)
+        )) &&
+    Boolean(guestName.trim()) &&
+    resolveIssueGuestContact({
+      contactPhone,
+      contactEmail,
+      contactSkipped,
+    }).ok &&
+    (Boolean(editDraft) ||
+      bookingPlatformId !== 'hostelworld' ||
+      parseHostelworldBookingReference(bookingExternalId, hostelworldBookingPrefix).ok) &&
+    resolveReservationBookingBalance({
+      settings: tenantSettings,
+      bookingAmountDue,
+      required: true,
+    }).ok &&
+    !validateReservationBookingSource({
+      settings: tenantSettings,
+      bookingPlatformId,
+      bookingExternalId:
+        bookingPlatformId === 'hostelworld' && hostelworldBookingPrefix
+          ? bookingExternalId
+          : bookingExternalId,
+    });
+
+  const isEditDirty = Boolean(
+    editDraft &&
+      editBaseline &&
+      (guestName !== editBaseline.guestName ||
+        selectedGuestId !== editBaseline.selectedGuestId ||
+        contactPhone !== editBaseline.contactPhone ||
+        contactEmail !== editBaseline.contactEmail ||
+        contactSkipped !== editBaseline.contactSkipped ||
+        bookingPlatformId !== editBaseline.bookingPlatformId ||
+        bookingExternalId !== editBaseline.bookingExternalId ||
+        bookingAmountDue !== editBaseline.bookingAmountDue ||
+        checkInDate !== editBaseline.checkInDate ||
+        checkOutDate !== editBaseline.checkOutDate ||
+        offerId !== editBaseline.offerId ||
+        bedIds.join('\0') !== editBaseline.bedIds.join('\0'))
+  );
+
+  const finishLeaveEdit = useCallback(
+    (intent: 'pop' | 'closeSheet') => {
+      setDiscardEditConfirmOpen(false);
+      setEditDraft(null);
+      setEditBaseline(null);
+      setIssueOverlayOpen(false);
+      resetCreateIssueForm();
+      if (intent === 'closeSheet') {
+        setSelectedStayId(null);
+        setSelectedStayOverride(null);
+        setStayDetailInitialTab('stay');
+        setStayDetailPartyView(false);
+        setStayDetailFocusStayId(null);
+      }
+    },
+    [resetCreateIssueForm]
+  );
+
+  const requestLeaveEdit = useCallback(
+    (intent: 'pop' | 'closeSheet') => {
+      if (!editDraft) return;
+      if (!isEditDirty) {
+        finishLeaveEdit(intent);
+        return;
+      }
+      setDiscardEditIntent(intent);
+      setDiscardEditConfirmOpen(true);
+    },
+    [editDraft, finishLeaveEdit, isEditDirty]
+  );
+
   const deskHeader = (
     <ReceptionDeskHeader
       tenantName={tenantName}
@@ -1695,9 +1927,8 @@ export function ReceptionCheckInPanel({
           onCancelOrCheckout={(stayId, intent) => {
             setPendingArchiveStay({ stayId, intent });
           }}
-          onEditStay={(stay) => {
-            closeStayDetail();
-            beginEditDraft(stay, 'changeDates');
+          onEditStay={(stay, options) => {
+            beginEditDraft(stay, options?.intent ?? 'changeDates', options?.partyStays);
           }}
           onReissueAccess={(stay) => {
             setPendingReissueAccessStay(stay);
@@ -1706,16 +1937,140 @@ export function ReceptionCheckInPanel({
             closeStayDetail();
             beginExtendFromStay(stay);
           }}
+          editDismissBlocked={discardEditConfirmOpen}
+          editSurface={
+            editDraft
+              ? {
+                  title: editDraft.intent === 'moveBed' ? 'Move bed' : 'Edit booking',
+                  header: (
+                    <p className="text-sm text-muted-foreground">
+                      {editDraft.intent === 'moveBed'
+                        ? editDraft.guestName
+                          ? `Moving ${editDraft.guestName} — PIN and link stay the same. Dates and booking details: edit from Group.`
+                          : 'Moving guest — PIN and link stay the same. Dates and booking details: edit from Group.'
+                        : editDraft.guestName
+                          ? `Editing ${editDraft.guestName} — PIN and link stay the same.`
+                          : 'Editing guest — PIN and link stay the same.'}
+                    </p>
+                  ),
+                  body: (
+                    <IssueGuestAccessFormFields
+                      layout="shell"
+                      isEditingReservation
+                      tenantSlug={tenantSlug}
+                      guestName={guestName}
+                      onGuestNameChange={setGuestName}
+                      selectedGuestId={selectedGuestId}
+                      onSelectGuestProfile={(guest) => {
+                        setSelectedGuestId(guest.id);
+                        setGuestName(guest.display_name);
+                      }}
+                      onClearGuestProfile={() => setSelectedGuestId(null)}
+                      contactPhone={contactPhone}
+                      onContactPhoneChange={(value) => {
+                        setContactSkipped(false);
+                        setContactPhone(value);
+                      }}
+                      contactEmail={contactEmail}
+                      onContactEmailChange={(value) => {
+                        setContactSkipped(false);
+                        setContactEmail(value);
+                      }}
+                      contactSkipped={contactSkipped}
+                      onContactSkippedChange={setContactSkipped}
+                      bookingPlatformId={bookingPlatformId}
+                      onBookingPlatformIdChange={setBookingPlatformId}
+                      bookingExternalId={bookingExternalId}
+                      onBookingExternalIdChange={setBookingExternalId}
+                      hostelworldBookingPrefix={hostelworldBookingPrefix}
+                      bookingPlatformOptions={bookingPlatformOptions}
+                      showBookingSourceFields={showBookingSourceFields}
+                      bookingAmountDue={bookingAmountDue}
+                      onBookingAmountDueChange={(value) => {
+                        setBookingAmountTouched(true);
+                        setBookingAmountDue(value);
+                      }}
+                      bookingBalanceCurrencySymbol={bookingBalanceCurrencySymbol}
+                      stayOfferOptions={stayOfferOptions}
+                      offerId={offerId}
+                      onOfferIdChange={handleOfferIdChange}
+                      bedId={bedId}
+                      onBedIdChange={handleBedIdChange}
+                      bedIds={bedIds}
+                      onBedIdAtIndexChange={handleBedIdAtIndexChange}
+                      guestCount={guestCount}
+                      onGuestCountChange={handleGuestCountChange}
+                      maxGuestCount={maxGuestCount}
+                      guestsReducedMessage={guestsReducedMessage}
+                      privateRoomCta={
+                        bedPathNeedsPrivateRoom
+                          ? { label: 'Book a private room', onClick: handleBookPrivateRoom }
+                          : null
+                      }
+                      placementWarning={
+                        inventoryCapacityZero
+                          ? 'No beds for these dates.'
+                          : bedPathNotEnoughBeds
+                            ? `Not enough beds for ${guestCount} guests.`
+                            : bedPathNeedsPrivateRoom
+                              ? `Only ${dormFreeBeds} dorm beds free for these dates.`
+                              : roomPathTooSmall
+                                ? selectedOfferEmptyRoomCapacity === 0
+                                  ? 'No empty private room in this offer for these dates.'
+                                  : `This private offer only fits ${selectedOfferEmptyRoomCapacity} guests.`
+                                : null
+                      }
+                      bedsByRoom={bedsByRoom}
+                      advancedBedOpenDefault={editDraft.intent === 'moveBed' || openAdvancedBeds}
+                      checkInDate={checkInDate}
+                      checkOutDate={checkOutDate}
+                      onDatesChange={({ checkInDate: nextFrom, checkOutDate: nextUntil }) => {
+                        setCheckInDate(nextFrom);
+                        setCheckOutDate(nextUntil);
+                      }}
+                      reissueGuestLabel={editDraft.guestName}
+                      editIntent={editDraft.intent}
+                      moveBedGroupHint={editDraft.intent === 'moveBed'}
+                      partyBedLabels={
+                        editDraft.partyStayIds && editDraft.partyStayIds.length > 1
+                          ? editDraft.partyStayIds.map((stayId) => {
+                              const member = planStays.find((entry) => entry.id === stayId);
+                              const name = member?.guest_name?.trim() || 'Guest';
+                              const bed = member ? resolveBedLabel(member.bed_id).trim() : '';
+                              return bed ? `${name} · ${bed}` : name;
+                            })
+                          : undefined
+                      }
+                      error={error}
+                    />
+                  ),
+                  chromeAction: (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="min-h-11 px-2 font-medium"
+                      onClick={handleSubmit}
+                      disabled={isPending || !canSubmitBooking || !rangeValid}
+                    >
+                      {isPending ? 'Saving…' : 'Save'}
+                    </Button>
+                  ),
+                  onBack: () => requestLeaveEdit('pop'),
+                  onDismiss: () => requestLeaveEdit('closeSheet'),
+                }
+              : null
+          }
         />
       ) : null}
 
       {canCheckIn ? (
         <ReceptionIssueAccessOverlay
-        open={issueOverlayOpen || editDraft !== null}
+        open={issueOverlayOpen}
         onClose={closeIssueOverlay}
         mode={mode}
         onModeChange={handleModeChange}
-        modeLocked={Boolean(editDraft)}
+        modeLocked={false}
         tenantSlug={tenantSlug}
         guestName={guestName}
         onGuestNameChange={setGuestName}
@@ -1780,66 +2135,36 @@ export function ReceptionCheckInPanel({
                   : null
         }
         bedsByRoom={bedsByRoom}
-        advancedBedOpenDefault={editDraft?.intent === 'moveBed' || openAdvancedBeds}
+        advancedBedOpenDefault={openAdvancedBeds}
         checkInDate={checkInDate}
         checkOutDate={checkOutDate}
         onDatesChange={({ checkInDate: nextFrom, checkOutDate: nextUntil }) => {
           setCheckInDate(nextFrom);
           setCheckOutDate(nextUntil);
-          if (!editDraft) {
-            setBookingAmountTouched(false);
-            setWholeRoomOverrideBedIds([]);
-            setPendingWholeRoomOverride(null);
-          }
+          setBookingAmountTouched(false);
+          setWholeRoomOverrideBedIds([]);
+          setPendingWholeRoomOverride(null);
         }}
-        reissueGuestLabel={editDraft?.guestName}
-        editIntent={editDraft?.intent}
-        onCancelReissue={editDraft ? clearEditDraft : undefined}
         error={error}
         isPending={isPending}
         rangeValid={rangeValid}
-        canSubmit={
-          rangeValid &&
-          Boolean(bedId) &&
-          !hardOverlappingBedIds.has(bedId) &&
-          !inventoryCapacityZero &&
-          !bedPathNeedsPrivateRoom &&
-          !bedPathNotEnoughBeds &&
-          !roomPathTooSmall &&
-          (editDraft ||
-            guestCount <= 1 ||
-            bedIds.slice(0, guestCount).every(
-              (id) => Boolean(id) && !hardOverlappingBedIds.has(id)
-            )) &&
-          Boolean(guestName.trim()) &&
-          resolveIssueGuestContact({
-            contactPhone,
-            contactEmail,
-            contactSkipped,
-          }).ok &&
-          (Boolean(editDraft) ||
-            bookingPlatformId !== 'hostelworld' ||
-            parseHostelworldBookingReference(bookingExternalId, hostelworldBookingPrefix).ok) &&
-          resolveReservationBookingBalance({
-            settings: tenantSettings,
-            bookingAmountDue,
-            required: true,
-          }).ok &&
-          !validateReservationBookingSource({
-            settings: tenantSettings,
-            bookingPlatformId,
-            bookingExternalId:
-              bookingPlatformId === 'hostelworld' && hostelworldBookingPrefix
-                ? // validateReservationBookingSource only checks non-empty when required; unique is enough
-                  bookingExternalId
-                : bookingExternalId,
-          })
-        }
+        canSubmit={canSubmitBooking}
         isReissue={false}
-        isEditingReservation={Boolean(editDraft)}
+        isEditingReservation={false}
         onSubmit={handleSubmit}
       />
       ) : null}
+
+      <ConfirmDialog
+        open={discardEditConfirmOpen}
+        title="Discard changes?"
+        description="You have unsaved edits. Discard them and leave?"
+        cancelLabel="Keep editing"
+        confirmLabel="Discard"
+        confirmVariant="destructive"
+        onCancel={() => setDiscardEditConfirmOpen(false)}
+        onConfirm={() => finishLeaveEdit(discardEditIntent)}
+      />
 
       <ConfirmDialog
         open={pendingHostelworldPrefix !== null}
