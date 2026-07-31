@@ -51,6 +51,7 @@ import type {
   SetDeskCheckedInAtResult,
 } from '@/entities/guest-stay/server';
 import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEvent';
+import { resolveStayCancelCheckoutAction } from '../lib/resolveStayCancelCheckoutAction';
 import {
   assertReceptionCheckInAccess,
   resolveReceptionStaffContext,
@@ -352,6 +353,122 @@ export async function checkoutGuestReservationAction(input: {
   } catch (error) {
     console.error('checkoutGuestReservationAction:', error);
     return { ok: false as const, error: 'unknown' as const };
+  }
+}
+
+export type CheckoutPartyReservationsActionResult =
+  | { ok: true; checkedOutStayIds: string[]; skippedCount: number }
+  | {
+      ok: false;
+      error:
+        | 'unauthorized'
+        | 'forbidden'
+        | 'not_found'
+        | 'already_archived'
+        | 'invalid_operational_day'
+        | 'db_unavailable'
+        | 'unknown';
+      blockedStayId?: string;
+      checkedOutStayIds: string[];
+    };
+
+/** Party root «Check out all»: checkout admitted members only; skip pre-admit. */
+export async function checkoutPartyReservationsAction(input: {
+  tenantSlug: string;
+  stayIds: string[];
+  operationalDate: string;
+}): Promise<CheckoutPartyReservationsActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error, checkedOutStayIds: [] };
+  }
+
+  const stayIds = [...new Set(input.stayIds.map((id) => id.trim()).filter(Boolean))];
+  if (stayIds.length === 0) {
+    return { ok: false, error: 'not_found', checkedOutStayIds: [] };
+  }
+
+  try {
+    const eligibleIds: string[] = [];
+    for (const stayId of stayIds) {
+      const stay = await getGuestReservationForDesk(input.tenantSlug, stayId);
+      if (!stay) {
+        return { ok: false, error: 'not_found', blockedStayId: stayId, checkedOutStayIds: [] };
+      }
+      if (stay.stay_kind === 'volunteer') {
+        continue;
+      }
+      const endAction = resolveStayCancelCheckoutAction({
+        passport_checked_at: stay.passport_checked_at,
+        desk_checked_in_at: stay.desk_checked_in_at,
+        check_out_date: stay.check_out_date,
+        check_out_at: stay.check_out_at,
+        operationalDate: input.operationalDate,
+        is_archived: stay.is_archived,
+        stay_kind: stay.stay_kind,
+      });
+      if (endAction === 'checkout') {
+        eligibleIds.push(stayId);
+      }
+    }
+
+    if (eligibleIds.length === 0) {
+      return { ok: false, error: 'not_found', checkedOutStayIds: [] };
+    }
+
+    const checkedOutStayIds: string[] = [];
+    for (const stayId of eligibleIds) {
+      const result = await cancelOrCheckoutGuestReservation({
+        tenantSlug: input.tenantSlug,
+        stayId,
+        operationalDate: input.operationalDate,
+        archivedByReceptionUserId: staff.ctx.id,
+        intent: 'checkout',
+      });
+      if (!result.ok) {
+        if (checkedOutStayIds.length > 0) {
+          revalidatePath('/');
+        }
+        return {
+          ok: false,
+          error:
+            result.error === 'already_archived'
+              ? 'already_archived'
+              : result.error === 'not_found'
+                ? 'not_found'
+                : result.error === 'invalid_operational_day'
+                  ? 'invalid_operational_day'
+                  : 'db_unavailable',
+          blockedStayId: stayId,
+          checkedOutStayIds,
+        };
+      }
+
+      await recordReceptionDeskAuditEvent({
+        tenantSlug: input.tenantSlug,
+        mutation: 'checkoutGuestReservation',
+        subjectId: stayId,
+      });
+      if (result.kind === 'remainder_archived' && result.archiveStayId) {
+        await recordReceptionDeskAuditEvent({
+          tenantSlug: input.tenantSlug,
+          mutation: 'remainderArchived',
+          subjectId: result.archiveStayId,
+        });
+      }
+      await clearStayPresenceAfterDeskMutation(input.tenantSlug, stayId);
+      checkedOutStayIds.push(stayId);
+    }
+
+    revalidatePath('/');
+    return {
+      ok: true,
+      checkedOutStayIds,
+      skippedCount: stayIds.length - eligibleIds.length,
+    };
+  } catch (error) {
+    console.error('checkoutPartyReservationsAction:', error);
+    return { ok: false, error: 'unknown', checkedOutStayIds: [] };
   }
 }
 

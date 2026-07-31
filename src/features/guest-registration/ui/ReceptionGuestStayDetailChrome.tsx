@@ -44,6 +44,7 @@ export function ReceptionGuestStayDetailActions({
   checkInDisabled,
   checkInHint,
   checkInError,
+  checkInVariant = 'default',
 }: {
   stay: GuestStayRecordWithLink;
   isPending: boolean;
@@ -57,6 +58,8 @@ export function ReceptionGuestStayDetailActions({
   checkInDisabled: boolean;
   checkInHint: string | null;
   checkInError: string | null;
+  /** Desktop party: demote when peek shows Check in all. */
+  checkInVariant?: 'default' | 'outline';
 }) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -101,6 +104,7 @@ export function ReceptionGuestStayDetailActions({
           {checkInError ? <p className="text-xs text-destructive">{checkInError}</p> : null}
           <Button
             type="button"
+            variant={checkInVariant}
             size="default"
             className="w-full"
             disabled={busy || checkInDisabled}
@@ -141,6 +145,8 @@ export function ReceptionGuestStayDetailOverflowMenu({
   unlockBedDisabled = false,
   unlockBedHint = null,
   onUnlockBed,
+  showMoveBed = false,
+  onMoveBed,
 }: {
   stay: GuestStayRecordWithLink;
   isPending: boolean;
@@ -155,6 +161,8 @@ export function ReceptionGuestStayDetailOverflowMenu({
   unlockBedDisabled?: boolean;
   unlockBedHint?: string | null;
   onUnlockBed?: () => void;
+  showMoveBed?: boolean;
+  onMoveBed?: () => void;
 }) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -181,6 +189,7 @@ export function ReceptionGuestStayDetailOverflowMenu({
   const showRevoke = accessGranted && (!pastCheckOut || overdueCheckout);
   const busy = isPending || accessPending;
   const showExtend = stay.stay_kind !== 'volunteer' && !stay.is_archived;
+  const canMoveBed = showMoveBed && Boolean(onMoveBed) && !pastCheckOut;
 
   return (
     <DropdownMenu>
@@ -201,6 +210,11 @@ export function ReceptionGuestStayDetailOverflowMenu({
             }}
           >
             Unlock bed
+          </DropdownMenuItem>
+        ) : null}
+        {canMoveBed ? (
+          <DropdownMenuItem disabled={busy} onSelect={() => onMoveBed?.()}>
+            Move bed
           </DropdownMenuItem>
         ) : null}
         {showReissue ? (

@@ -54,3 +54,27 @@ export function resolveStayCancelCheckoutAction(
 
   return 'cancel';
 }
+
+export type StayCancelCheckoutStayFields = Omit<StayCancelCheckoutFields, 'operationalDate'>;
+
+/** Party root «Check out all»: admitted members only; pre-admit skipped. */
+export function filterEligiblePartyCheckoutStays<T extends StayCancelCheckoutStayFields>(
+  stays: T[],
+  operationalDate: string
+): T[] {
+  return stays.filter(
+    (stay) =>
+      resolveStayCancelCheckoutAction({ ...stay, operationalDate }) === 'checkout'
+  );
+}
+
+export function partyCheckoutAllOverdue(
+  stays: StayCancelCheckoutStayFields[],
+  operationalDate: string
+): boolean {
+  const eligible = filterEligiblePartyCheckoutStays(stays, operationalDate);
+  return (
+    eligible.length > 0 &&
+    eligible.every((stay) => isStayCheckoutOverdue({ ...stay, operationalDate }))
+  );
+}

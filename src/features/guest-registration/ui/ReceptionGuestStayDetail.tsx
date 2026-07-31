@@ -15,9 +15,18 @@ import {
   resolveShowUnlockBedAction,
   isBedReadyForGuestVisibility,
 } from '@/entities/guest-stay';
-import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
+import {
+  resolvePartyLeadName,
+  resolvePartyMemberOrdinal,
+  resolvePartyMemberTitle,
+  resolvePartyTitle,
+} from '../lib/resolvePartyTitle';
 import { formatPartySheetMeta, formatReceptionDateTime } from '../lib/guestAccessDates';
-import { isStayCheckoutOverdue } from '../lib/resolveStayCancelCheckoutAction';
+import {
+  filterEligiblePartyCheckoutStays,
+  isStayCheckoutOverdue,
+  partyCheckoutAllOverdue,
+} from '../lib/resolveStayCancelCheckoutAction';
 import {
   resolveAccessTabBadge,
   resolveTourismStatusBadge,
@@ -100,6 +109,8 @@ export interface ReceptionGuestStayDetailProps {
   onPassportCheckedAtChange?: (stay: GuestStayRecordWithLink) => void;
   /** Cancel (not admitted) or check out (admitted, still in-house) → Archive. */
   onCancelOrCheckout: (stayId: string, intent: 'cancel' | 'checkout') => void;
+  /** Party root: check out admitted members only (opens confirm in parent). */
+  onCheckoutParty: (stayIds: string[]) => void;
   /** Opens unified edit (bed + dates). Party root may pass all party stays for multi-bed edit. */
   onEditStay: (
     stay: GuestStayRecordWithLink,
@@ -166,6 +177,7 @@ export function ReceptionGuestStayDetail({
   onReceptionNoteChange,
   onPassportCheckedAtChange,
   onCancelOrCheckout,
+  onCheckoutParty,
   onEditStay,
   onReissueAccess,
   onExtendStay,
@@ -478,18 +490,36 @@ export function ReceptionGuestStayDetail({
   const partyTitle = isParty
     ? resolvePartyTitle(partyLeadName || guestLabel, resolvedPartyStays.length)
     : guestLabel;
+  const partyMemberTitle = isParty
+    ? resolvePartyMemberTitle({
+        guestName: stay.guest_name,
+        leadName: partyLeadName || guestLabel,
+        ordinal: resolvePartyMemberOrdinal(resolvedPartyStays, stay.id),
+      })
+    : guestLabel;
   const pendingPartyCheckIns = resolvedPartyStays.filter(
     (member) => !isStayAdmitted(member) && !isReceptionStayPastCheckOut(member, operationalDate)
   );
+  const eligiblePartyCheckouts = filterEligiblePartyCheckoutStays(
+    resolvedPartyStays,
+    operationalDate
+  );
   const showCheckInParty =
     Boolean(tenantSlug) && isParty && !stayEnded && pendingPartyCheckIns.length > 0;
+  const showCheckoutParty =
+    Boolean(tenantSlug) && isParty && eligiblePartyCheckouts.length > 0;
+  const partyCheckoutOverdue = partyCheckoutAllOverdue(resolvedPartyStays, operationalDate);
   const partyCheckInDisabled = isPending || partyCheckInPending;
+  const requestCheckoutParty = () => {
+    onCheckoutParty(eligiblePartyCheckouts.map((member) => member.id));
+  };
   const showDesktopPartyPeek = !isBelowLg && isParty;
   /** Mobile only: party root replaces child body. */
   const showPartyRoot = isBelowLg && isParty && partyLevelOpen;
   const showEdit = Boolean(editSurface);
-  /** Child of a party: Back → Group (no Close). */
-  const showBackToParty = !showEdit && !showPartyRoot && isParty;
+  /** Child of a party: Back → Group on mobile only (desktop has peek). */
+  const showBackToParty = !showEdit && !showPartyRoot && isParty && isBelowLg;
+  const isPartyChild = isParty && !showPartyRoot && !showEdit;
   const partyBackLabel = 'Group';
   const editBackLabel =
     isParty && partyLevelOpen ? 'Group' : bedLabel.trim() || guestLabel || 'Back';
@@ -584,6 +614,28 @@ export function ReceptionGuestStayDetail({
 
   const header = showPartyRoot ? (
     <p className="truncate text-xs text-muted-foreground">{bookingMeta}</p>
+  ) : isPartyChild ? (
+    <div className="space-y-0.5">
+      <p className="truncate text-xs text-muted-foreground">
+        {bedLabel}
+        {stayRef ? (
+          <span className="font-mono">
+            {' '}
+            · #{stayRef}
+          </span>
+        ) : null}
+      </p>
+      {access.accessGranted && stay.desk_checked_in_at ? (
+        <p className="text-xs font-medium text-emerald-800">
+          Checked in · {formatReceptionDateTime(stay.desk_checked_in_at)}
+        </p>
+      ) : null}
+      {bedUnlockedAt && !access.accessGranted ? (
+        <p className="text-xs font-medium text-emerald-800">
+          Bed unlocked · {formatReceptionDateTime(bedUnlockedAt)}
+        </p>
+      ) : null}
+    </div>
   ) : (
     <header className="space-y-1">
       <p className="text-sm text-muted-foreground">
@@ -611,20 +663,33 @@ export function ReceptionGuestStayDetail({
 
   const footerActions =
     showPartyRoot
-      ? showCheckInParty && partySheetTab === 'booking'
+      ? partySheetTab === 'booking' && (showCheckInParty || showCheckoutParty)
         ? (
             <div className="space-y-1.5">
               {partyCheckInError ? (
                 <p className="text-xs text-destructive">{partyCheckInError}</p>
               ) : null}
-              <Button
-                type="button"
-                className="w-full"
-                disabled={partyCheckInDisabled}
-                onClick={requestCheckInParty}
-              >
-                {partyCheckInPending ? 'Checking in…' : 'Check in all'}
-              </Button>
+              {showCheckInParty ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  disabled={partyCheckInDisabled}
+                  onClick={requestCheckInParty}
+                >
+                  {partyCheckInPending ? 'Checking in…' : 'Check in all'}
+                </Button>
+              ) : null}
+              {showCheckoutParty ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="w-full"
+                  disabled={isPending}
+                  onClick={requestCheckoutParty}
+                >
+                  {partyCheckoutOverdue ? 'Confirm checkout all' : 'Check out all'}
+                </Button>
+              ) : null}
             </div>
           )
         : null
@@ -642,6 +707,9 @@ export function ReceptionGuestStayDetail({
           checkInDisabled={checkInDisabled}
           checkInHint={checkInHint}
           checkInError={access.actionError}
+          checkInVariant={
+            !isBelowLg && isParty && showCheckInParty ? 'outline' : 'default'
+          }
         />
       );
 
@@ -819,8 +887,11 @@ export function ReceptionGuestStayDetail({
             ? editSurface.title
             : showPartyRoot
               ? partyTitle
-              : guestLabel
+              : isPartyChild
+                ? partyMemberTitle
+                : guestLabel
         }
+        titleSize={showPartyRoot ? 'party' : 'default'}
         titlePrefix={
           showEdit
             ? undefined
@@ -945,6 +1016,20 @@ export function ReceptionGuestStayDetail({
               checkInPartyPending={partyCheckInPending}
               checkInPartyError={partyCheckInError}
               onCheckInParty={requestCheckInParty}
+              showCheckoutParty={showCheckoutParty}
+              checkoutPartyDisabled={isPending}
+              checkoutPartyOverdue={partyCheckoutOverdue}
+              onCheckoutParty={requestCheckoutParty}
+              onEditParty={
+                stayEnded
+                  ? undefined
+                  : () =>
+                      onEditStay(balanceStay, {
+                        intent: 'changeDates',
+                        partyStays: resolvedPartyStays,
+                      })
+              }
+              editPartyDisabled={isPending}
             />
               )
             : undefined
@@ -952,14 +1037,14 @@ export function ReceptionGuestStayDetail({
         onEdit={
           showEdit || stayEnded
             ? undefined
-            : showPartyRoot || (isParty && !isBelowLg)
+            : showPartyRoot
               ? () =>
                   onEditStay(balanceStay, {
                     intent: 'changeDates',
                     partyStays: resolvedPartyStays,
                   })
               : isParty
-                ? () => onEditStay(stay, { intent: 'moveBed' })
+                ? undefined
                 : () => onEditStay(stay, { intent: 'changeDates' })
         }
         editDisabled={isPending}
@@ -1001,6 +1086,8 @@ export function ReceptionGuestStayDetail({
                   : 'Bed is not marked ready — confirm readiness before unlocking.'
               }
               onUnlockBed={requestUnlockBed}
+              showMoveBed={isParty && !stayEnded}
+              onMoveBed={() => onEditStay(stay, { intent: 'moveBed' })}
             />
           )
         }
