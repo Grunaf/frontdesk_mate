@@ -115,6 +115,8 @@ export interface ReceptionGuestStayDetailProps {
   operationalDate: string;
   /** Housekeeping status for this stay's bed (`ready` unlocks guest bed visibility). */
   bedStatus?: string;
+  /** Mark bed ready from stay detail (housekeeping upsert + local status sync). */
+  onMarkBedReady?: (bedId: string) => Promise<boolean>;
   /** Tab on open: after create → access; otherwise stay. */
   initialTab?: StayDetailTabId;
   /** When true (Hub/Cash party row), open mobile party root first. */
@@ -169,6 +171,7 @@ export function ReceptionGuestStayDetail({
   tenantSettings,
   operationalDate,
   bedStatus,
+  onMarkBedReady,
   initialTab = 'stay',
   initialPartyView = false,
   initialFocusStayId = null,
@@ -195,6 +198,12 @@ export function ReceptionGuestStayDetail({
   const [skipTourismConfirmMode, setSkipTourismConfirmMode] = useState<'single' | 'party'>(
     'single'
   );
+  const [bedReadyConfirmOpen, setBedReadyConfirmOpen] = useState(false);
+  const [bedReadyConfirmPending, setBedReadyConfirmPending] = useState<'checkIn' | 'unlock' | null>(
+    null
+  );
+  const [bedReadyConfirmError, setBedReadyConfirmError] = useState<string | null>(null);
+  const [bedReadyConfirmPendingBusy, startBedReadyConfirm] = useTransition();
   const [partyCheckInError, setPartyCheckInError] = useState<string | null>(null);
   const [partyCheckInPending, startPartyCheckIn] = useTransition();
   const tourismAddGuestRef = useRef<(() => void) | null>(null);
@@ -248,15 +257,15 @@ export function ReceptionGuestStayDetail({
     showTourismTab && !tourismAccessReady && !access.accessGranted;
   const bedReady = isBedReadyForGuestVisibility(bedStatus);
   const tourismBlocksCheckIn = tourismIncomplete && !canSkipTourismGate;
-  const checkInDisabled = !bedReady || tourismBlocksCheckIn;
+  // Allow click when bed is not ready so staff can mark ready in-place; tourism hard-block only after ready.
+  const checkInDisabled = tourismBlocksCheckIn && bedReady;
   const checkInHint = !bedReady
-    ? 'Mark the bed as ready in Cleaning before check-in.'
+    ? 'Bed is not marked ready — confirm readiness before check-in.'
     : tourismBlocksCheckIn
       ? 'Complete tourism registration and upload passport photos before check-in.'
       : null;
 
-  const requestCheckIn = () => {
-    if (!bedReady) return;
+  const proceedCheckIn = () => {
     if (tourismIncomplete) {
       if (!canSkipTourismGate) return;
       setSkipTourismConfirmMode('single');
@@ -264,6 +273,53 @@ export function ReceptionGuestStayDetail({
       return;
     }
     access.checkIn();
+  };
+
+  const requestCheckIn = () => {
+    if (!bedReady) {
+      if (!onMarkBedReady) return;
+      setBedReadyConfirmError(null);
+      setBedReadyConfirmPending('checkIn');
+      setBedReadyConfirmOpen(true);
+      return;
+    }
+    proceedCheckIn();
+  };
+
+  const requestUnlockBed = () => {
+    if (!bedReady) {
+      if (!onMarkBedReady) return;
+      setBedReadyConfirmError(null);
+      setBedReadyConfirmPending('unlock');
+      setBedReadyConfirmOpen(true);
+      return;
+    }
+    access.unlockBed();
+  };
+
+  const confirmMarkBedReady = () => {
+    if (!onMarkBedReady) return;
+    const pending = bedReadyConfirmPending;
+    startBedReadyConfirm(async () => {
+      setBedReadyConfirmError(null);
+      const ok = await onMarkBedReady(stay.bed_id);
+      if (!ok) {
+        setBedReadyConfirmError('Could not mark ready. Try again.');
+        return;
+      }
+      setBedReadyConfirmOpen(false);
+      setBedReadyConfirmPending(null);
+      // Defer so confirm click does not fall through to the sheet.
+      window.setTimeout(() => {
+        if (pending === 'unlock') {
+          access.unlockBed();
+          return;
+        }
+        if (pending === 'checkIn') {
+          proceedCheckIn();
+        }
+      }, 0);
+    });
   };
 
   const runCheckInParty = (bypassAccessGate: boolean) => {
@@ -331,6 +387,9 @@ export function ReceptionGuestStayDetail({
     setTourismAccessReady(false);
     setSkipTourismConfirmOpen(false);
     setSkipTourismConfirmMode('single');
+    setBedReadyConfirmOpen(false);
+    setBedReadyConfirmPending(null);
+    setBedReadyConfirmError(null);
     setPartyCheckInError(null);
     if (!showTourismTab) {
       setCanAddTourismGuest(false);
@@ -746,14 +805,16 @@ export function ReceptionGuestStayDetail({
       <ReceptionStayDetailShell
         open={open}
         onClose={() => {
-          if (skipTourismConfirmOpen) return;
+          if (skipTourismConfirmOpen || bedReadyConfirmOpen) return;
           if (editSurface) {
             (editSurface.onDismiss ?? editSurface.onBack)();
             return;
           }
           onClose();
         }}
-        dismissBlocked={skipTourismConfirmOpen || editDismissBlocked}
+        dismissBlocked={
+          skipTourismConfirmOpen || bedReadyConfirmOpen || editDismissBlocked
+        }
         accessibleTitle={
           showEdit && editSurface
             ? editSurface.title
@@ -918,11 +979,13 @@ export function ReceptionGuestStayDetail({
               accessPending={access.isPending}
               onRevokeAccess={access.revokeAccess}
               showUnlockBed={showUnlockBed}
-              unlockBedDisabled={!bedReady}
+              unlockBedDisabled={bedReadyConfirmPendingBusy}
               unlockBedHint={
-                bedReady ? null : 'Mark the bed as ready in Cleaning before unlocking.'
+                bedReady
+                  ? null
+                  : 'Bed is not marked ready — confirm readiness before unlocking.'
               }
-              onUnlockBed={access.unlockBed}
+              onUnlockBed={requestUnlockBed}
             />
           )
         }
@@ -946,11 +1009,38 @@ export function ReceptionGuestStayDetail({
       />
   );
 
+  const bedReadyConfirmDialog = (
+    <ConfirmDialog
+      open={bedReadyConfirmOpen}
+      description={
+        bedReadyConfirmError
+          ? bedReadyConfirmError
+          : bedReadyConfirmPending === 'unlock'
+            ? 'Bed not ready. Mark ready and unlock?'
+            : 'Bed not ready. Mark ready and check in?'
+      }
+      cancelLabel="Cancel"
+      confirmLabel={bedReadyConfirmPendingBusy ? 'Marking…' : 'Mark ready'}
+      confirmVariant="default"
+      onCancel={() => {
+        if (bedReadyConfirmPendingBusy) return;
+        setBedReadyConfirmOpen(false);
+        setBedReadyConfirmPending(null);
+        setBedReadyConfirmError(null);
+      }}
+      onConfirm={() => {
+        if (bedReadyConfirmPendingBusy) return;
+        confirmMarkBedReady();
+      }}
+    />
+  );
+
   // Sheet/dialog root stays mounted across party ↔ child; Tabs live in wrapBodyRegion.
   return (
     <>
       {shell}
       {confirmDialog}
+      {bedReadyConfirmDialog}
     </>
   );
 }

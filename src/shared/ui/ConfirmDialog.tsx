@@ -10,7 +10,8 @@ export type ConfirmDialogActionVariant = 'default' | 'destructive' | 'outline';
 
 export interface ConfirmDialogProps {
   open: boolean;
-  title: string;
+  /** Optional; omitted for compact description-only confirms. */
+  title?: string;
   description: string;
   cancelLabel?: string;
   confirmLabel?: string;
@@ -42,6 +43,7 @@ export function ConfirmDialog({
   const titleId = useId();
   const descriptionId = useId();
   const [mounted, setMounted] = useState(false);
+  const hasTitle = Boolean(title?.trim());
 
   useEffect(() => {
     setMounted(true);
@@ -75,22 +77,37 @@ export function ConfirmDialog({
       <div
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-labelledby={hasTitle ? titleId : descriptionId}
         aria-describedby={descriptionId}
-        className="w-full max-w-md rounded-xl border bg-background p-5 shadow-lg"
+        className="w-full max-w-sm rounded-lg border bg-background px-4 py-3 shadow-lg"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id={titleId} className="text-sm font-semibold">
-          {title}
-        </h2>
-        <p id={descriptionId} className="mt-2 text-sm text-muted-foreground">
+        {hasTitle ? (
+          <h2 id={titleId} className="text-sm font-semibold">
+            {title}
+          </h2>
+        ) : null}
+        <p
+          id={descriptionId}
+          className={cn('text-sm text-muted-foreground', hasTitle && 'mt-1.5')}
+        >
           {description}
         </p>
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onCancel}>
+        <div className="mt-3 flex flex-row justify-end gap-1">
+          <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button type="button" variant={confirmVariant} onClick={onConfirm}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={
+              confirmVariant === 'destructive'
+                ? 'text-destructive hover:text-destructive'
+                : undefined
+            }
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </div>

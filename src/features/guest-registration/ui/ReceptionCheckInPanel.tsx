@@ -583,6 +583,26 @@ export function ReceptionCheckInPanel({
     [lastBookingsTab, navigateDeskTab, staffPermissions]
   );
 
+  const handleMarkBedReady = useCallback(async (bedId: string): Promise<boolean> => {
+    const previous = bedStatuses[bedId];
+    setBedStatuses((current) => ({ ...current, [bedId]: 'ready' }));
+    const result = await upsertHousekeepingBedStatusAction({
+      tenantSlug,
+      bedId,
+      status: 'ready',
+    });
+    if (!result.ok) {
+      setBedStatuses((current) => {
+        const next = { ...current };
+        if (previous) next[bedId] = previous;
+        else delete next[bedId];
+        return next;
+      });
+      return false;
+    }
+    return true;
+  }, [bedStatuses, tenantSlug]);
+
   const handleSetBedStatus = useCallback(
     (bedId: string, status: HousekeepingBedStatus) => {
       const previous = bedStatuses[bedId];
@@ -2000,6 +2020,7 @@ export function ReceptionCheckInPanel({
           initialPartyView={stayDetailPartyView}
           initialFocusStayId={stayDetailFocusStayId}
           bedStatus={bedStatuses[selectedStay.bed_id]}
+          onMarkBedReady={handleMarkBedReady}
           onTourismExportedAtChange={() => {
             void refresh();
           }}
@@ -2249,8 +2270,7 @@ export function ReceptionCheckInPanel({
 
       <ConfirmDialog
         open={discardEditConfirmOpen}
-        title="Discard changes?"
-        description="You have unsaved edits. Discard them and leave?"
+        description="Unsaved edits. Discard?"
         cancelLabel="Keep editing"
         confirmLabel="Discard"
         confirmVariant="destructive"
