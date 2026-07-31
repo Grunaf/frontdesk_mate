@@ -44,9 +44,6 @@ export function ReceptionGuestStayDetailActions({
   checkInDisabled,
   checkInHint,
   checkInError,
-  showGrantAccess,
-  onGrantAccess,
-  grantAccessDisabled,
 }: {
   stay: GuestStayRecordWithLink;
   isPending: boolean;
@@ -60,9 +57,6 @@ export function ReceptionGuestStayDetailActions({
   checkInDisabled: boolean;
   checkInHint: string | null;
   checkInError: string | null;
-  showGrantAccess: boolean;
-  onGrantAccess: () => void;
-  grantAccessDisabled: boolean;
 }) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -88,19 +82,6 @@ export function ReceptionGuestStayDetailActions({
 
   return (
     <div className="flex flex-col gap-2">
-      {showGrantAccess ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          className="w-full"
-          disabled={busy || grantAccessDisabled}
-          onClick={onGrantAccess}
-        >
-          Grant access
-        </Button>
-      ) : null}
-
       {showAddTourismGuest ? (
         <Button
           type="button"
@@ -156,6 +137,10 @@ export function ReceptionGuestStayDetailOverflowMenu({
   accessGranted,
   accessPending,
   onRevokeAccess,
+  showUnlockBed = false,
+  unlockBedDisabled = false,
+  unlockBedHint = null,
+  onUnlockBed,
 }: {
   stay: GuestStayRecordWithLink;
   isPending: boolean;
@@ -166,6 +151,10 @@ export function ReceptionGuestStayDetailOverflowMenu({
   accessGranted: boolean;
   accessPending: boolean;
   onRevokeAccess: () => void;
+  showUnlockBed?: boolean;
+  unlockBedDisabled?: boolean;
+  unlockBedHint?: string | null;
+  onUnlockBed?: () => void;
 }) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -202,6 +191,18 @@ export function ReceptionGuestStayDetailOverflowMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {showUnlockBed && onUnlockBed ? (
+          <DropdownMenuItem
+            disabled={busy || unlockBedDisabled}
+            title={unlockBedHint ?? undefined}
+            onSelect={() => {
+              if (unlockBedDisabled) return;
+              onUnlockBed();
+            }}
+          >
+            Unlock bed
+          </DropdownMenuItem>
+        ) : null}
         {showReissue ? (
           <DropdownMenuItem disabled={busy} onSelect={() => onReissueAccess(stay)}>
             Reissue access

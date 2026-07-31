@@ -28,6 +28,7 @@ export function useRegistrationStepState({
   const [entryStampDate, setEntryStampDate] = useState(initial.entryStampDate);
   const [contactComplete, setContactComplete] = useState(initial.contactComplete);
   const [passportVerified, setPassportVerified] = useState(initial.passportVerified);
+  const [bedVisible, setBedVisible] = useState(Boolean(initial.bedVisible));
   const [stayContactWhatsapp, setStayContactWhatsapp] = useState(initial.stayContactWhatsapp);
   const [contactDraftWhatsapp, setContactDraftWhatsapp] = useState(initial.stayContactWhatsapp ?? '');
   const [contactEditing, setContactEditing] = useState(false);
@@ -57,6 +58,7 @@ export function useRegistrationStepState({
     setEntryStampDate(initial.entryStampDate);
     setContactComplete(initial.contactComplete);
     setPassportVerified(initial.passportVerified);
+    setBedVisible(Boolean(initial.bedVisible));
     setStayContactWhatsapp(initial.stayContactWhatsapp);
     setContactDraftWhatsapp(initial.stayContactWhatsapp ?? '');
   }, [
@@ -65,6 +67,7 @@ export function useRegistrationStepState({
     initial.entryStampDate,
     initial.contactComplete,
     initial.passportVerified,
+    initial.bedVisible,
     initial.stayContactWhatsapp,
   ]);
 
@@ -84,6 +87,7 @@ export function useRegistrationStepState({
       setEntryStampDate(result.status.entryStampDate);
       setContactComplete(result.status.contactComplete);
       setPassportVerified(result.status.passportVerified);
+      setBedVisible(result.status.bedVisible);
     });
 
     return () => {
@@ -98,8 +102,16 @@ export function useRegistrationStepState({
       entryDateComplete,
       contactComplete,
       passportVerified,
+      bedVisible,
     }),
-    [tourismRequired, tourismComplete, entryDateComplete, contactComplete, passportVerified]
+    [
+      tourismRequired,
+      tourismComplete,
+      entryDateComplete,
+      contactComplete,
+      passportVerified,
+      bedVisible,
+    ]
   );
 
   const registrationComplete = isStaySetupRegistrationComplete(completion);
@@ -131,6 +143,7 @@ export function useRegistrationStepState({
       entryDateComplete: boolean;
       contactComplete: boolean;
       passportVerified?: boolean;
+      bedVisible?: boolean;
       entryStampDate?: string | null;
     }) => {
       setTourismComplete(status.tourismComplete);
@@ -138,6 +151,9 @@ export function useRegistrationStepState({
       setContactComplete(status.contactComplete);
       if (status.passportVerified !== undefined) {
         setPassportVerified(status.passportVerified);
+      }
+      if (status.bedVisible !== undefined) {
+        setBedVisible(status.bedVisible);
       }
       if (status.entryStampDate !== undefined) {
         setEntryStampDate(status.entryStampDate);
@@ -154,6 +170,7 @@ export function useRegistrationStepState({
     entryStampDate,
     contactComplete,
     passportVerified,
+    bedVisible,
     stayContactWhatsapp,
     contactDraftWhatsapp,
     setContactDraftWhatsapp,

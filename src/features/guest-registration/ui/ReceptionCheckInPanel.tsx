@@ -1999,6 +1999,7 @@ export function ReceptionCheckInPanel({
           initialTab={stayDetailInitialTab}
           initialPartyView={stayDetailPartyView}
           initialFocusStayId={stayDetailFocusStayId}
+          bedStatus={bedStatuses[selectedStay.bed_id]}
           onTourismExportedAtChange={() => {
             void refresh();
           }}

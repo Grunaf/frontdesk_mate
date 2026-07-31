@@ -32,7 +32,7 @@ import {
 } from '../lib/buildExtendStayWhatsappMessage';
 import { formatGuestStayDateRange } from '../lib/formatGuestStayDates';
 import { resolveTourismSummaryFromStaySetupStatus } from '../lib/resolveTourismSummaryFromStaySetupStatus';
-import { formatStayReference, isStayCheckInStarted } from '@/entities/guest-stay';
+import { formatStayReference } from '@/entities/guest-stay';
 import { GuestStayBedLocationCard } from './GuestStayBedLocationCard';
 import { GuestStayReceptionCard } from './GuestStayReceptionCard';
 import { GuestStayReceptionQrPanel } from './GuestStayReceptionQrPanel';
@@ -132,20 +132,22 @@ export function GuestStaySheet({
   const bedLocationLocked =
     !registrationStatusLoading && tourismRegistrationRequired && !tourismCompleteForStay;
 
-  const checkInStarted = isStayCheckInStarted({
-    checkInAt,
-    checkInDate,
-    propertyTimeZone: hostel.propertyTimeZone,
-    checkInTimeFallback: hostel.checkInTime,
-  });
   const checkInTimeLabel = hostel.checkInTime?.trim() || '14:00';
+  const bedVisible = staySetupStatus?.bedVisible ?? false;
+  const bedReady = staySetupStatus?.bedReady ?? false;
+  const bedVisibilityLoading = staySetupStatusLoading && !staySetupStatus;
 
-  const bedLocationLockReason =
-    registrationStatusLoading || checkInStarted
-      ? bedLocationLocked
-        ? ('registration' as const)
-        : null
-      : ('before_check_in' as const);
+  const bedLocationLockReason = (() => {
+    if (registrationStatusLoading || bedVisibilityLoading) {
+      return bedLocationLocked ? ('registration' as const) : null;
+    }
+    if (!bedVisible) {
+      if (!bedReady) return 'bed_not_ready' as const;
+      return 'before_check_in' as const;
+    }
+    if (bedLocationLocked) return 'registration' as const;
+    return null;
+  })();
 
   const settlementPath = resolveGuestStaySetupPath({
     locale: routeLocale,
@@ -161,15 +163,17 @@ export function GuestStaySheet({
     completion: staySetupBedMap.completion,
   });
 
-  const bedNavigatePath = registrationStatusLoading
-    ? undefined
-    : bedLocationLockReason === 'before_check_in'
+  const bedNavigatePath =
+    registrationStatusLoading || bedVisibilityLoading
       ? undefined
-      : bedLocationLockReason === 'registration'
-        ? registerPath
-        : settlementPath;
+      : bedLocationLockReason === 'before_check_in' || bedLocationLockReason === 'bed_not_ready'
+        ? undefined
+        : bedLocationLockReason === 'registration'
+          ? registerPath
+          : settlementPath;
 
-  const bedNavigateLoading = registrationStatusLoading || staySetupBedMap.statusLoading;
+  const bedNavigateLoading =
+    registrationStatusLoading || bedVisibilityLoading || staySetupBedMap.statusLoading;
 
   useEffect(() => {
     if (!open || !tourismRegistrationRequired || !slug) {

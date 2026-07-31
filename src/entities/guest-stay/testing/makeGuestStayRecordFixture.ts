@@ -29,6 +29,7 @@ export function makeGuestStayRecordFixture(
     desk_checked_in_at: null,
     key_issued_at: null,
     passport_checked_at: null,
+    bed_unlocked_at: null,
     tax_collected_at: null,
     revoked_at: null,
     created_at: '2026-06-22T10:00:00.000Z',

@@ -17,10 +17,17 @@ import {
   setGuestReservationReceptionNote,
   confirmGuestStayContactPhone,
   rejectGuestStayContactPhone,
+  setBedUnlockedAt,
+  setDeskCheckedInAt,
 } from '@/entities/guest-stay/server';
-import { clearHousekeepingStayPresence } from '@/entities/housekeeping/server';
+import { clearHousekeepingStayPresence, listHousekeepingBedStatuses } from '@/entities/housekeeping/server';
+import { isBedReadyForGuestVisibility } from '@/entities/guest-stay';
 import { getGuestById, searchGuests, type GuestProfile } from '@/entities/guest/server';
 import { seedTourismGuestFromGuestProfile } from '@/entities/guest-tourism-registration/server';
+import {
+  assertCanBypassTourismCheckInGate,
+  assertTourismReadyForCheckIn,
+} from '@/features/guest-tourism-registration';
 import { getTenantRecord, upsertTenant } from '@/entities/tenant/server';
 import {
   normalizeHostelworldBookingPrefix,
@@ -40,6 +47,8 @@ import type {
   SetGuestReservationReceptionNoteResult,
   ConfirmGuestStayContactPhoneResult,
   RejectGuestStayContactPhoneResult,
+  SetBedUnlockedAtResult,
+  SetDeskCheckedInAtResult,
 } from '@/entities/guest-stay/server';
 import { recordReceptionDeskAuditEvent } from '../lib/recordReceptionDeskAuditEvent';
 import {
@@ -757,12 +766,73 @@ export async function rejectGuestStayContactPhoneAction(input: {
 
 export type CompleteDeskCheckInActionResult =
   | CompleteDeskCheckInResult
+  | {
+      ok: false;
+      error:
+        | 'unauthorized'
+        | 'forbidden'
+        | 'bed_not_ready'
+        | 'not_found'
+        | 'tourism_incomplete'
+        | 'missing_documents'
+        | 'unknown';
+    };
+
+export type SetDeskCheckedInForReceptionActionResult =
+  | SetDeskCheckedInAtResult
   | { ok: false; error: 'unauthorized' | 'forbidden' | 'unknown' };
+
+export type UnlockBedForReceptionActionResult =
+  | SetBedUnlockedAtResult
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'bed_not_ready' | 'unknown' };
+
+export async function unlockBedForReceptionAction(input: {
+  tenantSlug: string;
+  stayId: string;
+}): Promise<UnlockBedForReceptionActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  try {
+    const stay = await getGuestReservationForDesk(input.tenantSlug, input.stayId);
+    if (!stay) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    const tenant = await getTenantRecord(input.tenantSlug);
+    if (!tenant) {
+      return { ok: false, error: 'not_found' };
+    }
+
+    const bedStatuses = await listHousekeepingBedStatuses(tenant.id);
+    const bedStatus = bedStatuses.find((row) => row.bed_id === stay.bed_id)?.status;
+    if (!isBedReadyForGuestVisibility(bedStatus)) {
+      return { ok: false, error: 'bed_not_ready' };
+    }
+
+    const result = await setBedUnlockedAt({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+    });
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('unlockBedForReceptionAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
 
 export async function completeDeskCheckInAction(input: {
   tenantSlug: string;
   stayId: string;
   keyIssued?: boolean;
+  bypassAccessGate?: boolean;
 }): Promise<CompleteDeskCheckInActionResult> {
   const staff = await requireCheckInStaff(input.tenantSlug);
   if (!staff.ok) {
@@ -770,6 +840,32 @@ export async function completeDeskCheckInAction(input: {
   }
 
   try {
+    if (input.bypassAccessGate) {
+      const bypass = await assertCanBypassTourismCheckInGate(input.tenantSlug);
+      if (bypass !== 'ok') {
+        return { ok: false, error: bypass };
+      }
+    } else {
+      const gate = await assertTourismReadyForCheckIn(input.tenantSlug, input.stayId);
+      if (gate === 'tourism_incomplete' || gate === 'missing_documents') {
+        return { ok: false, error: gate };
+      }
+    }
+
+    const stay = await getGuestReservationForDesk(input.tenantSlug, input.stayId);
+    if (!stay) {
+      return { ok: false, error: 'not_found' };
+    }
+    const tenant = await getTenantRecord(input.tenantSlug);
+    if (!tenant) {
+      return { ok: false, error: 'not_found' };
+    }
+    const bedStatuses = await listHousekeepingBedStatuses(tenant.id);
+    const bedStatus = bedStatuses.find((row) => row.bed_id === stay.bed_id)?.status;
+    if (!isBedReadyForGuestVisibility(bedStatus)) {
+      return { ok: false, error: 'bed_not_ready' };
+    }
+
     const result = await completeDeskCheckIn({
       tenantSlug: input.tenantSlug,
       stayId: input.stayId,
@@ -788,6 +884,37 @@ export async function completeDeskCheckInAction(input: {
     return result;
   } catch (error) {
     console.error('completeDeskCheckInAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+/** Un-admit (clear desk check-in). Leaves passport checklist and bed_unlocked_at intact. */
+export async function setDeskCheckedInForReceptionAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  checked: boolean;
+  keyIssued?: boolean;
+}): Promise<SetDeskCheckedInForReceptionActionResult> {
+  const staff = await requireCheckInStaff(input.tenantSlug);
+  if (!staff.ok) {
+    return { ok: false, error: staff.error };
+  }
+
+  try {
+    const result = await setDeskCheckedInAt({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+      checked: input.checked,
+      keyIssued: input.keyIssued,
+    });
+
+    if (result.ok) {
+      revalidatePath('/');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('setDeskCheckedInForReceptionAction:', error);
     return { ok: false, error: 'unknown' };
   }
 }

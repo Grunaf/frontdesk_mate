@@ -8,7 +8,10 @@ import { cn } from '@/shared/lib/utils';
 import { Icon, Skeleton } from '@/shared/ui';
 import { ChevronRight } from 'lucide-react';
 
-export type GuestStayBedLocationLockReason = 'before_check_in' | 'registration';
+export type GuestStayBedLocationLockReason =
+  | 'before_check_in'
+  | 'registration'
+  | 'bed_not_ready';
 
 interface GuestStayBedLocationCardProps {
   plan: GuestStayPlan;
@@ -57,6 +60,8 @@ export function GuestStayBedLocationCard({
           <p className="text-sm leading-snug text-muted-foreground">
             {tChip('bedLockedUntilCheckIn', { time: checkInTimeLabel })}
           </p>
+        ) : lockReason === 'bed_not_ready' ? (
+          <p className="text-sm leading-snug text-muted-foreground">{tChip('bedLockedUntilReady')}</p>
         ) : lockReason === 'registration' ? (
           <p className="text-sm leading-snug text-muted-foreground">{tChip('bedLockedUntilRegistration')}</p>
         ) : (

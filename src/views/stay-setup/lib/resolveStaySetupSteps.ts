@@ -6,8 +6,10 @@ export type StaySetupCompletion = {
   /** Required when tourism is on; entry stamp date for guests on the stay. */
   entryDateComplete: boolean;
   contactComplete: boolean;
-  /** Desk admitted guest (`passport_checked_at`). Independent of tourism form complete. */
+  /** Desk passport checklist (`passport_checked_at`). Independent of admit. */
   passportVerified: boolean;
+  /** Bed already visible to guest (unlock / time / admit + ready). Waives passport gate. */
+  bedVisible?: boolean;
 };
 
 const LEGACY_URL_STEP_ALIASES: Record<string, StaySetupStep> = {
@@ -23,9 +25,14 @@ export function isStaySetupRegistrationComplete(completion: StaySetupCompletion)
   return tourismOk && completion.contactComplete;
 }
 
-/** Bed / room unlock: registration aggregate + desk passport admit. */
+/** Past passport gate: passport checked OR bed already unlocked for viewing. */
+export function canBypassStaySetupPassportGate(completion: StaySetupCompletion): boolean {
+  return completion.passportVerified || Boolean(completion.bedVisible);
+}
+
+/** Bed / room unlock: registration aggregate + passport OR bed visible. */
 export function isStaySetupSettlementUnlocked(completion: StaySetupCompletion): boolean {
-  return isStaySetupRegistrationComplete(completion) && completion.passportVerified;
+  return isStaySetupRegistrationComplete(completion) && canBypassStaySetupPassportGate(completion);
 }
 
 export function normalizeStaySetupUrlStep(step: string | null): StaySetupStep | null {
@@ -50,7 +57,7 @@ export function resolveNextStaySetupStep(
     return null;
   }
 
-  if (currentStep === 'registration' && !completion.passportVerified) {
+  if (currentStep === 'registration' && !canBypassStaySetupPassportGate(completion)) {
     return null;
   }
 
@@ -100,7 +107,7 @@ export function resolveFirstIncompleteStaySetupStep(
     return 'registration';
   }
 
-  if (!completion.passportVerified) {
+  if (!canBypassStaySetupPassportGate(completion)) {
     return 'registration';
   }
 

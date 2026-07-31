@@ -20,7 +20,7 @@ describe('resolvePlanStayLifecycleStatus', () => {
   it('returns null when nightDate is not today (today-only badges)', () => {
     expect(
       resolvePlanStayLifecycleStatus({
-        stay: stay({ passport_checked_at: '2026-06-22T15:00:00.000Z' }),
+        stay: stay({ desk_checked_in_at: '2026-06-22T15:00:00.000Z' }),
         today: '2026-06-23',
         nightDate: '2026-06-22',
       })
@@ -84,7 +84,7 @@ describe('resolvePlanStayLifecycleStatus', () => {
   it('checked_in: admitted on a middle night', () => {
     expect(
       resolvePlanStayLifecycleStatus({
-        stay: stay({ passport_checked_at: '2026-06-22T15:00:00.000Z' }),
+        stay: stay({ desk_checked_in_at: '2026-06-22T15:00:00.000Z' }),
         today: '2026-06-23',
         nightDate: '2026-06-23',
       })
@@ -94,7 +94,7 @@ describe('resolvePlanStayLifecycleStatus', () => {
   it('leaving: admitted on last occupied night', () => {
     expect(
       resolvePlanStayLifecycleStatus({
-        stay: stay({ passport_checked_at: '2026-06-22T15:00:00.000Z' }),
+        stay: stay({ desk_checked_in_at: '2026-06-22T15:00:00.000Z' }),
         today: '2026-06-24',
         nightDate: '2026-06-24',
       })
@@ -119,7 +119,7 @@ describe('resolvePlanStayLifecycleStatus', () => {
           check_out_date: '2026-06-23',
           check_in_at: '2026-06-22T14:00:00.000Z',
           check_out_at: '2026-06-23T23:59:59.999Z',
-          passport_checked_at: '2026-06-22T15:00:00.000Z',
+          desk_checked_in_at: '2026-06-22T15:00:00.000Z',
         }),
         today: '2026-06-22',
         nightDate: '2026-06-22',

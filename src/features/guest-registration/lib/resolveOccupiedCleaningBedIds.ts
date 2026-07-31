@@ -13,7 +13,7 @@ export type OccupiedCleaningStay = {
 };
 
 function isAdmitted(stay: OccupiedCleaningStay): boolean {
-  return Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
+  return Boolean(stay.desk_checked_in_at);
 }
 
 /**

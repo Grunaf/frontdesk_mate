@@ -9,7 +9,7 @@ const base = {
   check_out_at: '2026-07-24T23:59:59.999Z',
   check_in_date: '2026-07-22',
   check_out_date: '2026-07-24',
-  passport_checked_at: '2026-07-22T15:00:00.000Z',
+  desk_checked_in_at: '2026-07-22T15:00:00.000Z',
 };
 
 describe('resolveBedStayPresenceLinks', () => {

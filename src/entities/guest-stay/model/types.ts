@@ -19,6 +19,11 @@ export interface GuestStayRecord {
   desk_checked_in_at: string | null;
   key_issued_at: string | null;
   passport_checked_at: string | null;
+  /**
+   * Desk unlocked bed visibility early, or stamped on check-in for audit.
+   * Guest bed visible also after check-in time when bed is ready — see `resolveIsBedVisible`.
+   */
+  bed_unlocked_at: string | null;
   tax_collected_at: string | null;
   revoked_at: string | null;
   created_at: string;
@@ -286,17 +291,45 @@ export type CompleteDeskCheckInResult =
     };
 
 /**
- * Desk admits guest to settle in.
- * `checked: true` dual-writes `passport_checked_at` + `desk_checked_in_at` (optional `key_issued_at`).
+ * Desk passport checklist (independent of admit).
+ * `checked: true` sets `passport_checked_at`; `false` clears it only.
  */
 export type SetPassportCheckedAtInput = {
   tenantSlug: string;
   stayId: string;
-  /** `true` sets timestamps to now; `false` clears admit timestamps (un-admit). */
   checked: boolean;
-  /** When admitting, optionally record room key handoff. */
+};
+
+/**
+ * Desk admits guest (occupancy).
+ * `checked: true` sets `desk_checked_in_at` + stamps `bed_unlocked_at` when null (audit).
+ * Optional `key_issued_at`. Does not touch `passport_checked_at`.
+ */
+export type SetDeskCheckedInAtInput = {
+  tenantSlug: string;
+  stayId: string;
+  checked: boolean;
   keyIssued?: boolean;
 };
+
+export type SetDeskCheckedInAtResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'not_found' | 'tenant_not_found' | 'db_unavailable';
+    };
+
+export type SetBedUnlockedAtInput = {
+  tenantSlug: string;
+  stayId: string;
+};
+
+export type SetBedUnlockedAtResult =
+  | { ok: true; stay: GuestStayRecord }
+  | {
+      ok: false;
+      error: 'not_found' | 'tenant_not_found' | 'bed_not_ready' | 'db_unavailable';
+    };
 
 export type SetPassportCheckedAtResult =
   | { ok: true; stay: GuestStayRecord }

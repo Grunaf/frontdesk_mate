@@ -14,8 +14,14 @@ export {
   getGuestReservationForDeskAction,
   updateGuestReservationAction,
   completeDeskCheckInAction,
+  setDeskCheckedInForReceptionAction,
+  unlockBedForReceptionAction,
   searchGuestProfilesAction,
   getGuestProfileAction,
+} from './actions/receptionActions';
+export type {
+  UnlockBedForReceptionActionResult,
+  SetDeskCheckedInForReceptionActionResult,
 } from './actions/receptionActions';
 export {
   countOpenGuestHubTransfersAction,

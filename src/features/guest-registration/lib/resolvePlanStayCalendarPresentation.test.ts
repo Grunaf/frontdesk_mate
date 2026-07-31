@@ -79,8 +79,8 @@ describe('isPlanStayUnpaid', () => {
         booking_amount_due_minor: 4500,
         booking_amount_currency: 'EUR',
         booking_paid_at: null,
-        passport_checked_at: '2026-07-26T10:00:00.000Z',
-        desk_checked_in_at: null,
+        desk_checked_in_at: '2026-07-26T10:00:00.000Z',
+        passport_checked_at: null,
       })
     ).toBe(true);
   });
@@ -102,8 +102,8 @@ describe('isPlanStayUnpaid', () => {
         booking_amount_due_minor: 4500,
         booking_amount_currency: 'EUR',
         booking_paid_at: '2026-07-26T10:00:00.000Z',
-        passport_checked_at: '2026-07-26T10:00:00.000Z',
-        desk_checked_in_at: null,
+        desk_checked_in_at: '2026-07-26T10:00:00.000Z',
+        passport_checked_at: null,
       })
     ).toBe(false);
     expect(
@@ -112,8 +112,8 @@ describe('isPlanStayUnpaid', () => {
         booking_amount_due_minor: 4500,
         booking_amount_currency: 'EUR',
         booking_paid_at: null,
-        passport_checked_at: '2026-07-26T10:00:00.000Z',
-        desk_checked_in_at: null,
+        desk_checked_in_at: '2026-07-26T10:00:00.000Z',
+        passport_checked_at: null,
       })
     ).toBe(false);
     expect(
@@ -122,8 +122,8 @@ describe('isPlanStayUnpaid', () => {
         booking_amount_due_minor: null,
         booking_amount_currency: null,
         booking_paid_at: null,
-        passport_checked_at: '2026-07-26T10:00:00.000Z',
-        desk_checked_in_at: null,
+        desk_checked_in_at: '2026-07-26T10:00:00.000Z',
+        passport_checked_at: null,
       })
     ).toBe(false);
   });

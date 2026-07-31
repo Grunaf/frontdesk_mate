@@ -2133,6 +2133,7 @@
       "receptionQrBack": "Back",
       "showRoomMapLink": "Show room map & directions",
       "bedLockedUntilCheckIn": "Your bed and directions unlock from {time} on your check-in day.",
+      "bedLockedUntilReady": "Your bed is being prepared. It will show here once housekeeping marks it ready.",
       "bedLockedUntilRegistration": "Complete registration to see your bed assignment.",
       "tourismSummaryHeading": "Tourist registration",
       "tourismStatusNotStarted": "Not started",

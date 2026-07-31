@@ -10,6 +10,7 @@ export function resolveRegistrationStandalonePrimary(input: {
   checkInDayOrLater: boolean;
   registrationComplete: boolean;
   passportVerified: boolean;
+  bedVisible?: boolean;
 }): RegistrationStandalonePrimary {
   if (!input.isRegistered) {
     return { kind: 'checkIn' };
@@ -23,7 +24,7 @@ export function resolveRegistrationStandalonePrimary(input: {
     return { kind: 'concierge' };
   }
 
-  if (!input.passportVerified) {
+  if (!input.passportVerified && !input.bedVisible) {
     return { kind: 'hidden' };
   }
 

@@ -1,19 +1,13 @@
 import { setRequestLocale } from 'next-intl/server';
-import { isStayContactComplete } from '@/features/guest-stay-contact';
-import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
-import {
-  isEntryDateComplete,
-  isTourismRegistrationComplete,
-  resolveSharedEntryStampDate,
-} from '@/entities/guest-tourism-registration';
-import { getTourismRegistrationByStayId } from '@/entities/guest-tourism-registration/server';
+import { resolveStaySetupStatus } from '@/features/guest-stay-contact/lib/resolveStaySetupStatus';
 import {
   mapTourismGuestListItems,
   type TourismGuestListItem,
 } from '@/features/guest-tourism-registration';
+import { getTourismRegistrationByStayId } from '@/entities/guest-tourism-registration/server';
 import { resolveTourismRegistrationRequired } from '@/entities/tenant';
 import { resolveTenantAccess } from '@/entities/tenant/server';
-import { getSupabaseAdmin } from '@/shared/lib/db/admin';
+import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
 import { StaySetupCoordinator } from '@/views/stay-setup';
 
 interface StaySetupPageProps {
@@ -29,6 +23,7 @@ export default async function StaySetupPage({ params }: StaySetupPageProps) {
   let entryStampDate: string | null = null;
   let contactComplete = false;
   let passportVerified = false;
+  let bedVisible = false;
   let stayContactWhatsapp: string | null = null;
   let tourismGuests: TourismGuestListItem[] = [];
 
@@ -38,33 +33,20 @@ export default async function StaySetupPage({ params }: StaySetupPageProps) {
     const tourismRequired = resolveTourismRegistrationRequired(access.config.settings);
 
     if (session) {
-      if (tourismRequired) {
-        const registration = await getTourismRegistrationByStayId(session.stayId);
-        tourismComplete = registration ? isTourismRegistrationComplete(registration) : false;
-        entryDateComplete = registration ? isEntryDateComplete(registration) : false;
-        entryStampDate = registration ? resolveSharedEntryStampDate(registration) : null;
-        tourismGuests = mapTourismGuestListItems(registration?.guests ?? []);
+      const setup = await resolveStaySetupStatus(access.config.slug);
+      if (setup.ok) {
+        tourismComplete = setup.status.tourismComplete;
+        entryDateComplete = setup.status.entryDateComplete;
+        entryStampDate = setup.status.entryStampDate;
+        contactComplete = setup.status.contactComplete;
+        passportVerified = setup.status.passportVerified;
+        bedVisible = setup.status.bedVisible;
+        stayContactWhatsapp = setup.status.contactPhone;
       }
 
-      const admin = getSupabaseAdmin();
-      if (admin) {
-        const { data } = await admin
-          .from('guest_reservations')
-          .select('contact_phone, contact_phone_pending, tourism_contact_whatsapp, passport_checked_at')
-          .eq('id', session.stayId)
-          .maybeSingle();
-
-        const stayContact = data?.contact_phone ? String(data.contact_phone) : null;
-        const legacy = data?.tourism_contact_whatsapp
-          ? String(data.tourism_contact_whatsapp)
-          : null;
-
-        contactComplete = isStayContactComplete({
-          contactPhone: stayContact,
-          legacyTourismContactWhatsapp: legacy,
-        });
-        stayContactWhatsapp = stayContact ?? legacy;
-        passportVerified = Boolean(data?.passport_checked_at);
+      if (tourismRequired) {
+        const registration = await getTourismRegistrationByStayId(session.stayId);
+        tourismGuests = mapTourismGuestListItems(registration?.guests ?? []);
       }
     }
   }
@@ -77,6 +59,7 @@ export default async function StaySetupPage({ params }: StaySetupPageProps) {
         entryStampDate,
         contactComplete,
         passportVerified,
+        bedVisible,
         stayContactWhatsapp,
         tourismGuests,
       }}

@@ -9,9 +9,14 @@ import {
   loadTourismRegistrationForReceptionAction,
 } from '@/features/guest-tourism-registration';
 import { formatStayReference } from '@/entities/guest-stay/lib/formatStayReference';
-import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
+import {
+  stayRecordCheckInDate,
+  stayRecordCheckOutDate,
+  resolveShowUnlockBedAction,
+  isBedReadyForGuestVisibility,
+} from '@/entities/guest-stay';
 import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
-import { formatPartySheetMeta } from '../lib/guestAccessDates';
+import { formatPartySheetMeta, formatReceptionDateTime } from '../lib/guestAccessDates';
 import { isStayCheckoutOverdue } from '../lib/resolveStayCancelCheckoutAction';
 import {
   resolveAccessTabBadge,
@@ -42,6 +47,7 @@ import {
   StayBookingBalanceBlock,
   StayReceptionNoteBlock,
   StayContactBlock,
+  StayPassportCheckedBlock,
   isStayAdmitted,
   resolvePartyContactStay,
 } from './StayDetailStayTabBlocks';
@@ -107,6 +113,8 @@ export interface ReceptionGuestStayDetailProps {
   tenantSettings?: TenantSettings;
   /** Current operational calendar day — gates Check out vs ended stays. */
   operationalDate: string;
+  /** Housekeeping status for this stay's bed (`ready` unlocks guest bed visibility). */
+  bedStatus?: string;
   /** Tab on open: after create → access; otherwise stay. */
   initialTab?: StayDetailTabId;
   /** When true (Hub/Cash party row), open mobile party root first. */
@@ -160,6 +168,7 @@ export function ReceptionGuestStayDetail({
   onExtendStay,
   tenantSettings,
   operationalDate,
+  bedStatus,
   initialTab = 'stay',
   initialPartyView = false,
   initialFocusStayId = null,
@@ -237,16 +246,24 @@ export function ReceptionGuestStayDetail({
 
   const tourismIncomplete =
     showTourismTab && !tourismAccessReady && !access.accessGranted;
-  const primaryGrantBlocked = tourismIncomplete && !canSkipTourismGate;
+  const bedReady = isBedReadyForGuestVisibility(bedStatus);
+  const tourismBlocksCheckIn = tourismIncomplete && !canSkipTourismGate;
+  const checkInDisabled = !bedReady || tourismBlocksCheckIn;
+  const checkInHint = !bedReady
+    ? 'Mark the bed as ready in Cleaning before check-in.'
+    : tourismBlocksCheckIn
+      ? 'Complete tourism registration and upload passport photos before check-in.'
+      : null;
 
-  const requestGrantAccess = () => {
+  const requestCheckIn = () => {
+    if (!bedReady) return;
     if (tourismIncomplete) {
       if (!canSkipTourismGate) return;
       setSkipTourismConfirmMode('single');
       setSkipTourismConfirmOpen(true);
       return;
     }
-    access.grantAccess();
+    access.checkIn();
   };
 
   const runCheckInParty = (bypassAccessGate: boolean) => {
@@ -276,7 +293,9 @@ export function ReceptionGuestStayDetail({
               ? 'You do not have permission to skip the tourism gate.'
               : result.error === 'tourism_incomplete' || result.error === 'missing_documents'
                 ? 'Complete tourism registration and upload passport photos for all pending guests.'
-                : 'Could not check in all guests.'
+                : result.error === 'bed_not_ready'
+                  ? 'Mark every pending bed as ready in Cleaning before check-in.'
+                  : 'Could not check in all guests.'
         );
         return;
       }
@@ -288,12 +307,12 @@ export function ReceptionGuestStayDetail({
     runCheckInParty(false);
   };
 
-  const confirmSkipTourismGrant = () => {
-    // Grant first; defer dialog close so the confirm click does not fall through to the sheet.
+  const confirmSkipTourismCheckIn = () => {
+    // Check in first; defer dialog close so the confirm click does not fall through to the sheet.
     if (skipTourismConfirmMode === 'party') {
       runCheckInParty(true);
     } else {
-      access.grantAccess({ bypassAccessGate: true });
+      access.checkIn({ bypassAccessGate: true });
     }
     window.setTimeout(() => setSkipTourismConfirmOpen(false), 0);
   };
@@ -363,6 +382,18 @@ export function ReceptionGuestStayDetail({
     stay.booking_platform_id,
     stay.booking_external_id
   );
+  const bedUnlockedAt = access.bedUnlockedAt ?? stay.bed_unlocked_at;
+  const showUnlockBed =
+    Boolean(tenantSlug) &&
+    resolveShowUnlockBedAction({
+      stay: {
+        ...stay,
+        bed_unlocked_at: bedUnlockedAt,
+      },
+      stayEnded,
+      propertyTimeZone: tenantSettings?.propertyTimeZone,
+      checkInTimeFallback: tenantSettings?.checkInTime,
+    });
   const accessTabTone = resolveAccessTabBadge({
     hasMagicLink: Boolean(stay.magicLinkUrl),
     hasPinInSession: Boolean(stayPins[stay.id]),
@@ -505,6 +536,16 @@ export function ReceptionGuestStayDetail({
         ) : null}
       </p>
       <p className="truncate text-xs text-muted-foreground">{bookingMeta}</p>
+      {access.accessGranted && stay.desk_checked_in_at ? (
+        <p className="text-xs font-medium text-emerald-800">
+          Checked in · {formatReceptionDateTime(stay.desk_checked_in_at)}
+        </p>
+      ) : null}
+      {bedUnlockedAt && !access.accessGranted ? (
+        <p className="text-xs font-medium text-emerald-800">
+          Bed unlocked · {formatReceptionDateTime(bedUnlockedAt)}
+        </p>
+      ) : null}
     </header>
   );
 
@@ -537,19 +578,10 @@ export function ReceptionGuestStayDetail({
           onAddTourismGuest={() => tourismAddGuestRef.current?.()}
           addTourismGuestDisabled={!canAddTourismGuest}
           showCheckIn={Boolean(tenantSlug) && !access.accessGranted && !stayEnded}
-          onCheckIn={requestGrantAccess}
-          checkInDisabled={primaryGrantBlocked}
-          checkInHint={
-            primaryGrantBlocked
-              ? 'Complete tourism registration and upload passport photos before check-in.'
-              : null
-          }
+          onCheckIn={requestCheckIn}
+          checkInDisabled={checkInDisabled}
+          checkInHint={checkInHint}
           checkInError={access.actionError}
-          showGrantAccess={
-            activeTab === 'access' && Boolean(tenantSlug) && !access.accessGranted && !stayEnded
-          }
-          onGrantAccess={requestGrantAccess}
-          grantAccessDisabled={primaryGrantBlocked}
         />
       );
 
@@ -646,6 +678,13 @@ export function ReceptionGuestStayDetail({
               tenantSlug={tenantSlug}
               onStayUpdated={onReceptionNoteChange}
             />
+            <StayPassportCheckedBlock
+              passportChecked={access.passportChecked}
+              passportCheckedAt={access.passportCheckedAt}
+              isPending={access.isPending}
+              readOnly={stayEnded}
+              onToggle={access.setPassportChecked}
+            />
             <StayRoomKeyBlock
               accessGranted={access.accessGranted}
               keyIssued={access.keyIssued}
@@ -678,13 +717,9 @@ export function ReceptionGuestStayDetail({
       ) : null}
 
       <TabsContent value="access" className="mt-0 space-y-4 outline-none">
-        {tenantSlug ? (
-          access.accessGranted ? (
-            <p className="text-sm font-medium text-emerald-800">Access granted</p>
-          ) : null
-        ) : (
+        {!tenantSlug ? (
           <p className="text-xs text-muted-foreground">Access actions unavailable.</p>
-        )}
+        ) : null}
 
         {!stay.magicLinkUrl ? (
           <p className="text-xs text-muted-foreground">
@@ -882,6 +917,12 @@ export function ReceptionGuestStayDetail({
               accessGranted={access.accessGranted}
               accessPending={access.isPending}
               onRevokeAccess={access.revokeAccess}
+              showUnlockBed={showUnlockBed}
+              unlockBedDisabled={!bedReady}
+              unlockBedHint={
+                bedReady ? null : 'Mark the bed as ready in Cleaning before unlocking.'
+              }
+              onUnlockBed={access.unlockBed}
             />
           )
         }
@@ -895,13 +936,13 @@ export function ReceptionGuestStayDetail({
         description={
           skipTourismConfirmMode === 'party'
             ? 'One or more guests have incomplete tourism registration / passport photos. Check in all of them anyway?'
-            : 'Guest tourism registration / passport photos are incomplete. Check in / grant access anyway?'
+            : 'Guest tourism registration / passport photos are incomplete. Check in anyway?'
         }
         cancelLabel="Cancel"
         confirmLabel="Continue anyway"
         confirmVariant="destructive"
         onCancel={() => setSkipTourismConfirmOpen(false)}
-        onConfirm={confirmSkipTourismGrant}
+        onConfirm={confirmSkipTourismCheckIn}
       />
   );
 

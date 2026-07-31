@@ -11,7 +11,7 @@ function stay(partial: Partial<CheckoutHousekeepingStay> & Pick<CheckoutHousekee
   return {
     check_out_at: '2026-07-24T23:59:59.999Z',
     check_out_date: '2026-07-24',
-    passport_checked_at: '2026-07-22T10:00:00.000Z',
+    desk_checked_in_at: '2026-07-22T10:00:00.000Z',
     ...partial,
   };
 }

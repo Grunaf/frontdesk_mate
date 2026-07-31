@@ -14,7 +14,7 @@ export type StayCancelCheckoutFields = {
 };
 
 function isAdmitted(input: Pick<StayCancelCheckoutFields, 'passport_checked_at' | 'desk_checked_in_at'>): boolean {
-  return Boolean(input.passport_checked_at || input.desk_checked_in_at);
+  return Boolean(input.desk_checked_in_at);
 }
 
 /** Calendar past exclusive check-out; desk has not archived yet. */

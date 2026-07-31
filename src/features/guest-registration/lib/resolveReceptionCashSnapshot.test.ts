@@ -111,7 +111,7 @@ describe('resolveReceptionCashSnapshot', () => {
     const admitted = makeStay({
       id: 'admitted',
       guest_name: 'Ann',
-      passport_checked_at: '2026-07-09T10:00:00.000Z',
+      desk_checked_in_at: '2026-07-09T10:00:00.000Z',
       booking_paid_at: null,
     });
 
@@ -138,7 +138,7 @@ describe('resolveReceptionCashSnapshot', () => {
       id: 'staying',
       guest_name: 'Ann',
       bed_id: 'bed-1',
-      passport_checked_at: '2026-07-08T15:00:00.000Z',
+      desk_checked_in_at: '2026-07-08T15:00:00.000Z',
       booking_paid_at: null,
       check_out_date: '2026-07-12',
       check_out_at: '2026-07-12T10:00:00.000Z',

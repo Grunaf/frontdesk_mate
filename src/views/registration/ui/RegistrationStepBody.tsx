@@ -16,6 +16,8 @@ export type RegistrationStepBodyProps = {
   contactComplete: boolean;
   registrationComplete: boolean;
   passportVerified?: boolean;
+  /** When true, hide passport-waiting banner (bed already unlocked). */
+  bedVisible?: boolean;
   accordionValue: RegistrationAccordionOpenValue;
   onAccordionValueChange: (value: RegistrationAccordionOpenValue) => void;
   interactionEnabled: boolean;
@@ -41,6 +43,7 @@ export function RegistrationStepBody({
   contactComplete,
   registrationComplete,
   passportVerified = false,
+  bedVisible = false,
   accordionValue,
   onAccordionValueChange,
   interactionEnabled,
@@ -55,12 +58,14 @@ export function RegistrationStepBody({
   onContactEditingChange,
   className,
   registrationSurface = 'standalone',
+  showCompleteHint = false,
 }: RegistrationStepBodyProps) {
   const t = useTranslations('pages.staySetup');
+  const showPassportWaiting = registrationComplete && !passportVerified && !bedVisible;
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-      {registrationComplete && !passportVerified ? (
+      {showPassportWaiting ? (
         <div className="mb-3 shrink-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-3">
           <p className="text-sm font-medium leading-snug text-foreground">
             {t('registration.passportWaitingTitle')}

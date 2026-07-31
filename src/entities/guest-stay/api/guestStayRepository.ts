@@ -43,6 +43,10 @@ import type {
   CreateGuestStayResult,
   SetPassportCheckedAtInput,
   SetPassportCheckedAtResult,
+  SetDeskCheckedInAtInput,
+  SetDeskCheckedInAtResult,
+  SetBedUnlockedAtInput,
+  SetBedUnlockedAtResult,
   GuestSessionPayload,
   GuestStayPreview,
   GuestStayRecord,
@@ -1802,7 +1806,7 @@ export async function cancelOrCheckoutGuestReservation(
 
   const checkInDate = String(reservation.check_in_date).slice(0, 10);
   const checkOutDate = String(reservation.check_out_date).slice(0, 10);
-  const admitted = Boolean(reservation.passport_checked_at || reservation.desk_checked_in_at);
+  const admitted = Boolean(reservation.desk_checked_in_at);
   const nowIso = new Date().toISOString();
   const actorId = input.archivedByReceptionUserId.trim() || null;
   const archiveReason: GuestReservationArchiveReason =
@@ -2326,20 +2330,24 @@ export async function getGuestReservationForDesk(
 }
 
 /**
- * Admit guest at desk: passport verified + arrived (dual-write) + optional key.
- * Prefer this over a separate "arrived only" path — kept as a thin wrapper for callers.
+ * Admit guest at desk (occupancy). Does not set passport checklist.
  */
 export async function completeDeskCheckIn(
   input: CompleteDeskCheckInInput
 ): Promise<CompleteDeskCheckInResult> {
-  return setPassportCheckedAt({
+  const result = await setDeskCheckedInAt({
     tenantSlug: input.tenantSlug,
     stayId: input.stayId,
     checked: true,
     keyIssued: input.keyIssued,
   });
+  if (!result.ok) {
+    return result;
+  }
+  return result;
 }
 
+/** Passport checklist only — does not admit occupancy. */
 export async function setPassportCheckedAt(
   input: SetPassportCheckedAtInput
 ): Promise<SetPassportCheckedAtResult> {
@@ -2385,56 +2393,19 @@ export async function setPassportCheckedAt(
   }
 
   if (input.checked && mapped.passport_checked_at) {
-    if (input.keyIssued && !mapped.key_issued_at) {
-      const nowIso = new Date().toISOString();
-      const { data: updatedKey, error: keyError } = await admin
-        .from('guest_reservations')
-        .update({ key_issued_at: nowIso, updated_at: nowIso })
-        .eq('id', input.stayId)
-        .eq('tenant_id', tenant.id)
-        .eq('status', 'planned')
-        .select(GUEST_RESERVATION_COLUMNS)
-        .maybeSingle();
-
-      if (keyError) {
-        console.error('setPassportCheckedAt key:', keyError.message);
-        return { ok: false, error: 'db_unavailable' };
-      }
-      if (!updatedKey) {
-        return { ok: false, error: 'not_found' };
-      }
-      const stay = mapReservationGrantToStayRecord(
-        updatedKey as Record<string, unknown>,
-        grant,
-        tenant.slug
-      );
-      if (!stay) {
-        return { ok: false, error: 'db_unavailable' };
-      }
-      return { ok: true, stay };
-    }
+    return { ok: true, stay: mapped };
+  }
+  if (!input.checked && !mapped.passport_checked_at) {
     return { ok: true, stay: mapped };
   }
 
   const nowIso = new Date().toISOString();
-  const patch: Record<string, string | null> = {
-    updated_at: nowIso,
-  };
-
-  if (input.checked) {
-    patch.passport_checked_at = nowIso;
-    patch.desk_checked_in_at = nowIso;
-    if (input.keyIssued) {
-      patch.key_issued_at = nowIso;
-    }
-  } else {
-    patch.passport_checked_at = null;
-    patch.desk_checked_in_at = null;
-  }
-
   const { data: updated, error: updateError } = await admin
     .from('guest_reservations')
-    .update(patch)
+    .update({
+      passport_checked_at: input.checked ? nowIso : null,
+      updated_at: nowIso,
+    })
     .eq('id', input.stayId)
     .eq('tenant_id', tenant.id)
     .eq('status', 'planned')
@@ -2460,4 +2431,208 @@ export async function setPassportCheckedAt(
   }
 
   return { ok: true, stay };
+}
+
+/** Occupancy admit / un-admit. Does not touch passport checklist. */
+export async function setDeskCheckedInAt(
+  input: SetDeskCheckedInAtInput
+): Promise<SetDeskCheckedInAtResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'tenant_not_found' };
+  }
+
+  const grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
+  if (!grant) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const { data: existing, error: loadError } = await admin
+    .from('guest_reservations')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('setDeskCheckedInAt load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const mapped = mapReservationGrantToStayRecord(
+    existing as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
+  if (!mapped) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  if (input.checked && mapped.desk_checked_in_at) {
+    if (input.keyIssued && !mapped.key_issued_at) {
+      const nowIso = new Date().toISOString();
+      const { data: updatedKey, error: keyError } = await admin
+        .from('guest_reservations')
+        .update({ key_issued_at: nowIso, updated_at: nowIso })
+        .eq('id', input.stayId)
+        .eq('tenant_id', tenant.id)
+        .eq('status', 'planned')
+        .select(GUEST_RESERVATION_COLUMNS)
+        .maybeSingle();
+
+      if (keyError) {
+        console.error('setDeskCheckedInAt key:', keyError.message);
+        return { ok: false, error: 'db_unavailable' };
+      }
+      if (!updatedKey) {
+        return { ok: false, error: 'not_found' };
+      }
+      const stay = mapReservationGrantToStayRecord(
+        updatedKey as Record<string, unknown>,
+        grant,
+        tenant.slug
+      );
+      if (!stay) {
+        return { ok: false, error: 'db_unavailable' };
+      }
+      return { ok: true, stay };
+    }
+    return { ok: true, stay: mapped };
+  }
+
+  const nowIso = new Date().toISOString();
+  const patch: Record<string, string | null> = {
+    updated_at: nowIso,
+  };
+
+  if (input.checked) {
+    patch.desk_checked_in_at = nowIso;
+    if (!mapped.bed_unlocked_at) {
+      patch.bed_unlocked_at = nowIso;
+    }
+    if (input.keyIssued) {
+      patch.key_issued_at = nowIso;
+    }
+  } else {
+    patch.desk_checked_in_at = null;
+  }
+
+  const { data: updated, error: updateError } = await admin
+    .from('guest_reservations')
+    .update(patch)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .maybeSingle();
+
+  if (updateError) {
+    console.error('setDeskCheckedInAt update:', updateError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!updated) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const stay = mapReservationGrantToStayRecord(
+    updated as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
+  if (!stay) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  return { ok: true, stay };
+}
+
+/** Stamp early bed unlock. Caller must enforce housekeeping ready gate. */
+export async function setBedUnlockedAt(
+  input: SetBedUnlockedAtInput
+): Promise<SetBedUnlockedAtResult> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) {
+    return { ok: false, error: 'tenant_not_found' };
+  }
+
+  const grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
+  if (!grant) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const { data: existing, error: loadError } = await admin
+    .from('guest_reservations')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('setBedUnlockedAt load:', loadError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const mapped = mapReservationGrantToStayRecord(
+    existing as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
+  if (!mapped) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  if (mapped.bed_unlocked_at) {
+    return { ok: true, stay: mapped };
+  }
+
+  const nowIso = new Date().toISOString();
+  const { data: updatedRow, error: unlockError } = await admin
+    .from('guest_reservations')
+    .update({ bed_unlocked_at: nowIso, updated_at: nowIso })
+    .eq('id', input.stayId)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'planned')
+    .select(GUEST_RESERVATION_COLUMNS)
+    .maybeSingle();
+
+  if (unlockError) {
+    console.error('setBedUnlockedAt update:', unlockError.message);
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (!updatedRow) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const unlockedStay = mapReservationGrantToStayRecord(
+    updatedRow as Record<string, unknown>,
+    grant,
+    tenant.slug
+  );
+  if (!unlockedStay) {
+    return { ok: false, error: 'db_unavailable' };
+  }
+
+  return { ok: true, stay: unlockedStay };
 }

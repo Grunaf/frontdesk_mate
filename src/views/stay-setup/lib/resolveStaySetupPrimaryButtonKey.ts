@@ -1,5 +1,6 @@
 import type { StaySetupStep } from './resolveStaySetupSteps';
 import {
+  canBypassStaySetupPassportGate,
   isStaySetupRegistrationComplete,
   type StaySetupCompletion,
 } from './resolveStaySetupSteps';
@@ -45,7 +46,7 @@ export function shouldShowStaySetupPrimaryButton(
     return false;
   }
 
-  if (activeStepId === 'registration' && !completion.passportVerified) {
+  if (activeStepId === 'registration' && !canBypassStaySetupPassportGate(completion)) {
     return false;
   }
 

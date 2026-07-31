@@ -27,6 +27,8 @@ export {
   setKeyIssuedForReceptionAction,
   setPassportCheckedAction,
   checkInPartyAction,
+  assertTourismReadyForCheckIn,
+  assertCanBypassTourismCheckInGate,
   setTourismExportedAction,
   setTourismGuestEntryStampDateAction,
   updateTourismGuestIdentityForReceptionAction,

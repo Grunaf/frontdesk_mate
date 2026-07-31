@@ -19,6 +19,7 @@ import type { TourismGuestListItem } from '@/features/guest-tourism-registration
 import { Button, IconBackActionsRow } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
+  canBypassStaySetupPassportGate,
   isStaySetupSettlementUnlocked,
   isStaySetupStepLocked,
   normalizeStaySetupUrlStep,
@@ -58,6 +59,7 @@ export interface StaySetupInitialState {
   entryStampDate: string | null;
   contactComplete: boolean;
   passportVerified: boolean;
+  bedVisible?: boolean;
   stayContactWhatsapp: string | null;
   /** SSR guest list for registration panels (avoids client waterfall skeleton). */
   tourismGuests: TourismGuestListItem[];
@@ -101,6 +103,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     entryDateComplete,
     contactComplete,
     passportVerified,
+    bedVisible,
     stayContactWhatsapp,
     completion,
     registrationComplete,
@@ -166,6 +169,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       entryStampDate: string | null;
       contactComplete: boolean;
       passportVerified: boolean;
+      bedVisible: boolean;
     }) => {
       const merged = mergeRegistrationStatusMonotonic(
         { tourismComplete, entryDateComplete, contactComplete, passportVerified },
@@ -173,10 +177,11 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       );
       applyRegistrationStatus({
         ...merged,
+        bedVisible: status.bedVisible,
         entryStampDate: status.entryStampDate,
       });
 
-      if (merged.passportVerified) {
+      if (merged.passportVerified || status.bedVisible) {
         setPassportGateSheetOpen(false);
       }
 
@@ -186,6 +191,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         entryDateComplete: merged.entryDateComplete,
         contactComplete: merged.contactComplete,
         passportVerified: merged.passportVerified,
+        bedVisible: status.bedVisible,
       };
 
       setCurrentStep((step) => {
@@ -226,7 +232,11 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     if (!pendingPassportAdvanceRef.current) {
       return;
     }
-    if (!registrationComplete || !passportVerified || !checkInStarted) {
+    if (
+      !registrationComplete ||
+      !canBypassStaySetupPassportGate(completion) ||
+      !checkInStarted
+    ) {
       pendingPassportAdvanceRef.current = false;
       return;
     }
@@ -235,7 +245,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
     setPassportGateSheetOpen(false);
     userStepIntentRef.current = 'essentials';
     setCurrentStep('essentials');
-  }, [contactEditing, registrationComplete, passportVerified, checkInStarted]);
+  }, [contactEditing, registrationComplete, completion, checkInStarted]);
 
   useStaySetupCompletionSync({
     slug,
@@ -375,7 +385,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
         isRoomOrEssentialsStep(step) &&
         isRegistered &&
         registrationComplete &&
-        !passportVerified
+        !canBypassStaySetupPassportGate(completion)
       ) {
         openPassportGateSheet();
         return;
@@ -389,7 +399,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       tourismRegistrationRequired,
       tourismComplete,
       checkInStarted,
-      passportVerified,
+      completion,
       focusRegistrationStep,
     ]
   );
@@ -415,6 +425,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
             contactComplete={contactComplete}
             registrationComplete={registrationComplete}
             passportVerified={passportVerified}
+            bedVisible={bedVisible}
             accordionValue={accordionValue}
             onAccordionValueChange={setAccordionValue}
             interactionEnabled={isRegistered}
@@ -538,7 +549,7 @@ export function StaySetupCoordinator({ initial }: StaySetupCoordinatorProps) {
       isRoomOrEssentialsStep(activeStep.id) &&
       registrationComplete &&
       checkInStarted &&
-      !passportVerified
+      !canBypassStaySetupPassportGate(completion)
     ) {
       openPassportGateSheet();
       return;

@@ -20,7 +20,7 @@ export type BedStayPresenceLink = {
 };
 
 function isAdmitted(stay: PresenceEligibleStay): boolean {
-  return Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
+  return Boolean(stay.desk_checked_in_at);
 }
 
 /**

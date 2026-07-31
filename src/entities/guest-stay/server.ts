@@ -26,6 +26,8 @@ export {
   confirmGuestStayContactPhone,
   rejectGuestStayContactPhone,
   setPassportCheckedAt,
+  setDeskCheckedInAt,
+  setBedUnlockedAt,
 } from './api/guestStayRepository';
 export {
   clearGuestSessionCookie,
@@ -56,4 +58,6 @@ export type {
   ConfirmGuestStayContactPhoneResult,
   RejectGuestStayContactPhoneResult,
   SetPassportCheckedAtResult,
+  SetDeskCheckedInAtResult,
+  SetBedUnlockedAtResult,
 } from './model/types';

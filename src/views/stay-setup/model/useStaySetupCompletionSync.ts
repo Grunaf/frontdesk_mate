@@ -10,6 +10,7 @@ export type StaySetupCompletionSyncStatus = {
   entryStampDate: string | null;
   contactComplete: boolean;
   passportVerified: boolean;
+  bedVisible: boolean;
 };
 
 type UseStaySetupCompletionSyncOptions = {
@@ -50,6 +51,7 @@ export function useStaySetupCompletionSync({
         entryStampDate: result.status.entryStampDate,
         contactComplete: result.status.contactComplete,
         passportVerified: result.status.passportVerified,
+        bedVisible: result.status.bedVisible,
       });
     });
   }, [isRegistered, isOnStaySetup, slug]);

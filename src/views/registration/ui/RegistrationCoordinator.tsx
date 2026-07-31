@@ -16,6 +16,7 @@ import { useLocale, useTranslations } from '@/shared/i18n';
 import { Button } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { ensureStayContactSaved } from '@/features/guest-stay-contact/lib/ensureStayContactSaved';
+import { canBypassStaySetupPassportGate } from '@/views/stay-setup/lib/resolveStaySetupSteps';
 import { resolveRegistrationStandalonePrimary } from '../lib/resolveRegistrationFooterAction';
 import { useRegistrationStepState } from '../model/useRegistrationStepState';
 import { RegistrationStepBody } from './RegistrationStepBody';
@@ -45,6 +46,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     entryDateComplete,
     contactComplete,
     passportVerified,
+    bedVisible,
     stayContactWhatsapp,
     completion,
     registrationComplete,
@@ -88,7 +90,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     (savedWhatsapp: string) => {
       handleContactComplete(savedWhatsapp);
 
-      if (!checkInDayOrLater || !passportVerified) {
+      if (!checkInDayOrLater || !canBypassStaySetupPassportGate(completion)) {
         return;
       }
 
@@ -98,6 +100,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
         entryDateComplete,
         contactComplete: true,
         passportVerified,
+        bedVisible,
       };
 
       router.push(
@@ -112,6 +115,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     },
     [
       checkInDayOrLater,
+      completion,
       handleContactComplete,
       locale,
       router,
@@ -119,6 +123,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
       tourismComplete,
       entryDateComplete,
       passportVerified,
+      bedVisible,
     ]
   );
 
@@ -127,6 +132,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
     checkInDayOrLater,
     registrationComplete,
     passportVerified,
+    bedVisible,
   });
 
   const openCheckInSheet = () => setCheckInSheetOpen(true);
@@ -181,6 +187,7 @@ export function RegistrationCoordinator({ initial }: RegistrationCoordinatorProp
             contactComplete={contactComplete}
             registrationComplete={registrationComplete}
             passportVerified={passportVerified}
+            bedVisible={bedVisible}
             accordionValue={accordionValue}
             onAccordionValueChange={setAccordionValue}
             interactionEnabled={isRegistered}

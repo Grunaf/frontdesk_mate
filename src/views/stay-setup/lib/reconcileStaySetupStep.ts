@@ -1,5 +1,6 @@
 import {
   isStaySetupRegistrationComplete,
+  canBypassStaySetupPassportGate,
   resolveStaySetupCoordinatorStep,
   type StaySetupCompletion,
   type StaySetupStep,
@@ -48,7 +49,8 @@ export function reconcileStepAfterCompletionSync(
   checkInDayOrLater: boolean
 ): StaySetupStep {
   const regComplete = isStaySetupRegistrationComplete(nextCompletion);
-  const settlementUnlocked = regComplete && nextCompletion.passportVerified;
+  const settlementUnlocked =
+    regComplete && canBypassStaySetupPassportGate(nextCompletion);
 
   if (!settlementUnlocked || !checkInDayOrLater) {
     if (isRoomOrEssentialsStep(step)) {
@@ -163,7 +165,7 @@ export function resolveStaySetupStepFromUrl(input: {
     if (!input.checkInDayOrLater) {
       return 'registration';
     }
-    if (!input.completion.passportVerified) {
+    if (!canBypassStaySetupPassportGate(input.completion)) {
       return 'registration';
     }
     return urlStep;

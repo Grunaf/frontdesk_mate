@@ -30,6 +30,18 @@ export {
   stayRecordCheckOutDate,
 } from './lib/resolveReservationStayPeriod';
 export type { ReservationStayPeriod } from './lib/resolveReservationStayPeriod';
+export {
+  isBedReadyForGuestVisibility,
+  resolveIsBedVisible,
+  resolveIsPassportChecked,
+  resolveIsStayAdmitted,
+  resolveShowUnlockBedAction,
+} from './lib/resolveBedVisible';
+export type {
+  ResolveIsBedVisibleInput,
+  StayAdmitFields,
+  StayBedUnlockFields,
+} from './lib/resolveBedVisible';
 export type { GuestSessionPayload, GuestStayKind, GuestStayRecord, GuestStayRecordWithLink, GuestReservationArchiveListItem, GuestReservationTrashListItem, ResolvedGuestSession } from './model/types';
 export { validateContactEmail } from './lib/validateContactEmail';
 export type { ValidateContactEmailResult } from './lib/validateContactEmail';

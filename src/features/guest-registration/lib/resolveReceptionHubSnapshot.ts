@@ -66,7 +66,7 @@ function sortByCheckIn(stays: GuestStayRecordWithLink[]): GuestStayRecordWithLin
 export function hasGuestArrivedAtReception(
   stay: Pick<GuestStayRecordWithLink, 'passport_checked_at' | 'desk_checked_in_at'>
 ): boolean {
-  return Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
+  return Boolean(stay.desk_checked_in_at);
 }
 
 function isAwaitingArrival(

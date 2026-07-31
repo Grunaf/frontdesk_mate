@@ -199,7 +199,49 @@ export function StayBookingBalanceBlock({
 }
 
 export function isStayAdmitted(stay: GuestStayRecordWithLink): boolean {
-  return Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
+  return Boolean(stay.desk_checked_in_at);
+}
+
+export function StayPassportCheckedBlock({
+  passportChecked,
+  passportCheckedAt,
+  isPending,
+  readOnly = false,
+  onToggle,
+}: {
+  passportChecked: boolean;
+  passportCheckedAt: string | null;
+  isPending: boolean;
+  readOnly?: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Passport
+      </p>
+      {passportChecked ? (
+        <p className="text-sm">
+          Checked
+          {passportCheckedAt ? ` · ${formatReceptionDateTime(passportCheckedAt)}` : ''}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">ID / passport not verified yet.</p>
+      )}
+      {!readOnly ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8"
+          disabled={isPending}
+          onClick={() => onToggle(!passportChecked)}
+        >
+          {passportChecked ? 'Mark not checked' : 'Mark passport checked'}
+        </Button>
+      ) : null}
+    </div>
+  );
 }
 
 export function resolvePartyContactStay(

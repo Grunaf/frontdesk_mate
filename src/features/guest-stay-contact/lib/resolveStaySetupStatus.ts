@@ -1,5 +1,9 @@
 import { resolveGuestSessionFromCookies } from '@/entities/guest-stay/server';
 import {
+  isBedReadyForGuestVisibility,
+  resolveIsBedVisible,
+} from '@/entities/guest-stay';
+import {
   isEntryDateComplete,
   isTourismRegistrationComplete,
   resolveSharedEntryStampDate,
@@ -7,6 +11,7 @@ import {
 import { getTourismRegistrationByStayId } from '@/entities/guest-tourism-registration/server';
 import { resolveTourismRegistrationRequired } from '@/entities/tenant';
 import { getTenantRecord } from '@/entities/tenant/server';
+import { listHousekeepingBedStatuses } from '@/entities/housekeeping/server';
 import { getSupabaseAdmin } from '@/shared/lib/db/admin';
 import { isStayContactComplete } from './isStayContactComplete';
 
@@ -20,6 +25,10 @@ export type StaySetupStatus = {
   contactComplete: boolean;
   /** Desk admitted guest to settle in (`passport_checked_at` set). */
   passportVerified: boolean;
+  /** Housekeeping marked bed ready. */
+  bedReady: boolean;
+  /** Guest may see bed assignment (ready + time/unlock/admit). */
+  bedVisible: boolean;
   /** Confirmed phone (E.164), or tourism fallback for display/prefill. */
   contactPhone: string | null;
   /** Guest-proposed phone awaiting desk confirm. */
@@ -79,7 +88,7 @@ export async function resolveStaySetupStatus(
   const { data, error } = await admin
     .from('guest_reservations')
     .select(
-      'contact_phone, contact_phone_pending, contact_email, tourism_contact_whatsapp, passport_checked_at'
+      'bed_id, contact_phone, contact_phone_pending, contact_email, tourism_contact_whatsapp, passport_checked_at, desk_checked_in_at, bed_unlocked_at, check_in_at, check_in_date'
     )
     .eq('id', session.stayId)
     .maybeSingle();
@@ -105,6 +114,23 @@ export async function resolveStaySetupStatus(
   const passportVerified = Boolean(data?.passport_checked_at);
   const displayPhone = contactPhone ?? legacyTourismContact;
 
+  const bedId = data?.bed_id ? String(data.bed_id) : session.bedId;
+  const bedStatuses = await listHousekeepingBedStatuses(tenant.id);
+  const bedStatus = bedStatuses.find((row) => row.bed_id === bedId)?.status;
+  const bedReady = isBedReadyForGuestVisibility(bedStatus);
+  const bedVisible = resolveIsBedVisible({
+    bedStatus,
+    passport_checked_at: data?.passport_checked_at ? String(data.passport_checked_at) : null,
+    desk_checked_in_at: data?.desk_checked_in_at ? String(data.desk_checked_in_at) : null,
+    bed_unlocked_at: data?.bed_unlocked_at ? String(data.bed_unlocked_at) : null,
+    check_in_at: data?.check_in_at ? String(data.check_in_at) : session.checkInAt,
+    check_in_date: data?.check_in_date
+      ? String(data.check_in_date).slice(0, 10)
+      : session.checkInDate,
+    propertyTimeZone: tenant.settings?.propertyTimeZone,
+    checkInTimeFallback: tenant.settings?.checkInTime,
+  });
+
   const totalSteps = tourismRequired ? 3 : 2;
   let completedSteps = 0;
   if (tourismRequired && tourismComplete) {
@@ -127,6 +153,8 @@ export async function resolveStaySetupStatus(
       entryStampDate,
       contactComplete,
       passportVerified,
+      bedReady,
+      bedVisible,
       contactPhone: displayPhone,
       contactPhonePending,
       contactEmail,

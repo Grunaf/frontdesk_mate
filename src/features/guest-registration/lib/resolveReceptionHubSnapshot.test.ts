@@ -70,7 +70,7 @@ describe('resolveReceptionHubSnapshot', () => {
     const now = new Date('2026-07-09T08:30:00.000Z');
     const stay = makeStay({
       check_in_at: '2026-07-09T14:00:00.000Z',
-      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      desk_checked_in_at: '2026-07-09T09:00:00.000Z',
     });
 
     const snapshot = resolveReceptionHubSnapshot(settings, [stay], now);
@@ -140,13 +140,13 @@ describe('resolveReceptionHubSnapshot', () => {
       id: 'no-key',
       bed_id: 'bed-1',
       check_in_at: '2026-07-09T14:00:00.000Z',
-      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      desk_checked_in_at: '2026-07-09T09:00:00.000Z',
     });
     const withKey = makeStay({
       id: 'has-key',
       bed_id: 'bed-2',
       check_in_at: '2026-07-09T14:00:00.000Z',
-      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      desk_checked_in_at: '2026-07-09T09:00:00.000Z',
       key_issued_at: '2026-07-09T09:05:00.000Z',
     });
     const notAdmitted = makeStay({
@@ -165,14 +165,14 @@ describe('resolveReceptionHubSnapshot', () => {
     const archived = makeStay({
       id: 'archived',
       check_in_at: '2026-07-09T14:00:00.000Z',
-      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      desk_checked_in_at: '2026-07-09T09:00:00.000Z',
       is_archived: true,
     });
     const revoked = makeStay({
       id: 'revoked',
       bed_id: 'bed-2',
       check_in_at: '2026-07-09T14:00:00.000Z',
-      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      desk_checked_in_at: '2026-07-09T09:00:00.000Z',
       revoked_at: '2026-07-09T09:30:00.000Z',
     });
 
@@ -189,14 +189,14 @@ describe('resolveReceptionHubSnapshot', () => {
       id: 'leaving',
       check_in_at: '2026-07-08T14:00:00.000Z',
       check_out_at: '2026-07-10T23:59:59.999Z',
-      passport_checked_at: '2026-07-08T15:00:00.000Z',
+      desk_checked_in_at: '2026-07-08T15:00:00.000Z',
     });
     const midStay = makeStay({
       id: 'staying',
       bed_id: 'bed-2',
       check_in_at: '2026-07-08T14:00:00.000Z',
       check_out_at: '2026-07-12T23:59:59.999Z',
-      passport_checked_at: '2026-07-08T15:00:00.000Z',
+      desk_checked_in_at: '2026-07-08T15:00:00.000Z',
     });
 
     const onLastNight = resolveReceptionHubSnapshot(settings, [departing, midStay], lastNightNow);
@@ -221,7 +221,7 @@ describe('resolveReceptionHubSnapshot', () => {
       id: 'in',
       check_in_at: '2026-07-09T14:00:00.000Z',
       check_in_date: '2026-07-09',
-      passport_checked_at: '2026-07-09T09:00:00.000Z',
+      desk_checked_in_at: '2026-07-09T09:00:00.000Z',
     });
     const expected = makeStay({
       id: 'expected',

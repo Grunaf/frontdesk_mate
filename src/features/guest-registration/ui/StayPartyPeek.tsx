@@ -20,7 +20,7 @@ import { cn } from '@/shared/lib/utils';
 export type PartySheetTabId = 'booking' | 'beds';
 
 function isStayAdmitted(stay: GuestStayRecordWithLink): boolean {
-  return Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
+  return Boolean(stay.desk_checked_in_at);
 }
 
 function PartyStatusDot({ tone }: { tone: 'none' | 'muted' | 'amber' | 'emerald' }) {

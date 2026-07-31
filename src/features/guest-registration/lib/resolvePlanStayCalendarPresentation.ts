@@ -27,7 +27,7 @@ export function isPlanStayCellInactive(input: {
 export function isPlanStayAdmitted(
   stay: Pick<GuestStayRecord, 'passport_checked_at' | 'desk_checked_in_at'>
 ): boolean {
-  return Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
+  return Boolean(stay.desk_checked_in_at);
 }
 
 /**

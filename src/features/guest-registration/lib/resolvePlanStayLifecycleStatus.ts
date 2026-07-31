@@ -43,7 +43,7 @@ export function resolvePlanStayLifecycleStatus(input: {
   const checkOutDay = stayRecordCheckOutDate(stay);
   if (!(checkInDay <= today && today < checkOutDay)) return null;
 
-  const admitted = Boolean(stay.passport_checked_at || stay.desk_checked_in_at);
+  const admitted = Boolean(stay.desk_checked_in_at);
   const lastNight = addStayCalendarDays(checkOutDay, -1);
   const isCheckInDay = today === checkInDay;
   const isLastNight = today === lastNight;

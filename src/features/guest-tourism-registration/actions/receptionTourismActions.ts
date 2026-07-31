@@ -27,9 +27,15 @@ import {
   updateTourismGuestPassportPath,
   type TourismReceptionDocumentKind,
 } from '@/entities/guest-tourism-registration/server';
-import { getGuestReservationForDesk, setPassportCheckedAt } from '@/entities/guest-stay/server';
+import { isBedReadyForGuestVisibility } from '@/entities/guest-stay';
+import {
+  completeDeskCheckIn,
+  getGuestReservationForDesk,
+  setPassportCheckedAt,
+} from '@/entities/guest-stay/server';
 import type { GuestStayRecord } from '@/entities/guest-stay/server';
 import { getGuestById, resolveGuestIdForBooking, updateGuestIdentity } from '@/entities/guest/server';
+import { listHousekeepingBedStatuses } from '@/entities/housekeeping/server';
 import {
   findReceptionUserById,
   receptionStaffCanSkipTourismGate,
@@ -250,15 +256,60 @@ export type SetPassportCheckedActionResult =
   | { ok: true; stay: GuestStayRecord }
   | {
       ok: false;
-      error:
-        | 'unauthorized'
-        | 'forbidden'
-        | 'not_found'
-        | 'db_unavailable'
-        | 'tourism_incomplete'
-        | 'missing_documents'
-        | 'unknown';
+      error: 'unauthorized' | 'not_found' | 'db_unavailable' | 'unknown';
     };
+
+export async function setPassportCheckedAction(input: {
+  tenantSlug: string;
+  stayId: string;
+  checked: boolean;
+}): Promise<SetPassportCheckedActionResult> {
+  try {
+    await assertReceptionAuthenticated(input.tenantSlug);
+  } catch {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  try {
+    const result = await setPassportCheckedAt({
+      tenantSlug: input.tenantSlug,
+      stayId: input.stayId,
+      checked: input.checked,
+    });
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        error:
+          result.error === 'tenant_not_found' || result.error === 'not_found'
+            ? 'not_found'
+            : result.error === 'db_unavailable'
+              ? 'db_unavailable'
+              : 'unknown',
+      };
+    }
+
+    revalidatePath('/');
+    return { ok: true, stay: result.stay };
+  } catch (error) {
+    console.error('setPassportCheckedAction:', error);
+    return { ok: false, error: 'unknown' };
+  }
+}
+
+/** @deprecated Tourism gate helpers kept for check-in path in receptionActions. */
+export async function assertTourismReadyForCheckIn(
+  tenantSlug: string,
+  stayId: string
+): Promise<'ok' | 'tourism_incomplete' | 'missing_documents' | 'feature_off'> {
+  return assertTourismReadyForAccessGrant(tenantSlug, stayId);
+}
+
+export async function assertCanBypassTourismCheckInGate(
+  tenantSlug: string
+): Promise<'ok' | 'unauthorized' | 'forbidden'> {
+  return assertCanBypassTourismAccessGate(tenantSlug);
+}
 
 async function assertTourismReadyForAccessGrant(
   tenantSlug: string,
@@ -307,58 +358,6 @@ async function assertCanBypassTourismAccessGate(
   return 'ok';
 }
 
-export async function setPassportCheckedAction(input: {
-  tenantSlug: string;
-  stayId: string;
-  checked: boolean;
-  keyIssued?: boolean;
-  /** Override desk path — skips tourism/photo gate when granting access. */
-  bypassAccessGate?: boolean;
-}): Promise<SetPassportCheckedActionResult> {
-  try {
-    await assertReceptionAuthenticated(input.tenantSlug);
-  } catch {
-    return { ok: false, error: 'unauthorized' };
-  }
-
-  try {
-    if (input.checked && input.bypassAccessGate) {
-      const bypass = await assertCanBypassTourismAccessGate(input.tenantSlug);
-      if (bypass !== 'ok') {
-        return { ok: false, error: bypass };
-      }
-    } else if (input.checked) {
-      const gate = await assertTourismReadyForAccessGrant(input.tenantSlug, input.stayId);
-      if (gate === 'tourism_incomplete' || gate === 'missing_documents') {
-        return { ok: false, error: gate };
-      }
-    }
-
-    const result = await setPassportCheckedAt({
-      tenantSlug: input.tenantSlug,
-      stayId: input.stayId,
-      checked: input.checked,
-      keyIssued: input.keyIssued,
-    });
-
-    if (!result.ok) {
-      return {
-        ok: false,
-        error:
-          result.error === 'tenant_not_found' || result.error === 'not_found'
-            ? 'not_found'
-            : result.error,
-      };
-    }
-
-    revalidatePath('/');
-    return { ok: true, stay: result.stay };
-  } catch (error) {
-    console.error('setPassportCheckedAction:', error);
-    return { ok: false, error: 'unknown' };
-  }
-}
-
 export type CheckInPartyActionResult =
   | { ok: true; checkedCount: number; skippedCount: number }
   | {
@@ -370,12 +369,13 @@ export type CheckInPartyActionResult =
         | 'db_unavailable'
         | 'tourism_incomplete'
         | 'missing_documents'
+        | 'bed_not_ready'
         | 'unknown';
       blockedStayId?: string;
     };
 
 /**
- * Grant access (passport checked) for every stay in the party that is not yet admitted.
+ * Desk check-in for every stay in the party that is not yet admitted.
  * Already-admitted members are skipped. Tourism gate applies per pending member unless bypassed.
  */
 export async function checkInPartyAction(input: {
@@ -396,7 +396,7 @@ export async function checkInPartyAction(input: {
 
   try {
     if (input.bypassAccessGate) {
-      const bypass = await assertCanBypassTourismAccessGate(input.tenantSlug);
+      const bypass = await assertCanBypassTourismCheckInGate(input.tenantSlug);
       if (bypass !== 'ok') {
         return { ok: false, error: bypass };
       }
@@ -408,7 +408,7 @@ export async function checkInPartyAction(input: {
       if (!stay) {
         return { ok: false, error: 'not_found', blockedStayId: stayId };
       }
-      if (stay.passport_checked_at || stay.desk_checked_in_at) {
+      if (stay.desk_checked_in_at) {
         continue;
       }
       pendingIds.push(stayId);
@@ -416,19 +416,33 @@ export async function checkInPartyAction(input: {
 
     if (!input.bypassAccessGate) {
       for (const stayId of pendingIds) {
-        const gate = await assertTourismReadyForAccessGrant(input.tenantSlug, stayId);
+        const gate = await assertTourismReadyForCheckIn(input.tenantSlug, stayId);
         if (gate === 'tourism_incomplete' || gate === 'missing_documents') {
           return { ok: false, error: gate, blockedStayId: stayId };
         }
       }
     }
 
+    const tenant = await getTenantRecord(input.tenantSlug);
+    if (!tenant) {
+      return { ok: false, error: 'not_found' };
+    }
+    const bedStatuses = await listHousekeepingBedStatuses(tenant.id);
+    const bedStatusById = new Map(bedStatuses.map((row) => [row.bed_id, row.status]));
+
     let checkedCount = 0;
     for (const stayId of pendingIds) {
-      const result = await setPassportCheckedAt({
+      const stay = await getGuestReservationForDesk(input.tenantSlug, stayId);
+      if (!stay) {
+        return { ok: false, error: 'not_found', blockedStayId: stayId };
+      }
+      if (!isBedReadyForGuestVisibility(bedStatusById.get(stay.bed_id))) {
+        return { ok: false, error: 'bed_not_ready', blockedStayId: stayId };
+      }
+
+      const result = await completeDeskCheckIn({
         tenantSlug: input.tenantSlug,
         stayId,
-        checked: true,
       });
       if (!result.ok) {
         return {

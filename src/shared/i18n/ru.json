@@ -2135,6 +2135,7 @@
       "receptionQrBack": "Назад",
       "showRoomMapLink": "Карта комнаты и маршрут",
       "bedLockedUntilCheckIn": "Кровать и маршрут откроются с {time} в день заселения.",
+      "bedLockedUntilReady": "Кровать ещё готовят. Она появится здесь, когда housekeeping отметит её как ready.",
       "bedLockedUntilRegistration": "Завершите регистрацию, чтобы увидеть назначение кровати.",
       "tourismSummaryHeading": "Tourist registration",
       "tourismStatusNotStarted": "Not started",
