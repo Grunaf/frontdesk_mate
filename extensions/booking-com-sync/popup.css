@@ -1,0 +1,107 @@
+:root {
+  color-scheme: light;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+body {
+  width: 300px;
+  margin: 0;
+  padding: 12px;
+  background: #f7f7f5;
+  color: #1c1c1a;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.status {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.status-ok {
+  background: #d8f5d0;
+  color: #146c2e;
+}
+
+.status-error {
+  background: #fde2e1;
+  color: #b42318;
+}
+
+.status-idle {
+  background: #ebebea;
+  color: #5f5e5a;
+}
+
+.meta {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #5f5e5a;
+}
+
+.error {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #b42318;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #5f5e5a;
+}
+
+.field input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d6d6d3;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: #fff;
+}
+
+.actions {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #1c1c1a;
+  color: #fff;
+}
+
+button.secondary {
+  background: #fff;
+  color: #1c1c1a;
+  border: 1px solid #d6d6d3;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

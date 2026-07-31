@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Frontdesk Mate — Booking.com Sync",
+  "version": "0.1.0",
+  "description": "Sync Booking.com Extranet reservations into Frontdesk Mate reception inbox.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://admin.booking.com/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Booking.com Sync"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://admin.booking.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://admin.booking.com/*"],
+      "js": ["page-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}

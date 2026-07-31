@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Booking.com Sync</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Booking sync</h1>
+      <p id="status" class="status status-idle">Idle</p>
+    </header>
+
+    <p id="last-sync" class="meta">No sync yet</p>
+    <p id="error" class="error" hidden></p>
+
+    <label class="field">
+      <span>Webhook URL</span>
+      <input id="webhook-url" type="url" autocomplete="off" />
+    </label>
+    <label class="field">
+      <span>Sync secret</span>
+      <input id="sync-secret" type="password" autocomplete="off" />
+    </label>
+    <label class="field">
+      <span>Open reception URL</span>
+      <input id="saas-url" type="url" autocomplete="off" />
+    </label>
+
+    <div class="actions">
+      <button id="save" type="button">Save</button>
+      <button id="sync-page" type="button">Sync current page</button>
+      <button id="open-saas" type="button" class="secondary">Open reception</button>
+    </div>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

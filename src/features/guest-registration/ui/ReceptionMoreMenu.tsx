@@ -7,6 +7,7 @@ const MORE_LABELS: Record<MoreMenuTab, string> = {
   schedule: 'My schedule',
   issues: 'Issues',
   transfers: 'Transfers',
+  'booking-inbox': 'Booking.com',
   archive: 'Archive',
   cleaning: 'Cleaning',
 };
@@ -15,6 +16,7 @@ interface ReceptionMoreMenuProps {
   items: readonly MoreMenuTab[];
   openIssuesCount: number;
   openTransfersCount: number;
+  openBookingInboxCount: number;
   onSelect: (tab: MoreMenuTab) => void;
 }
 
@@ -22,6 +24,7 @@ export function ReceptionMoreMenu({
   items,
   openIssuesCount,
   openTransfersCount,
+  openBookingInboxCount,
   onSelect,
 }: ReceptionMoreMenuProps) {
   if (items.length === 0) {
@@ -32,12 +35,20 @@ export function ReceptionMoreMenu({
     <div className="space-y-3">
       <div>
         <h2 className="text-sm font-semibold text-foreground">More</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">Schedule, issues, transfers, and utilities.</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Schedule, issues, Booking.com inbox, and utilities.
+        </p>
       </div>
       <ul className="divide-y divide-border/80 overflow-hidden rounded-lg border bg-card">
         {items.map((item) => {
           const count =
-            item === 'issues' ? openIssuesCount : item === 'transfers' ? openTransfersCount : 0;
+            item === 'issues'
+              ? openIssuesCount
+              : item === 'transfers'
+                ? openTransfersCount
+                : item === 'booking-inbox'
+                  ? openBookingInboxCount
+                  : 0;
           return (
             <li key={item}>
               <button

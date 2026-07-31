@@ -17,6 +17,10 @@ vi.mock('@/entities/housekeeping/server', () => ({
   hasHousekeepingBedRolloverRun: vi.fn(),
 }));
 
+vi.mock('@/entities/booking-com-external-booking/server', () => ({
+  listBookingComExternalBookings: vi.fn(),
+}));
+
 vi.mock('@/entities/tenant/server', () => ({
   getTenantRecord: vi.fn(),
 }));
@@ -25,6 +29,7 @@ vi.mock('@/features/guest-registration/lib/resolveReceptionStaffContext', () => 
   resolveReceptionStaffContext: vi.fn(),
 }));
 
+import { listBookingComExternalBookings } from '@/entities/booking-com-external-booking/server';
 import { listGuestHubTransfers } from '@/entities/guest-hub-transfer/server';
 import { listGuestIssues } from '@/entities/guest-issue/server';
 import { listActiveGuestStays, listPlanGuestReservations } from '@/entities/guest-stay/server';
@@ -48,6 +53,7 @@ describe('buildReceptionOperationalContext', () => {
     vi.mocked(listGuestIssues).mockResolvedValue([]);
     vi.mocked(listGuestHubTransfers).mockResolvedValue([]);
     vi.mocked(hasHousekeepingBedRolloverRun).mockResolvedValue(false);
+    vi.mocked(listBookingComExternalBookings).mockResolvedValue([]);
     vi.mocked(resolveReceptionStaffContext).mockResolvedValue({
       ok: true,
       ctx: {
@@ -80,6 +86,7 @@ describe('buildReceptionOperationalContext', () => {
       startTimeLabel: '08:00',
       targetOperationalDate: '2026-07-09',
     });
+    expect(context.openBookingInbox).toEqual([]);
     expect(hasHousekeepingBedRolloverRun).toHaveBeenCalledWith('tenant-1', '2026-07-09');
   });
 
@@ -99,6 +106,7 @@ describe('buildReceptionOperationalContext', () => {
     expect(listPlanGuestReservations).toHaveBeenCalledWith('kotor-demo', 'en');
     expect(listGuestIssues).toHaveBeenCalledWith('kotor-demo', 'open');
     expect(listGuestHubTransfers).toHaveBeenCalledWith('kotor-demo', 'open');
+    expect(listBookingComExternalBookings).toHaveBeenCalledWith('kotor-demo', 'open');
     expect(getTenantRecord).toHaveBeenCalledWith('kotor-demo');
   });
 

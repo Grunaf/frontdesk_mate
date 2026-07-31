@@ -24,6 +24,7 @@ describe('receptionDeskAccess', () => {
       'cash',
       'issues',
       'transfers',
+      'booking-inbox',
       'archive',
       'schedule',
     ]);
@@ -44,6 +45,7 @@ describe('receptionDeskAccess', () => {
       'cash',
       'issues',
       'transfers',
+      'booking-inbox',
       'archive',
       'cleaning',
       'schedule',
@@ -64,12 +66,14 @@ describe('receptionDeskAccess', () => {
       'schedule',
       'issues',
       'transfers',
+      'booking-inbox',
       'archive',
     ]);
     expect(resolveMoreMenuTabs(['desk.check_in', 'desk.cleaning'])).toEqual([
       'schedule',
       'issues',
       'transfers',
+      'booking-inbox',
       'archive',
       'cleaning',
     ]);
@@ -89,10 +93,10 @@ describe('receptionDeskAccess', () => {
   });
 
   it('scopes More badge to visible More tabs only', () => {
-    expect(resolveMoreBadgeCount(['desk.check_in'], 2, 1)).toBe(3);
-    expect(resolveMoreBadgeCount(['desk.check_in', 'desk.cleaning'], 2, 1)).toBe(3);
+    expect(resolveMoreBadgeCount(['desk.check_in'], 2, 1, 4)).toBe(7);
+    expect(resolveMoreBadgeCount(['desk.check_in', 'desk.cleaning'], 2, 1, 4)).toBe(7);
     // Cleaning-only: Issues/Transfers not in More (promoted schedule) → no badge.
-    expect(resolveMoreBadgeCount(['desk.cleaning'], 5, 3)).toBe(0);
+    expect(resolveMoreBadgeCount(['desk.cleaning'], 5, 3, 2)).toBe(0);
   });
 
   it('maps desk tabs to primary nav and bookings context visibility', () => {

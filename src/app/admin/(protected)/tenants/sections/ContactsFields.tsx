@@ -157,7 +157,7 @@ function ReceptionDeskModule({
           />
         </>
       ) : null}
-      <ReceptionBookingPlatformsFields settings={settings} />
+      <ReceptionBookingPlatformsFields settings={settings} surface={surface} />
     </div>
   );
 }

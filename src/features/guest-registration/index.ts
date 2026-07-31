@@ -29,5 +29,11 @@ export {
   listGuestHubTransfersAction,
   resolveGuestHubTransferAction,
 } from './actions/guestHubTransferActions';
+export {
+  countOpenBookingComExternalBookingsAction,
+  dismissBookingComExternalBookingAction,
+  listBookingComExternalBookingsAction,
+  markBookingComExternalBookingIssuedAction,
+} from './actions/bookingComExternalBookingActions';
 export { MagicLinkCard } from './ui/MagicLinkCard';
 export { ReceptionCheckInPanel } from './ui/ReceptionCheckInPanel';
