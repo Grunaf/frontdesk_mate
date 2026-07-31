@@ -7,6 +7,7 @@ export {
   archiveGuestReservationAction,
   cancelGuestReservationAction,
   checkoutGuestReservationAction,
+  checkoutPartyReservationsAction,
   trashGuestReservationAction,
   restoreGuestReservationAction,
   listArchivedGuestReservationsAction,

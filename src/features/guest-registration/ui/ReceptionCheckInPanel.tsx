@@ -62,6 +62,7 @@ import {
   createGuestStayPartyAction,
   cancelGuestReservationAction,
   checkoutGuestReservationAction,
+  checkoutPartyReservationsAction,
   reissueGuestStayAction,
   updateGuestReservationAction,
   saveHostelworldBookingPrefixAction,
@@ -350,6 +351,9 @@ export function ReceptionCheckInPanel({
     stayId: string;
     intent: 'cancel' | 'checkout';
   } | null>(null);
+  const [pendingPartyCheckoutStayIds, setPendingPartyCheckoutStayIds] = useState<string[] | null>(
+    null
+  );
   const [pendingReissueAccessStay, setPendingReissueAccessStay] =
     useState<GuestStayRecordWithLink | null>(null);
   const [editDraft, setEditDraft] = useState<EditReservationDraft | null>(null);
@@ -1798,6 +1802,57 @@ export function ReceptionCheckInPanel({
     });
   };
 
+  const handleCheckoutParty = (stayIds: string[]) => {
+    setRevokeError(null);
+    const operationalDate = hubSnapshot.operational.operationalDate;
+    const ids = [...new Set(stayIds.map((id) => id.trim()).filter(Boolean))];
+    if (ids.length === 0) {
+      setPendingPartyCheckoutStayIds(null);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await checkoutPartyReservationsAction({
+        tenantSlug,
+        stayIds: ids,
+        operationalDate,
+      });
+
+      const checkedOut = result.checkedOutStayIds;
+      if (checkedOut.length > 0) {
+        await refresh();
+        setStayPins((current) => {
+          const next = { ...current };
+          for (const stayId of checkedOut) {
+            delete next[stayId];
+          }
+          return next;
+        });
+        if (editDraft?.stayId && checkedOut.includes(editDraft.stayId)) {
+          clearEditDraft();
+        }
+      }
+
+      setPendingPartyCheckoutStayIds(null);
+
+      if (!result.ok) {
+        setRevokeError(
+          result.error === 'unauthorized'
+            ? 'Sign in again at reception desk.'
+            : result.error === 'forbidden'
+              ? 'You do not have permission to check out guests.'
+              : 'Could not check out all guests.'
+        );
+        if (checkedOut.length === 0) {
+          await refresh();
+        }
+        return;
+      }
+
+      closeStayDetail();
+    });
+  };
+
   const openStayDetailFromRefSearch = (stayId: string) => {
     setIssuedAccessFilter('all');
     openStayFromChildSurface(stayId);
@@ -1947,11 +2002,23 @@ export function ReceptionCheckInPanel({
       ) : null}
 
       <CancelBookingDialog
-        open={pendingArchiveStay !== null}
-        intent={pendingArchiveStay?.intent ?? 'cancel'}
+        open={pendingArchiveStay !== null || pendingPartyCheckoutStayIds !== null}
+        intent={
+          pendingPartyCheckoutStayIds !== null
+            ? 'checkout'
+            : (pendingArchiveStay?.intent ?? 'cancel')
+        }
+        guestCount={pendingPartyCheckoutStayIds?.length ?? 1}
         isPending={isPending}
-        onKeep={() => setPendingArchiveStay(null)}
+        onKeep={() => {
+          setPendingArchiveStay(null);
+          setPendingPartyCheckoutStayIds(null);
+        }}
         onConfirm={() => {
+          if (pendingPartyCheckoutStayIds) {
+            handleCheckoutParty(pendingPartyCheckoutStayIds);
+            return;
+          }
           if (pendingArchiveStay) {
             handleCancelOrCheckout(pendingArchiveStay.stayId, pendingArchiveStay.intent);
           }
@@ -2017,6 +2084,9 @@ export function ReceptionCheckInPanel({
           }}
           onCancelOrCheckout={(stayId, intent) => {
             setPendingArchiveStay({ stayId, intent });
+          }}
+          onCheckoutParty={(stayIds) => {
+            setPendingPartyCheckoutStayIds(stayIds);
           }}
           onEditStay={(stay, options) => {
             beginEditDraft(stay, options?.intent ?? 'changeDates', options?.partyStays);

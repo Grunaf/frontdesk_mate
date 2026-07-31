@@ -9,7 +9,6 @@ import {
   BottomSheetClose,
   BottomSheetContent,
   BottomSheetFooter,
-  BottomSheetHeader,
   BottomSheetTitle,
   Button,
 } from '@/shared/ui';
@@ -19,6 +18,12 @@ export const RECEPTION_STAY_DETAIL_TITLE_ID = 'reception-stay-detail-title';
 export const RECEPTION_ISSUE_ACCESS_TITLE_ID = 'reception-issue-access-title';
 
 const RECEPTION_SHELL_TITLE_CLASS = 'text-base font-semibold leading-tight';
+/** Party root booking title — one step above default shell title. */
+export const RECEPTION_SHELL_PARTY_TITLE_CLASS = 'text-lg font-semibold leading-tight';
+
+function shellTitleClass(titleSize: 'default' | 'party' = 'default'): string {
+  return titleSize === 'party' ? RECEPTION_SHELL_PARTY_TITLE_CLASS : RECEPTION_SHELL_TITLE_CLASS;
+}
 
 /** Matches desktop stay dialog breakpoint (`lg` = 1024px). */
 export function useIsReceptionStayDetailBelowLg(): boolean {
@@ -50,6 +55,8 @@ export interface ReceptionStayDetailShellProps {
   titlePrefix?: ReactNode;
   /** Optional trailing control beside the title (e.g. status badge). */
   titleTrailing?: ReactNode;
+  /** Party root uses a larger title scale. */
+  titleSize?: 'default' | 'party';
   header: ReactNode;
   body: ReactNode;
   footer: ReactNode;
@@ -74,7 +81,9 @@ export interface ReceptionStayDetailShellProps {
   titleId?: string;
   /**
    * When set, stay-detail chrome shows Edit (pencil).
-   * Mobile: in-flow toolbar — close left, pencil (+ optional overflow) right.
+   * Mobile: right chrome actions; Close may sit left when Edit chrome is present
+   * (title then stacks below). Without a left control, title shares the chrome
+   * row with right actions (top-aligned).
    * Desktop: pencil left of overflow/close (close stays top-right).
    */
   onEdit?: () => void;
@@ -115,6 +124,12 @@ function desktopHeaderActionsPaddingClass(leadingCount: number): string {
 /** Shared horizontal inset for mobile stay sheet chrome + tabs + body + footer. */
 const MOBILE_STAY_SHEET_INSET_X = 'px-4';
 
+/**
+ * Actions share the chrome band top edge with title when title is beside them.
+ * When a left control exists, title stacks below — actions still use this top.
+ */
+const SHELL_CHROME_ACTIONS_TOP = 'top-3';
+
 function countLeadingHeaderActions(input: {
   onEdit?: () => void;
   headerExtra?: ReactNode;
@@ -135,6 +150,7 @@ function DesktopStayDetailDialog({
   titleLeading,
   titlePrefix,
   titleTrailing,
+  titleSize = 'default',
   header,
   body,
   bodyTop,
@@ -151,6 +167,7 @@ function DesktopStayDetailDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const labelledBy = titleId;
   const leadingCount = countLeadingHeaderActions({ onEdit, headerExtra, headerOverflow });
+  const titleClass = shellTitleClass(titleSize);
 
   useCloseOnEscape(open && !dismissBlocked, onClose);
 
@@ -201,9 +218,17 @@ function DesktopStayDetailDialog({
         onClick={(event) => event.stopPropagation()}
       >
         <div
-          className={`relative shrink-0 border-b border-border/60 px-6 py-4 ${desktopHeaderActionsPaddingClass(leadingCount)}`}
+          className={cn(
+            'relative shrink-0 border-b border-border/60 px-6 py-3',
+            desktopHeaderActionsPaddingClass(leadingCount)
+          )}
         >
-          <div className="absolute top-3 right-3 flex items-center gap-1">
+          <div
+            className={cn(
+              'absolute right-3 flex items-center gap-1',
+              SHELL_CHROME_ACTIONS_TOP
+            )}
+          >
             {onEdit ? (
               <Button
                 type="button"
@@ -223,13 +248,14 @@ function DesktopStayDetailDialog({
               <span className="sr-only">Close</span>
             </Button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-0.5">
             {titleLeading ? <div className="pr-10">{titleLeading}</div> : null}
-            <div className="space-y-1">
+            {/* No left chrome: nudge title to optically match icon-button glyph. */}
+            <div className={cn(!titleLeading && 'pt-1.5')}>
               <h2
                 id={labelledBy}
                 className={cn(
-                  RECEPTION_SHELL_TITLE_CLASS,
+                  titleClass,
                   (titlePrefix || titleTrailing) && 'flex min-w-0 items-center gap-1.5'
                 )}
                 title={accessibleTitleTooltip}
@@ -261,6 +287,7 @@ function MobileStayDetailSheet({
   titleLeading,
   titlePrefix,
   titleTrailing,
+  titleSize = 'default',
   header,
   body,
   bodyTop,
@@ -279,6 +306,9 @@ function MobileStayDetailSheet({
   const hasTitleLeading = Boolean(titleLeading);
   /** Back to group replaces Close on child level — never show both. */
   const showClose = !hasTitleLeading;
+  /** Left chrome slot occupied → title stacks below; empty → title beside right actions. */
+  const hasLeftChrome = hasTitleLeading || (showClose && hasEditChrome);
+  const titleClass = shellTitleClass(titleSize);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -295,6 +325,27 @@ function MobileStayDetailSheet({
         <span className="sr-only">Close</span>
       </Button>
     </BottomSheetClose>
+  );
+
+  const titleNode = (
+    <BottomSheetTitle
+      className={cn(
+        titleClass,
+        (titlePrefix || titleTrailing) && 'flex min-w-0 items-center gap-1.5'
+      )}
+      title={accessibleTitleTooltip}
+    >
+      {titlePrefix}
+      <span className="min-w-0 truncate">{accessibleTitle}</span>
+      {titleTrailing}
+    </BottomSheetTitle>
+  );
+
+  const titleAndMeta = (
+    <div className="min-w-0 space-y-0.5">
+      {titleNode}
+      {header}
+    </div>
   );
 
   const bodyRegion = (
@@ -315,6 +366,37 @@ function MobileStayDetailSheet({
     </>
   );
 
+  const rightChromeActions = (
+    <div className="flex shrink-0 items-center gap-1">
+      {hasEditChrome ? (
+        <>
+          {onEdit ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={editDisabled}
+              onClick={onEdit}
+            >
+              <Pencil />
+              <span className="sr-only">Edit</span>
+            </Button>
+          ) : null}
+          {headerExtra}
+          {headerOverflow}
+        </>
+      ) : showClose ? (
+        closeButton
+      ) : null}
+    </div>
+  );
+
+  const leftChromeControl = hasTitleLeading
+    ? titleLeading
+    : showClose && hasEditChrome
+      ? closeButton
+      : null;
+
   return (
     <BottomSheet open={open} onOpenChange={handleOpenChange}>
       <BottomSheetContent
@@ -329,53 +411,31 @@ function MobileStayDetailSheet({
           if (dismissBlocked) event.preventDefault();
         }}
       >
-        {/* In-flow chrome row: same inset as title / tabs / body (no absolute close). */}
-        <div
-          className={cn(
-            'flex shrink-0 items-center justify-between gap-2 pb-0.5',
-            MOBILE_STAY_SHEET_INSET_X
-          )}
-        >
-          <div className="flex min-w-0 items-center">
-            {hasTitleLeading ? titleLeading : showClose && hasEditChrome ? closeButton : null}
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {hasEditChrome ? (
-              <>
-                {onEdit ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={editDisabled}
-                    onClick={onEdit}
-                  >
-                    <Pencil />
-                    <span className="sr-only">Edit</span>
-                  </Button>
-                ) : null}
-                {headerExtra}
-                {headerOverflow}
-              </>
-            ) : showClose ? (
-              closeButton
-            ) : null}
-          </div>
-        </div>
-        <BottomSheetHeader className={cn('space-y-1 pb-3 pt-1', MOBILE_STAY_SHEET_INSET_X)}>
-          <BottomSheetTitle
+        {hasLeftChrome ? (
+          <>
+            <div
+              className={cn(
+                'flex shrink-0 items-center justify-between gap-2 pb-0.5',
+                MOBILE_STAY_SHEET_INSET_X
+              )}
+            >
+              <div className="flex min-w-0 items-center">{leftChromeControl}</div>
+              {rightChromeActions}
+            </div>
+            <div className={cn('pb-2 pt-1', MOBILE_STAY_SHEET_INSET_X)}>{titleAndMeta}</div>
+          </>
+        ) : (
+          <div
             className={cn(
-              RECEPTION_SHELL_TITLE_CLASS,
-              (titlePrefix || titleTrailing) && 'flex min-w-0 items-center gap-1.5'
+              'flex shrink-0 items-start justify-between gap-2 pb-2',
+              MOBILE_STAY_SHEET_INSET_X
             )}
-            title={accessibleTitleTooltip}
           >
-            {titlePrefix}
-            <span className="min-w-0 truncate">{accessibleTitle}</span>
-            {titleTrailing}
-          </BottomSheetTitle>
-          {header}
-        </BottomSheetHeader>
+            {/* pt offsets title vs icon-button hit padding (glyph sits lower than box top). */}
+            <div className="min-w-0 flex-1 pt-1.5">{titleAndMeta}</div>
+            {rightChromeActions}
+          </div>
+        )}
         {wrapBodyRegion ? wrapBodyRegion(bodyRegion) : bodyRegion}
         {footer ? (
           <BottomSheetFooter
@@ -400,6 +460,7 @@ export function ReceptionStayDetailShell({
   titleLeading,
   titlePrefix,
   titleTrailing,
+  titleSize,
   header,
   body,
   bodyTop,
@@ -429,6 +490,7 @@ export function ReceptionStayDetailShell({
         titleLeading={titleLeading}
         titlePrefix={titlePrefix}
         titleTrailing={titleTrailing}
+        titleSize={titleSize}
         header={header}
         body={body}
         bodyTop={bodyTop}
@@ -453,6 +515,7 @@ export function ReceptionStayDetailShell({
       titleLeading={titleLeading}
       titlePrefix={titlePrefix}
       titleTrailing={titleTrailing}
+      titleSize={titleSize}
       header={header}
       body={body}
       bodyTop={bodyTop}

@@ -11,6 +11,8 @@ interface CancelBookingDialogProps {
   onKeep: () => void;
   onConfirm: () => void;
   isPending?: boolean;
+  /** Party checkout: plural copy when > 1. */
+  guestCount?: number;
 }
 
 /** Confirm cancel (pre-admit) or check out (post-admit) → Archive. */
@@ -20,6 +22,7 @@ export function CancelBookingDialog({
   onKeep,
   onConfirm,
   isPending = false,
+  guestCount = 1,
 }: CancelBookingDialogProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -44,6 +47,7 @@ export function CancelBookingDialog({
   }
 
   const isCheckout = intent === 'checkout';
+  const isPartyCheckout = isCheckout && guestCount > 1;
 
   return createPortal(
     <div
@@ -60,26 +64,34 @@ export function CancelBookingDialog({
       >
         <div className="space-y-2">
           <h2 id="cancel-booking-title" className="text-sm font-semibold">
-            {isCheckout ? 'Check out this guest?' : 'Cancel this booking?'}
+            {isPartyCheckout
+              ? `Check out ${guestCount} guests?`
+              : isCheckout
+                ? 'Check out this guest?'
+                : 'Cancel this booking?'}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {isCheckout
-              ? 'Guest app access will be revoked. Today\'s night and any remaining nights leave inventory and go to Archive. Lived nights stay on the original booking.'
-              : 'Guest app access will be revoked. The booking moves to Archive and the bed is freed for all nights.'}
+            {isPartyCheckout
+              ? 'Guest app access will be revoked for each checked-in guest. Today\'s night and any remaining nights leave inventory and go to Archive. Lived nights stay on the original bookings. Guests not yet checked in are left unchanged.'
+              : isCheckout
+                ? 'Guest app access will be revoked. Today\'s night and any remaining nights leave inventory and go to Archive. Lived nights stay on the original booking.'
+                : 'Guest app access will be revoked. The booking moves to Archive and the bed is freed for all nights.'}
           </p>
         </div>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={onKeep} disabled={isPending}>
-            Keep booking
+            {isPartyCheckout ? 'Keep bookings' : 'Keep booking'}
           </Button>
           <Button type="button" variant="destructive" onClick={onConfirm} disabled={isPending}>
             {isPending
               ? isCheckout
                 ? 'Checking out…'
                 : 'Cancelling…'
-              : isCheckout
-                ? 'Check out'
-                : 'Cancel booking'}
+              : isPartyCheckout
+                ? 'Check out all'
+                : isCheckout
+                  ? 'Check out'
+                  : 'Cancel booking'}
           </Button>
         </div>
       </div>

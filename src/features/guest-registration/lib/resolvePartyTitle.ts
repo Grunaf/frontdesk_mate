@@ -21,3 +21,31 @@ export function resolvePartyLeadName(
   const withBalance = sorted.find((s) => s.booking_amount_due_minor != null);
   return (withBalance ?? sorted[0])?.guest_name?.trim() || '';
 }
+
+/**
+ * Party child bed title:
+ * - own guest_name when set
+ * - else `{lead} · {1-based ordinal}` (creation order in the party)
+ */
+export function resolvePartyMemberTitle(input: {
+  guestName?: string | null;
+  leadName: string;
+  /** 1-based index in party order (created_at ascending). */
+  ordinal: number;
+}): string {
+  const own = input.guestName?.trim();
+  if (own) return own;
+  const lead = input.leadName.trim() || 'Guest';
+  const ordinal = Math.max(1, Math.floor(input.ordinal));
+  return `${lead} · ${ordinal}`;
+}
+
+/** 1-based ordinal by created_at; unknown id → 1. */
+export function resolvePartyMemberOrdinal(
+  partyStays: Array<{ id: string; created_at: string }>,
+  stayId: string
+): number {
+  const sorted = [...partyStays].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const index = sorted.findIndex((member) => member.id === stayId);
+  return index >= 0 ? index + 1 : 1;
+}

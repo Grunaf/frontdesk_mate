@@ -12,8 +12,14 @@ import {
   resolveTourismTabBadge,
   type TourismStatusBadge,
 } from '../lib/resolveStayDetailTabBadge';
-import { resolvePartyLeadName, resolvePartyTitle } from '../lib/resolvePartyTitle';
+import {
+  resolvePartyLeadName,
+  resolvePartyMemberOrdinal,
+  resolvePartyMemberTitle,
+  resolvePartyTitle,
+} from '../lib/resolvePartyTitle';
 import { BookingGroupIcon } from './BookingGroupIcon';
+import { RECEPTION_SHELL_PARTY_TITLE_CLASS } from './ReceptionStayDetailShell';
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 
@@ -205,14 +211,20 @@ export function StayPartyBedsTab({
 }: StayPartyBedsTabProps) {
   if (partyStays.length <= 1) return null;
 
+  const leadName = resolvePartyLeadName(partyStays);
+
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
         Open a bed for tourism, access, or room key
       </p>
       <ul className="space-y-1.5">
-        {partyStays.map((member, index) => {
-          const guestLabel = member.guest_name?.trim() || `Guest ${index + 1}`;
+        {partyStays.map((member) => {
+          const guestLabel = resolvePartyMemberTitle({
+            guestName: member.guest_name,
+            leadName,
+            ordinal: resolvePartyMemberOrdinal(partyStays, member.id),
+          });
           const bedLabel = resolveBedLabel(member.bed_id);
           const ref = formatStayReference(member.id);
           const isActive = member.id === activeStayId;
@@ -329,6 +341,10 @@ export type StayPartyPeekProps = {
   checkInPartyHint?: string | null;
   checkInPartyError?: string | null;
   onCheckInParty: () => void;
+  showCheckoutParty?: boolean;
+  checkoutPartyDisabled?: boolean;
+  checkoutPartyOverdue?: boolean;
+  onCheckoutParty?: () => void;
 };
 
 export function StayPartyPeek({
@@ -353,6 +369,10 @@ export function StayPartyPeek({
   checkInPartyHint = null,
   checkInPartyError = null,
   onCheckInParty,
+  showCheckoutParty = false,
+  checkoutPartyDisabled = false,
+  checkoutPartyOverdue = false,
+  onCheckoutParty,
 }: StayPartyPeekProps) {
   const [tab, setTab] = useState<PartySheetTabId>('booking');
 
@@ -361,7 +381,8 @@ export function StayPartyPeek({
   const leadName = resolvePartyLeadName(partyStays) || 'Guest';
   const partyTitle = resolvePartyTitle(leadName, partyStays.length);
   const partyMeta = formatPartySheetMeta(checkInDate, checkOutDate, bookingSourceLine);
-  const showFooter = showCheckInParty && tab === 'booking';
+  const showFooter =
+    tab === 'booking' && (showCheckInParty || (showCheckoutParty && Boolean(onCheckoutParty)));
 
   return (
     <aside
@@ -369,7 +390,12 @@ export function StayPartyPeek({
       className="flex h-full w-80 flex-col overflow-hidden rounded-xl border bg-background shadow-lg"
     >
       <div className="shrink-0 space-y-1 border-b border-border/60 px-4 py-3">
-        <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-foreground">
+        <p
+          className={cn(
+            'flex min-w-0 items-center gap-1.5 text-foreground',
+            RECEPTION_SHELL_PARTY_TITLE_CLASS
+          )}
+        >
           <BookingGroupIcon className="text-foreground/70" />
           <span className="truncate">{partyTitle}</span>
         </p>
@@ -414,20 +440,35 @@ export function StayPartyPeek({
 
       {showFooter ? (
         <div className="shrink-0 space-y-2 border-t border-border/60 px-3 py-3">
-          {checkInPartyHint ? (
-            <p className="text-xs text-muted-foreground">{checkInPartyHint}</p>
+          {showCheckInParty ? (
+            <>
+              {checkInPartyHint ? (
+                <p className="text-xs text-muted-foreground">{checkInPartyHint}</p>
+              ) : null}
+              {checkInPartyError ? (
+                <p className="text-xs text-destructive">{checkInPartyError}</p>
+              ) : null}
+              <Button
+                type="button"
+                className="w-full"
+                disabled={checkInPartyDisabled || checkInPartyPending}
+                onClick={onCheckInParty}
+              >
+                {checkInPartyPending ? 'Checking in…' : 'Check in all'}
+              </Button>
+            </>
           ) : null}
-          {checkInPartyError ? (
-            <p className="text-xs text-destructive">{checkInPartyError}</p>
+          {showCheckoutParty && onCheckoutParty ? (
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full"
+              disabled={checkoutPartyDisabled}
+              onClick={onCheckoutParty}
+            >
+              {checkoutPartyOverdue ? 'Confirm checkout all' : 'Check out all'}
+            </Button>
           ) : null}
-          <Button
-            type="button"
-            className="w-full"
-            disabled={checkInPartyDisabled || checkInPartyPending}
-            onClick={onCheckInParty}
-          >
-            {checkInPartyPending ? 'Checking in…' : 'Check in all'}
-          </Button>
         </div>
       ) : null}
     </aside>
