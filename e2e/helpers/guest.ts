@@ -26,20 +26,41 @@ export async function checkInWithPin(page: Page, config: E2eConfig): Promise<voi
   await page.goto(e2eGuestCheckInUrl(config));
   await page.getByLabel('Check-in PIN').fill(guestPin);
 
+  const outcomeTimeoutMs = config.navTimeoutMs * 2;
   const pinError = page.getByText(/PIN not recognized|Access revoked|Too many tries/i);
+  const activating = page.getByText(/Checking PIN/i);
+
   const navigated = page.waitForURL(/\/(check-in\/intent|welcome)/, {
-    timeout: config.navTimeoutMs * 2,
+    timeout: outcomeTimeoutMs,
   });
-  const rejected = pinError.waitFor({ state: 'visible', timeout: config.navTimeoutMs * 2 }).then(
-    async () => {
-      const message = (await pinError.first().textContent())?.trim() || 'PIN check-in rejected';
-      throw new Error(`Guest PIN check-in failed: ${message}`);
+  const rejected = pinError.waitFor({ state: 'visible', timeout: outcomeTimeoutMs }).then(async () => {
+    const message = (await pinError.first().textContent())?.trim() || 'PIN check-in rejected';
+    throw new Error(`Guest PIN check-in failed: ${message}`);
+  });
+  // Outcome-based race: spinner is only a stuck signal, never success.
+  const stuck = (async () => {
+    const shown = await activating
+      .waitFor({ state: 'visible', timeout: outcomeTimeoutMs })
+      .then(() => true)
+      .catch(() => false);
+    if (!shown) {
+      await new Promise(() => {});
+      return;
     }
-  );
-  await Promise.race([navigated, rejected]);
+    try {
+      await activating.waitFor({ state: 'hidden', timeout: config.navTimeoutMs });
+    } catch {
+      throw new Error(
+        'PIN activation stuck (server action pending). Restart next dev after HMR, then re-run smoke.'
+      );
+    }
+    await new Promise(() => {});
+  })();
+
+  await Promise.race([navigated, rejected, stuck]);
 
   await completeGuestIntentIfShown(page, config);
-  await page.waitForURL(/\/welcome\?.*step=info/, { timeout: config.navTimeoutMs * 2 });
+  await page.waitForURL(/\/welcome\?.*step=info/, { timeout: outcomeTimeoutMs });
 }
 
 export async function openGuestRouteStep(page: Page, config: E2eConfig): Promise<void> {

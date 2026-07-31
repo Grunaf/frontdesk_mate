@@ -26,6 +26,8 @@ export default defineConfig({
     },
   ],
   webServer: {
+    // Local smoke reuses an already-running next dev. After heavy HMR, guest PIN
+    // server actions can hang on "Checking PIN…" — restart the server and re-run.
     command: 'npm run dev:next',
     url: guestOrigin,
     reuseExistingServer: !process.env.CI,

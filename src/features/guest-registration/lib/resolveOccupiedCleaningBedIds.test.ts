@@ -8,7 +8,7 @@ const midStay = {
   check_out_at: '2026-07-25T10:00:00.000Z',
   check_in_date: '2026-07-22',
   check_out_date: '2026-07-25',
-  passport_checked_at: '2026-07-22T15:00:00.000Z',
+  desk_checked_in_at: '2026-07-22T15:00:00.000Z',
 };
 
 describe('resolveOccupiedCleaningBedIds', () => {
