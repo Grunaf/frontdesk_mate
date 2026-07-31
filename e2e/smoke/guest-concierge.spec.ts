@@ -58,16 +58,23 @@ test.describe('guest concierge stay chip', () => {
     await expect(strip).toBeHidden();
   });
 
-  // Requires post–check-in smoke stay (see resolveSmokeCheckInDate in provisionGuestStay).
-  // Before policy check-in time the bed card is locked (no link), not a selector flake.
+  // Requires post–check-in smoke stay with HK ready (see resolveSmokeCheckInDate +
+  // markSmokeBedReady in provisionGuestStay). Time/HK locks render a div, not a link.
   test('room map link opens stay-setup registration when prerequisites are incomplete', async ({
     page,
   }) => {
     await page.getByRole('button', { name: /My stay|Проживание/ }).click();
     await expect(page.getByText(/For reception|Для ресепшена/i)).toBeVisible();
 
+    await expect(
+      page.getByText(
+        /bed is being prepared|Кровать ещё готовят|unlock from|откроются с|bed and directions unlock/i
+      ),
+      'bed card must not be HK/time-locked for this smoke'
+    ).toHaveCount(0);
+
     const roomMapLink = page.getByRole('link', {
-      name: /Show room map|room map|Карта комнаты|направления/i,
+      name: /Show room map|room map|Карта комнаты|направления|маршрут/i,
     });
     await roomMapLink.scrollIntoViewIfNeeded();
     await expect(roomMapLink).toHaveAttribute('href', /\/stay-setup\?.*step=registration/, {

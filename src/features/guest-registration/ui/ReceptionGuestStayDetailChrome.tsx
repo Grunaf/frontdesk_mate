@@ -189,7 +189,8 @@ export function ReceptionGuestStayDetailOverflowMenu({
   const showRevoke = accessGranted && (!pastCheckOut || overdueCheckout);
   const busy = isPending || accessPending;
   const showExtend = stay.stay_kind !== 'volunteer' && !stay.is_archived;
-  const canMoveBed = showMoveBed && Boolean(onMoveBed) && !pastCheckOut;
+  /** Parent gates past-edit via `showMoveBed`; do not re-block on pastCheckOut. */
+  const canMoveBed = showMoveBed && Boolean(onMoveBed);
 
   return (
     <DropdownMenu>

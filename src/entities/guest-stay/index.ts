@@ -31,6 +31,10 @@ export {
 } from './lib/resolveReservationStayPeriod';
 export type { ReservationStayPeriod } from './lib/resolveReservationStayPeriod';
 export {
+  isPastEditEligibleArchivedStay,
+  shouldUnarchiveAfterPastOccupancyEdit,
+} from './lib/resolvePastStayOccupancyEdit';
+export {
   isBedReadyForGuestVisibility,
   resolveIsBedVisible,
   resolveIsPassportChecked,

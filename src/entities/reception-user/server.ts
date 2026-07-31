@@ -16,11 +16,13 @@ export {
 export {
   DESK_CHECK_IN_PERMISSION,
   DESK_CLEANING_PERMISSION,
+  DESK_EDIT_PAST_STAYS_PERMISSION,
   DESK_SKIP_TOURISM_GATE_PERMISSION,
   RECEPTION_STAFF_PERMISSIONS,
   isReceptionStaffPermission,
   receptionStaffCanCheckIn,
   receptionStaffCanClean,
+  receptionStaffCanEditPastStays,
   receptionStaffCanManageArchive,
   receptionStaffCanManageHousekeeping,
   receptionStaffCanManageTrash,

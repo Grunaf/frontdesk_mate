@@ -12,6 +12,10 @@ import {
 } from '../lib/accessToken';
 import { generateGuestPin, hashGuestPin, isGuestPinFormatValid, verifyGuestPin } from '../lib/guestPin';
 import { resolveArchiveSplitPlan } from '../lib/resolveArchiveSplitPlan';
+import {
+  isPastEditEligibleArchivedStay,
+  shouldUnarchiveAfterPastOccupancyEdit,
+} from '../lib/resolvePastStayOccupancyEdit';
 import { resolveGuestPinActivationError } from '../lib/resolveGuestPinActivationError';
 import { buildGuestMagicLinkUrl } from '../lib/buildMagicLinkUrl';
 import { buildGuestSessionPayload, readGuestSessionFromCookies } from '../lib/guestSession';
@@ -139,6 +143,31 @@ async function loadActiveGrantForReservation(
 
   if (error) {
     console.error('loadActiveGrantForReservation:', error.message);
+    return null;
+  }
+
+  return data as Record<string, unknown> | null;
+}
+
+/** Latest grant by created_at (active or revoked) — Plan checked-out history. */
+async function loadLatestGrantForReservation(
+  tenantId: string,
+  reservationId: string
+): Promise<Record<string, unknown> | null> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+
+  const { data, error } = await admin
+    .from('guest_access_grants')
+    .select(GUEST_ACCESS_GRANT_COLUMNS)
+    .eq('tenant_id', tenantId)
+    .eq('reservation_id', reservationId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('loadLatestGrantForReservation:', error.message);
     return null;
   }
 
@@ -589,14 +618,30 @@ export async function updateGuestReservation(
     return { ok: false, error: 'bed_not_found' };
   }
 
-  const { data: existing, error: loadError } = await admin
+  const allowPastEdit = Boolean(input.allowPastEdit);
+  const operationalDate =
+    typeof input.operationalDate === 'string' && isValidOperationalDate(input.operationalDate)
+      ? input.operationalDate
+      : null;
+  if (allowPastEdit && !operationalDate) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  /**
+   * Live edit: planned + not archived.
+   * Past edit: no status filter — checked-out Plan history is status=cancelled.
+   */
+  let loadBuilder = admin
     .from('guest_reservations')
     .select(GUEST_RESERVATION_COLUMNS)
     .eq('id', input.stayId)
-    .eq('tenant_id', tenant.id)
-    .eq('status', 'planned')
-    .eq('is_archived', false)
-    .maybeSingle();
+    .eq('tenant_id', tenant.id);
+
+  if (!allowPastEdit) {
+    loadBuilder = loadBuilder.eq('status', 'planned').eq('is_archived', false);
+  }
+
+  const { data: existing, error: loadError } = await loadBuilder.maybeSingle();
 
   if (loadError) {
     console.error('updateGuestReservation load:', loadError.message);
@@ -607,9 +652,35 @@ export async function updateGuestReservation(
     return { ok: false, error: 'not_found' };
   }
 
-  const grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
-  if (!grant) {
+  const existingRow = existing as Record<string, unknown>;
+  const wasArchived = Boolean(existingRow.is_archived);
+  const existingStatus = existingRow.status ? String(existingRow.status) : 'planned';
+
+  if (wasArchived) {
+    if (!allowPastEdit || !isPastEditEligibleArchivedStay(existingRow)) {
+      return { ok: false, error: 'not_found' };
+    }
+  } else if (existingStatus !== 'planned') {
+    // Live path / past-edit of non-archive must still be an active planned reservation.
     return { ok: false, error: 'not_found' };
+  }
+
+  const unarchive =
+    wasArchived &&
+    operationalDate != null &&
+    shouldUnarchiveAfterPastOccupancyEdit({
+      checkOutDate: period.checkOutDate,
+      operationalDate,
+    });
+
+  let grant: Record<string, unknown> | null = null;
+  if (wasArchived && !unarchive) {
+    grant = await loadLatestGrantForReservation(tenant.id, input.stayId);
+  } else {
+    grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
+    if (!grant && !wasArchived) {
+      return { ok: false, error: 'not_found' };
+    }
   }
 
   if (
@@ -642,14 +713,12 @@ export async function updateGuestReservation(
     balanceFields.paidAt === undefined
       ? balanceFields.amountMinor == null
         ? null
-        : (existing as Record<string, unknown>).booking_paid_at
-          ? String((existing as Record<string, unknown>).booking_paid_at)
+        : existingRow.booking_paid_at
+          ? String(existingRow.booking_paid_at)
           : null
       : balanceFields.paidAt;
 
-  const existingGuestId = (existing as Record<string, unknown>).guest_id
-    ? String((existing as Record<string, unknown>).guest_id)
-    : null;
+  const existingGuestId = existingRow.guest_id ? String(existingRow.guest_id) : null;
   const guestLink = await resolveGuestIdForBooking({
     tenantId: tenant.id,
     guestId: input.guestId ?? existingGuestId,
@@ -662,28 +731,46 @@ export async function updateGuestReservation(
     };
   }
 
-  const { data: updated, error: updateError } = await admin
+  const nowIso = new Date().toISOString();
+  const updatePayload: Record<string, unknown> = {
+    bed_id: bedId,
+    guest_id: guestLink.guestId,
+    guest_name: guestLink.displayName,
+    check_in_date: period.checkInDate,
+    check_out_date: period.checkOutDate,
+    check_in_at: period.checkInAt,
+    check_out_at: period.checkOutAt,
+    booking_platform_id: bookingFields.platformId,
+    booking_external_id: bookingFields.externalId,
+    booking_amount_due_minor: balanceFields.amountMinor,
+    booking_amount_currency: balanceFields.currency,
+    booking_paid_at: bookingPaidAt,
+    contact_phone: input.contactPhone?.trim() || null,
+    contact_email: input.contactEmail?.trim() || null,
+    updated_at: nowIso,
+  };
+
+  if (unarchive) {
+    updatePayload.status = 'planned';
+    updatePayload.is_archived = false;
+    updatePayload.archived_at = null;
+    updatePayload.archived_by_reception_user_id = null;
+    updatePayload.archive_kind = null;
+    updatePayload.archive_reason = null;
+    updatePayload.original_reservation_id = null;
+  }
+
+  let updateBuilder = admin
     .from('guest_reservations')
-    .update({
-      bed_id: bedId,
-      guest_id: guestLink.guestId,
-      guest_name: guestLink.displayName,
-      check_in_date: period.checkInDate,
-      check_out_date: period.checkOutDate,
-      check_in_at: period.checkInAt,
-      check_out_at: period.checkOutAt,
-      booking_platform_id: bookingFields.platformId,
-      booking_external_id: bookingFields.externalId,
-      booking_amount_due_minor: balanceFields.amountMinor,
-      booking_amount_currency: balanceFields.currency,
-      booking_paid_at: bookingPaidAt,
-      contact_phone: input.contactPhone?.trim() || null,
-      contact_email: input.contactEmail?.trim() || null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq('id', input.stayId)
-    .eq('tenant_id', tenant.id)
-    .eq('status', 'planned')
+    .eq('tenant_id', tenant.id);
+
+  if (!allowPastEdit) {
+    updateBuilder = updateBuilder.eq('status', 'planned').eq('is_archived', false);
+  }
+
+  const { data: updated, error: updateError } = await updateBuilder
     .select(GUEST_RESERVATION_COLUMNS)
     .maybeSingle();
 
@@ -693,6 +780,18 @@ export async function updateGuestReservation(
     }
     console.error('updateGuestReservation update:', updateError?.message);
     return { ok: false, error: 'db_unavailable' };
+  }
+
+  if (unarchive) {
+    const grantStatus = await ensureActiveAccessGrant({
+      tenantId: tenant.id,
+      reservationId: input.stayId,
+      tenantSlug: tenant.slug,
+    });
+    if (grantStatus !== 'ok') {
+      return { ok: false, error: 'db_unavailable' };
+    }
+    grant = await loadActiveGrantForReservation(tenant.id, input.stayId);
   }
 
   const stay = mapReservationGrantToStayRecord(

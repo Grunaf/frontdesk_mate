@@ -21,6 +21,7 @@ import type {
 import {
   DESK_CHECK_IN_PERMISSION,
   DESK_CLEANING_PERMISSION,
+  DESK_EDIT_PAST_STAYS_PERMISSION,
   DESK_SKIP_TOURISM_GATE_PERMISSION,
   RECEPTION_STAFF_PERMISSIONS,
   type ReceptionStaffPermission,
@@ -41,6 +42,10 @@ const PERMISSION_LABELS: Record<ReceptionStaffPermission, PermissionLabelMeta> =
     platform:
       'Skip tourism gate (check-in / grant with warning when registration incomplete)',
     ownerKey: 'permissions.skipTourismGate',
+  },
+  [DESK_EDIT_PAST_STAYS_PERMISSION]: {
+    platform: 'Edit past stays (dates / bed / booking on ended or checked-out)',
+    ownerKey: 'permissions.editPastStays',
   },
 };
 

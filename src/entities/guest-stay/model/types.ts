@@ -191,6 +191,13 @@ export type UpdateGuestReservationInput = {
   bookingAmountDue?: string | number;
   contactPhone?: string | null;
   contactEmail?: string | null;
+  /**
+   * When true, allow updating full checked-out archived stays (past-edit permission).
+   * Requires `operationalDate` to decide unarchive after save.
+   */
+  allowPastEdit?: boolean;
+  /** Operational calendar day — required with `allowPastEdit`. */
+  operationalDate?: string;
 };
 
 export type UpdateGuestReservationResult =
