@@ -520,7 +520,7 @@ export async function createGuestStayParty(
       {
         tenantSlug: input.tenantSlug,
         bedId: guest.bedId,
-        guestName: guest.guestName?.trim() || (isLead ? undefined : `Guest ${index + 1}`),
+        guestName: guest.guestName?.trim() || undefined,
         guestId: guest.guestId,
         checkInDate: input.checkInDate,
         checkOutDate: input.checkOutDate,

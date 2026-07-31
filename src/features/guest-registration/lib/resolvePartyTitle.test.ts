@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isPlaceholderGuestName,
   resolvePartyLeadName,
   resolvePartyMemberOrdinal,
   resolvePartyMemberTitle,
@@ -17,6 +18,17 @@ describe('resolvePartyTitle', () => {
 
   it('singular bed label', () => {
     expect(resolvePartyTitle('Alex', 1)).toBe('Alex · 1 bed');
+  });
+});
+
+describe('isPlaceholderGuestName', () => {
+  it('treats empty and Guest / Guest N as placeholders', () => {
+    expect(isPlaceholderGuestName(null)).toBe(true);
+    expect(isPlaceholderGuestName('')).toBe(true);
+    expect(isPlaceholderGuestName('Guest')).toBe(true);
+    expect(isPlaceholderGuestName('guest 3')).toBe(true);
+    expect(isPlaceholderGuestName('Alex')).toBe(false);
+    expect(isPlaceholderGuestName('Guest House')).toBe(false);
   });
 });
 
@@ -46,6 +58,15 @@ describe('resolvePartyLeadName', () => {
       ])
     ).toBe('Alex');
   });
+
+  it('skips Guest placeholders when resolving lead', () => {
+    expect(
+      resolvePartyLeadName([
+        { guest_name: 'Guest', created_at: '2026-01-01T00:00:00Z', booking_amount_due_minor: 100 },
+        { guest_name: 'Maria', created_at: '2026-01-02T00:00:00Z' },
+      ])
+    ).toBe('Maria');
+  });
 });
 
 describe('resolvePartyMemberTitle', () => {
@@ -55,13 +76,19 @@ describe('resolvePartyMemberTitle', () => {
     ).toBe('Alex');
   });
 
-  it('falls back to lead · ordinal when name missing', () => {
+  it('falls back to lead (ordinal) when name missing', () => {
     expect(
       resolvePartyMemberTitle({ guestName: null, leadName: 'Maria', ordinal: 2 })
-    ).toBe('Maria · 2');
+    ).toBe('Maria (2)');
     expect(resolvePartyMemberTitle({ guestName: '  ', leadName: '', ordinal: 1 })).toBe(
-      'Guest · 1'
+      'Guest (1)'
     );
+  });
+
+  it('treats legacy Guest N as missing name', () => {
+    expect(
+      resolvePartyMemberTitle({ guestName: 'Guest 2', leadName: 'Maria', ordinal: 2 })
+    ).toBe('Maria (2)');
   });
 });
 

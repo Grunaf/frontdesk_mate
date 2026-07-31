@@ -22,6 +22,7 @@ import { BookingGroupIcon } from './BookingGroupIcon';
 import { RECEPTION_SHELL_PARTY_TITLE_CLASS } from './ReceptionStayDetailShell';
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
+import { Pencil } from 'lucide-react';
 
 export type PartySheetTabId = 'booking' | 'beds';
 
@@ -345,6 +346,9 @@ export type StayPartyPeekProps = {
   checkoutPartyDisabled?: boolean;
   checkoutPartyOverdue?: boolean;
   onCheckoutParty?: () => void;
+  /** Party-level edit (change dates / beds for the group). */
+  onEditParty?: () => void;
+  editPartyDisabled?: boolean;
 };
 
 export function StayPartyPeek({
@@ -373,6 +377,8 @@ export function StayPartyPeek({
   checkoutPartyDisabled = false,
   checkoutPartyOverdue = false,
   onCheckoutParty,
+  onEditParty,
+  editPartyDisabled = false,
 }: StayPartyPeekProps) {
   const [tab, setTab] = useState<PartySheetTabId>('booking');
 
@@ -389,7 +395,21 @@ export function StayPartyPeek({
       aria-label={partyTitle}
       className="flex h-full w-80 flex-col overflow-hidden rounded-xl border bg-background shadow-lg"
     >
-      <div className="shrink-0 space-y-1 border-b border-border/60 px-4 py-3">
+      <div className="relative shrink-0 space-y-1 border-b border-border/60 px-4 py-3 pr-12">
+        {onEditParty ? (
+          <div className="absolute top-2 right-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={editPartyDisabled}
+              onClick={onEditParty}
+            >
+              <Pencil />
+              <span className="sr-only">Edit booking</span>
+            </Button>
+          </div>
+        ) : null}
         <p
           className={cn(
             'flex min-w-0 items-center gap-1.5 text-foreground',

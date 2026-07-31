@@ -2107,8 +2107,8 @@ export function ReceptionCheckInPanel({
                     <p className="text-sm text-muted-foreground">
                       {editDraft.intent === 'moveBed'
                         ? editDraft.guestName
-                          ? `Moving ${editDraft.guestName} — PIN and link stay the same. Dates and booking details: edit from Group.`
-                          : 'Moving guest — PIN and link stay the same. Dates and booking details: edit from Group.'
+                          ? `Moving ${editDraft.guestName} — PIN and link stay the same.`
+                          : 'Moving guest — PIN and link stay the same.'
                         : editDraft.guestName
                           ? `Editing ${editDraft.guestName} — PIN and link stay the same.`
                           : 'Editing guest — PIN and link stay the same.'}
@@ -2191,7 +2191,6 @@ export function ReceptionCheckInPanel({
                       }}
                       reissueGuestLabel={editDraft.guestName}
                       editIntent={editDraft.intent}
-                      moveBedGroupHint={editDraft.intent === 'moveBed'}
                       partyBedLabels={
                         editDraft.partyStayIds && editDraft.partyStayIds.length > 1
                           ? editDraft.partyStayIds.map((stayId) => {

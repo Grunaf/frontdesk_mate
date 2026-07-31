@@ -34,7 +34,7 @@ function IssueAccessOverlayHeader({
         : `Editing ${reissueGuestLabel} — PIN and link stay the same.`
       : isEditingReservation
         ? editIntent === 'moveBed'
-          ? 'Moving guest — PIN and link stay the same. Dates and booking details: edit from Group.'
+          ? 'Moving guest — PIN and link stay the same.'
           : 'Editing guest — PIN and link stay the same.'
         : null;
 

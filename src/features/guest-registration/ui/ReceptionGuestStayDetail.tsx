@@ -1020,6 +1020,16 @@ export function ReceptionGuestStayDetail({
               checkoutPartyDisabled={isPending}
               checkoutPartyOverdue={partyCheckoutOverdue}
               onCheckoutParty={requestCheckoutParty}
+              onEditParty={
+                stayEnded
+                  ? undefined
+                  : () =>
+                      onEditStay(balanceStay, {
+                        intent: 'changeDates',
+                        partyStays: resolvedPartyStays,
+                      })
+              }
+              editPartyDisabled={isPending}
             />
               )
             : undefined
@@ -1027,14 +1037,14 @@ export function ReceptionGuestStayDetail({
         onEdit={
           showEdit || stayEnded
             ? undefined
-            : showPartyRoot || (isParty && !isBelowLg)
+            : showPartyRoot
               ? () =>
                   onEditStay(balanceStay, {
                     intent: 'changeDates',
                     partyStays: resolvedPartyStays,
                   })
               : isParty
-                ? () => onEditStay(stay, { intent: 'moveBed' })
+                ? undefined
                 : () => onEditStay(stay, { intent: 'changeDates' })
         }
         editDisabled={isPending}
@@ -1076,6 +1086,8 @@ export function ReceptionGuestStayDetail({
                   : 'Bed is not marked ready — confirm readiness before unlocking.'
               }
               onUnlockBed={requestUnlockBed}
+              showMoveBed={isParty && !stayEnded}
+              onMoveBed={() => onEditStay(stay, { intent: 'moveBed' })}
             />
           )
         }

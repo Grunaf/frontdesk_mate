@@ -94,8 +94,6 @@ export interface IssueGuestAccessFormProps {
   onDatesChange: (next: { checkInDate: string; checkOutDate: string }) => void;
   reissueGuestLabel?: string;
   editIntent?: 'moveBed' | 'changeDates';
-  /** Child of a party: hint that shared fields edit from Group. */
-  moveBedGroupHint?: boolean;
   onCancelReissue?: () => void;
   error: string | null;
   isPending: boolean;
@@ -170,7 +168,6 @@ export function IssueGuestAccessFormFields({
   onDatesChange,
   reissueGuestLabel,
   editIntent = 'changeDates',
-  moveBedGroupHint = false,
   onCancelReissue,
   error,
   isEditingReservation = false,
@@ -220,7 +217,6 @@ export function IssueGuestAccessFormFields({
   | 'onDatesChange'
   | 'reissueGuestLabel'
   | 'editIntent'
-  | 'moveBedGroupHint'
   | 'onCancelReissue'
   | 'error'
   | 'isEditingReservation'
@@ -709,11 +705,6 @@ export function IssueGuestAccessFormFields({
 
       {isEditingReservation && editIntent === 'moveBed' ? (
         <div className="space-y-3">
-          {moveBedGroupHint ? (
-            <p className="text-xs text-muted-foreground">
-              Dates, balance, contact, and booking source are edited from the Group sheet.
-            </p>
-          ) : null}
           {bedSelect}
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>

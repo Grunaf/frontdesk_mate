@@ -145,6 +145,8 @@ export function ReceptionGuestStayDetailOverflowMenu({
   unlockBedDisabled = false,
   unlockBedHint = null,
   onUnlockBed,
+  showMoveBed = false,
+  onMoveBed,
 }: {
   stay: GuestStayRecordWithLink;
   isPending: boolean;
@@ -159,6 +161,8 @@ export function ReceptionGuestStayDetailOverflowMenu({
   unlockBedDisabled?: boolean;
   unlockBedHint?: string | null;
   onUnlockBed?: () => void;
+  showMoveBed?: boolean;
+  onMoveBed?: () => void;
 }) {
   const endAction = resolveStayCancelCheckoutAction({
     passport_checked_at: stay.passport_checked_at,
@@ -185,6 +189,7 @@ export function ReceptionGuestStayDetailOverflowMenu({
   const showRevoke = accessGranted && (!pastCheckOut || overdueCheckout);
   const busy = isPending || accessPending;
   const showExtend = stay.stay_kind !== 'volunteer' && !stay.is_archived;
+  const canMoveBed = showMoveBed && Boolean(onMoveBed) && !pastCheckOut;
 
   return (
     <DropdownMenu>
@@ -205,6 +210,11 @@ export function ReceptionGuestStayDetailOverflowMenu({
             }}
           >
             Unlock bed
+          </DropdownMenuItem>
+        ) : null}
+        {canMoveBed ? (
+          <DropdownMenuItem disabled={busy} onSelect={() => onMoveBed?.()}>
+            Move bed
           </DropdownMenuItem>
         ) : null}
         {showReissue ? (
