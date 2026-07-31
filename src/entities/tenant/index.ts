@@ -124,11 +124,14 @@ export { SUGGESTED_RECEPTION_BOOKING_PLATFORMS } from './model/receptionBooking'
 export {
   normalizeReceptionBookingForSave,
   normalizeReceptionBookingOnRead,
+  normalizeHostelworldBookingPrefix,
   listReceptionBookingPlatforms,
   resolveBookingComHotelId,
+  resolveHostelworldBookingPrefix,
   resolveReceptionBookingPlatformLabel,
   formatReceptionBookingSourceSummary,
   slugifyBookingPlatformId,
+  HOSTELWORLD_BOOKING_PREFIX_LENGTH,
 } from './lib/normalizeReceptionBookingSettings';
 export {
   BOOKING_PROVIDER_LABELS,

@@ -16,6 +16,7 @@ import {
   listStayOffers,
   resolveGuestAccessMessageTemplate,
   resolveGuestAccessPinMissingText,
+  resolveHostelworldBookingPrefix,
   resolvePlanStayStatusEnabled,
   resolveTourismRegistrationRequired,
 } from '@/entities/tenant';
@@ -33,6 +34,7 @@ import {
 } from '../lib/resolveReceptionPartyPlacement';
 import { resolveReceptionOfferBalance } from '../lib/resolveReceptionOfferBalance';
 import { resolveIssueGuestContact } from '../lib/resolveIssueGuestContact';
+import { parseHostelworldBookingReference } from '../lib/parseHostelworldBookingReference';
 import { listWholeRoomBlockedBedIdsForDateRange } from '../lib/resolveRoomOccupancyBlocks';
 import { resolveStayOfferBookingUnit } from '@/entities/tenant/model/stayOffers';
 import {
@@ -63,6 +65,7 @@ import {
   checkoutGuestReservationAction,
   reissueGuestStayAction,
   updateGuestReservationAction,
+  saveHostelworldBookingPrefixAction,
 } from '../actions/receptionActions';
 import {
   clearHousekeepingStayPresenceAction,
@@ -300,8 +303,19 @@ export function ReceptionCheckInPanel({
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  const [contactSkipped, setContactSkipped] = useState(false);
   const [bookingPlatformId, setBookingPlatformId] = useState('');
   const [bookingExternalId, setBookingExternalId] = useState('');
+  const [hostelworldPrefixOverride, setHostelworldPrefixOverride] = useState<string | null>(null);
+  const [pendingHostelworldPrefix, setPendingHostelworldPrefix] = useState<{
+    prefix: string;
+    unique: string;
+  } | null>(null);
+  const hostelworldBookingPrefix = useMemo(
+    () =>
+      hostelworldPrefixOverride ?? resolveHostelworldBookingPrefix(tenantSettings),
+    [hostelworldPrefixOverride, tenantSettings]
+  );
   const [bookingAmountDue, setBookingAmountDue] = useState('');
   const [bookingAmountTouched, setBookingAmountTouched] = useState(false);
   const [checkInDate, setCheckInDate] = useState(walkInDefaults.checkInDate);
@@ -1180,8 +1194,10 @@ export function ReceptionCheckInPanel({
     setSelectedGuestId(null);
     setContactPhone('');
     setContactEmail('');
+    setContactSkipped(false);
     setBookingPlatformId('');
     setBookingExternalId('');
+    setPendingHostelworldPrefix(null);
     setBookingAmountDue('');
     setBookingAmountTouched(false);
     setGuestCount(1);
@@ -1304,6 +1320,11 @@ export function ReceptionCheckInPanel({
     setSelectedGuestId(stay.guest_id ?? null);
     setBookingPlatformId(platformId);
     setBookingExternalId(externalId);
+    setContactPhone(stay.contact_phone?.trim() ?? '');
+    setContactEmail(stay.contact_email?.trim() ?? '');
+    setContactSkipped(
+      !stay.contact_phone?.trim() && !stay.contact_email?.trim()
+    );
     setBookingAmountDue(balanceDue);
     setBookingAmountTouched(true);
     setCheckInDate(toDateInput(stay.check_in_date || stay.check_in_at));
@@ -1400,17 +1421,56 @@ export function ReceptionCheckInPanel({
       return;
     }
 
-    const contactResolution = editDraft
-      ? ({ ok: true as const, contactPhone: null, contactEmail: null })
-      : resolveIssueGuestContact({ contactPhone, contactEmail });
+    const contactResolution = resolveIssueGuestContact({
+      contactPhone,
+      contactEmail,
+      contactSkipped,
+    });
     if (!contactResolution.ok) {
       setError(createErrorMessage(contactResolution.error));
       return;
     }
 
-    startTransition(async () => {
-      try {
-        if (editDraft) {
+    let resolvedBookingExternalId = bookingExternalId.trim() || undefined;
+    if (!editDraft && bookingPlatformId === 'hostelworld') {
+      const parsed = parseHostelworldBookingReference(
+        bookingExternalId,
+        hostelworldBookingPrefix
+      );
+      if (!parsed.ok) {
+        setError(
+          parsed.error === 'too_short' || parsed.error === 'invalid_prefix'
+            ? 'Enter the full Hostelworld number (6-digit prefix + unique part).'
+            : 'Enter a Hostelworld booking number.'
+        );
+        return;
+      }
+      if (parsed.proposedPrefix && !hostelworldBookingPrefix) {
+        setPendingHostelworldPrefix({
+          prefix: parsed.proposedPrefix,
+          unique: parsed.unique,
+        });
+        return;
+      }
+      resolvedBookingExternalId = parsed.unique;
+    }
+
+    startTransition(() => {
+      void submitCreateOrEdit({
+        contactResolution,
+        bookingExternalId: resolvedBookingExternalId,
+      });
+    });
+  };
+
+  const submitCreateOrEdit = async (input: {
+    contactResolution:
+      | { ok: true; contactPhone: string | null; contactEmail: string | null }
+      | { ok: true; contactPhone: null; contactEmail: null };
+    bookingExternalId: string | undefined;
+  }) => {
+    try {
+      if (editDraft) {
           const result = await updateGuestReservationAction({
             tenantSlug,
             stayId: editDraft.stayId,
@@ -1420,44 +1480,11 @@ export function ReceptionCheckInPanel({
             checkInDate,
             checkOutDate,
             bookingPlatformId: bookingPlatformId || undefined,
-            bookingExternalId: bookingExternalId.trim() || undefined,
+            bookingExternalId: input.bookingExternalId,
             bookingAmountDue,
+            contactPhone: input.contactResolution.contactPhone,
+            contactEmail: input.contactResolution.contactEmail,
           });
-
-          if (!result.ok) {
-            setError(createErrorMessage(result.error));
-            if (result.error === 'access_overlap') {
-              await refresh();
-            }
-            return;
-          }
-
-          await refresh();
-          openStayDetail(result.stay.id);
-          clearEditDraft();
-          return;
-        }
-
-        const partyBeds = guestCount > 1 ? bedIds.slice(0, guestCount) : [bedId];
-        const leadName = guestName.trim();
-        const result = await createGuestStayPartyAction({
-          tenantSlug,
-          guests: partyBeds.map((partyBedId, index) => ({
-            bedId: partyBedId,
-            guestName:
-              index === 0
-                ? leadName
-                : resolvePartyGuestDisplayName(leadName, index),
-            guestId: index === 0 ? selectedGuestId ?? undefined : undefined,
-          })),
-          checkInDate,
-          checkOutDate,
-          bookingPlatformId: bookingPlatformId || undefined,
-          bookingExternalId: bookingExternalId.trim() || undefined,
-          bookingAmountDue,
-          contactPhone: contactResolution.contactPhone,
-          contactEmail: contactResolution.contactEmail,
-        });
 
         if (!result.ok) {
           setError(createErrorMessage(result.error));
@@ -1467,26 +1494,98 @@ export function ReceptionCheckInPanel({
           return;
         }
 
-        const lead = result.stays[0];
         await refresh();
-        if (lead) {
-          openStayDetail(lead.stay.id, { initialTab: 'access' });
-          setStayPins((current) => {
-            const next = { ...current };
-            for (const entry of result.stays) {
-              next[entry.stay.id] = entry.guestPin;
-            }
-            return next;
-          });
-        }
-        resetCreateIssueForm();
-        setIssueOverlayOpen(false);
-        const usedBeds = new Set(partyBeds);
-        const nextAvailable = availableBedIds.filter((id) => !usedBeds.has(id));
-        setBedIds(nextAvailable[0] ? [nextAvailable[0]] : ['']);
-      } catch {
-        setError('Something went wrong. Try again or check the server logs.');
+        openStayDetail(result.stay.id);
+        clearEditDraft();
+        return;
       }
+
+      const partyBeds = guestCount > 1 ? bedIds.slice(0, guestCount) : [bedId];
+      const result = await createGuestStayPartyAction({
+        tenantSlug,
+        guests: partyBeds.map((partyBedId, index) => ({
+          bedId: partyBedId,
+          guestName: index === 0 ? guestName.trim() : undefined,
+          guestId: index === 0 ? selectedGuestId ?? undefined : undefined,
+        })),
+        checkInDate,
+        checkOutDate,
+        bookingPlatformId: bookingPlatformId || undefined,
+        bookingExternalId: input.bookingExternalId,
+        bookingAmountDue,
+        contactPhone: input.contactResolution.contactPhone,
+        contactEmail: input.contactResolution.contactEmail,
+      });
+
+      if (!result.ok) {
+        setError(createErrorMessage(result.error));
+        if (result.error === 'access_overlap') {
+          await refresh();
+        }
+        return;
+      }
+
+      const lead = result.stays[0];
+      await refresh();
+      if (lead) {
+        openStayDetail(lead.stay.id, { initialTab: 'access' });
+        setStayPins((current) => {
+          const next = { ...current };
+          for (const entry of result.stays) {
+            next[entry.stay.id] = entry.guestPin;
+          }
+          return next;
+        });
+      }
+      resetCreateIssueForm();
+      setIssueOverlayOpen(false);
+      const usedBeds = new Set(partyBeds);
+      const nextAvailable = availableBedIds.filter((id) => !usedBeds.has(id));
+      setBedIds(nextAvailable[0] ? [nextAvailable[0]] : ['']);
+    } catch {
+      setError('Something went wrong. Try again or check the server logs.');
+    }
+  };
+
+  const confirmHostelworldPrefixSave = () => {
+    const pending = pendingHostelworldPrefix;
+    if (!pending) return;
+    setPendingHostelworldPrefix(null);
+    setError(null);
+
+    startTransition(async () => {
+      const saveResult = await saveHostelworldBookingPrefixAction({
+        tenantSlug,
+        prefix: pending.prefix,
+      });
+      if (!saveResult.ok) {
+        setError(
+          saveResult.error === 'already_set'
+            ? 'Hostelworld prefix is already set for this hostel. Refresh and try again.'
+            : saveResult.error === 'invalid_prefix'
+              ? 'Hostelworld prefix must be exactly 6 digits.'
+              : 'Could not save Hostelworld prefix.'
+        );
+        return;
+      }
+
+      setHostelworldPrefixOverride(saveResult.prefix);
+      setBookingExternalId(pending.unique);
+
+      const contactResolution = resolveIssueGuestContact({
+        contactPhone,
+        contactEmail,
+        contactSkipped,
+      });
+      if (!contactResolution.ok) {
+        setError(createErrorMessage(contactResolution.error));
+        return;
+      }
+
+      await submitCreateOrEdit({
+        contactResolution,
+        bookingExternalId: pending.unique,
+      });
     });
   };
 
@@ -1697,13 +1796,22 @@ export function ReceptionCheckInPanel({
         }}
         onClearGuestProfile={() => setSelectedGuestId(null)}
         contactPhone={contactPhone}
-        onContactPhoneChange={setContactPhone}
+        onContactPhoneChange={(value) => {
+          setContactSkipped(false);
+          setContactPhone(value);
+        }}
         contactEmail={contactEmail}
-        onContactEmailChange={setContactEmail}
+        onContactEmailChange={(value) => {
+          setContactSkipped(false);
+          setContactEmail(value);
+        }}
+        contactSkipped={contactSkipped}
+        onContactSkippedChange={setContactSkipped}
         bookingPlatformId={bookingPlatformId}
         onBookingPlatformIdChange={setBookingPlatformId}
         bookingExternalId={bookingExternalId}
         onBookingExternalIdChange={setBookingExternalId}
+        hostelworldBookingPrefix={hostelworldBookingPrefix}
         bookingPlatformOptions={bookingPlatformOptions}
         showBookingSourceFields={showBookingSourceFields}
         bookingAmountDue={bookingAmountDue}
@@ -1774,7 +1882,14 @@ export function ReceptionCheckInPanel({
               (id) => Boolean(id) && !hardOverlappingBedIds.has(id)
             )) &&
           Boolean(guestName.trim()) &&
-          (Boolean(editDraft) || resolveIssueGuestContact({ contactPhone, contactEmail }).ok) &&
+          resolveIssueGuestContact({
+            contactPhone,
+            contactEmail,
+            contactSkipped,
+          }).ok &&
+          (Boolean(editDraft) ||
+            bookingPlatformId !== 'hostelworld' ||
+            parseHostelworldBookingReference(bookingExternalId, hostelworldBookingPrefix).ok) &&
           resolveReservationBookingBalance({
             settings: tenantSettings,
             bookingAmountDue,
@@ -1783,7 +1898,11 @@ export function ReceptionCheckInPanel({
           !validateReservationBookingSource({
             settings: tenantSettings,
             bookingPlatformId,
-            bookingExternalId,
+            bookingExternalId:
+              bookingPlatformId === 'hostelworld' && hostelworldBookingPrefix
+                ? // validateReservationBookingSource only checks non-empty when required; unique is enough
+                  bookingExternalId
+                : bookingExternalId,
           })
         }
         isReissue={false}
@@ -1791,6 +1910,20 @@ export function ReceptionCheckInPanel({
         onSubmit={handleSubmit}
       />
       ) : null}
+
+      <ConfirmDialog
+        open={pendingHostelworldPrefix !== null}
+        title="Save Hostelworld property prefix?"
+        description={
+          pendingHostelworldPrefix
+            ? `The first 6 digits (${pendingHostelworldPrefix.prefix}) will be saved as this hostel’s Hostelworld ID. Later bookings will only ask for the unique part.`
+            : ''
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Save prefix & create"
+        onCancel={() => setPendingHostelworldPrefix(null)}
+        onConfirm={confirmHostelworldPrefixSave}
+      />
 
       <ConfirmDialog
         open={pendingWholeRoomOverride !== null}

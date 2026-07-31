@@ -53,10 +53,15 @@ export interface IssueGuestAccessFormProps {
   onContactPhoneChange?: (value: string) => void;
   contactEmail?: string;
   onContactEmailChange?: (value: string) => void;
+  /** Explicit opt-out when OTA has no usable guest contact. */
+  contactSkipped?: boolean;
+  onContactSkippedChange?: (skipped: boolean) => void;
   bookingPlatformId: string;
   onBookingPlatformIdChange: (value: string) => void;
   bookingExternalId: string;
   onBookingExternalIdChange: (value: string) => void;
+  /** Hostelworld 6-digit property prefix when already configured. */
+  hostelworldBookingPrefix?: string | null;
   bookingPlatformOptions: Array<{ id: string; label: string }>;
   showBookingSourceFields: boolean;
   bookingAmountDue: string;
@@ -125,10 +130,13 @@ export function IssueGuestAccessFormFields({
   onContactPhoneChange,
   contactEmail = '',
   onContactEmailChange,
+  contactSkipped = false,
+  onContactSkippedChange,
   bookingPlatformId,
   onBookingPlatformIdChange,
   bookingExternalId,
   onBookingExternalIdChange,
+  hostelworldBookingPrefix = null,
   bookingPlatformOptions,
   showBookingSourceFields,
   bookingAmountDue,
@@ -170,10 +178,13 @@ export function IssueGuestAccessFormFields({
   | 'onContactPhoneChange'
   | 'contactEmail'
   | 'onContactEmailChange'
+  | 'contactSkipped'
+  | 'onContactSkippedChange'
   | 'bookingPlatformId'
   | 'onBookingPlatformIdChange'
   | 'bookingExternalId'
   | 'onBookingExternalIdChange'
+  | 'hostelworldBookingPrefix'
   | 'bookingPlatformOptions'
   | 'showBookingSourceFields'
   | 'bookingAmountDue'
@@ -206,17 +217,18 @@ export function IssueGuestAccessFormFields({
   const inShell = layout === 'shell';
   const showEditBanner = isEditingReservation && onCancelReissue && !inShell;
   const showBookingReference = showsBookingReference(bookingPlatformId);
-  const offerFirst = stayOfferOptions.length > 0 && Boolean(onOfferIdChange);
+  const offerFirst =
+    !isEditingReservation && stayOfferOptions.length > 0 && Boolean(onOfferIdChange);
   const [advancedOpen, setAdvancedOpen] = useState(
     advancedBedOpenDefault || editIntent === 'moveBed' || !offerFirst
   );
   const [emailFieldOpen, setEmailFieldOpen] = useState(() => Boolean(contactEmail.trim()));
 
   useEffect(() => {
-    if (advancedBedOpenDefault || editIntent === 'moveBed') {
+    if (advancedBedOpenDefault || editIntent === 'moveBed' || isEditingReservation) {
       setAdvancedOpen(true);
     }
-  }, [advancedBedOpenDefault, editIntent]);
+  }, [advancedBedOpenDefault, editIntent, isEditingReservation]);
 
   useEffect(() => {
     if (contactEmail.trim()) {
@@ -224,7 +236,7 @@ export function IssueGuestAccessFormFields({
     }
   }, [contactEmail]);
 
-  const showContactFields = !isEditingReservation && onContactPhoneChange;
+  const showContactFields = Boolean(onContactPhoneChange);
   const phoneValid = validateTourismWhatsapp(contactPhone).ok;
   const whatsappHref = phoneValid ? buildWhatsappMeHref(contactPhone) : null;
 
@@ -340,55 +352,99 @@ export function IssueGuestAccessFormFields({
 
       {showContactFields ? (
         <div className="space-y-3 lg:col-span-2">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                At least one contact is required — phone or email.
+          {contactSkipped ? (
+            <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2.5">
+              <p className="text-sm text-muted-foreground">
+                No guest contact on this OTA booking — phone and email skipped.
               </p>
-              {whatsappHref ? (
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+              {onContactSkippedChange ? (
+                <button
+                  type="button"
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                  onClick={() => onContactSkippedChange(false)}
                 >
-                  <MessageCircle className="size-4" aria-hidden />
-                  Open WhatsApp
-                </a>
+                  Add a contact instead
+                </button>
               ) : null}
             </div>
-            <GuestPhoneNumberField
-              id="contact-phone"
-              countrySelectId="contact-phone-country"
-              value={contactPhone}
-              onChange={(next) => onContactPhoneChange?.(next)}
-              label="Phone (WhatsApp)"
-              countryLabel="Country"
-              locale="en"
-            />
-          </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Phone or email — at least one required.
+                  </p>
+                  {whatsappHref ? (
+                    <a
+                      href={whatsappHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      <MessageCircle className="size-4" aria-hidden />
+                      Open WhatsApp
+                    </a>
+                  ) : null}
+                </div>
+                <GuestPhoneNumberField
+                  id="contact-phone"
+                  countrySelectId="contact-phone-country"
+                  value={contactPhone}
+                  onChange={(next) => onContactPhoneChange?.(next)}
+                  label="Phone (WhatsApp)"
+                  countryLabel="Country"
+                  locale="en"
+                />
+              </div>
 
-          {emailFieldOpen && onContactEmailChange ? (
-            <div className="space-y-1">
-              <Label htmlFor="contact-email">Email</Label>
-              <Input
-                id="contact-email"
-                type="email"
-                value={contactEmail}
-                onChange={(event) => onContactEmailChange(event.target.value)}
-                placeholder="guest@example.com"
-                autoComplete="off"
-              />
-            </div>
-          ) : onContactEmailChange ? (
-            <button
-              type="button"
-              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-              onClick={() => setEmailFieldOpen(true)}
-            >
-              + Add another contact method
-            </button>
-          ) : null}
+              {emailFieldOpen && onContactEmailChange ? (
+                <div className="space-y-1">
+                  <Label htmlFor="contact-email">Email</Label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    value={contactEmail}
+                    onChange={(event) => onContactEmailChange(event.target.value)}
+                    placeholder="guest@example.com"
+                    autoComplete="off"
+                  />
+                </div>
+              ) : null}
+
+              {(onContactEmailChange && !emailFieldOpen) || onContactSkippedChange ? (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  {onContactEmailChange && !emailFieldOpen ? (
+                    <button
+                      type="button"
+                      className="font-medium text-primary underline-offset-4 hover:underline"
+                      onClick={() => setEmailFieldOpen(true)}
+                    >
+                      Add email
+                    </button>
+                  ) : null}
+                  {onContactEmailChange && !emailFieldOpen && onContactSkippedChange ? (
+                    <span className="text-muted-foreground/50" aria-hidden>
+                      ·
+                    </span>
+                  ) : null}
+                  {onContactSkippedChange ? (
+                    <button
+                      type="button"
+                      className="font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                      onClick={() => {
+                        onContactPhoneChange?.('');
+                        onContactEmailChange?.('');
+                        setEmailFieldOpen(false);
+                        onContactSkippedChange(true);
+                      }}
+                    >
+                      No contact on OTA
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
       ) : null}
 
@@ -440,18 +496,73 @@ export function IssueGuestAccessFormFields({
             />
           </div>
           {showBookingReference ? (
-            <div className="space-y-1">
-              <Label htmlFor="booking-external-id">Booking reference</Label>
-              <p className="text-xs text-muted-foreground">OTA confirmation number.</p>
-              <Input
-                id="booking-external-id"
-                value={bookingExternalId}
-                onChange={(event) => onBookingExternalIdChange(event.target.value)}
-                placeholder="e.g. 1234567890"
-                autoComplete="off"
-                required
-              />
-            </div>
+            bookingPlatformId === 'hostelworld' ? (
+              <div className="space-y-1 lg:col-span-2">
+                <Label htmlFor="booking-external-id">Hostelworld booking number</Label>
+                {hostelworldBookingPrefix ? (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Property prefix is fixed. Paste the full number or only the unique part.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        value={`${hostelworldBookingPrefix}-`}
+                        disabled
+                        readOnly
+                        aria-label="Hostelworld property prefix"
+                        className="w-[8.25rem] shrink-0 font-mono"
+                      />
+                      <Input
+                        id="booking-external-id"
+                        value={bookingExternalId}
+                        onChange={(event) => {
+                          const raw = event.target.value.trim().replace(/\s+/g, '');
+                          const afterPrefix = raw.startsWith(hostelworldBookingPrefix)
+                            ? raw.slice(hostelworldBookingPrefix.length)
+                            : raw;
+                          onBookingExternalIdChange(afterPrefix.replace(/-/g, ''));
+                        }}
+                        placeholder="Unique booking part"
+                        autoComplete="off"
+                        className="font-mono"
+                        required
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Paste the full Hostelworld number. The first 6 digits will be saved as this
+                      hostel&apos;s prefix.
+                    </p>
+                    <Input
+                      id="booking-external-id"
+                      value={bookingExternalId}
+                      onChange={(event) =>
+                        onBookingExternalIdChange(event.target.value.trim().replace(/\s+/g, ''))
+                      }
+                      placeholder="e.g. 12345678901"
+                      autoComplete="off"
+                      className="font-mono"
+                      required
+                    />
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label htmlFor="booking-external-id">Booking reference</Label>
+                <p className="text-xs text-muted-foreground">OTA confirmation number.</p>
+                <Input
+                  id="booking-external-id"
+                  value={bookingExternalId}
+                  onChange={(event) => onBookingExternalIdChange(event.target.value)}
+                  placeholder="e.g. 1234567890"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+            )
           ) : null}
         </>
       ) : null}

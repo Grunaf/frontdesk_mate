@@ -3,8 +3,10 @@ import type { BookingPlatformOption, ReceptionBookingSettings } from '../model/r
 
 const PLATFORM_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const BOOKING_COM_HOTEL_ID_PATTERN = /^[0-9]+$/;
+const HOSTELWORLD_BOOKING_PREFIX_PATTERN = /^\d{6}$/;
 export const RECEPTION_BOOKING_EXTERNAL_ID_MAX = 128;
 export const RECEPTION_BOOKING_COM_HOTEL_ID_MAX = 32;
+export const HOSTELWORLD_BOOKING_PREFIX_LENGTH = 6;
 
 export function slugifyBookingPlatformId(label: string): string {
   const slug = label
@@ -38,6 +40,19 @@ export function normalizeBookingComHotelId(value: string | null | undefined): st
   return trimmed.slice(0, RECEPTION_BOOKING_COM_HOTEL_ID_MAX);
 }
 
+export function normalizeHostelworldBookingPrefix(
+  value: string | null | undefined
+): string | undefined {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed) {
+    return undefined;
+  }
+  if (!HOSTELWORLD_BOOKING_PREFIX_PATTERN.test(trimmed)) {
+    return undefined;
+  }
+  return trimmed;
+}
+
 function normalizePlatforms(raw: BookingPlatformOption[] | undefined): BookingPlatformOption[] {
   if (!raw?.length) {
     return [];
@@ -67,14 +82,18 @@ export function normalizeReceptionBookingForSave(
 
   const platforms = normalizePlatforms(receptionBooking.platforms);
   const bookingComHotelId = normalizeBookingComHotelId(receptionBooking.bookingComHotelId);
+  const hostelworldBookingPrefix = normalizeHostelworldBookingPrefix(
+    receptionBooking.hostelworldBookingPrefix
+  );
 
-  if (platforms.length === 0 && !bookingComHotelId) {
+  if (platforms.length === 0 && !bookingComHotelId && !hostelworldBookingPrefix) {
     return undefined;
   }
 
   return {
     platforms,
     ...(bookingComHotelId ? { bookingComHotelId } : {}),
+    ...(hostelworldBookingPrefix ? { hostelworldBookingPrefix } : {}),
   };
 }
 
@@ -94,6 +113,14 @@ export function resolveBookingComHotelId(
   settings: TenantSettings | undefined
 ): string | null {
   return normalizeBookingComHotelId(settings?.receptionBooking?.bookingComHotelId) ?? null;
+}
+
+export function resolveHostelworldBookingPrefix(
+  settings: TenantSettings | undefined
+): string | null {
+  return (
+    normalizeHostelworldBookingPrefix(settings?.receptionBooking?.hostelworldBookingPrefix) ?? null
+  );
 }
 
 export function resolveReceptionBookingPlatformLabel(
@@ -161,6 +188,11 @@ export function validateReceptionBookingPlatformsForAdmin(
     if (!BOOKING_COM_HOTEL_ID_PATTERN.test(hotelId)) {
       return 'Booking.com hotel ID must be digits only.';
     }
+  }
+
+  const hwPrefix = settings.receptionBooking?.hostelworldBookingPrefix?.trim() ?? '';
+  if (hwPrefix && !HOSTELWORLD_BOOKING_PREFIX_PATTERN.test(hwPrefix)) {
+    return 'Hostelworld booking prefix must be exactly 6 digits.';
   }
 
   return null;

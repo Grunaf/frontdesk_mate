@@ -673,6 +673,8 @@ export async function updateGuestReservation(
       booking_amount_due_minor: balanceFields.amountMinor,
       booking_amount_currency: balanceFields.currency,
       booking_paid_at: bookingPaidAt,
+      contact_phone: input.contactPhone?.trim() || null,
+      contact_email: input.contactEmail?.trim() || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', input.stayId)

@@ -58,14 +58,31 @@ describe('normalizeReceptionBookingSettings', () => {
     ).toMatch(/slug/i);
   });
 
-  it('validates booking.com hotel id digits', () => {
+  it('keeps hostelworldBookingPrefix when platforms are empty', () => {
+    const result = normalizeReceptionBookingForSave({
+      platforms: [],
+      hostelworldBookingPrefix: ' 123456 ',
+    });
+    expect(result).toEqual({ platforms: [], hostelworldBookingPrefix: '123456' });
+  });
+
+  it('drops invalid hostelworldBookingPrefix length', () => {
+    expect(
+      normalizeReceptionBookingForSave({
+        platforms: [],
+        hostelworldBookingPrefix: '12345',
+      })
+    ).toBeUndefined();
+  });
+
+  it('validates hostelworld booking prefix digits', () => {
     expect(
       validateReceptionBookingPlatformsForAdmin({
         receptionBooking: {
           platforms: [],
-          bookingComHotelId: '12ab',
+          hostelworldBookingPrefix: '12ab56',
         },
       })
-    ).toMatch(/digits/i);
+    ).toMatch(/6 digits/i);
   });
 });

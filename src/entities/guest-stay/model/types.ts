@@ -184,6 +184,8 @@ export type UpdateGuestReservationInput = {
   bookingPlatformId?: string;
   bookingExternalId?: string;
   bookingAmountDue?: string | number;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
 };
 
 export type UpdateGuestReservationResult =

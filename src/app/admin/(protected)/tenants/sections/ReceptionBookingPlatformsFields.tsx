@@ -23,19 +23,26 @@ export function ReceptionBookingPlatformsFields({ settings }: ReceptionBookingPl
     [settings?.receptionBooking?.platforms]
   );
   const bookingComHotelId = settings?.receptionBooking?.bookingComHotelId ?? '';
+  const hostelworldBookingPrefix = settings?.receptionBooking?.hostelworldBookingPrefix ?? '';
 
   const patchReceptionBooking = (next: {
     platforms?: BookingPlatformOption[];
     bookingComHotelId?: string;
+    hostelworldBookingPrefix?: string;
   }) => {
     const nextPlatforms = next.platforms ?? platforms;
     const nextHotelId =
       next.bookingComHotelId !== undefined ? next.bookingComHotelId : bookingComHotelId;
+    const nextHwPrefix =
+      next.hostelworldBookingPrefix !== undefined
+        ? next.hostelworldBookingPrefix
+        : hostelworldBookingPrefix;
 
     updateDraft({
       receptionBooking: {
         platforms: nextPlatforms,
         ...(nextHotelId.trim() ? { bookingComHotelId: nextHotelId } : {}),
+        ...(nextHwPrefix.trim() ? { hostelworldBookingPrefix: nextHwPrefix.trim() } : {}),
       },
     });
   };
@@ -88,6 +95,27 @@ export function ReceptionBookingPlatformsFields({ settings }: ReceptionBookingPl
           onChange={(event) => patchReceptionBooking({ bookingComHotelId: event.target.value })}
           placeholder="e.g. 123456"
           inputMode="numeric"
+          autoComplete="off"
+          className="w-full max-w-xs rounded-md border px-2.5 py-1.5 font-mono text-sm"
+        />
+      </label>
+
+      <label className="block space-y-1">
+        <span className="text-sm font-medium">Hostelworld booking prefix</span>
+        <p className="text-xs text-muted-foreground">
+          Leading 6 digits shared by this property. Reception stores only the unique booking suffix;
+          Inbox links use the unique part.
+        </p>
+        <input
+          value={hostelworldBookingPrefix}
+          onChange={(event) =>
+            patchReceptionBooking({
+              hostelworldBookingPrefix: event.target.value.replace(/\D/g, '').slice(0, 6),
+            })
+          }
+          placeholder="e.g. 123456"
+          inputMode="numeric"
+          maxLength={6}
           autoComplete="off"
           className="w-full max-w-xs rounded-md border px-2.5 py-1.5 font-mono text-sm"
         />

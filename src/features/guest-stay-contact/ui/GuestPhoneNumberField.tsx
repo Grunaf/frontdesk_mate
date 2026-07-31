@@ -90,30 +90,15 @@ function extractNationalDigits(raw: string, country: CountryCode): string {
   return digits;
 }
 
-/**
- * Cap national digits for input UX:
- * - hard stop on lib `TOO_LONG`
- * - also stop when AsYouType mask disappears after it appeared
- *   (e.g. RU allows 10 or 14 in metadata; 11–13 drop formatting)
- */
+/** Cap national digits for input UX: hard stop on lib `TOO_LONG`. */
 function clipNationalDigits(country: CountryCode, nationalDigits: string): string {
   let accepted = '';
-  let sawMask = false;
 
   for (const digit of nationalDigits.replace(/\D/g, '')) {
     const next = `${accepted}${digit}`;
     if (validatePhoneNumberLength(next, country) === 'TOO_LONG') {
       break;
     }
-
-    const formatted = new AsYouType(country).input(next);
-    const hasMask = /[\s\-()]/.test(formatted);
-    if (hasMask) {
-      sawMask = true;
-    } else if (sawMask) {
-      break;
-    }
-
     accepted = next;
   }
 
