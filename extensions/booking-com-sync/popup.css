@@ -11,12 +11,22 @@ body {
   color: #1c1c1a;
 }
 
+.view[hidden] {
+  display: none;
+}
+
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 h1 {
@@ -99,6 +109,21 @@ button.secondary {
   background: #fff;
   color: #1c1c1a;
   border: 1px solid #d6d6d3;
+}
+
+button.icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #1c1c1a;
+  border: 1px solid #d6d6d3;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
 }
 
 button:disabled {

@@ -2,6 +2,7 @@ const DEFAULTS = {
   webhookUrl: 'http://localhost:3000/api/integrations/booking-com/webhook',
   syncSecret: '',
   saasOpenUrl: 'http://localhost:3000',
+  settingsConfigured: false,
   lastSyncAt: null,
   lastStatus: 'idle',
   lastError: null,

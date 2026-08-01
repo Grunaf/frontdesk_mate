@@ -7,32 +7,55 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header>
-      <h1>Booking sync</h1>
-      <p id="status" class="status status-idle">Idle</p>
-    </header>
+    <section id="view-status" class="view" hidden>
+      <header>
+        <h1>Booking sync</h1>
+        <div class="header-actions">
+          <p id="status" class="status status-idle">Idle</p>
+          <button id="open-settings" type="button" class="icon-btn" aria-label="Settings" title="Settings">
+            ⚙
+          </button>
+        </div>
+      </header>
 
-    <p id="last-sync" class="meta">No sync yet</p>
-    <p id="error" class="error" hidden></p>
+      <p id="last-sync" class="meta">No sync yet</p>
+      <p id="error" class="error" hidden></p>
 
-    <label class="field">
-      <span>Webhook URL</span>
-      <input id="webhook-url" type="url" autocomplete="off" />
-    </label>
-    <label class="field">
-      <span>Sync secret</span>
-      <input id="sync-secret" type="password" autocomplete="off" />
-    </label>
-    <label class="field">
-      <span>Open reception URL</span>
-      <input id="saas-url" type="url" autocomplete="off" />
-    </label>
+      <div class="actions">
+        <button id="sync-page" type="button">Sync current page</button>
+        <button id="open-saas" type="button" class="secondary">Open reception</button>
+      </div>
+    </section>
 
-    <div class="actions">
-      <button id="save" type="button">Save</button>
-      <button id="sync-page" type="button">Sync current page</button>
-      <button id="open-saas" type="button" class="secondary">Open reception</button>
-    </div>
+    <section id="view-settings" class="view" hidden>
+      <header>
+        <h1>Settings</h1>
+        <button id="back-status" type="button" class="icon-btn" aria-label="Back" title="Back">←</button>
+      </header>
+
+      <p id="settings-hint" class="meta">
+        Set webhook and sync secret once. Reception inbox uses Booking.com hotel ID from Admin /
+        Owner settings.
+      </p>
+      <p id="settings-error" class="error" hidden></p>
+
+      <label class="field">
+        <span>Webhook URL</span>
+        <input id="webhook-url" type="url" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Sync secret</span>
+        <input id="sync-secret" type="password" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Open reception URL</span>
+        <input id="saas-url" type="url" autocomplete="off" />
+      </label>
+
+      <div class="actions">
+        <button id="save" type="button">Save</button>
+      </div>
+    </section>
 
     <script src="popup.js" type="module"></script>
   </body>

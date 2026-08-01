@@ -42,7 +42,33 @@ function paintStatus(status) {
   }
 }
 
-async function refresh() {
+function showView(view) {
+  const statusView = document.getElementById('view-status');
+  const settingsView = document.getElementById('view-settings');
+  const isSettings = view === 'settings';
+  statusView.hidden = isSettings;
+  settingsView.hidden = !isSettings;
+}
+
+function isConfigured(stored) {
+  if (stored?.settingsConfigured === true) return true;
+  return Boolean(String(stored?.syncSecret || '').trim());
+}
+
+async function loadSettingsFields() {
+  const stored = await chrome.storage.local.get([
+    'webhookUrl',
+    'syncSecret',
+    'saasOpenUrl',
+    'settingsConfigured',
+  ]);
+  document.getElementById('webhook-url').value = stored.webhookUrl || '';
+  document.getElementById('sync-secret').value = stored.syncSecret || '';
+  document.getElementById('saas-url').value = stored.saasOpenUrl || '';
+  return stored;
+}
+
+async function refreshStatus() {
   const status = await chrome.runtime.sendMessage({ type: 'get_status' });
   paintStatus(status?.lastStatus || 'idle');
   document.getElementById('last-sync').textContent = relativeTime(status?.lastSyncAt);
@@ -54,30 +80,48 @@ async function refresh() {
     errorEl.hidden = true;
     errorEl.textContent = '';
   }
-
-  const stored = await chrome.storage.local.get(['webhookUrl', 'syncSecret', 'saasOpenUrl']);
-  document.getElementById('webhook-url').value = stored.webhookUrl || '';
-  document.getElementById('sync-secret').value = stored.syncSecret || '';
-  document.getElementById('saas-url').value = stored.saasOpenUrl || '';
 }
+
+document.getElementById('open-settings').addEventListener('click', async () => {
+  document.getElementById('settings-error').hidden = true;
+  await loadSettingsFields();
+  showView('settings');
+});
+
+document.getElementById('back-status').addEventListener('click', async () => {
+  showView('status');
+  await refreshStatus();
+});
 
 document.getElementById('save').addEventListener('click', async () => {
   const webhookUrl = document.getElementById('webhook-url').value.trim();
   const syncSecret = document.getElementById('sync-secret').value.trim();
   const saasOpenUrl = document.getElementById('saas-url').value.trim();
+  const settingsError = document.getElementById('settings-error');
 
-  const allowed = await ensureHostPermission(webhookUrl);
-  if (!allowed) {
-    paintStatus('error');
-    const errorEl = document.getElementById('error');
-    errorEl.hidden = false;
-    errorEl.textContent = 'Host permission denied for webhook URL';
+  if (!webhookUrl || !syncSecret) {
+    settingsError.hidden = false;
+    settingsError.textContent = 'Webhook URL and sync secret are required';
     return;
   }
 
-  await chrome.storage.local.set({ webhookUrl, syncSecret, saasOpenUrl });
+  const allowed = await ensureHostPermission(webhookUrl);
+  if (!allowed) {
+    settingsError.hidden = false;
+    settingsError.textContent = 'Host permission denied for webhook URL';
+    return;
+  }
+
+  await chrome.storage.local.set({
+    webhookUrl,
+    syncSecret,
+    saasOpenUrl,
+    settingsConfigured: true,
+  });
   await chrome.runtime.sendMessage({ type: 'flush_outbox' });
-  await refresh();
+  settingsError.hidden = true;
+  showView('status');
+  await refreshStatus();
 });
 
 document.getElementById('sync-page').addEventListener('click', async () => {
@@ -100,7 +144,7 @@ document.getElementById('sync-page').addEventListener('click', async () => {
     errorEl.textContent = error instanceof Error ? error.message : 'Could not sync tab';
     return;
   }
-  await refresh();
+  await refreshStatus();
 });
 
 document.getElementById('open-saas').addEventListener('click', async () => {
@@ -109,4 +153,14 @@ document.getElementById('open-saas').addEventListener('click', async () => {
   await chrome.tabs.create({ url });
 });
 
-refresh();
+async function boot() {
+  const stored = await loadSettingsFields();
+  if (!isConfigured(stored)) {
+    showView('settings');
+    return;
+  }
+  showView('status');
+  await refreshStatus();
+}
+
+boot();
