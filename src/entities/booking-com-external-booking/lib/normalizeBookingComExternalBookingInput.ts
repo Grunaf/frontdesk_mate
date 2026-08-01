@@ -52,9 +52,14 @@ function asDate(value: unknown): string | null {
   return raw;
 }
 
-function asStatus(value: unknown): BookingComBookingStatus {
-  if (typeof value === 'string' && (BOOKING_COM_BOOKING_STATUSES as readonly string[]).includes(value)) {
-    return value as BookingComBookingStatus;
+export function normalizeBookingComBookingStatus(value: unknown): BookingComBookingStatus {
+  if (typeof value !== 'string') return 'unknown';
+  const s = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (s === 'canceled' || s === 'cancelled') return 'cancelled';
+  if (s === 'no_show' || s === 'noshow') return 'no_show';
+  if (s === 'ok' || s === 'confirmed' || s === 'booked') return 'ok';
+  if ((BOOKING_COM_BOOKING_STATUSES as readonly string[]).includes(s)) {
+    return s as BookingComBookingStatus;
   }
   return 'unknown';
 }
@@ -76,6 +81,15 @@ export function normalizeBookingComExternalBookingInput(
   const hotelId = asTrimmedString(record.hotel_id, HOTEL_ID_MAX);
   if (!bookingId || !hotelId) return null;
 
+  const source = asSource(record.source);
+  const legacyAmount = asAmount(record.amount);
+  const listAmount =
+    asAmount(record.list_amount) ??
+    (source === 'detail_api' ? null : legacyAmount);
+  const totalAmount =
+    asAmount(record.total_amount) ??
+    (source === 'detail_api' ? legacyAmount : null);
+
   return {
     booking_id: bookingId,
     hotel_id: hotelId,
@@ -86,12 +100,14 @@ export function normalizeBookingComExternalBookingInput(
     children: asNonNegInt(record.children),
     check_in: asDate(record.check_in),
     check_out: asDate(record.check_out),
-    amount: asAmount(record.amount),
+    amount: listAmount,
+    list_amount: listAmount,
+    total_amount: totalAmount,
     currency: asTrimmedString(record.currency, CURRENCY_MAX)?.toUpperCase() ?? null,
-    status: asStatus(record.status),
+    status: normalizeBookingComBookingStatus(record.status),
     room_name: asTrimmedString(record.room_name, ROOM_NAME_MAX),
     captured_at: asTrimmedString(record.captured_at, 40),
-    source: asSource(record.source),
+    source,
   };
 }
 

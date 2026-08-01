@@ -13,11 +13,38 @@ import type {
 } from '../model/types';
 
 const COLUMNS =
-  'id, tenant_id, hotel_id, booking_id, guest_name, phone_number, guest_email, adults, children, check_in, check_out, amount, currency, booking_status, room_name, inbox_status, source, captured_at, issued_stay_id, created_at, updated_at';
+  'id, tenant_id, hotel_id, booking_id, guest_name, phone_number, guest_email, adults, children, check_in, check_out, amount, list_amount, total_amount, currency, booking_status, room_name, inbox_status, source, captured_at, issued_stay_id, created_at, updated_at';
+
+type ExistingPreserve = {
+  guest_name: string | null;
+  phone_number: string | null;
+  guest_email: string | null;
+  adults: number | null;
+  children: number | null;
+  check_in: string | null;
+  check_out: string | null;
+  list_amount: number | null;
+  total_amount: number | null;
+  currency: string | null;
+  room_name: string | null;
+  booking_status: string | null;
+};
+
+function asNullableNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (value != null && value !== '') {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
 
 function mapRow(row: Record<string, unknown>): BookingComExternalBookingRecord {
   const checkIn = row.check_in;
   const checkOut = row.check_out;
+  const listAmount =
+    asNullableNumber(row.list_amount) ?? asNullableNumber(row.amount);
+  const totalAmount = asNullableNumber(row.total_amount);
   return {
     id: String(row.id),
     tenant_id: String(row.tenant_id),
@@ -31,7 +58,9 @@ function mapRow(row: Record<string, unknown>): BookingComExternalBookingRecord {
       typeof row.children === 'number' ? row.children : row.children != null ? Number(row.children) : null,
     check_in: checkIn ? String(checkIn).slice(0, 10) : null,
     check_out: checkOut ? String(checkOut).slice(0, 10) : null,
-    amount: typeof row.amount === 'number' ? row.amount : row.amount != null ? Number(row.amount) : null,
+    amount: listAmount,
+    list_amount: listAmount,
+    total_amount: totalAmount,
     currency: row.currency ? String(row.currency) : null,
     booking_status: String(row.booking_status) as BookingComExternalBookingRecord['booking_status'],
     room_name: row.room_name ? String(row.room_name) : null,
@@ -61,26 +90,36 @@ function assertHotelMatch(
 function buildUpsertRow(
   tenantId: string,
   input: BookingComExternalBookingInput,
-  nowIso: string
+  nowIso: string,
+  existing: ExistingPreserve | undefined
 ): Record<string, unknown> {
+  const listAmount = input.list_amount ?? null;
+  const totalAmount = input.total_amount ?? null;
+
   return {
     tenant_id: tenantId,
     hotel_id: input.hotel_id,
     booking_id: input.booking_id,
-    guest_name: input.guest_name ?? null,
-    adults: input.adults ?? null,
-    children: input.children ?? null,
-    check_in: input.check_in ?? null,
-    check_out: input.check_out ?? null,
-    amount: input.amount ?? null,
-    currency: input.currency ?? null,
-    booking_status: input.status ?? 'unknown',
-    room_name: input.room_name ?? null,
+    guest_name: input.guest_name ?? existing?.guest_name ?? null,
+    adults: input.adults ?? existing?.adults ?? null,
+    children: input.children ?? existing?.children ?? null,
+    check_in: input.check_in ?? existing?.check_in ?? null,
+    check_out: input.check_out ?? existing?.check_out ?? null,
+    list_amount: listAmount ?? existing?.list_amount ?? null,
+    total_amount: totalAmount ?? existing?.total_amount ?? null,
+    // Keep legacy column in sync with list price for older readers.
+    amount: listAmount ?? existing?.list_amount ?? null,
+    currency: input.currency ?? existing?.currency ?? null,
+    booking_status:
+      input.status && input.status !== 'unknown'
+        ? input.status
+        : existing?.booking_status ?? input.status ?? 'unknown',
+    room_name: input.room_name ?? existing?.room_name ?? null,
     source: input.source ?? 'list_api',
     captured_at: input.captured_at ?? nowIso,
     updated_at: nowIso,
-    ...(input.phone_number ? { phone_number: input.phone_number } : {}),
-    ...(input.guest_email ? { guest_email: input.guest_email } : {}),
+    phone_number: input.phone_number ?? existing?.phone_number ?? null,
+    guest_email: input.guest_email ?? existing?.guest_email ?? null,
   };
 }
 
@@ -108,36 +147,46 @@ export async function upsertBookingComExternalBookings(input: {
 
   const { data: existing, error: existingError } = await admin
     .from('booking_com_external_bookings')
-    .select('booking_id, phone_number, guest_email')
+    .select(
+      'booking_id, guest_name, phone_number, guest_email, adults, children, check_in, check_out, list_amount, total_amount, amount, currency, room_name, booking_status'
+    )
     .eq('tenant_id', gate.tenantId)
     .eq('hotel_id', hotelId)
     .in('booking_id', bookingIds);
 
   if (existingError) {
-    console.error('upsertBookingComExternalBookings existing phones:', existingError.message);
+    console.error('upsertBookingComExternalBookings existing:', existingError.message);
     return { ok: false, error: 'db_unavailable' };
   }
 
   const existingById = new Map(
     (existing ?? []).map((row) => {
-      const r = row as { booking_id: string; phone_number: string | null; guest_email: string | null };
+      const r = row as Record<string, unknown>;
+      const listAmount =
+        asNullableNumber(r.list_amount) ?? asNullableNumber(r.amount);
       return [
         String(r.booking_id),
         {
-          phone: r.phone_number?.trim() || null,
-          email: r.guest_email?.trim() || null,
-        },
+          guest_name: r.guest_name ? String(r.guest_name) : null,
+          phone_number: r.phone_number ? String(r.phone_number).trim() || null : null,
+          guest_email: r.guest_email ? String(r.guest_email).trim() || null : null,
+          adults: asNullableNumber(r.adults),
+          children: asNullableNumber(r.children),
+          check_in: r.check_in ? String(r.check_in).slice(0, 10) : null,
+          check_out: r.check_out ? String(r.check_out).slice(0, 10) : null,
+          list_amount: listAmount,
+          total_amount: asNullableNumber(r.total_amount),
+          currency: r.currency ? String(r.currency) : null,
+          room_name: r.room_name ? String(r.room_name) : null,
+          booking_status: r.booking_status ? String(r.booking_status) : null,
+        } satisfies ExistingPreserve,
       ] as const;
     })
   );
 
-  const rows = input.bookings.map((booking) => {
-    const row = buildUpsertRow(gate.tenantId, booking, nowIso);
-    const kept = existingById.get(booking.booking_id);
-    if (!booking.phone_number && kept?.phone) row.phone_number = kept.phone;
-    if (!booking.guest_email && kept?.email) row.guest_email = kept.email;
-    return row;
-  });
+  const rows = input.bookings.map((booking) =>
+    buildUpsertRow(gate.tenantId, booking, nowIso, existingById.get(booking.booking_id))
+  );
 
   const { error } = await admin.from('booking_com_external_bookings').upsert(rows, {
     onConflict: 'tenant_id,hotel_id,booking_id',
@@ -174,9 +223,24 @@ export async function patchBookingComExternalBooking(input: {
   if (input.booking.children != null) patch.children = input.booking.children;
   if (input.booking.check_in) patch.check_in = input.booking.check_in;
   if (input.booking.check_out) patch.check_out = input.booking.check_out;
-  if (input.booking.amount != null) patch.amount = input.booking.amount;
+  if (input.booking.list_amount != null) {
+    patch.list_amount = input.booking.list_amount;
+    patch.amount = input.booking.list_amount;
+  }
+  if (input.booking.total_amount != null) patch.total_amount = input.booking.total_amount;
+  // Legacy detail payloads may still send `amount` as total due.
+  if (
+    input.booking.total_amount == null &&
+    input.booking.list_amount == null &&
+    input.booking.amount != null &&
+    (input.booking.source === 'detail_api' || input.booking.source === 'dom_fallback')
+  ) {
+    patch.total_amount = input.booking.amount;
+  }
   if (input.booking.currency) patch.currency = input.booking.currency;
-  if (input.booking.status) patch.booking_status = input.booking.status;
+  if (input.booking.status && input.booking.status !== 'unknown') {
+    patch.booking_status = input.booking.status;
+  }
   if (input.booking.room_name) patch.room_name = input.booking.room_name;
   if (input.booking.captured_at) patch.captured_at = input.booking.captured_at;
 
@@ -195,7 +259,6 @@ export async function patchBookingComExternalBooking(input: {
   }
 
   if (!data) {
-    // Detail opened before list sync — upsert a minimal row.
     const upsert = await upsertBookingComExternalBookings({
       tenantSlug: input.tenantSlug,
       bookings: [{ ...input.booking, source: input.booking.source ?? 'detail_api' }],
@@ -276,14 +339,14 @@ export async function getBookingComExternalBooking(input: {
     console.error('getBookingComExternalBooking:', error.message);
     return null;
   }
-
-  return data ? mapRow(data as Record<string, unknown>) : null;
+  if (!data) return null;
+  return mapRow(data as Record<string, unknown>);
 }
 
 export async function setBookingComExternalBookingInboxStatus(input: {
   tenantSlug: string;
   bookingRowId: string;
-  inboxStatus: 'done' | 'dismissed';
+  inboxStatus: 'done' | 'dismissed' | 'open';
   issuedStayId?: string | null;
 }): Promise<ResolveBookingComExternalBookingResult> {
   const admin = getSupabaseAdmin();
@@ -299,8 +362,8 @@ export async function setBookingComExternalBookingInboxStatus(input: {
       updated_at: new Date().toISOString(),
       ...(input.issuedStayId ? { issued_stay_id: input.issuedStayId } : {}),
     })
-    .eq('id', input.bookingRowId)
     .eq('tenant_id', tenant.id)
+    .eq('id', input.bookingRowId)
     .select('id')
     .maybeSingle();
 
@@ -308,7 +371,6 @@ export async function setBookingComExternalBookingInboxStatus(input: {
     console.error('setBookingComExternalBookingInboxStatus:', error.message);
     return { ok: false, error: 'db_unavailable' };
   }
-
   if (!data) return { ok: false, error: 'not_found' };
   return { ok: true };
 }

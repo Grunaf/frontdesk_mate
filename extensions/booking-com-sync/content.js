@@ -156,7 +156,8 @@ function emptyBooking(bookingId, hotelId, source) {
     children: null,
     check_in: null,
     check_out: null,
-    amount: null,
+    list_amount: null,
+    total_amount: null,
     currency: null,
     status: 'unknown',
     room_name: null,
@@ -201,9 +202,13 @@ function normalizeOne(raw, fallbackHotelId, source) {
   const checkOut = asString(
     pick(raw, ['check_out', 'checkout', 'checkOut', 'departure_date', 'departureDate', 'to_date'])
   ).slice(0, 10);
-  const amount = asNumber(
+  const legacyAmount = asNumber(
     pick(raw, ['amount', 'price', 'total_price', 'totalPrice', 'price_euro', 'commissionable_amount'])
   );
+  const listAmount = asNumber(pick(raw, ['list_amount', 'listAmount'])) ??
+    (source === 'detail_api' ? null : legacyAmount);
+  const totalAmount = asNumber(pick(raw, ['total_amount', 'totalAmount'])) ??
+    (source === 'detail_api' ? legacyAmount : null);
   const currency = asString(pick(raw, ['currency', 'currency_code', 'currencyCode'])).toUpperCase();
   const roomName = asString(pick(raw, ['room_name', 'roomName', 'room_type', 'roomType', 'unit_name']));
   const status = normalizeStatus(pick(raw, ['status', 'booking_status', 'reservation_status']));
@@ -218,7 +223,8 @@ function normalizeOne(raw, fallbackHotelId, source) {
     children,
     check_in: /^\d{4}-\d{2}-\d{2}$/.test(checkIn) ? checkIn : parseExtranetDate(checkIn),
     check_out: /^\d{4}-\d{2}-\d{2}$/.test(checkOut) ? checkOut : parseExtranetDate(checkOut),
-    amount,
+    list_amount: listAmount,
+    total_amount: totalAmount,
     currency: currency || null,
     status,
     room_name: roomName || null,
@@ -293,8 +299,10 @@ function parseIdsFromHref(href) {
   }
 }
 
-function cellText(row, selector) {
-  const el = row.querySelector(selector);
+function headingCell(row, heading) {
+  const el =
+    row.querySelector(`td[data-heading="${heading}"], th[data-heading="${heading}"]`) ||
+    row.querySelector(`[data-heading="${heading}"]`);
   return el ? asString(el.textContent) : '';
 }
 
@@ -302,7 +310,7 @@ function parseListFromDom() {
   const table = document.querySelector('table.reservation-table');
   if (!table) return [];
 
-  const rows = [...table.querySelectorAll('tbody tr, tr')].filter((row) =>
+  const rows = [...table.querySelectorAll('tbody tr.bui-table__row, tbody tr')].filter((row) =>
     row.querySelector('a[href*="res_id="], a[href*="reservation_id="]')
   );
   const fallbackHotel = hotelIdFromPage();
@@ -310,52 +318,37 @@ function parseListFromDom() {
   const seen = new Set();
 
   for (const row of rows) {
-    const link =
-      row.querySelector('a[href*="res_id="]') ||
-      row.querySelector('a[href*="reservation_id="]');
-    if (!link) continue;
-    const { bookingId, hotelId: hrefHotel } = parseIdsFromHref(link.getAttribute('href') || '');
+    const nameLink =
+      row.querySelector('th[data-heading="Guest Name"] a[href*="res_id="]') ||
+      row.querySelector('a[href*="res_id="]');
+    if (!nameLink) continue;
+    const { bookingId, hotelId: hrefHotel } = parseIdsFromHref(nameLink.getAttribute('href') || '');
     const hotelId = hrefHotel || fallbackHotel;
     if (!bookingId || !hotelId || seen.has(bookingId)) continue;
     seen.add(bookingId);
 
-    const guestName = asString(link.textContent) || null;
-    const checkIn =
-      parseExtranetDate(cellText(row, '.checkin, .check-in, [class*="checkin"], [class*="check-in"]')) ||
-      parseExtranetDate(
-        [...row.querySelectorAll('td')].map((td) => asString(td.textContent)).find((t) => parseExtranetDate(t)) ||
-          ''
-      );
-    const cells = [...row.querySelectorAll('td')].map((td) => asString(td.textContent));
-    const dateCells = cells.map(parseExtranetDate).filter(Boolean);
-    const check_in = checkIn || dateCells[0] || null;
-    const check_out = dateCells[1] || null;
-
-    const guestsCell =
-      cells.find((t) => /\d+\s*(adult|guest|child)/i.test(t)) ||
-      cellText(row, '[class*="guest"], [class*="occupancy"]');
-    const { adults, children } = parseGuestCounts(guestsCell);
-
-    const roomCell =
-      cells.find((t) => /room|bed|dorm|private|suite/i.test(t) && !/adult|guest|child/i.test(t)) ||
-      cellText(row, '[class*="room"]');
-    const priceCell = cells.find((t) => /\d/.test(t) && /[€$£]|EUR|USD|GBP|[A-Z]{3}/.test(t)) || '';
-    const { amount, currency } = parseAmountCurrency(priceCell);
-    const statusCell =
-      cells.find((t) => /^(ok|cancelled|canceled|no.?show)$/i.test(t.trim())) ||
-      cellText(row, '[class*="status"]');
+    const guestName = asString(nameLink.textContent) || null;
+    const guestCounts = parseGuestCounts(headingCell(row, 'Guest Name'));
+    const check_in = parseExtranetDate(headingCell(row, 'Check-in'));
+    const check_out = parseExtranetDate(headingCell(row, 'Check-out'));
+    const room_name = headingCell(row, 'Rooms') || null;
+    const statusText =
+      asString(row.querySelector('.status--cancelled, .reservation-status__main')?.textContent) ||
+      headingCell(row, 'Status');
+    const { amount, currency } = parseAmountCurrency(headingCell(row, 'Price'));
 
     out.push({
       ...emptyBooking(bookingId, hotelId, 'dom_fallback'),
       guest_name: guestName,
-      adults,
-      children,
+      adults: guestCounts.adults,
+      children: guestCounts.children,
       check_in,
       check_out,
-      amount,
+      list_amount: amount,
+      total_amount: null,
       currency,
-      status: normalizeStatus(statusCell || 'ok'),
-      room_name: roomCell || null,
+      status: normalizeStatus(statusText || 'ok'),
+      room_name: room_name || null,
     });
   }
 
@@ -411,6 +404,7 @@ function parseDetailFromDom() {
   row.check_out = parseExtranetDate(checkOutRaw);
 
   const guestsRaw =
+    labeledValue(root, /total\s*guests?\b/i) ||
     labeledValue(root, /^guests?\b/i) ||
     asString(root.querySelector('[data-test-id*="guest"], [class*="guest-count"]')?.textContent);
   const counts = parseGuestCounts(guestsRaw);
@@ -421,7 +415,8 @@ function parseDetailFromDom() {
     labeledValue(root, /total\s*price|price\b/i) ||
     asString(root.querySelector('[data-test-id*="price"], [class*="total-price"]')?.textContent);
   const { amount, currency } = parseAmountCurrency(priceRaw);
-  row.amount = amount;
+  row.list_amount = null;
+  row.total_amount = amount;
   row.currency = currency;
 
   const bookingNo =
@@ -594,11 +589,14 @@ window.addEventListener('message', (event) => {
     const onDetail = Boolean(bookingIdFromPage());
     const sourceHint = onDetail ? 'detail_api' : 'list_api';
     const bookings = extractBookingsFromApiBody(data.payload.body, sourceHint);
-    if (bookings.length) {
+    const hasUsefulFields = bookings.some(
+      (b) => b.guest_name || b.check_in || b.list_amount != null || b.total_amount != null || b.phone_number
+    );
+    if (bookings.length && hasUsefulFields) {
       emitBookings(bookings, onDetail ? 'patch' : 'batch');
       return;
     }
-    // API body not useful → DOM fallback
+    // Sparse API body (ids-only) → DOM fallback
     syncDomNow();
   }
 });

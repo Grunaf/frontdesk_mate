@@ -16,6 +16,7 @@ import type { BedRoomOptionGroup } from '@/shared/ui';
 import { ChevronDown, MessageCircle } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { buildWhatsappMeHref } from '@/shared/lib';
+import { BOOKING_COM_LIST_PRICE_ONLY_NOTICE } from '@/entities/booking-com-external-booking';
 import { GuestPhoneNumberField } from '@/features/guest-stay-contact';
 import { validateTourismWhatsapp } from '@/features/guest-tourism-registration';
 
@@ -67,6 +68,10 @@ export interface IssueGuestAccessFormProps {
   bookingAmountDue: string;
   onBookingAmountDueChange: (value: string) => void;
   bookingBalanceCurrencySymbol: string;
+  /**
+   * Booking.com inbox prefill: amount came from Extranet list only (not detail total due).
+   */
+  bookingComListPriceOnlyWarning?: boolean;
   /** Stay offer selection (default path when offers are configured). */
   stayOfferOptions?: StayOfferFormOption[];
   offerId?: string;
@@ -147,6 +152,7 @@ export function IssueGuestAccessFormFields({
   bookingAmountDue,
   onBookingAmountDueChange,
   bookingBalanceCurrencySymbol,
+  bookingComListPriceOnlyWarning = false,
   stayOfferOptions = [],
   offerId = '',
   onOfferIdChange,
@@ -196,6 +202,7 @@ export function IssueGuestAccessFormFields({
   | 'bookingAmountDue'
   | 'onBookingAmountDueChange'
   | 'bookingBalanceCurrencySymbol'
+  | 'bookingComListPriceOnlyWarning'
   | 'stayOfferOptions'
   | 'offerId'
   | 'onOfferIdChange'
@@ -684,6 +691,11 @@ export function IssueGuestAccessFormFields({
           autoComplete="off"
           required
         />
+        {bookingComListPriceOnlyWarning ? (
+          <p className="text-xs text-amber-800 dark:text-amber-200">
+            {BOOKING_COM_LIST_PRICE_ONLY_NOTICE}
+          </p>
+        ) : null}
       </div>
     </div>
   );

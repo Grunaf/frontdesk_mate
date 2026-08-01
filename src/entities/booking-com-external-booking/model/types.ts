@@ -22,7 +22,10 @@ export interface BookingComExternalBookingRecord {
   children: number | null;
   check_in: string | null;
   check_out: string | null;
+  /** @deprecated Prefer list_amount / total_amount. Kept as list_amount alias for older rows. */
   amount: number | null;
+  list_amount: number | null;
+  total_amount: number | null;
   currency: string | null;
   booking_status: BookingComBookingStatus;
   room_name: string | null;
@@ -45,7 +48,10 @@ export type BookingComExternalBookingInput = {
   children?: number | null;
   check_in?: string | null;
   check_out?: string | null;
+  /** @deprecated Use list_amount / total_amount. */
   amount?: number | null;
+  list_amount?: number | null;
+  total_amount?: number | null;
   currency?: string | null;
   status?: BookingComBookingStatus | null;
   room_name?: string | null;
@@ -57,16 +63,13 @@ export type ListBookingComExternalBookingsFilter = BookingComInboxStatus;
 
 export type UpsertBookingComExternalBookingsResult =
   | { ok: true; upserted: number }
-  | {
-      ok: false;
-      error: 'tenant_not_found' | 'hotel_mismatch' | 'invalid_payload' | 'db_unavailable';
-    };
+  | { ok: false; error: 'invalid_payload' | 'tenant_not_found' | 'hotel_mismatch' | 'db_unavailable' };
 
 export type PatchBookingComExternalBookingResult =
   | { ok: true }
   | {
       ok: false;
-      error: 'tenant_not_found' | 'hotel_mismatch' | 'not_found' | 'invalid_payload' | 'db_unavailable';
+      error: 'invalid_payload' | 'tenant_not_found' | 'hotel_mismatch' | 'db_unavailable' | 'not_found';
     };
 
 export type ResolveBookingComExternalBookingResult =
