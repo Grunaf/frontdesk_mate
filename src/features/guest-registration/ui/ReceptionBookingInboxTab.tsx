@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import type { BookingComExternalBookingRecord } from '@/entities/booking-com-external-booking';
+import { formatBookingComInboxContactLine } from '@/shared/lib/booking-com-extension/parseBookingComExtranetFields';
 import { buildBookingComReservationUrl } from '../lib/buildBookingComReservationUrl';
 import { formatDisplayDate } from '../lib/guestAccessDates';
 import {
@@ -167,7 +168,11 @@ export function ReceptionBookingInboxTab({
                       {' → '}
                       {booking.check_out ? formatDisplayDate(booking.check_out) : '—'}
                       {guestCount ? ` · ${guestCount}` : null}
-                      {booking.phone_number ? ` · ${booking.phone_number}` : ' · No phone yet'}
+                      {' · '}
+                      {formatBookingComInboxContactLine({
+                        phone_number: booking.phone_number,
+                        guest_email: booking.guest_email,
+                      })}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {amountLabel ? `${amountLabel} · ` : null}

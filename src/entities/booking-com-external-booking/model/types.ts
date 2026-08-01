@@ -17,6 +17,7 @@ export interface BookingComExternalBookingRecord {
   booking_id: string;
   guest_name: string | null;
   phone_number: string | null;
+  guest_email: string | null;
   adults: number | null;
   children: number | null;
   check_in: string | null;
@@ -39,6 +40,7 @@ export type BookingComExternalBookingInput = {
   hotel_id: string;
   guest_name?: string | null;
   phone_number?: string | null;
+  guest_email?: string | null;
   adults?: number | null;
   children?: number | null;
   check_in?: string | null;

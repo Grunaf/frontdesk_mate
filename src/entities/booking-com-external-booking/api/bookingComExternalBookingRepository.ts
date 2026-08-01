@@ -13,7 +13,7 @@ import type {
 } from '../model/types';
 
 const COLUMNS =
-  'id, tenant_id, hotel_id, booking_id, guest_name, phone_number, adults, children, check_in, check_out, amount, currency, booking_status, room_name, inbox_status, source, captured_at, issued_stay_id, created_at, updated_at';
+  'id, tenant_id, hotel_id, booking_id, guest_name, phone_number, guest_email, adults, children, check_in, check_out, amount, currency, booking_status, room_name, inbox_status, source, captured_at, issued_stay_id, created_at, updated_at';
 
 function mapRow(row: Record<string, unknown>): BookingComExternalBookingRecord {
   const checkIn = row.check_in;
@@ -25,6 +25,7 @@ function mapRow(row: Record<string, unknown>): BookingComExternalBookingRecord {
     booking_id: String(row.booking_id),
     guest_name: row.guest_name ? String(row.guest_name) : null,
     phone_number: row.phone_number ? String(row.phone_number) : null,
+    guest_email: row.guest_email ? String(row.guest_email) : null,
     adults: typeof row.adults === 'number' ? row.adults : row.adults != null ? Number(row.adults) : null,
     children:
       typeof row.children === 'number' ? row.children : row.children != null ? Number(row.children) : null,
@@ -79,6 +80,7 @@ function buildUpsertRow(
     captured_at: input.captured_at ?? nowIso,
     updated_at: nowIso,
     ...(input.phone_number ? { phone_number: input.phone_number } : {}),
+    ...(input.guest_email ? { guest_email: input.guest_email } : {}),
   };
 }
 
@@ -106,7 +108,7 @@ export async function upsertBookingComExternalBookings(input: {
 
   const { data: existing, error: existingError } = await admin
     .from('booking_com_external_bookings')
-    .select('booking_id, phone_number')
+    .select('booking_id, phone_number, guest_email')
     .eq('tenant_id', gate.tenantId)
     .eq('hotel_id', hotelId)
     .in('booking_id', bookingIds);
@@ -116,19 +118,24 @@ export async function upsertBookingComExternalBookings(input: {
     return { ok: false, error: 'db_unavailable' };
   }
 
-  const existingPhoneById = new Map(
+  const existingById = new Map(
     (existing ?? []).map((row) => {
-      const r = row as { booking_id: string; phone_number: string | null };
-      return [String(r.booking_id), r.phone_number?.trim() || null] as const;
+      const r = row as { booking_id: string; phone_number: string | null; guest_email: string | null };
+      return [
+        String(r.booking_id),
+        {
+          phone: r.phone_number?.trim() || null,
+          email: r.guest_email?.trim() || null,
+        },
+      ] as const;
     })
   );
 
   const rows = input.bookings.map((booking) => {
     const row = buildUpsertRow(gate.tenantId, booking, nowIso);
-    if (!booking.phone_number) {
-      const kept = existingPhoneById.get(booking.booking_id);
-      if (kept) row.phone_number = kept;
-    }
+    const kept = existingById.get(booking.booking_id);
+    if (!booking.phone_number && kept?.phone) row.phone_number = kept.phone;
+    if (!booking.guest_email && kept?.email) row.guest_email = kept.email;
     return row;
   });
 
@@ -161,6 +168,7 @@ export async function patchBookingComExternalBooking(input: {
     source: input.booking.source ?? 'detail_api',
   };
   if (input.booking.phone_number) patch.phone_number = input.booking.phone_number;
+  if (input.booking.guest_email) patch.guest_email = input.booking.guest_email;
   if (input.booking.guest_name) patch.guest_name = input.booking.guest_name;
   if (input.booking.adults != null) patch.adults = input.booking.adults;
   if (input.booking.children != null) patch.children = input.booking.children;

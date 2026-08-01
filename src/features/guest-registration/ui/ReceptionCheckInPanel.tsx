@@ -1342,6 +1342,7 @@ export function ReceptionCheckInPanel({
       setMode('custom');
       setGuestName(booking.guest_name?.trim() ?? '');
       setContactPhone(booking.phone_number?.trim() ?? '');
+      setContactEmail(booking.guest_email?.trim() ?? '');
       setBookingPlatformId('booking-com');
       setBookingExternalId(booking.booking_id);
       if (booking.check_in) setCheckInDate(booking.check_in);

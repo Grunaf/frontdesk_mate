@@ -10,6 +10,7 @@ const BOOKING_ID_MAX = 64;
 const HOTEL_ID_MAX = 32;
 const GUEST_NAME_MAX = 200;
 const PHONE_MAX = 40;
+const EMAIL_MAX = 254;
 const CURRENCY_MAX = 8;
 const ROOM_NAME_MAX = 200;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -80,6 +81,7 @@ export function normalizeBookingComExternalBookingInput(
     hotel_id: hotelId,
     guest_name: asTrimmedString(record.guest_name, GUEST_NAME_MAX),
     phone_number: asTrimmedString(record.phone_number, PHONE_MAX),
+    guest_email: asTrimmedString(record.guest_email, EMAIL_MAX)?.toLowerCase() ?? null,
     adults: asNonNegInt(record.adults),
     children: asNonNegInt(record.children),
     check_in: asDate(record.check_in),
