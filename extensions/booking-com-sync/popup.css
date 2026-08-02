@@ -4,7 +4,7 @@
 }
 
 body {
-  width: 300px;
+  width: 320px;
   margin: 0;
   padding: 12px;
   background: #f7f7f5;
@@ -59,15 +59,70 @@ h1 {
 }
 
 .meta {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: 12px;
   color: #5f5e5a;
+}
+
+.progress {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1c1c1a;
+}
+
+.progress.is-warn {
+  color: #9a3412;
 }
 
 .error {
   margin: 0 0 8px;
   font-size: 11px;
   color: #b42318;
+}
+
+.panel {
+  margin: 8px 0 10px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #d6d6d3;
+  border-radius: 8px;
+}
+
+.panel-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 650;
+  color: #5f5e5a;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.chip {
+  border: 1px solid #d6d6d3;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+  color: #1c1c1a;
+}
+
+.chip.is-active {
+  background: #1c1c1a;
+  color: #fff;
+  border-color: #1c1c1a;
+}
+
+.range-hint {
+  margin: 6px 0 0;
 }
 
 .field {

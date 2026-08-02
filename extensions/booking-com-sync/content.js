@@ -543,8 +543,40 @@ function sendToBackground(message) {
   }
 }
 
+function rememberHotelId(hotelId) {
+  const id = asString(hotelId) || hotelIdFromPage();
+  if (!id) return;
+  sendToBackground({ type: 'remember_hotel_id', hotelId: id });
+}
+
+function pageKindFromUrl() {
+  try {
+    const path = window.location.pathname || '';
+    if (path.includes('search_reservations')) return 'list';
+    if (path.includes('booking.html') && bookingIdFromPage()) return 'detail';
+    return 'extranet';
+  } catch {
+    return 'extranet';
+  }
+}
+
+function getPageContext() {
+  const hotelId = hotelIdFromPage();
+  const bookingId = bookingIdFromPage();
+  return {
+    ok: true,
+    kind: pageKindFromUrl(),
+    hotelId,
+    bookingId,
+    href: window.location.href,
+  };
+}
+
 function emitBookings(bookings, mode) {
   if (!bookings.length) return;
+
+  const hotelId = hotelIdFromPage() || asString(bookings[0]?.hotel_id);
+  rememberHotelId(hotelId);
 
   const isDetail =
     mode === 'patch' ||
@@ -602,15 +634,21 @@ window.addEventListener('message', (event) => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'get_page_context') {
+    sendResponse(getPageContext());
+    return false;
+  }
   if (message?.type === 'sync_current_page') {
     const count = syncDomNow();
-    sendResponse({ ok: true, count });
+    rememberHotelId(hotelIdFromPage());
+    sendResponse({ ok: true, count, context: getPageContext() });
     return true;
   }
   return false;
 });
 
 function scheduleAutoDomSync() {
+  rememberHotelId(hotelIdFromPage());
   const run = () => {
     try {
       syncDomNow();

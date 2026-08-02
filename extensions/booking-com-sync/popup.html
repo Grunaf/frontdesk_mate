@@ -18,11 +18,28 @@
         </div>
       </header>
 
+      <p id="page-context" class="meta">Checking current tab…</p>
+      <p id="progress" class="progress">No list scan yet</p>
       <p id="last-sync" class="meta">No sync yet</p>
       <p id="error" class="error" hidden></p>
 
+      <div class="panel">
+        <p class="panel-label">Scan arrivals</p>
+        <div class="chips" role="group" aria-label="Arrival date range">
+          <button type="button" class="chip is-active" data-range="today" id="range-today">
+            Today
+          </button>
+          <button type="button" class="chip" data-range="week" id="range-week">Week</button>
+          <button type="button" class="chip" data-range="month" id="range-month">Month</button>
+        </div>
+        <p id="range-hint" class="meta range-hint">Arrivals: today</p>
+      </div>
+
       <div class="actions">
-        <button id="sync-page" type="button">Sync current page</button>
+        <button id="primary-action" type="button">Open reservations list</button>
+        <button id="secondary-action" type="button" class="secondary" hidden>
+          Open next booking
+        </button>
         <button id="open-saas" type="button" class="secondary">Open reception</button>
       </div>
     </section>
