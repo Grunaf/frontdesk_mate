@@ -6,7 +6,7 @@ import {
   resolveStayCancelCheckoutAction,
 } from '../lib/resolveStayCancelCheckoutAction';
 import type { StayDetailTabBadgeTone } from '../lib/resolveStayDetailTabBadge';
-import { isReceptionStayPastCheckOut } from './useStayAccessControls';
+import { isReceptionStayPastCheckOut } from '../lib/canEditReceptionStayOccupancy';
 import {
   Button,
   DropdownMenu,
