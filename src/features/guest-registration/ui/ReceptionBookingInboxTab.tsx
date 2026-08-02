@@ -122,11 +122,15 @@ function InboxBookingCard({
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {!isCancelled ? (
               showSyncCue ? (
-                <ShieldAlert
-                  aria-label={BOOKING_COM_INBOX_SYNC_MISSING_DATA_HINT}
-                  className="size-4 shrink-0 text-amber-500 dark:text-amber-400"
+                <span
                   title={BOOKING_COM_INBOX_SYNC_MISSING_DATA_HINT}
-                />
+                  className="inline-flex shrink-0"
+                >
+                  <ShieldAlert
+                    aria-label={BOOKING_COM_INBOX_SYNC_MISSING_DATA_HINT}
+                    className="size-4 text-amber-500 dark:text-amber-400"
+                  />
+                </span>
               ) : (
                 <span aria-hidden className="inline-block size-4 shrink-0" />
               )
