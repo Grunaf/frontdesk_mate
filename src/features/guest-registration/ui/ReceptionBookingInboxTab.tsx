@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ChevronDown, ShieldAlert } from 'lucide-react';
 import type { BookingComExternalBookingRecord } from '@/entities/booking-com-external-booking';
 import {
@@ -15,7 +16,7 @@ import {
   dismissBookingComExternalBookingAction,
   listBookingComExternalBookingsAction,
 } from '../actions/bookingComExternalBookingActions';
-import { Badge, Button, SegmentedChipBar } from '@/shared/ui';
+import { Badge, Button, Input, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 
 const FILTER_ITEMS = [
@@ -25,6 +26,25 @@ const FILTER_ITEMS = [
 ] as const;
 
 type InboxFilter = (typeof FILTER_ITEMS)[number]['id'];
+
+function isIsoDay(value: string | null | undefined): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function bookingCheckInDay(booking: BookingComExternalBookingRecord): string | null {
+  const raw = booking.check_in?.trim();
+  if (!raw) return null;
+  const day = raw.slice(0, 10);
+  return isIsoDay(day) ? day : null;
+}
+
+function matchesArrivalDay(
+  booking: BookingComExternalBookingRecord,
+  arrivalDay: string
+): boolean {
+  if (!arrivalDay) return true;
+  return bookingCheckInDay(booking) === arrivalDay;
+}
 interface ReceptionBookingInboxTabProps {
   tenantSlug: string;
   openBookings: BookingComExternalBookingRecord[];
@@ -201,11 +221,27 @@ export function ReceptionBookingInboxTab({
   onAddStay,
   onOpenStay,
 }: ReceptionBookingInboxTabProps) {
+  const searchParams = useSearchParams();
+  const inboxParam = searchParams.get('inbox');
+  const dayParam = searchParams.get('day');
+
   const [filter, setFilter] = useState<InboxFilter>('open');
+  const [needsSyncOnly, setNeedsSyncOnly] = useState(() => inboxParam === 'needs-sync');
+  const [arrivalDay, setArrivalDay] = useState(() => (isIsoDay(dayParam) ? dayParam : ''));
   const [closedBookings, setClosedBookings] = useState<BookingComExternalBookingRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [canceledExpanded, setCanceledExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setNeedsSyncOnly(inboxParam === 'needs-sync');
+    if (isIsoDay(dayParam)) {
+      setArrivalDay(dayParam);
+    }
+    if (inboxParam === 'needs-sync') {
+      setFilter('open');
+    }
+  }, [inboxParam, dayParam]);
 
   const loadClosed = useCallback(
     async (nextFilter: 'done' | 'dismissed') => {
@@ -220,16 +256,45 @@ export function ReceptionBookingInboxTab({
     [openBookings, stays]
   );
 
-  const canceledCount = openPartition.canceled.length;
+  const filteredNeedsAction = useMemo(() => {
+    return openPartition.needsAction.filter(({ booking }) => {
+      if (arrivalDay && !matchesArrivalDay(booking, arrivalDay)) return false;
+      if (needsSyncOnly && !needsBookingComInboxReservationSync(booking)) return false;
+      return true;
+    });
+  }, [openPartition.needsAction, arrivalDay, needsSyncOnly]);
+
+  const filteredAlreadyInSystem = useMemo(() => {
+    if (needsSyncOnly) {
+      return openPartition.alreadyInSystem.filter(
+        ({ booking }) =>
+          matchesArrivalDay(booking, arrivalDay) && needsBookingComInboxReservationSync(booking)
+      );
+    }
+    return openPartition.alreadyInSystem.filter(({ booking }) =>
+      matchesArrivalDay(booking, arrivalDay)
+    );
+  }, [openPartition.alreadyInSystem, arrivalDay, needsSyncOnly]);
+
+  const filteredCanceled = useMemo(() => {
+    if (needsSyncOnly) return [];
+    return openPartition.canceled.filter(({ booking }) =>
+      matchesArrivalDay(booking, arrivalDay)
+    );
+  }, [openPartition.canceled, arrivalDay, needsSyncOnly]);
+
+  const canceledCount = filteredCanceled.length;
   const showCanceledList = canceledExpanded;
 
   const closedBookingsWithLinks = useMemo(
     () =>
-      closedBookings.map((booking) => ({
-        booking,
-        linkedStayId: resolveLinkedStayIdForBookingComInbox({ booking, stays }),
-      })),
-    [closedBookings, stays]
+      closedBookings
+        .filter((booking) => matchesArrivalDay(booking, arrivalDay))
+        .map((booking) => ({
+          booking,
+          linkedStayId: resolveLinkedStayIdForBookingComInbox({ booking, stays }),
+        })),
+    [closedBookings, stays, arrivalDay]
   );
 
   useEffect(() => {
@@ -271,7 +336,7 @@ export function ReceptionBookingInboxTab({
   };
 
   const handleDismissAllCanceled = () => {
-    const ids = openPartition.canceled.map((row) => row.booking.id);
+    const ids = filteredCanceled.map((row) => row.booking.id);
     if (ids.length === 0) return;
     setError(null);
     startTransition(async () => {
@@ -298,8 +363,8 @@ export function ReceptionBookingInboxTab({
   };
 
   const openEmpty =
-    openPartition.needsAction.length === 0 &&
-    openPartition.alreadyInSystem.length === 0 &&
+    filteredNeedsAction.length === 0 &&
+    filteredAlreadyInSystem.length === 0 &&
     canceledCount === 0;
 
   return (
@@ -320,12 +385,48 @@ export function ReceptionBookingInboxTab({
         bleed={false}
       />
 
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="grid gap-1 text-xs text-muted-foreground">
+          <span>Arrival day</span>
+          <Input
+            type="date"
+            value={arrivalDay}
+            onChange={(event) => setArrivalDay(event.target.value)}
+            className="h-9 w-[10.5rem]"
+            aria-label="Filter by arrival day"
+          />
+        </label>
+        {arrivalDay ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setArrivalDay('')}
+          >
+            Clear day
+          </Button>
+        ) : null}
+        {filter === 'open' ? (
+          <Button
+            type="button"
+            size="sm"
+            variant={needsSyncOnly ? 'default' : 'secondary'}
+            aria-pressed={needsSyncOnly}
+            onClick={() => setNeedsSyncOnly((value) => !value)}
+          >
+            Needs sync
+          </Button>
+        ) : null}
+      </div>
+
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       {filter === 'open' ? (
         openEmpty ? (
           <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-            No open Booking.com reservations.
+            {needsSyncOnly || arrivalDay
+              ? 'No bookings match these filters.'
+              : 'No open Booking.com reservations.'}
           </p>
         ) : (
           <div className="space-y-4">
@@ -361,7 +462,7 @@ export function ReceptionBookingInboxTab({
                 </div>
                 {showCanceledList ? (
                   <ul className="space-y-2">
-                    {openPartition.canceled.map(({ booking, linkedStayId }) => (
+                    {filteredCanceled.map(({ booking, linkedStayId }) => (
                       <InboxBookingCard
                         key={booking.id}
                         booking={booking}
@@ -379,13 +480,13 @@ export function ReceptionBookingInboxTab({
               </section>
             ) : null}
 
-            {openPartition.needsAction.length > 0 ? (
+            {filteredNeedsAction.length > 0 ? (
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Needs action
                 </h3>
                 <ul className="space-y-2">
-                  {openPartition.needsAction.map(({ booking }) => (
+                  {filteredNeedsAction.map(({ booking }) => (
                     <InboxBookingCard
                       key={booking.id}
                       booking={booking}
@@ -401,13 +502,13 @@ export function ReceptionBookingInboxTab({
               </section>
             ) : null}
 
-            {openPartition.alreadyInSystem.length > 0 ? (
+            {filteredAlreadyInSystem.length > 0 ? (
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Already in system
                 </h3>
                 <ul className="space-y-2">
-                  {openPartition.alreadyInSystem.map(({ booking, linkedStayId }) => (
+                  {filteredAlreadyInSystem.map(({ booking, linkedStayId }) => (
                     <InboxBookingCard
                       key={booking.id}
                       booking={booking}

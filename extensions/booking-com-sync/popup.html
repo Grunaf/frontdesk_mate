@@ -13,6 +13,17 @@
         <div class="header-actions">
           <p id="status" class="status status-error" hidden>Error</p>
           <button
+            id="needs-details-badge"
+            type="button"
+            class="needs-badge"
+            hidden
+            aria-label="Open inbox — bookings needing details"
+            title="Open inbox — bookings needing details"
+          >
+            <span class="needs-badge-icon" aria-hidden="true">⚠</span>
+            <span id="needs-details-count" class="needs-badge-count">0</span>
+          </button>
+          <button
             id="open-saas"
             type="button"
             class="icon-btn"
@@ -38,15 +49,23 @@
           <button type="button" class="chip" data-range="week" id="range-week">Week</button>
           <button type="button" class="chip" data-range="month" id="range-month">Month</button>
         </div>
-        <p id="range-hint" class="meta range-hint">Arrivals: today</p>
+        <div class="date-row">
+          <label class="date-field">
+            <span>From</span>
+            <input id="date-from" type="date" />
+          </label>
+          <label class="date-field">
+            <span>To</span>
+            <input id="date-to" type="date" />
+          </label>
+        </div>
       </div>
 
       <div class="panel panel-soft">
         <p class="panel-label">Freshness</p>
-        <p id="freshness" class="freshness">No list scan yet</p>
+        <p id="freshness" class="freshness" hidden>No list scan yet</p>
         <p id="freshness-nudge" class="meta freshness-nudge" hidden></p>
         <p id="last-sync" class="meta last-sync">No list scan yet</p>
-        <p id="progress" class="meta progress-secondary" hidden></p>
       </div>
 
       <p id="error" class="error" hidden></p>
@@ -54,7 +73,7 @@
       <div class="actions">
         <button id="primary-action" type="button">Open reservations list</button>
         <button id="secondary-action" type="button" class="secondary" hidden>
-          Open next booking
+          Sync this list anyway
         </button>
       </div>
     </section>

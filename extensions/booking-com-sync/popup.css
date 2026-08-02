@@ -121,6 +121,62 @@ h1 {
   border-color: #1c1c1a;
 }
 
+.date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.date-field {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  color: #5f5e5a;
+}
+
+.date-field input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d6d6d3;
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-size: 12px;
+  background: #fff;
+  color: #1c1c1a;
+}
+
+.needs-badge {
+  position: relative;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid #f0c7a0;
+  border-radius: 6px;
+  background: #fff7ed;
+  color: #9a3412;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.needs-badge[hidden] {
+  display: none;
+}
+
+.needs-badge-icon {
+  font-size: 11px;
+}
+
+.needs-badge-count {
+  font-variant-numeric: tabular-nums;
+}
+
 .panel-soft {
   background: #fafaf8;
 }

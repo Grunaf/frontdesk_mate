@@ -1,13 +1,13 @@
 const LIST_PATH =
   'https://admin.booking.com/hotel/hoteladmin/extranet_ng/manage/search_reservations.html';
-const DETAIL_PATH =
-  'https://admin.booking.com/hotel/hoteladmin/extranet_ng/manage/booking.html';
 
 const RANGE_STORAGE_KEY = 'arrivalRange';
+const DATE_FROM_STORAGE_KEY = 'arrivalDateFrom';
+const DATE_TO_STORAGE_KEY = 'arrivalDateTo';
 /** Hours after which a day's list scan is stale. */
 const STALE_HOURS = 18;
 
-/** @typedef {'today' | 'week' | 'month'} ArrivalRange */
+/** @typedef {'today' | 'week' | 'month' | 'custom'} ArrivalRange */
 /** @typedef {'away' | 'list' | 'detail' | 'extranet'} PageKind */
 
 function originPattern(url) {
@@ -110,6 +110,9 @@ function isWeekday(date) {
 
 /** @param {ArrivalRange} range */
 function arrivalDateBounds(range) {
+  if (range === 'custom') {
+    return readDateInputs();
+  }
   const today = new Date();
   const from = formatIsoDate(today);
   if (range === 'week') return { from, to: formatIsoDate(addDays(today, 6)) };
@@ -117,21 +120,50 @@ function arrivalDateBounds(range) {
   return { from, to: from };
 }
 
-/** @param {ArrivalRange} range */
-function rangeLabel(range) {
-  const { from, to } = arrivalDateBounds(range);
-  if (range === 'today') return `Window: today (${from}) · ok + cancelled`;
-  if (range === 'week') return `Window: week (${from} → ${to}) · ok + cancelled`;
-  return `Window: month (${from} → ${to}) · ok + cancelled`;
+function isIsoDay(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+}
+
+function readDateInputs() {
+  const fromEl = document.getElementById('date-from');
+  const toEl = document.getElementById('date-to');
+  let from = fromEl?.value || '';
+  let to = toEl?.value || '';
+  if (!isIsoDay(from)) from = formatIsoDate(new Date());
+  if (!isIsoDay(to)) to = from;
+  if (to < from) to = from;
+  return { from, to };
+}
+
+function writeDateInputs(from, to) {
+  const fromEl = document.getElementById('date-from');
+  const toEl = document.getElementById('date-to');
+  if (fromEl) fromEl.value = from;
+  if (toEl) toEl.value = to;
+}
+
+function matchPresetForDates(from, to) {
+  for (const range of /** @type {const} */ (['today', 'week', 'month'])) {
+    const bounds = (() => {
+      const today = new Date();
+      const start = formatIsoDate(today);
+      if (range === 'week') return { from: start, to: formatIsoDate(addDays(today, 6)) };
+      if (range === 'month') return { from: start, to: formatIsoDate(addDays(today, 29)) };
+      return { from: start, to: start };
+    })();
+    if (bounds.from === from && bounds.to === to) return range;
+  }
+  return 'custom';
 }
 
 /**
- * @param {{ hotelId: string, range: ArrivalRange, ses?: string }} input
+ * @param {{ hotelId: string, from: string, to: string, ses?: string }} input
  */
 function buildSearchReservationsUrl(input) {
   const hotelId = String(input.hotelId || '').trim();
   if (!hotelId) return null;
-  const { from, to } = arrivalDateBounds(input.range);
+  const from = isIsoDay(input.from) ? input.from : formatIsoDate(new Date());
+  const to = isIsoDay(input.to) ? input.to : from;
   const url = new URL(LIST_PATH);
   url.searchParams.set('source', 'nav');
   url.searchParams.set('upcoming_reservations', '1');
@@ -140,23 +172,8 @@ function buildSearchReservationsUrl(input) {
   url.searchParams.append('reservation_status', 'ok');
   url.searchParams.append('reservation_status', 'cancelled');
   url.searchParams.set('date_from', from);
-  url.searchParams.set('date_to', to);
+  url.searchParams.set('date_to', to < from ? from : to);
   url.searchParams.set('date_type', 'arrival');
-  const ses = String(input.ses || '').trim();
-  if (ses) url.searchParams.set('ses', ses);
-  return url.toString();
-}
-
-/**
- * @param {{ bookingId: string, hotelId: string, ses?: string }} input
- */
-function buildReservationDetailUrl(input) {
-  const bookingId = String(input.bookingId || '').trim();
-  const hotelId = String(input.hotelId || '').trim();
-  if (!bookingId || !hotelId) return null;
-  const url = new URL(DETAIL_PATH);
-  url.searchParams.set('res_id', bookingId);
-  url.searchParams.set('hotel_id', hotelId);
   const ses = String(input.ses || '').trim();
   if (ses) url.searchParams.set('ses', ses);
   return url.toString();
@@ -234,6 +251,8 @@ async function loadSettingsFields() {
     'saasOpenUrl',
     'settingsConfigured',
     RANGE_STORAGE_KEY,
+    DATE_FROM_STORAGE_KEY,
+    DATE_TO_STORAGE_KEY,
   ]);
   document.getElementById('webhook-url').value = stored.webhookUrl || '';
   document.getElementById('sync-secret').value = stored.syncSecret || '';
@@ -246,15 +265,35 @@ function readActiveRange() {
   const active = document.querySelector('.chip.is-active');
   const range = active?.getAttribute('data-range');
   if (range === 'week' || range === 'month' || range === 'today') return range;
-  return 'today';
+  return 'custom';
 }
 
 /** @param {ArrivalRange} range */
-function setActiveRange(range) {
+function setActiveRange(range, { syncInputs = true } = {}) {
   for (const chip of document.querySelectorAll('.chip')) {
-    chip.classList.toggle('is-active', chip.getAttribute('data-range') === range);
+    chip.classList.toggle(
+      'is-active',
+      range !== 'custom' && chip.getAttribute('data-range') === range
+    );
   }
-  document.getElementById('range-hint').textContent = rangeLabel(range);
+  if (syncInputs && range !== 'custom') {
+    const bounds = arrivalDateBounds(range);
+    writeDateInputs(bounds.from, bounds.to);
+  }
+}
+
+function clearChipSelection() {
+  for (const chip of document.querySelectorAll('.chip')) {
+    chip.classList.remove('is-active');
+  }
+}
+
+async function persistDateWindow(range, from, to) {
+  await chrome.storage.local.set({
+    [RANGE_STORAGE_KEY]: range,
+    [DATE_FROM_STORAGE_KEY]: from,
+    [DATE_TO_STORAGE_KEY]: to,
+  });
 }
 
 function isDayFresh(scannedAt, nowMs = Date.now()) {
@@ -305,22 +344,23 @@ function paintFreshness(status, range) {
     range
   );
 
+  // Hide success "fresh for …" copy — dates already shown above. Show only gaps / empty.
   if (!status?.lastListSyncAt && fresh.length === 0 && stale.length === days.length) {
+    freshnessEl.hidden = false;
     freshnessEl.className = 'freshness is-warn';
     freshnessEl.textContent = 'No list scan yet for this window';
   } else if (stale.length === 0) {
-    freshnessEl.className = 'freshness';
-    freshnessEl.textContent =
-      days.length === 1
-        ? `Arrivals fresh for ${shortDayLabel(days[0])}`
-        : `Arrivals fresh through ${shortDayLabel(to)}`;
+    freshnessEl.hidden = true;
+    freshnessEl.textContent = '';
   } else if (stale.length === days.length) {
+    freshnessEl.hidden = false;
     freshnessEl.className = 'freshness is-warn';
     freshnessEl.textContent =
       days.length === 1
         ? `${shortDayLabel(days[0])} not scanned`
         : `Stale: whole window (${from} → ${to})`;
   } else {
+    freshnessEl.hidden = false;
     freshnessEl.className = 'freshness is-warn';
     const shown = stale.slice(0, 4).map(shortDayLabel).join(', ');
     const more = stale.length > 4 ? ` +${stale.length - 4}` : '';
@@ -360,19 +400,22 @@ function paintFreshness(status, range) {
 /**
  * @param {object} status
  */
-function paintProgress(status) {
-  const progressEl = document.getElementById('progress');
+function paintNeedsBadge(status) {
+  const badge = document.getElementById('needs-details-badge');
+  const countEl = document.getElementById('needs-details-count');
   const needing = Number(status?.needingDetailsCount || 0);
-
   if (needing > 0) {
-    progressEl.hidden = false;
-    progressEl.className = 'meta progress-secondary';
-    progressEl.textContent = `Details still needed: ${needing} active booking${needing === 1 ? '' : 's'}`;
-    return;
+    badge.hidden = false;
+    countEl.textContent = String(needing);
+    badge.setAttribute(
+      'aria-label',
+      `${needing} booking${needing === 1 ? '' : 's'} need details — open inbox`
+    );
+    badge.title = `${needing} need details — open Booking.com inbox`;
+  } else {
+    badge.hidden = true;
+    countEl.textContent = '0';
   }
-
-  progressEl.hidden = true;
-  progressEl.textContent = '';
 }
 
 /**
@@ -411,8 +454,6 @@ function paintActions(status, page, tabUrl) {
   const primary = document.getElementById('primary-action');
   const secondary = document.getElementById('secondary-action');
   const hotelId = page.hotelId || status.hotelId || '';
-  const needing = Number(status?.needingDetailsCount || 0);
-  const next = status?.nextNeedingDetails || null;
   const range = readActiveRange();
   const freshness = resolveFreshness(status, range);
 
@@ -433,22 +474,12 @@ function paintActions(status, page, tabUrl) {
       secondary.textContent = 'Sync this list anyway';
       secondary.dataset.action = 'sync';
     }
-    if (needing > 0 && next?.booking_id && matches) {
-      secondary.hidden = false;
-      secondary.textContent = `Open next booking (${needing} left)`;
-      secondary.dataset.action = 'open-next';
-    }
     return;
   }
 
   if (page.kind === 'detail') {
     primary.textContent = 'Sync this booking';
     primary.dataset.action = 'sync';
-    if (needing > 1 || (needing === 1 && next?.booking_id && next.booking_id !== page.bookingId)) {
-      secondary.hidden = false;
-      secondary.textContent = `Open next needing details (${needing})`;
-      secondary.dataset.action = 'open-next';
-    }
     return;
   }
 
@@ -465,11 +496,6 @@ function paintActions(status, page, tabUrl) {
     primary.textContent = 'Open reservations list';
   }
   primary.dataset.action = 'open-list';
-  if (needing > 0 && next?.booking_id) {
-    secondary.hidden = false;
-    secondary.textContent = `Open next booking (${needing} left)`;
-    secondary.dataset.action = 'open-next';
-  }
 }
 
 async function getActiveTab() {
@@ -531,37 +557,21 @@ async function refreshStatus() {
     page.bookingId
   );
   paintFreshness(status || {}, range);
-  paintProgress(status || {});
+  paintNeedsBadge(status || {});
   paintActions(status || {}, page, tab?.url);
 
   return { status, page, tab };
 }
 
 async function openListInTab(hotelId, range, ses) {
-  const url = buildSearchReservationsUrl({ hotelId, range, ses });
+  const { from, to } = arrivalDateBounds(range);
+  const url = buildSearchReservationsUrl({ hotelId, from, to, ses });
   if (!url) {
     const errorEl = document.getElementById('error');
     errorEl.hidden = false;
     errorEl.textContent =
       'Hotel ID unknown — open any Extranet page for this property once, then retry.';
     paintStatus('error');
-    return;
-  }
-  await chrome.tabs.create({ url });
-}
-
-async function openNextNeedingDetails(status, ses) {
-  const next = status?.nextNeedingDetails;
-  const hotelId = next?.hotel_id || status?.hotelId || '';
-  const url = buildReservationDetailUrl({
-    bookingId: next?.booking_id || '',
-    hotelId,
-    ses,
-  });
-  if (!url) {
-    const errorEl = document.getElementById('error');
-    errorEl.hidden = false;
-    errorEl.textContent = 'No booking waiting for details.';
     return;
   }
   await chrome.tabs.create({ url });
@@ -655,10 +665,54 @@ for (const chip of document.querySelectorAll('.chip')) {
     const range = chip.getAttribute('data-range');
     if (range !== 'today' && range !== 'week' && range !== 'month') return;
     setActiveRange(range);
-    await chrome.storage.local.set({ [RANGE_STORAGE_KEY]: range });
+    const { from, to } = readDateInputs();
+    await persistDateWindow(range, from, to);
     await refreshStatus();
   });
 }
+
+async function onDateInputsChanged() {
+  let { from, to } = readDateInputs();
+  if (to < from) {
+    to = from;
+    writeDateInputs(from, to);
+  }
+  const matched = matchPresetForDates(from, to);
+  if (matched === 'custom') {
+    clearChipSelection();
+  } else {
+    setActiveRange(matched, { syncInputs: false });
+  }
+  await persistDateWindow(matched, from, to);
+  await refreshStatus();
+}
+
+document.getElementById('date-from').addEventListener('change', () => {
+  void onDateInputsChanged();
+});
+document.getElementById('date-to').addEventListener('change', () => {
+  void onDateInputsChanged();
+});
+
+function buildReceptionInboxUrl(baseUrl, day) {
+  try {
+    const url = new URL(baseUrl || 'http://localhost:3000');
+    url.searchParams.set('tab', 'booking-inbox');
+    url.searchParams.set('inbox', 'needs-sync');
+    if (isIsoDay(day)) url.searchParams.set('day', day);
+    return url.toString();
+  } catch {
+    return 'http://localhost:3000/?tab=booking-inbox&inbox=needs-sync';
+  }
+}
+
+document.getElementById('needs-details-badge').addEventListener('click', async () => {
+  const { saasOpenUrl } = await chrome.storage.local.get('saasOpenUrl');
+  const { from, to } = readDateInputs();
+  const day = from === to ? from : from;
+  const url = buildReceptionInboxUrl(saasOpenUrl || 'http://localhost:3000', day);
+  await chrome.tabs.create({ url });
+});
 
 document.getElementById('primary-action').addEventListener('click', async () => {
   const action = document.getElementById('primary-action').dataset.action;
@@ -683,11 +737,7 @@ document.getElementById('primary-action').addEventListener('click', async () => 
 
 document.getElementById('secondary-action').addEventListener('click', async () => {
   const action = document.getElementById('secondary-action').dataset.action;
-  const { status, page, tab } = await refreshStatus();
-  if (action === 'open-next') {
-    await openNextNeedingDetails(status, page.ses || (await resolveExtranetSes(tab)));
-    return;
-  }
+  const { tab } = await refreshStatus();
   if (action === 'sync') {
     await syncCurrentPage(tab);
   }
@@ -701,13 +751,26 @@ document.getElementById('open-saas').addEventListener('click', async () => {
 
 async function boot() {
   const stored = await loadSettingsFields();
-  const range =
-    stored[RANGE_STORAGE_KEY] === 'week' ||
-    stored[RANGE_STORAGE_KEY] === 'month' ||
-    stored[RANGE_STORAGE_KEY] === 'today'
-      ? stored[RANGE_STORAGE_KEY]
-      : 'today';
-  setActiveRange(range);
+  const storedFrom = isIsoDay(stored[DATE_FROM_STORAGE_KEY])
+    ? stored[DATE_FROM_STORAGE_KEY]
+    : '';
+  const storedTo = isIsoDay(stored[DATE_TO_STORAGE_KEY]) ? stored[DATE_TO_STORAGE_KEY] : '';
+  const storedRange = stored[RANGE_STORAGE_KEY];
+
+  if (
+    storedRange === 'today' ||
+    storedRange === 'week' ||
+    storedRange === 'month'
+  ) {
+    setActiveRange(storedRange);
+  } else if (storedFrom && storedTo) {
+    writeDateInputs(storedFrom, storedTo);
+    const matched = matchPresetForDates(storedFrom, storedTo);
+    if (matched === 'custom') clearChipSelection();
+    else setActiveRange(matched, { syncInputs: false });
+  } else {
+    setActiveRange('today');
+  }
 
   if (!isConfigured(stored)) {
     showView('settings');
