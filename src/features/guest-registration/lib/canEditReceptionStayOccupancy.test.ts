@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canEditReceptionStayOccupancy } from './useStayAccessControls';
+import { canEditReceptionStayOccupancy } from './canEditReceptionStayOccupancy';
 
 describe('canEditReceptionStayOccupancy', () => {
   it('allows live stays without past-edit permission', () => {

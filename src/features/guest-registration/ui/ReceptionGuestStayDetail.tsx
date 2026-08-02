@@ -69,8 +69,8 @@ import {
 import {
   canEditReceptionStayOccupancy,
   isReceptionStayPastCheckOut,
-  useStayAccessControls,
-} from './useStayAccessControls';
+} from '../lib/canEditReceptionStayOccupancy';
+import { useStayAccessControls } from './useStayAccessControls';
 import { Badge, Button, ConfirmDialog, Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 import {
   receptionStaffCanEditPastStays,

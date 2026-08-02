@@ -2,13 +2,24 @@ const DEFAULTS = {
   webhookUrl: 'http://localhost:3000/api/integrations/booking-com/webhook',
   syncSecret: '',
   saasOpenUrl: 'http://localhost:3000',
+  settingsConfigured: false,
   lastSyncAt: null,
   lastStatus: 'idle',
   lastError: null,
+  hotelId: '',
+  lastListSyncAt: null,
+  lastListCount: 0,
+  lastListDateFrom: null,
+  lastListDateTo: null,
+  /** @type {Record<string, { scannedAt: string }>} */
+  arrivalCoverage: {},
 };
 
 const OUTBOX_KEY = 'outbox';
+const CAPTURE_INDEX_KEY = 'bookingCaptureIndex';
 const MAX_OUTBOX = 50;
+const MAX_CAPTURE_INDEX = 200;
+const MAX_COVERAGE_DAYS = 90;
 
 async function getSettings() {
   const stored = await chrome.storage.local.get(null);
@@ -17,6 +28,184 @@ async function getSettings() {
 
 async function setStatus(patch) {
   await chrome.storage.local.set(patch);
+}
+
+function asTrimmed(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function asAmount(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const n = Number(value.replace(',', '.').replace(/[^\d.-]/g, ''));
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/** Mirrors needsBookingComInboxReservationSync — contact OR total due missing. */
+function needsDetailSync(booking) {
+  const phone = asTrimmed(booking?.phone_number);
+  const email = asTrimmed(booking?.guest_email);
+  const hasContact = Boolean(phone || email);
+  const list =
+    asAmount(booking?.list_amount) ?? asAmount(booking?.amount) ?? null;
+  const total = asAmount(booking?.total_amount);
+  const amountDue = total ?? list;
+  if (!hasContact) return true;
+  if (amountDue == null) return true;
+  if (list != null && total == null) return true;
+  return false;
+}
+
+function normalizeCapturedBooking(raw) {
+  const bookingId = asTrimmed(raw?.booking_id);
+  if (!bookingId) return null;
+  return {
+    booking_id: bookingId,
+    hotel_id: asTrimmed(raw?.hotel_id),
+    guest_name: asTrimmed(raw?.guest_name) || null,
+    phone_number: asTrimmed(raw?.phone_number) || null,
+    guest_email: asTrimmed(raw?.guest_email) || null,
+    list_amount: asAmount(raw?.list_amount),
+    total_amount: asAmount(raw?.total_amount),
+    cancellation_fee_amount: asAmount(raw?.cancellation_fee_amount),
+    amount: asAmount(raw?.amount),
+    booking_status: asTrimmed(raw?.booking_status) || asTrimmed(raw?.status) || 'unknown',
+    check_in: asTrimmed(raw?.check_in) || null,
+    updatedAt: Date.now(),
+  };
+}
+
+function mergeCaptured(existing, incoming) {
+  if (!existing) return incoming;
+  return {
+    booking_id: incoming.booking_id,
+    hotel_id: incoming.hotel_id || existing.hotel_id,
+    guest_name: incoming.guest_name || existing.guest_name,
+    phone_number: incoming.phone_number || existing.phone_number,
+    guest_email: incoming.guest_email || existing.guest_email,
+    list_amount: incoming.list_amount ?? existing.list_amount,
+    total_amount: incoming.total_amount ?? existing.total_amount,
+    cancellation_fee_amount:
+      incoming.cancellation_fee_amount ?? existing.cancellation_fee_amount,
+    amount: incoming.amount ?? existing.amount,
+    booking_status: incoming.booking_status || existing.booking_status,
+    check_in: incoming.check_in || existing.check_in,
+    updatedAt: Date.now(),
+  };
+}
+
+async function readCaptureIndex() {
+  const { [CAPTURE_INDEX_KEY]: index = {} } = await chrome.storage.local.get(CAPTURE_INDEX_KEY);
+  return index && typeof index === 'object' ? index : {};
+}
+
+async function writeCaptureIndex(index) {
+  const entries = Object.entries(index).sort(
+    (a, b) => (b[1]?.updatedAt || 0) - (a[1]?.updatedAt || 0)
+  );
+  const trimmed = Object.fromEntries(entries.slice(0, MAX_CAPTURE_INDEX));
+  await chrome.storage.local.set({ [CAPTURE_INDEX_KEY]: trimmed });
+  return trimmed;
+}
+
+function eachIsoDay(fromIso, toIso) {
+  const from = String(fromIso || '').slice(0, 10);
+  const to = String(toIso || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return [];
+  const start = new Date(`${from}T12:00:00`);
+  const end = new Date(`${to}T12:00:00`);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) {
+    return [];
+  }
+  const days = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    days.push(`${y}-${m}-${day}`);
+  }
+  return days;
+}
+
+async function markArrivalCoverage(dateFrom, dateTo, scannedAtIso) {
+  const days = eachIsoDay(dateFrom, dateTo);
+  if (!days.length) return null;
+  const settings = await getSettings();
+  const coverage =
+    settings.arrivalCoverage && typeof settings.arrivalCoverage === 'object'
+      ? { ...settings.arrivalCoverage }
+      : {};
+  const scannedAt = scannedAtIso || new Date().toISOString();
+  for (const day of days) {
+    coverage[day] = { scannedAt };
+  }
+  const trimmedEntries = Object.entries(coverage)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, MAX_COVERAGE_DAYS);
+  const trimmed = Object.fromEntries(trimmedEntries);
+  await setStatus({
+    arrivalCoverage: trimmed,
+    lastListDateFrom: String(dateFrom).slice(0, 10),
+    lastListDateTo: String(dateTo).slice(0, 10),
+  });
+  return trimmed;
+}
+
+async function upsertCapturedBookings(bookings, { fromList = false, dateFrom = '', dateTo = '' } = {}) {
+  const index = await readCaptureIndex();
+  let hotelId = '';
+  let listCount = 0;
+
+  for (const raw of bookings) {
+    const next = normalizeCapturedBooking(raw);
+    if (!next) continue;
+    index[next.booking_id] = mergeCaptured(index[next.booking_id], next);
+    if (next.hotel_id) hotelId = next.hotel_id;
+    listCount += 1;
+  }
+
+  await writeCaptureIndex(index);
+
+  const patch = {};
+  if (hotelId) patch.hotelId = hotelId;
+  if (fromList) {
+    const scannedAt = new Date().toISOString();
+    patch.lastListSyncAt = scannedAt;
+    patch.lastListCount = listCount;
+    await setStatus(patch);
+    if (dateFrom && dateTo) {
+      await markArrivalCoverage(dateFrom, dateTo, scannedAt);
+    }
+  } else if (Object.keys(patch).length) {
+    await setStatus(patch);
+  }
+
+  return summarizeCaptureIndex(index);
+}
+
+function summarizeCaptureIndex(index) {
+  const rows = Object.values(index || {});
+  const active = rows.filter((row) => row.booking_status !== 'cancelled');
+  const needingDetails = active.filter((row) => needsDetailSync(row));
+  const next = needingDetails
+    .slice()
+    .sort((a, b) => String(a.check_in || '').localeCompare(String(b.check_in || '')))[0];
+
+  return {
+    capturedCount: rows.length,
+    activeCount: active.length,
+    needingDetailsCount: needingDetails.length,
+    nextNeedingDetails: next
+      ? {
+          booking_id: next.booking_id,
+          hotel_id: next.hotel_id,
+          guest_name: next.guest_name,
+          check_in: next.check_in,
+        }
+      : null,
+  };
 }
 
 async function enqueue(item) {
@@ -100,6 +289,11 @@ async function postWebhook(settings, body) {
 
 async function handlePayload(message) {
   if (message.type === 'bookings.upsert_batch' && Array.isArray(message.bookings)) {
+    await upsertCapturedBookings(message.bookings, {
+      fromList: true,
+      dateFrom: asTrimmed(message.dateFrom),
+      dateTo: asTrimmed(message.dateTo),
+    });
     const body = {
       schemaVersion: 1,
       event: 'bookings.upsert_batch',
@@ -114,6 +308,7 @@ async function handlePayload(message) {
   }
 
   if (message.type === 'bookings.patch' && message.booking) {
+    await upsertCapturedBookings([message.booking], { fromList: false });
     const body = {
       schemaVersion: 1,
       event: 'bookings.patch',
@@ -125,6 +320,30 @@ async function handlePayload(message) {
       await enqueue({ body });
     }
   }
+}
+
+async function buildStatusPayload() {
+  const settings = await getSettings();
+  const index = await readCaptureIndex();
+  const summary = summarizeCaptureIndex(index);
+  return {
+    lastStatus: settings.lastStatus,
+    lastSyncAt: settings.lastSyncAt,
+    lastError: settings.lastError,
+    webhookUrl: settings.webhookUrl,
+    hasSecret: Boolean(settings.syncSecret),
+    saasOpenUrl: settings.saasOpenUrl,
+    hotelId: settings.hotelId || '',
+    lastListSyncAt: settings.lastListSyncAt,
+    lastListCount: settings.lastListCount || 0,
+    lastListDateFrom: settings.lastListDateFrom || null,
+    lastListDateTo: settings.lastListDateTo || null,
+    arrivalCoverage:
+      settings.arrivalCoverage && typeof settings.arrivalCoverage === 'object'
+        ? settings.arrivalCoverage
+        : {},
+    ...summary,
+  };
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -141,15 +360,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === 'get_status') {
-    getSettings().then((settings) =>
-      sendResponse({
-        lastStatus: settings.lastStatus,
-        lastSyncAt: settings.lastSyncAt,
-        lastError: settings.lastError,
-        webhookUrl: settings.webhookUrl,
-        hasSecret: Boolean(settings.syncSecret),
-        saasOpenUrl: settings.saasOpenUrl,
-      })
+    buildStatusPayload().then((payload) => sendResponse(payload));
+    return true;
+  }
+
+  if (message.type === 'remember_hotel_id') {
+    const hotelId = asTrimmed(message.hotelId);
+    if (hotelId) {
+      setStatus({ hotelId }).then(() => sendResponse({ ok: true, hotelId }));
+      return true;
+    }
+    sendResponse({ ok: false });
+    return false;
+  }
+
+  if (message.type === 'mark_arrival_coverage') {
+    markArrivalCoverage(message.dateFrom, message.dateTo, message.scannedAt).then((coverage) =>
+      sendResponse({ ok: Boolean(coverage), coverage })
     );
     return true;
   }

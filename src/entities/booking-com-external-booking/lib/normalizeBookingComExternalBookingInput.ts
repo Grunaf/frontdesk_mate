@@ -10,6 +10,7 @@ const BOOKING_ID_MAX = 64;
 const HOTEL_ID_MAX = 32;
 const GUEST_NAME_MAX = 200;
 const PHONE_MAX = 40;
+const EMAIL_MAX = 254;
 const CURRENCY_MAX = 8;
 const ROOM_NAME_MAX = 200;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -51,9 +52,14 @@ function asDate(value: unknown): string | null {
   return raw;
 }
 
-function asStatus(value: unknown): BookingComBookingStatus {
-  if (typeof value === 'string' && (BOOKING_COM_BOOKING_STATUSES as readonly string[]).includes(value)) {
-    return value as BookingComBookingStatus;
+export function normalizeBookingComBookingStatus(value: unknown): BookingComBookingStatus {
+  if (typeof value !== 'string') return 'unknown';
+  const s = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (s === 'canceled' || s === 'cancelled') return 'cancelled';
+  if (s === 'no_show' || s === 'noshow') return 'no_show';
+  if (s === 'ok' || s === 'confirmed' || s === 'booked') return 'ok';
+  if ((BOOKING_COM_BOOKING_STATUSES as readonly string[]).includes(s)) {
+    return s as BookingComBookingStatus;
   }
   return 'unknown';
 }
@@ -75,21 +81,35 @@ export function normalizeBookingComExternalBookingInput(
   const hotelId = asTrimmedString(record.hotel_id, HOTEL_ID_MAX);
   if (!bookingId || !hotelId) return null;
 
+  const source = asSource(record.source);
+  const legacyAmount = asAmount(record.amount);
+  const listAmount =
+    asAmount(record.list_amount) ??
+    (source === 'detail_api' ? null : legacyAmount);
+  const totalAmount =
+    asAmount(record.total_amount) ??
+    (source === 'detail_api' ? legacyAmount : null);
+  const cancellationFeeAmount = asAmount(record.cancellation_fee_amount);
+
   return {
     booking_id: bookingId,
     hotel_id: hotelId,
     guest_name: asTrimmedString(record.guest_name, GUEST_NAME_MAX),
     phone_number: asTrimmedString(record.phone_number, PHONE_MAX),
+    guest_email: asTrimmedString(record.guest_email, EMAIL_MAX)?.toLowerCase() ?? null,
     adults: asNonNegInt(record.adults),
     children: asNonNegInt(record.children),
     check_in: asDate(record.check_in),
     check_out: asDate(record.check_out),
-    amount: asAmount(record.amount),
+    amount: listAmount,
+    list_amount: listAmount,
+    total_amount: totalAmount,
+    cancellation_fee_amount: cancellationFeeAmount,
     currency: asTrimmedString(record.currency, CURRENCY_MAX)?.toUpperCase() ?? null,
-    status: asStatus(record.status),
+    status: normalizeBookingComBookingStatus(record.status),
     room_name: asTrimmedString(record.room_name, ROOM_NAME_MAX),
     captured_at: asTrimmedString(record.captured_at, 40),
-    source: asSource(record.source),
+    source,
   };
 }
 

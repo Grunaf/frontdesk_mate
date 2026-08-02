@@ -130,6 +130,7 @@ import { ReceptionBookingInboxTab } from './ReceptionBookingInboxTab';
 import { ReceptionArchiveTab } from './ReceptionArchiveTab';
 import { markBookingComExternalBookingIssuedAction } from '../actions/bookingComExternalBookingActions';
 import type { BookingComExternalBookingRecord } from '@/entities/booking-com-external-booking';
+import { hasBookingComListPriceOnlyWarning } from '@/entities/booking-com-external-booking';
 import {
   ReceptionBottomNav,
   RECEPTION_BOTTOM_NAV_CONTENT_PAD,
@@ -304,6 +305,7 @@ export function ReceptionCheckInPanel({
   const [pendingExternalBookingRowId, setPendingExternalBookingRowId] = useState<string | null>(
     null
   );
+  const [bookingComListPriceOnlyWarning, setBookingComListPriceOnlyWarning] = useState(false);
   const [deskTab, setDeskTab] = useState<DeskTab>(() =>
     resolveDefaultDeskTab(initialContext.staffPermissions)
   );
@@ -1292,6 +1294,7 @@ export function ReceptionCheckInPanel({
     setPendingWholeRoomOverride(null);
     setOpenAdvancedBeds(false);
     setPendingExternalBookingRowId(null);
+    setBookingComListPriceOnlyWarning(false);
     setOfferId(preferredDefaultOfferId);
     if (stayOfferOptions.length > 0) {
       const picked = pickAvailableBedsForStayOffer({
@@ -1335,13 +1338,15 @@ export function ReceptionCheckInPanel({
     setIssueOverlayOpen(false);
   }, [editDraft, clearEditDraft, resetCreateIssueForm]);
 
-  const beginIssueFromExternalBooking = useCallback(
+  const beginAddStayFromExternalBooking = useCallback(
     (booking: BookingComExternalBookingRecord) => {
       resetCreateIssueForm();
       setPendingExternalBookingRowId(booking.id);
+      setBookingComListPriceOnlyWarning(hasBookingComListPriceOnlyWarning(booking));
       setMode('custom');
       setGuestName(booking.guest_name?.trim() ?? '');
       setContactPhone(booking.phone_number?.trim() ?? '');
+      setContactEmail(booking.guest_email?.trim() ?? '');
       setBookingPlatformId('booking-com');
       setBookingExternalId(booking.booking_id);
       if (booking.check_in) setCheckInDate(booking.check_in);
@@ -1350,8 +1355,10 @@ export function ReceptionCheckInPanel({
       const children = booking.children ?? 0;
       const partySize = Math.max(1, adults + children);
       setGuestCount(partySize);
-      if (booking.amount != null) {
-        setBookingAmountDue(String(booking.amount));
+      const amountDue =
+        booking.total_amount ?? booking.list_amount ?? booking.amount ?? null;
+      if (amountDue != null) {
+        setBookingAmountDue(String(amountDue));
         setBookingAmountTouched(true);
       }
       setIssueOverlayOpen(true);
@@ -1745,7 +1752,8 @@ export function ReceptionCheckInPanel({
       }
       await refresh();
       if (lead) {
-        openStayFromChildSurface(lead.stay.id, { initialTab: 'access' });
+        // Inbox Add stay → stay tab; Issue access is done later from the stay.
+        openStayFromChildSurface(lead.stay.id, { initialTab: 'stay' });
         setStayPins((current) => {
           const next = { ...current };
           for (const entry of result.stays) {
@@ -2316,6 +2324,7 @@ export function ReceptionCheckInPanel({
           setBookingAmountDue(value);
         }}
         bookingBalanceCurrencySymbol={bookingBalanceCurrencySymbol}
+        bookingComListPriceOnlyWarning={bookingComListPriceOnlyWarning}
         stayOfferOptions={stayOfferOptions}
         offerId={offerId}
         onOfferIdChange={handleOfferIdChange}
@@ -2556,9 +2565,11 @@ export function ReceptionCheckInPanel({
               <ReceptionBookingInboxTab
                 tenantSlug={tenantSlug}
                 openBookings={bookingInbox}
+                stays={[...stays, ...planStaysFromContext]}
                 isActive={deskTab === 'booking-inbox'}
                 onOperationalRefresh={refresh}
-                onIssueAccess={beginIssueFromExternalBooking}
+                onAddStay={beginAddStayFromExternalBooking}
+                onOpenStay={(stayId) => openStayFromChildSurface(stayId, { initialTab: 'stay' })}
               />
             </TabsContent>
 

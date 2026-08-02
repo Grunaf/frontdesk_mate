@@ -5,6 +5,7 @@ import {
   patchBookingComExternalBooking,
   upsertBookingComExternalBookings,
 } from '@/entities/booking-com-external-booking/server';
+import { cancelLinkedStaysForBookingComCancellations } from '@/features/guest-registration/lib/cancelLinkedStaysForBookingComCancellations';
 
 export const runtime = 'nodejs';
 
@@ -75,6 +76,8 @@ export async function POST(request: Request) {
       return Response.json({ ok: false, error: result.error }, { status });
     }
 
+    await cancelLinkedStaysForBookingComCancellations({ tenantSlug, bookings });
+
     return Response.json({ ok: true, upserted: result.upserted, tenantSlug });
   }
 
@@ -101,6 +104,11 @@ export async function POST(request: Request) {
               : 500;
       return Response.json({ ok: false, error: result.error }, { status });
     }
+
+    await cancelLinkedStaysForBookingComCancellations({
+      tenantSlug,
+      bookings: [booking],
+    });
 
     return Response.json({ ok: true, tenantSlug });
   }
