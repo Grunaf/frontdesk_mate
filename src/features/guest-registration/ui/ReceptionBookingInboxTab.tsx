@@ -24,11 +24,7 @@ const FILTER_ITEMS = [
   { id: 'dismissed', label: 'Dismissed' },
 ] as const;
 
-/** Collapse canceled list by default when count exceeds this. */
-const CANCELED_COLLAPSE_THRESHOLD = 3;
-
 type InboxFilter = (typeof FILTER_ITEMS)[number]['id'];
-
 interface ReceptionBookingInboxTabProps {
   tenantSlug: string;
   openBookings: BookingComExternalBookingRecord[];
@@ -225,8 +221,7 @@ export function ReceptionBookingInboxTab({
   );
 
   const canceledCount = openPartition.canceled.length;
-  const canceledCollapsible = canceledCount > CANCELED_COLLAPSE_THRESHOLD;
-  const showCanceledList = !canceledCollapsible || canceledExpanded;
+  const showCanceledList = canceledExpanded;
 
   const closedBookingsWithLinks = useMemo(
     () =>
@@ -338,27 +333,21 @@ export function ReceptionBookingInboxTab({
               <section className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    {canceledCollapsible ? (
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                        aria-expanded={showCanceledList}
-                        onClick={() => setCanceledExpanded((open) => !open)}
-                      >
-                        <ChevronDown
-                          className={cn(
-                            'size-3.5 shrink-0 transition-transform',
-                            showCanceledList ? 'rotate-0' : '-rotate-90'
-                          )}
-                          aria-hidden
-                        />
-                        Canceled ({canceledCount})
-                      </button>
-                    ) : (
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Canceled ({canceledCount})
-                      </h3>
-                    )}
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      aria-expanded={showCanceledList}
+                      onClick={() => setCanceledExpanded((open) => !open)}
+                    >
+                      <ChevronDown
+                        className={cn(
+                          'size-3.5 shrink-0 transition-transform',
+                          showCanceledList ? 'rotate-0' : '-rotate-90'
+                        )}
+                        aria-hidden
+                      />
+                      Canceled ({canceledCount})
+                    </button>
                   </div>
                   <Button
                     type="button"

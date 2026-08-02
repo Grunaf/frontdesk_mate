@@ -352,6 +352,34 @@ export async function getBookingComExternalBooking(input: {
   return mapRow(data as Record<string, unknown>);
 }
 
+/** Lean lookup for sync side-effects (linked stay cancel on OTA cancelled). */
+export async function listBookingComExternalBookingsByBookingIds(input: {
+  tenantSlug: string;
+  bookingIds: string[];
+}): Promise<BookingComExternalBookingRecord[]> {
+  const bookingIds = [...new Set(input.bookingIds.map((id) => id.trim()).filter(Boolean))];
+  if (bookingIds.length === 0) return [];
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return [];
+
+  const tenant = await getTenantRecord(input.tenantSlug);
+  if (!tenant) return [];
+
+  const { data, error } = await admin
+    .from('booking_com_external_bookings')
+    .select(COLUMNS)
+    .eq('tenant_id', tenant.id)
+    .in('booking_id', bookingIds);
+
+  if (error) {
+    console.error('listBookingComExternalBookingsByBookingIds:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => mapRow(row as Record<string, unknown>));
+}
+
 export async function setBookingComExternalBookingInboxStatus(input: {
   tenantSlug: string;
   bookingRowId: string;

@@ -4,6 +4,7 @@ export {
   countOpenBookingComExternalBookings,
   getBookingComExternalBooking,
   listBookingComExternalBookings,
+  listBookingComExternalBookingsByBookingIds,
   patchBookingComExternalBooking,
   setBookingComExternalBookingInboxStatus,
   upsertBookingComExternalBookings,
