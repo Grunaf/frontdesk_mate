@@ -112,7 +112,14 @@ function parseGuestCounts(text) {
   const adultsMatch = t.match(/(\d+)\s*adult/);
   const childrenMatch = t.match(/(\d+)\s*child/);
   const guestsOnly = t.match(/(\d+)\s*guest/);
-  const adults = adultsMatch ? Number(adultsMatch[1]) : guestsOnly ? Number(guestsOnly[1]) : null;
+  const bare = t.match(/^\s*(\d+)\s*$/);
+  const adults = adultsMatch
+    ? Number(adultsMatch[1])
+    : guestsOnly
+      ? Number(guestsOnly[1])
+      : bare
+        ? Number(bare[1])
+        : null;
   const children = childrenMatch ? Number(childrenMatch[1]) : null;
   return {
     adults: Number.isFinite(adults) ? adults : null,
@@ -125,9 +132,11 @@ function parseAmountCurrency(text) {
   if (!t) return { amount: null, currency: null };
   const currencyMatch = t.match(/\b([A-Z]{3})\b/);
   const amount = asNumber(t);
+  let currency = currencyMatch ? currencyMatch[1] : null;
+  if (!currency && /€|eur\b/i.test(t)) currency = 'EUR';
   return {
     amount,
-    currency: currencyMatch ? currencyMatch[1] : null,
+    currency,
   };
 }
 
@@ -158,6 +167,7 @@ function emptyBooking(bookingId, hotelId, source) {
     check_out: null,
     list_amount: null,
     total_amount: null,
+    cancellation_fee_amount: null,
     currency: null,
     status: 'unknown',
     room_name: null,
@@ -209,6 +219,9 @@ function normalizeOne(raw, fallbackHotelId, source) {
     (source === 'detail_api' ? null : legacyAmount);
   const totalAmount = asNumber(pick(raw, ['total_amount', 'totalAmount'])) ??
     (source === 'detail_api' ? legacyAmount : null);
+  const cancellationFeeAmount = asNumber(
+    pick(raw, ['cancellation_fee_amount', 'cancellationFeeAmount'])
+  );
   const currency = asString(pick(raw, ['currency', 'currency_code', 'currencyCode'])).toUpperCase();
   const roomName = asString(pick(raw, ['room_name', 'roomName', 'room_type', 'roomType', 'unit_name']));
   const status = normalizeStatus(pick(raw, ['status', 'booking_status', 'reservation_status']));
@@ -225,6 +238,7 @@ function normalizeOne(raw, fallbackHotelId, source) {
     check_out: /^\d{4}-\d{2}-\d{2}$/.test(checkOut) ? checkOut : parseExtranetDate(checkOut),
     list_amount: listAmount,
     total_amount: totalAmount,
+    cancellation_fee_amount: cancellationFeeAmount,
     currency: currency || null,
     status,
     room_name: roomName || null,
@@ -380,12 +394,43 @@ function labeledValue(root, labelRe) {
   return '';
 }
 
+function parseDetailStatus(scope) {
+  const roots = [scope, document].filter(Boolean);
+  for (const root of roots) {
+    const bannerTitle = asString(
+      root.querySelector('.res-status-banner .bui-alert__title')?.textContent
+    );
+    if (/cancel/i.test(bannerTitle)) return 'cancelled';
+
+    const destructiveBadge = [...root.querySelectorAll('.bui-badge--destructive')].map((el) =>
+      asString(el.textContent)
+    );
+    if (destructiveBadge.some((t) => /cancel/i.test(t))) return 'cancelled';
+
+    const cancelledRoom = root.querySelector(
+      '.res-room-price--cancelled, .res-room-subtitle--cancelled'
+    );
+    if (cancelledRoom) return 'cancelled';
+  }
+  return 'ok';
+}
+
+function parseRoomNameFromDetail(scope) {
+  const title = scope.querySelector('.res-room-title__name') || document.querySelector('.res-room-title__name');
+  if (!title) return null;
+  const clone = title.cloneNode(true);
+  clone.querySelectorAll('.bui-badge, .bui-flag').forEach((el) => el.remove());
+  const name = asString(clone.textContent);
+  return name || null;
+}
+
 function parseDetailFromDom() {
   const bookingId = bookingIdFromPage();
   const hotelId = hotelIdFromPage();
   if (!bookingId || !hotelId) return [];
 
   const root = findOverviewRoot() || document.body;
+  const page = document.querySelector('.res-content') || document.body;
   const row = emptyBooking(bookingId, hotelId, 'dom_fallback');
 
   const nameEl =
@@ -404,6 +449,7 @@ function parseDetailFromDom() {
   row.check_out = parseExtranetDate(checkOutRaw);
 
   const guestsRaw =
+    labeledValue(page, /booked\s*occupancy\b/i) ||
     labeledValue(root, /total\s*guests?\b/i) ||
     labeledValue(root, /^guests?\b/i) ||
     asString(root.querySelector('[data-test-id*="guest"], [class*="guest-count"]')?.textContent);
@@ -411,13 +457,17 @@ function parseDetailFromDom() {
   row.adults = counts.adults;
   row.children = counts.children;
 
-  const priceRaw =
-    labeledValue(root, /total\s*price|price\b/i) ||
-    asString(root.querySelector('[data-test-id*="price"], [class*="total-price"]')?.textContent);
-  const { amount, currency } = parseAmountCurrency(priceRaw);
-  row.list_amount = null;
-  row.total_amount = amount;
-  row.currency = currency;
+  const totalDueRaw = labeledValue(root, /^total\s*price\b/i);
+  const roomTotalRaw =
+    labeledValue(page, /^total\s*room\s*price\b/i) ||
+    labeledValue(root, /^total\s*room\s*price\b/i);
+
+  const dueParsed = parseAmountCurrency(totalDueRaw);
+  const roomParsed = parseAmountCurrency(roomTotalRaw);
+
+  row.total_amount = dueParsed.amount;
+  row.list_amount = roomParsed.amount;
+  row.currency = dueParsed.currency || roomParsed.currency || null;
 
   const bookingNo =
     labeledValue(root, /booking\s*number|reservation\s*(?:number|id)/i) || bookingId;
@@ -425,9 +475,19 @@ function parseDetailFromDom() {
     row.booking_id = asString(bookingNo);
   }
 
-  row.guest_email = parseEmailFromRoot(root);
-  row.phone_number = parsePhoneFromText(root.innerText || root.textContent || '');
-  row.status = 'ok';
+  row.guest_email = parseEmailFromRoot(root) || parseEmailFromRoot(page);
+  row.phone_number = parsePhoneFromText(page.innerText || page.textContent || '');
+  row.room_name = parseRoomNameFromDetail(page);
+  row.status = parseDetailStatus(page);
+
+  if (row.status === 'cancelled') {
+    const feeRaw =
+      labeledValue(page, /applicable\s*cancellation\s*fees?\b/i) ||
+      labeledValue(root, /commissionable\s*amount\b/i);
+    const feeParsed = parseAmountCurrency(feeRaw);
+    row.cancellation_fee_amount = feeParsed.amount;
+    if (!row.currency && feeParsed.currency) row.currency = feeParsed.currency;
+  }
 
   return [row];
 }
@@ -563,13 +623,34 @@ function pageKindFromUrl() {
 function getPageContext() {
   const hotelId = hotelIdFromPage();
   const bookingId = bookingIdFromPage();
+  let ses = '';
+  try {
+    ses = new URLSearchParams(window.location.search).get('ses')?.trim() || '';
+  } catch {
+    ses = '';
+  }
   return {
     ok: true,
     kind: pageKindFromUrl(),
     hotelId,
     bookingId,
+    ses,
     href: window.location.href,
   };
+}
+
+function listArrivalRangeFromPage() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const dateFrom = params.get('date_from') || '';
+    const dateTo = params.get('date_to') || '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateFrom) && /^\d{4}-\d{2}-\d{2}$/.test(dateTo)) {
+      return { dateFrom, dateTo };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { dateFrom: '', dateTo: '' };
 }
 
 function emitBookings(bookings, mode) {
@@ -594,9 +675,12 @@ function emitBookings(bookings, mode) {
     return;
   }
 
+  const { dateFrom, dateTo } = listArrivalRangeFromPage();
   sendToBackground({
     type: 'bookings.upsert_batch',
     bookings,
+    dateFrom,
+    dateTo,
   });
 }
 

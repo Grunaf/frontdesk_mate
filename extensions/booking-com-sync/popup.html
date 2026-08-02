@@ -11,7 +11,16 @@
       <header>
         <h1>Booking sync</h1>
         <div class="header-actions">
-          <p id="status" class="status status-idle">Idle</p>
+          <p id="status" class="status status-error" hidden>Error</p>
+          <button
+            id="open-saas"
+            type="button"
+            class="icon-btn"
+            aria-label="Open reception"
+            title="Open reception"
+          >
+            ⌂
+          </button>
           <button id="open-settings" type="button" class="icon-btn" aria-label="Settings" title="Settings">
             ⚙
           </button>
@@ -19,9 +28,6 @@
       </header>
 
       <p id="page-context" class="meta">Checking current tab…</p>
-      <p id="progress" class="progress">No list scan yet</p>
-      <p id="last-sync" class="meta">No sync yet</p>
-      <p id="error" class="error" hidden></p>
 
       <div class="panel">
         <p class="panel-label">Scan arrivals</p>
@@ -35,12 +41,21 @@
         <p id="range-hint" class="meta range-hint">Arrivals: today</p>
       </div>
 
+      <div class="panel panel-soft">
+        <p class="panel-label">Freshness</p>
+        <p id="freshness" class="freshness">No list scan yet</p>
+        <p id="freshness-nudge" class="meta freshness-nudge" hidden></p>
+        <p id="last-sync" class="meta last-sync">No list scan yet</p>
+        <p id="progress" class="meta progress-secondary" hidden></p>
+      </div>
+
+      <p id="error" class="error" hidden></p>
+
       <div class="actions">
         <button id="primary-action" type="button">Open reservations list</button>
         <button id="secondary-action" type="button" class="secondary" hidden>
           Open next booking
         </button>
-        <button id="open-saas" type="button" class="secondary">Open reception</button>
       </div>
     </section>
 

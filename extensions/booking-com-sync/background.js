@@ -9,12 +9,17 @@ const DEFAULTS = {
   hotelId: '',
   lastListSyncAt: null,
   lastListCount: 0,
+  lastListDateFrom: null,
+  lastListDateTo: null,
+  /** @type {Record<string, { scannedAt: string }>} */
+  arrivalCoverage: {},
 };
 
 const OUTBOX_KEY = 'outbox';
 const CAPTURE_INDEX_KEY = 'bookingCaptureIndex';
 const MAX_OUTBOX = 50;
 const MAX_CAPTURE_INDEX = 200;
+const MAX_COVERAGE_DAYS = 90;
 
 async function getSettings() {
   const stored = await chrome.storage.local.get(null);
@@ -64,8 +69,9 @@ function normalizeCapturedBooking(raw) {
     guest_email: asTrimmed(raw?.guest_email) || null,
     list_amount: asAmount(raw?.list_amount),
     total_amount: asAmount(raw?.total_amount),
+    cancellation_fee_amount: asAmount(raw?.cancellation_fee_amount),
     amount: asAmount(raw?.amount),
-    booking_status: asTrimmed(raw?.booking_status) || 'unknown',
+    booking_status: asTrimmed(raw?.booking_status) || asTrimmed(raw?.status) || 'unknown',
     check_in: asTrimmed(raw?.check_in) || null,
     updatedAt: Date.now(),
   };
@@ -81,6 +87,8 @@ function mergeCaptured(existing, incoming) {
     guest_email: incoming.guest_email || existing.guest_email,
     list_amount: incoming.list_amount ?? existing.list_amount,
     total_amount: incoming.total_amount ?? existing.total_amount,
+    cancellation_fee_amount:
+      incoming.cancellation_fee_amount ?? existing.cancellation_fee_amount,
     amount: incoming.amount ?? existing.amount,
     booking_status: incoming.booking_status || existing.booking_status,
     check_in: incoming.check_in || existing.check_in,
@@ -102,7 +110,50 @@ async function writeCaptureIndex(index) {
   return trimmed;
 }
 
-async function upsertCapturedBookings(bookings, { fromList = false } = {}) {
+function eachIsoDay(fromIso, toIso) {
+  const from = String(fromIso || '').slice(0, 10);
+  const to = String(toIso || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return [];
+  const start = new Date(`${from}T12:00:00`);
+  const end = new Date(`${to}T12:00:00`);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) {
+    return [];
+  }
+  const days = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    days.push(`${y}-${m}-${day}`);
+  }
+  return days;
+}
+
+async function markArrivalCoverage(dateFrom, dateTo, scannedAtIso) {
+  const days = eachIsoDay(dateFrom, dateTo);
+  if (!days.length) return null;
+  const settings = await getSettings();
+  const coverage =
+    settings.arrivalCoverage && typeof settings.arrivalCoverage === 'object'
+      ? { ...settings.arrivalCoverage }
+      : {};
+  const scannedAt = scannedAtIso || new Date().toISOString();
+  for (const day of days) {
+    coverage[day] = { scannedAt };
+  }
+  const trimmedEntries = Object.entries(coverage)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, MAX_COVERAGE_DAYS);
+  const trimmed = Object.fromEntries(trimmedEntries);
+  await setStatus({
+    arrivalCoverage: trimmed,
+    lastListDateFrom: String(dateFrom).slice(0, 10),
+    lastListDateTo: String(dateTo).slice(0, 10),
+  });
+  return trimmed;
+}
+
+async function upsertCapturedBookings(bookings, { fromList = false, dateFrom = '', dateTo = '' } = {}) {
   const index = await readCaptureIndex();
   let hotelId = '';
   let listCount = 0;
@@ -120,10 +171,16 @@ async function upsertCapturedBookings(bookings, { fromList = false } = {}) {
   const patch = {};
   if (hotelId) patch.hotelId = hotelId;
   if (fromList) {
-    patch.lastListSyncAt = new Date().toISOString();
+    const scannedAt = new Date().toISOString();
+    patch.lastListSyncAt = scannedAt;
     patch.lastListCount = listCount;
+    await setStatus(patch);
+    if (dateFrom && dateTo) {
+      await markArrivalCoverage(dateFrom, dateTo, scannedAt);
+    }
+  } else if (Object.keys(patch).length) {
+    await setStatus(patch);
   }
-  if (Object.keys(patch).length) await setStatus(patch);
 
   return summarizeCaptureIndex(index);
 }
@@ -232,7 +289,11 @@ async function postWebhook(settings, body) {
 
 async function handlePayload(message) {
   if (message.type === 'bookings.upsert_batch' && Array.isArray(message.bookings)) {
-    await upsertCapturedBookings(message.bookings, { fromList: true });
+    await upsertCapturedBookings(message.bookings, {
+      fromList: true,
+      dateFrom: asTrimmed(message.dateFrom),
+      dateTo: asTrimmed(message.dateTo),
+    });
     const body = {
       schemaVersion: 1,
       event: 'bookings.upsert_batch',
@@ -275,6 +336,12 @@ async function buildStatusPayload() {
     hotelId: settings.hotelId || '',
     lastListSyncAt: settings.lastListSyncAt,
     lastListCount: settings.lastListCount || 0,
+    lastListDateFrom: settings.lastListDateFrom || null,
+    lastListDateTo: settings.lastListDateTo || null,
+    arrivalCoverage:
+      settings.arrivalCoverage && typeof settings.arrivalCoverage === 'object'
+        ? settings.arrivalCoverage
+        : {},
     ...summary,
   };
 }
@@ -305,6 +372,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     sendResponse({ ok: false });
     return false;
+  }
+
+  if (message.type === 'mark_arrival_coverage') {
+    markArrivalCoverage(message.dateFrom, message.dateTo, message.scannedAt).then((coverage) =>
+      sendResponse({ ok: Boolean(coverage), coverage })
+    );
+    return true;
   }
 
   return false;

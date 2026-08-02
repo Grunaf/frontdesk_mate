@@ -121,8 +121,37 @@ h1 {
   border-color: #1c1c1a;
 }
 
-.range-hint {
-  margin: 6px 0 0;
+.panel-soft {
+  background: #fafaf8;
+}
+
+.freshness {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #1c1c1a;
+}
+
+.freshness.is-warn {
+  color: #9a3412;
+}
+
+.freshness-nudge {
+  margin: 0 0 4px;
+  color: #9a3412;
+}
+
+.last-sync {
+  margin: 0 0 2px;
+}
+
+.progress-secondary {
+  margin: 0;
+  font-weight: 500;
+}
+
+.status[hidden] {
+  display: none;
 }
 
 .field {

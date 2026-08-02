@@ -51,6 +51,7 @@ describe('normalizeBookingComExternalBookingInput', () => {
       amount: null,
       list_amount: null,
       total_amount: 120.5,
+      cancellation_fee_amount: null,
       currency: 'EUR',
       status: 'ok',
       room_name: 'Dorm 8',
@@ -92,6 +93,27 @@ describe('normalizeBookingComExternalBookingInput', () => {
         list_amount: 32.4,
         total_amount: 33.4,
         amount: 32.4,
+      })
+    );
+  });
+
+  it('keeps cancellation fee amount', () => {
+    expect(
+      normalizeBookingComExternalBookingInput({
+        booking_id: '1',
+        hotel_id: '9',
+        list_amount: 66.8,
+        total_amount: 0,
+        cancellation_fee_amount: 32.4,
+        status: 'cancelled',
+        source: 'dom_fallback',
+      })
+    ).toEqual(
+      expect.objectContaining({
+        list_amount: 66.8,
+        total_amount: 0,
+        cancellation_fee_amount: 32.4,
+        status: 'cancelled',
       })
     );
   });

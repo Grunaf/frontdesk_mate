@@ -4,21 +4,11 @@ const DETAIL_PATH =
   'https://admin.booking.com/hotel/hoteladmin/extranet_ng/manage/booking.html';
 
 const RANGE_STORAGE_KEY = 'arrivalRange';
+/** Hours after which a day's list scan is stale. */
+const STALE_HOURS = 18;
 
 /** @typedef {'today' | 'week' | 'month'} ArrivalRange */
 /** @typedef {'away' | 'list' | 'detail' | 'extranet'} PageKind */
-
-function relativeTime(iso) {
-  if (!iso) return 'No sync yet';
-  const then = new Date(iso).getTime();
-  if (!Number.isFinite(then)) return 'No sync yet';
-  const diffSec = Math.round((Date.now() - then) / 1000);
-  if (diffSec < 60) return `Last update: ${diffSec}s ago`;
-  const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `Last update: ${diffMin} min ago`;
-  const diffHr = Math.round(diffMin / 60);
-  return `Last update: ${diffHr}h ago`;
-}
 
 function originPattern(url) {
   try {
@@ -37,19 +27,18 @@ async function ensureHostPermission(webhookUrl) {
   return chrome.permissions.request({ origins: [pattern] });
 }
 
+/** Show status chip only on error. */
 function paintStatus(status) {
   const el = document.getElementById('status');
-  el.className = 'status';
-  if (status === 'ok') {
-    el.classList.add('status-ok');
-    el.textContent = 'Active';
-  } else if (status === 'error') {
-    el.classList.add('status-error');
+  if (status === 'error') {
+    el.hidden = false;
+    el.className = 'status status-error';
     el.textContent = 'Error';
-  } else {
-    el.classList.add('status-idle');
-    el.textContent = 'Idle';
+    return;
   }
+  el.hidden = true;
+  el.textContent = '';
+  el.className = 'status';
 }
 
 function showView(view) {
@@ -78,6 +67,47 @@ function addDays(date, days) {
   return next;
 }
 
+function parseIsoDay(iso) {
+  const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+function eachIsoDay(fromIso, toIso) {
+  const start = parseIsoDay(fromIso);
+  const end = parseIsoDay(toIso);
+  if (!start || !end || end < start) return [];
+  const days = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push(formatIsoDate(d));
+  }
+  return days;
+}
+
+function shortDayLabel(iso) {
+  const d = parseIsoDay(iso);
+  if (!d) return iso;
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function relativeAgo(iso) {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return null;
+  const diffSec = Math.round((Date.now() - then) / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 48) return `${diffHr}h ago`;
+  const diffDay = Math.round(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
+function isWeekday(date) {
+  const day = date.getDay();
+  return day >= 1 && day <= 5;
+}
+
 /** @param {ArrivalRange} range */
 function arrivalDateBounds(range) {
   const today = new Date();
@@ -90,13 +120,13 @@ function arrivalDateBounds(range) {
 /** @param {ArrivalRange} range */
 function rangeLabel(range) {
   const { from, to } = arrivalDateBounds(range);
-  if (range === 'today') return `Arrivals: today (${from})`;
-  if (range === 'week') return `Arrivals: week (${from} → ${to})`;
-  return `Arrivals: month (${from} → ${to})`;
+  if (range === 'today') return `Window: today (${from}) · ok + cancelled`;
+  if (range === 'week') return `Window: week (${from} → ${to}) · ok + cancelled`;
+  return `Window: month (${from} → ${to}) · ok + cancelled`;
 }
 
 /**
- * @param {{ hotelId: string, range: ArrivalRange }} input
+ * @param {{ hotelId: string, range: ArrivalRange, ses?: string }} input
  */
 function buildSearchReservationsUrl(input) {
   const hotelId = String(input.hotelId || '').trim();
@@ -112,11 +142,13 @@ function buildSearchReservationsUrl(input) {
   url.searchParams.set('date_from', from);
   url.searchParams.set('date_to', to);
   url.searchParams.set('date_type', 'arrival');
+  const ses = String(input.ses || '').trim();
+  if (ses) url.searchParams.set('ses', ses);
   return url.toString();
 }
 
 /**
- * @param {{ bookingId: string, hotelId: string }} input
+ * @param {{ bookingId: string, hotelId: string, ses?: string }} input
  */
 function buildReservationDetailUrl(input) {
   const bookingId = String(input.bookingId || '').trim();
@@ -125,7 +157,39 @@ function buildReservationDetailUrl(input) {
   const url = new URL(DETAIL_PATH);
   url.searchParams.set('res_id', bookingId);
   url.searchParams.set('hotel_id', hotelId);
+  const ses = String(input.ses || '').trim();
+  if (ses) url.searchParams.set('ses', ses);
   return url.toString();
+}
+
+/** @param {string | undefined} tabUrl */
+function sesFromUrl(tabUrl) {
+  if (!tabUrl || !tabUrl.includes('admin.booking.com')) return '';
+  try {
+    return new URL(tabUrl).searchParams.get('ses')?.trim() || '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Prefer ses from the active Extranet tab; else any open admin.booking.com tab.
+ * @param {chrome.tabs.Tab | null | undefined} activeTab
+ */
+async function resolveExtranetSes(activeTab) {
+  const fromActive = sesFromUrl(activeTab?.url);
+  if (fromActive) return fromActive;
+
+  try {
+    const tabs = await chrome.tabs.query({ url: 'https://admin.booking.com/*' });
+    for (const tab of tabs) {
+      const ses = sesFromUrl(tab.url);
+      if (ses) return ses;
+    }
+  } catch {
+    /* host/tabs access may be limited */
+  }
+  return '';
 }
 
 /**
@@ -193,31 +257,122 @@ function setActiveRange(range) {
   document.getElementById('range-hint').textContent = rangeLabel(range);
 }
 
+function isDayFresh(scannedAt, nowMs = Date.now()) {
+  if (!scannedAt) return false;
+  const then = new Date(scannedAt).getTime();
+  if (!Number.isFinite(then)) return false;
+  return nowMs - then <= STALE_HOURS * 60 * 60 * 1000;
+}
+
 /**
  * @param {object} status
- * @param {{ kind: PageKind, hotelId: string, bookingId: string }} page
+ * @param {ArrivalRange} range
  */
-function paintProgress(status, page) {
+function resolveFreshness(status, range) {
+  const { from, to } = arrivalDateBounds(range);
+  const days = eachIsoDay(from, to);
+  const coverage =
+    status?.arrivalCoverage && typeof status.arrivalCoverage === 'object'
+      ? status.arrivalCoverage
+      : {};
+  const stale = [];
+  const fresh = [];
+  for (const day of days) {
+    const scannedAt = coverage[day]?.scannedAt || null;
+    if (isDayFresh(scannedAt)) fresh.push(day);
+    else stale.push(day);
+  }
+
+  const today = formatIsoDate(new Date());
+  const tomorrow = formatIsoDate(addDays(new Date(), 1));
+  const priorityDays = [today, tomorrow].filter((d) => days.includes(d));
+  const nudgeDay = priorityDays.find((d) => stale.includes(d)) || null;
+  const nudgeIsWeekday = nudgeDay ? isWeekday(parseIsoDay(nudgeDay) || new Date()) : false;
+
+  return { from, to, days, stale, fresh, nudgeDay, nudgeIsWeekday };
+}
+
+/**
+ * @param {object} status
+ * @param {ArrivalRange} range
+ */
+function paintFreshness(status, range) {
+  const freshnessEl = document.getElementById('freshness');
+  const nudgeEl = document.getElementById('freshness-nudge');
+  const lastEl = document.getElementById('last-sync');
+  const { stale, fresh, days, nudgeDay, nudgeIsWeekday, from, to } = resolveFreshness(
+    status,
+    range
+  );
+
+  if (!status?.lastListSyncAt && fresh.length === 0 && stale.length === days.length) {
+    freshnessEl.className = 'freshness is-warn';
+    freshnessEl.textContent = 'No list scan yet for this window';
+  } else if (stale.length === 0) {
+    freshnessEl.className = 'freshness';
+    freshnessEl.textContent =
+      days.length === 1
+        ? `Arrivals fresh for ${shortDayLabel(days[0])}`
+        : `Arrivals fresh through ${shortDayLabel(to)}`;
+  } else if (stale.length === days.length) {
+    freshnessEl.className = 'freshness is-warn';
+    freshnessEl.textContent =
+      days.length === 1
+        ? `${shortDayLabel(days[0])} not scanned`
+        : `Stale: whole window (${from} → ${to})`;
+  } else {
+    freshnessEl.className = 'freshness is-warn';
+    const shown = stale.slice(0, 4).map(shortDayLabel).join(', ');
+    const more = stale.length > 4 ? ` +${stale.length - 4}` : '';
+    freshnessEl.textContent = `Stale: ${shown}${more}`;
+  }
+
+  if (nudgeDay) {
+    nudgeEl.hidden = false;
+    const when =
+      nudgeDay === formatIsoDate(new Date())
+        ? 'today'
+        : nudgeDay === formatIsoDate(addDays(new Date(), 1))
+          ? 'tomorrow'
+          : shortDayLabel(nudgeDay);
+    nudgeEl.textContent = nudgeIsWeekday
+      ? `Suggested: sync arrivals for ${when} (next working day coverage).`
+      : `Suggested: sync arrivals for ${when}.`;
+  } else {
+    nudgeEl.hidden = true;
+    nudgeEl.textContent = '';
+  }
+
+  const listAgo = relativeAgo(status?.lastListSyncAt);
+  if (listAgo && status?.lastListDateFrom) {
+    const span =
+      status.lastListDateFrom === status.lastListDateTo
+        ? shortDayLabel(status.lastListDateFrom)
+        : `${shortDayLabel(status.lastListDateFrom)} → ${shortDayLabel(status.lastListDateTo)}`;
+    lastEl.textContent = `List scanned ${listAgo} (${span})`;
+  } else if (listAgo) {
+    lastEl.textContent = `List scanned ${listAgo}`;
+  } else {
+    lastEl.textContent = 'No list scan yet';
+  }
+}
+
+/**
+ * @param {object} status
+ */
+function paintProgress(status) {
   const progressEl = document.getElementById('progress');
   const needing = Number(status?.needingDetailsCount || 0);
-  const captured = Number(status?.capturedCount || 0);
-  const listCount = Number(status?.lastListCount || 0);
 
-  if (!captured && !listCount) {
-    progressEl.className = 'progress';
-    progressEl.textContent = 'No list scan yet — open arrivals and sync';
+  if (needing > 0) {
+    progressEl.hidden = false;
+    progressEl.className = 'meta progress-secondary';
+    progressEl.textContent = `Details still needed: ${needing} active booking${needing === 1 ? '' : 's'}`;
     return;
   }
 
-  progressEl.className = needing > 0 ? 'progress is-warn' : 'progress';
-  const base =
-    listCount > 0
-      ? `${listCount} on last list scan`
-      : `${captured} captured`;
-  progressEl.textContent =
-    needing > 0
-      ? `${base} · ${needing} need details`
-      : `${base} · details complete`;
+  progressEl.hidden = true;
+  progressEl.textContent = '';
 }
 
 /**
@@ -230,12 +385,17 @@ function listMatchesSelectedRange(tabUrl, hotelId, range) {
   try {
     const current = new URL(tabUrl);
     const { from, to } = arrivalDateBounds(range);
+    const statuses = current.searchParams.getAll('reservation_status');
+    const hasOk = statuses.includes('ok');
+    const hasCancelled = statuses.includes('cancelled');
     return (
       current.pathname.includes('search_reservations') &&
       (current.searchParams.get('hotel_id') || '') === hotelId &&
       current.searchParams.get('date_from') === from &&
       current.searchParams.get('date_to') === to &&
-      current.searchParams.get('date_type') === 'arrival'
+      current.searchParams.get('date_type') === 'arrival' &&
+      hasOk &&
+      hasCancelled
     );
   } catch {
     return false;
@@ -254,6 +414,7 @@ function paintActions(status, page, tabUrl) {
   const needing = Number(status?.needingDetailsCount || 0);
   const next = status?.nextNeedingDetails || null;
   const range = readActiveRange();
+  const freshness = resolveFreshness(status, range);
 
   primary.disabled = false;
   secondary.hidden = true;
@@ -261,7 +422,9 @@ function paintActions(status, page, tabUrl) {
   if (page.kind === 'list') {
     const matches = listMatchesSelectedRange(tabUrl, hotelId, range);
     if (matches) {
-      primary.textContent = 'Sync reservations list';
+      primary.textContent = freshness.nudgeDay
+        ? `Sync list (covers ${shortDayLabel(freshness.nudgeDay)})`
+        : 'Sync reservations list';
       primary.dataset.action = 'sync';
     } else {
       primary.textContent = 'Open list for selected dates';
@@ -296,7 +459,11 @@ function paintActions(status, page, tabUrl) {
     return;
   }
 
-  primary.textContent = 'Open reservations list';
+  if (freshness.nudgeDay) {
+    primary.textContent = `Open list · sync ${shortDayLabel(freshness.nudgeDay)}`;
+  } else {
+    primary.textContent = 'Open reservations list';
+  }
   primary.dataset.action = 'open-list';
   if (needing > 0 && next?.booking_id) {
     secondary.hidden = false;
@@ -315,6 +482,7 @@ async function resolvePageContext(tab, status) {
   let hotelId = fromUrl.hotelId || status.hotelId || '';
   let bookingId = fromUrl.bookingId;
   let kind = fromUrl.kind;
+  let ses = sesFromUrl(tab?.url);
 
   if (tab?.id && fromUrl.kind !== 'away') {
     try {
@@ -323,28 +491,33 @@ async function resolvePageContext(tab, status) {
         kind = ctx.kind || kind;
         hotelId = ctx.hotelId || hotelId;
         bookingId = ctx.bookingId || bookingId;
+        if (ctx.ses) ses = String(ctx.ses).trim() || ses;
       }
     } catch {
       /* content script may not be injected yet */
     }
   }
 
+  if (!ses) {
+    ses = await resolveExtranetSes(tab);
+  }
+
   if (hotelId && hotelId !== status.hotelId) {
     await chrome.runtime.sendMessage({ type: 'remember_hotel_id', hotelId });
   }
 
-  return { kind, hotelId, bookingId };
+  return { kind, hotelId, bookingId, ses };
 }
 
 async function refreshStatus() {
   const status = await chrome.runtime.sendMessage({ type: 'get_status' });
   paintStatus(status?.lastStatus || 'idle');
-  document.getElementById('last-sync').textContent = relativeTime(status?.lastSyncAt);
 
   const errorEl = document.getElementById('error');
   if (status?.lastError) {
     errorEl.hidden = false;
     errorEl.textContent = status.lastError;
+    paintStatus('error');
   } else {
     errorEl.hidden = true;
     errorEl.textContent = '';
@@ -352,18 +525,20 @@ async function refreshStatus() {
 
   const tab = await getActiveTab();
   const page = await resolvePageContext(tab, status || {});
+  const range = readActiveRange();
   document.getElementById('page-context').textContent = pageContextCopy(
     page.kind,
     page.bookingId
   );
-  paintProgress(status || {}, page);
+  paintFreshness(status || {}, range);
+  paintProgress(status || {});
   paintActions(status || {}, page, tab?.url);
 
   return { status, page, tab };
 }
 
-async function openListInTab(hotelId, range) {
-  const url = buildSearchReservationsUrl({ hotelId, range });
+async function openListInTab(hotelId, range, ses) {
+  const url = buildSearchReservationsUrl({ hotelId, range, ses });
   if (!url) {
     const errorEl = document.getElementById('error');
     errorEl.hidden = false;
@@ -375,12 +550,13 @@ async function openListInTab(hotelId, range) {
   await chrome.tabs.create({ url });
 }
 
-async function openNextNeedingDetails(status) {
+async function openNextNeedingDetails(status, ses) {
   const next = status?.nextNeedingDetails;
   const hotelId = next?.hotel_id || status?.hotelId || '';
   const url = buildReservationDetailUrl({
     bookingId: next?.booking_id || '',
     hotelId,
+    ses,
   });
   if (!url) {
     const errorEl = document.getElementById('error');
@@ -389,6 +565,24 @@ async function openNextNeedingDetails(status) {
     return;
   }
   await chrome.tabs.create({ url });
+}
+
+async function maybeMarkCoverageFromTab(tab) {
+  if (!tab?.url?.includes('search_reservations')) return;
+  try {
+    const url = new URL(tab.url);
+    const dateFrom = url.searchParams.get('date_from') || '';
+    const dateTo = url.searchParams.get('date_to') || '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(dateTo)) return;
+    await chrome.runtime.sendMessage({
+      type: 'mark_arrival_coverage',
+      dateFrom,
+      dateTo,
+      scannedAt: new Date().toISOString(),
+    });
+  } catch {
+    /* ignore */
+  }
 }
 
 async function syncCurrentPage(tab) {
@@ -403,6 +597,7 @@ async function syncCurrentPage(tab) {
   try {
     await chrome.tabs.sendMessage(tab.id, { type: 'sync_current_page' });
     await chrome.runtime.sendMessage({ type: 'flush_outbox' });
+    await maybeMarkCoverageFromTab(tab);
   } catch (error) {
     paintStatus('error');
     const errorEl = document.getElementById('error');
@@ -470,13 +665,14 @@ document.getElementById('primary-action').addEventListener('click', async () => 
   const { status, page, tab } = await refreshStatus();
   const hotelId = page.hotelId || status?.hotelId || '';
   const range = readActiveRange();
+  const ses = page.ses || (await resolveExtranetSes(tab));
 
   if (action === 'sync') {
     await syncCurrentPage(tab);
     return;
   }
   if (action === 'open-list') {
-    await openListInTab(hotelId, range);
+    await openListInTab(hotelId, range, ses);
     return;
   }
   if (action === 'open-extranet-home') {
@@ -487,9 +683,9 @@ document.getElementById('primary-action').addEventListener('click', async () => 
 
 document.getElementById('secondary-action').addEventListener('click', async () => {
   const action = document.getElementById('secondary-action').dataset.action;
-  const { status, tab } = await refreshStatus();
+  const { status, page, tab } = await refreshStatus();
   if (action === 'open-next') {
-    await openNextNeedingDetails(status);
+    await openNextNeedingDetails(status, page.ses || (await resolveExtranetSes(tab)));
     return;
   }
   if (action === 'sync') {

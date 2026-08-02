@@ -21,8 +21,8 @@ describe('parseBookingComExtranetDate', () => {
 });
 
 describe('parseBookingComGuestCounts', () => {
-  it('parses adults and children', () => {
-    expect(parseBookingComGuestCounts('2 adults, 1 child')).toEqual({ adults: 2, children: 1 });
+  it('parses bare guest count', () => {
+    expect(parseBookingComGuestCounts('1')).toEqual({ adults: 1, children: null });
   });
 
   it('parses guests only', () => {

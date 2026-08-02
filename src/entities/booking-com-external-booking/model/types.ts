@@ -26,6 +26,8 @@ export interface BookingComExternalBookingRecord {
   amount: number | null;
   list_amount: number | null;
   total_amount: number | null;
+  /** Applicable cancellation fee when booking_status is cancelled (Extranet). */
+  cancellation_fee_amount: number | null;
   currency: string | null;
   booking_status: BookingComBookingStatus;
   room_name: string | null;
@@ -52,6 +54,7 @@ export type BookingComExternalBookingInput = {
   amount?: number | null;
   list_amount?: number | null;
   total_amount?: number | null;
+  cancellation_fee_amount?: number | null;
   currency?: string | null;
   status?: BookingComBookingStatus | null;
   room_name?: string | null;

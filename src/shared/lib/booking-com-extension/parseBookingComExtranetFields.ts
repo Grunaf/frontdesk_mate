@@ -63,7 +63,14 @@ export function parseBookingComGuestCounts(text: string | null | undefined): {
   const adultsMatch = t.match(/(\d+)\s*adult/);
   const childrenMatch = t.match(/(\d+)\s*child/);
   const guestsOnly = t.match(/(\d+)\s*guest/);
-  const adults = adultsMatch ? Number(adultsMatch[1]) : guestsOnly ? Number(guestsOnly[1]) : null;
+  const bare = t.match(/^\d+$/);
+  const adults = adultsMatch
+    ? Number(adultsMatch[1])
+    : guestsOnly
+      ? Number(guestsOnly[1])
+      : bare
+        ? Number(bare[0])
+        : null;
   const children = childrenMatch ? Number(childrenMatch[1]) : null;
   return {
     adults: Number.isFinite(adults) ? adults : null,
@@ -79,9 +86,11 @@ export function parseBookingComAmountCurrency(text: string | null | undefined): 
   if (!t) return { amount: null, currency: null };
   const currencyMatch = t.match(/\b([A-Z]{3})\b/);
   const amountRaw = Number(t.replace(',', '.').replace(/[^\d.-]/g, ''));
+  let currency = currencyMatch ? currencyMatch[1] : null;
+  if (!currency && /€|eur\b/i.test(t)) currency = 'EUR';
   return {
     amount: Number.isFinite(amountRaw) ? amountRaw : null,
-    currency: currencyMatch ? currencyMatch[1] : null,
+    currency,
   };
 }
 

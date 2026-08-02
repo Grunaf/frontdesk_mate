@@ -89,6 +89,7 @@ export function normalizeBookingComExternalBookingInput(
   const totalAmount =
     asAmount(record.total_amount) ??
     (source === 'detail_api' ? legacyAmount : null);
+  const cancellationFeeAmount = asAmount(record.cancellation_fee_amount);
 
   return {
     booking_id: bookingId,
@@ -103,6 +104,7 @@ export function normalizeBookingComExternalBookingInput(
     amount: listAmount,
     list_amount: listAmount,
     total_amount: totalAmount,
+    cancellation_fee_amount: cancellationFeeAmount,
     currency: asTrimmedString(record.currency, CURRENCY_MAX)?.toUpperCase() ?? null,
     status: normalizeBookingComBookingStatus(record.status),
     room_name: asTrimmedString(record.room_name, ROOM_NAME_MAX),

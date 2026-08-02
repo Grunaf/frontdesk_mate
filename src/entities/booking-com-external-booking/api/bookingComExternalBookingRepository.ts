@@ -13,7 +13,7 @@ import type {
 } from '../model/types';
 
 const COLUMNS =
-  'id, tenant_id, hotel_id, booking_id, guest_name, phone_number, guest_email, adults, children, check_in, check_out, amount, list_amount, total_amount, currency, booking_status, room_name, inbox_status, source, captured_at, issued_stay_id, created_at, updated_at';
+  'id, tenant_id, hotel_id, booking_id, guest_name, phone_number, guest_email, adults, children, check_in, check_out, amount, list_amount, total_amount, cancellation_fee_amount, currency, booking_status, room_name, inbox_status, source, captured_at, issued_stay_id, created_at, updated_at';
 
 type ExistingPreserve = {
   guest_name: string | null;
@@ -25,6 +25,7 @@ type ExistingPreserve = {
   check_out: string | null;
   list_amount: number | null;
   total_amount: number | null;
+  cancellation_fee_amount: number | null;
   currency: string | null;
   room_name: string | null;
   booking_status: string | null;
@@ -61,6 +62,7 @@ function mapRow(row: Record<string, unknown>): BookingComExternalBookingRecord {
     amount: listAmount,
     list_amount: listAmount,
     total_amount: totalAmount,
+    cancellation_fee_amount: asNullableNumber(row.cancellation_fee_amount),
     currency: row.currency ? String(row.currency) : null,
     booking_status: String(row.booking_status) as BookingComExternalBookingRecord['booking_status'],
     room_name: row.room_name ? String(row.room_name) : null,
@@ -95,6 +97,7 @@ function buildUpsertRow(
 ): Record<string, unknown> {
   const listAmount = input.list_amount ?? null;
   const totalAmount = input.total_amount ?? null;
+  const cancellationFeeAmount = input.cancellation_fee_amount ?? null;
 
   return {
     tenant_id: tenantId,
@@ -107,6 +110,8 @@ function buildUpsertRow(
     check_out: input.check_out ?? existing?.check_out ?? null,
     list_amount: listAmount ?? existing?.list_amount ?? null,
     total_amount: totalAmount ?? existing?.total_amount ?? null,
+    cancellation_fee_amount:
+      cancellationFeeAmount ?? existing?.cancellation_fee_amount ?? null,
     // Keep legacy column in sync with list price for older readers.
     amount: listAmount ?? existing?.list_amount ?? null,
     currency: input.currency ?? existing?.currency ?? null,
@@ -148,7 +153,7 @@ export async function upsertBookingComExternalBookings(input: {
   const { data: existing, error: existingError } = await admin
     .from('booking_com_external_bookings')
     .select(
-      'booking_id, guest_name, phone_number, guest_email, adults, children, check_in, check_out, list_amount, total_amount, amount, currency, room_name, booking_status'
+      'booking_id, guest_name, phone_number, guest_email, adults, children, check_in, check_out, list_amount, total_amount, cancellation_fee_amount, amount, currency, room_name, booking_status'
     )
     .eq('tenant_id', gate.tenantId)
     .eq('hotel_id', hotelId)
@@ -176,6 +181,7 @@ export async function upsertBookingComExternalBookings(input: {
           check_out: r.check_out ? String(r.check_out).slice(0, 10) : null,
           list_amount: listAmount,
           total_amount: asNullableNumber(r.total_amount),
+          cancellation_fee_amount: asNullableNumber(r.cancellation_fee_amount),
           currency: r.currency ? String(r.currency) : null,
           room_name: r.room_name ? String(r.room_name) : null,
           booking_status: r.booking_status ? String(r.booking_status) : null,
@@ -228,6 +234,9 @@ export async function patchBookingComExternalBooking(input: {
     patch.amount = input.booking.list_amount;
   }
   if (input.booking.total_amount != null) patch.total_amount = input.booking.total_amount;
+  if (input.booking.cancellation_fee_amount != null) {
+    patch.cancellation_fee_amount = input.booking.cancellation_fee_amount;
+  }
   // Legacy detail payloads may still send `amount` as total due.
   if (
     input.booking.total_amount == null &&
