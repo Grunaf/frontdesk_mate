@@ -103,12 +103,6 @@ function InboxBookingCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
-          {isCancelled ? (
-            <Badge variant="destructive" className="text-[10px]">
-              Canceled
-            </Badge>
-          ) : null}
-
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {!isCancelled ? (
               showSyncCue ? (
