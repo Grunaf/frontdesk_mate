@@ -24,6 +24,7 @@ import {
   filterPlanRoomGroupsByFreeTonight,
   type PlanBedFilter,
 } from '../lib/filterPlanRoomGroupsByFreeTonight';
+import { filterPlanRoomGroupsForMoveBed } from '../lib/filterPlanRoomGroupsForMoveBed';
 import {
   DEFAULT_PLAN_QUICK_FILTERS,
   filterPlanRoomGroupsByQuickFilters,
@@ -56,7 +57,8 @@ import {
   PlanStayQuickActionsContextMenu,
   PlanStayQuickActionsSheet,
 } from './PlanStayQuickActionsSheet';
-import { Button, SegmentedChipBar } from '@/shared/ui';
+import { Check } from 'lucide-react';
+import { Button, Icon, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
 import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
@@ -113,6 +115,7 @@ interface BedAccessCalendarProps {
   onStartMoveMode?: () => void;
   onCancelMoveMode?: () => void;
   onPickStayForMove?: (stayId: string) => void;
+  /** Confirm vertical move to this bed (after in-grid target selection). */
   onPickBedForMove?: (bedId: string) => void;
   /** When false, hide Move bed entry (e.g. no check-in permission). */
   canMoveBeds?: boolean;
@@ -221,12 +224,14 @@ function HousekeepingBedStatusSelect({
   disabled,
   locked,
   onChange,
+  className,
 }: {
   status: HousekeepingBedStatus | undefined;
   disabled?: boolean;
   /** Ready is locked on Plan — change via Cleaning if needed. */
   locked?: boolean;
   onChange: (status: HousekeepingBedStatus) => void;
+  className?: string;
 }) {
   const needsWork = isHousekeepingBedNeedsWork(status);
   const unset = !status;
@@ -249,11 +254,12 @@ function HousekeepingBedStatusSelect({
         }
       }}
       className={cn(
-        'max-w-[7.5rem] shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight',
+        'max-w-[6.75rem] shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight',
         unset && 'border-border bg-background text-muted-foreground',
         !unset && needsWork && 'border-amber-200 bg-amber-50 text-amber-900',
         !unset && !needsWork && 'border-transparent bg-muted text-muted-foreground',
-        (disabled || locked) && 'pointer-events-none opacity-60'
+        (disabled || locked) && 'pointer-events-none opacity-60',
+        className
       )}
     >
       <option value="" disabled={Boolean(status)}>
@@ -290,7 +296,7 @@ function HousekeepingChip({
         onClick();
       }}
       className={cn(
-        'shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors',
+        'max-w-[6.75rem] shrink-0 truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors',
         unset && 'border-border bg-background text-muted-foreground hover:bg-muted/40',
         !unset && needsWork && 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100',
         !unset && !needsWork && 'border-transparent bg-muted text-muted-foreground hover:bg-muted/80',
@@ -341,6 +347,7 @@ export function BedAccessCalendar({
   const [toolbarSlotEl, setToolbarSlotEl] = useState<HTMLElement | null>(null);
   const quickFiltersSlugRef = useRef<string | null>(null);
   const [quickMenu, setQuickMenu] = useState<StayQuickMenuState | null>(null);
+  const [pendingMoveTargetBedId, setPendingMoveTargetBedId] = useState<string | null>(null);
   const suppressStayClickRef = useRef(false);
   const longPressTimerRef = useRef<number | null>(null);
   const longPressOriginRef = useRef<{ x: number; y: number; stayId: string } | null>(null);
@@ -387,17 +394,26 @@ export function BedAccessCalendar({
   useEffect(() => {
     if (!moveActive || !onCancelMoveMode) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !moveBusy) {
-        onCancelMoveMode();
+      if (event.key !== 'Escape' || moveBusy) return;
+      if (pendingMoveTargetBedId) {
+        setPendingMoveTargetBedId(null);
+        return;
       }
+      onCancelMoveMode();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [moveActive, moveBusy, onCancelMoveMode]);
+  }, [moveActive, moveBusy, onCancelMoveMode, pendingMoveTargetBedId]);
 
   useEffect(() => {
     if (moveActive) setQuickMenu(null);
   }, [moveActive]);
+
+  useEffect(() => {
+    if (moveMode?.phase !== 'pickBed') {
+      setPendingMoveTargetBedId(null);
+    }
+  }, [moveMode]);
 
   useEffect(() => () => clearLongPress(), []);
 
@@ -482,9 +498,25 @@ export function BedAccessCalendar({
   );
 
   const visibleRoomGroups = useMemo(() => {
-    if (effectiveBedFilter !== 'free_tonight') return quickFilteredRoomGroups;
-    return filterPlanRoomGroupsByFreeTonight(quickFilteredRoomGroups, lifecycleToday);
-  }, [effectiveBedFilter, lifecycleToday, quickFilteredRoomGroups]);
+    const filtered =
+      effectiveBedFilter === 'free_tonight'
+        ? filterPlanRoomGroupsByFreeTonight(quickFilteredRoomGroups, lifecycleToday)
+        : quickFilteredRoomGroups;
+
+    if (moveMode?.phase !== 'pickBed' || !movingStay) return filtered;
+
+    return filterPlanRoomGroupsForMoveBed(filtered, {
+      currentBedId: movingStay.bed_id,
+      targetBedIds: moveTargetBedIds ?? new Set(),
+    });
+  }, [
+    effectiveBedFilter,
+    lifecycleToday,
+    moveMode?.phase,
+    moveTargetBedIds,
+    movingStay,
+    quickFilteredRoomGroups,
+  ]);
 
   const planBedIds = useMemo(
     () => snapshot.roomGroups.flatMap((group) => group.rows.map((row) => row.bedId)),
@@ -549,22 +581,10 @@ export function BedAccessCalendar({
           />
         ) : null}
       </Button>
-      {canMoveBeds && onStartMoveMode && onCancelMoveMode ? (
-        moveActive ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="default"
-            disabled={moveBusy}
-            onClick={onCancelMoveMode}
-          >
-            Cancel
-          </Button>
-        ) : (
-          <Button type="button" size="sm" variant="outline" onClick={onStartMoveMode}>
-            Move bed
-          </Button>
-        )
+      {canMoveBeds && onStartMoveMode && !moveActive ? (
+        <Button type="button" size="sm" variant="outline" onClick={onStartMoveMode}>
+          Move bed
+        </Button>
       ) : null}
       <Button
         type="button"
@@ -658,8 +678,8 @@ export function BedAccessCalendar({
                 <Fragment key={group.roomId}>
                   <tr className="border-t-2 border-border">
                     <td className="sticky left-0 z-10 border bg-muted px-2 py-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                      <div className="flex flex-nowrap items-center gap-2">
+                        <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-wide text-foreground">
                           {group.roomLabel}
                         </span>
                         {showRoomChip ? (
@@ -681,20 +701,66 @@ export function BedAccessCalendar({
                   {group.rows.map((row) => {
                     const bedStatus = bedStatuses?.[row.bedId];
                     const showBedChip = housekeepingEnabled && onSetBedStatus;
+                    const isPickBedPhase = moveMode?.phase === 'pickBed';
                     const isMoveTargetBed =
-                      moveMode?.phase === 'pickBed' && Boolean(moveTargetBedIds?.has(row.bedId));
+                      isPickBedPhase && Boolean(moveTargetBedIds?.has(row.bedId));
+                    const isPendingMoveTarget =
+                      isPickBedPhase && pendingMoveTargetBedId === row.bedId;
 
                     return (
-                      <tr key={row.bedId}>
-                        <td className="sticky left-0 z-10 border bg-background px-2 py-1.5 pl-4">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-medium text-foreground">{row.displayLabel}</span>
-                            {showBedChip ? (
+                      <tr
+                        key={row.bedId}
+                        className={cn(isPendingMoveTarget && 'bg-primary/5')}
+                      >
+                        <td
+                          className={cn(
+                            'sticky left-0 z-10 border bg-background px-2 py-1.5 pl-4',
+                            isPendingMoveTarget && 'z-20'
+                          )}
+                        >
+                          <div className="flex flex-nowrap items-center gap-2">
+                            <span className="min-w-0 truncate font-medium text-foreground">
+                              {row.displayLabel}
+                            </span>
+                            {isPendingMoveTarget ? (
+                              <button
+                                type="button"
+                                disabled={moveBusy}
+                                onClick={() => onPickBedForMove?.(row.bedId)}
+                                aria-label={
+                                  moveBusy
+                                    ? `Moving to ${row.displayLabel}`
+                                    : `Confirm move to ${row.displayLabel}`
+                                }
+                                className={cn(
+                                  'inline-flex h-7 w-[6.75rem] shrink-0 items-center justify-center rounded-md border px-1.5',
+                                  'border-primary/30 bg-primary/10 text-primary',
+                                  'hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                  'disabled:pointer-events-none disabled:opacity-60'
+                                )}
+                              >
+                                {moveBusy ? (
+                                  <span className="text-xs font-medium leading-none">…</span>
+                                ) : (
+                                  <Icon icon={Check} className="size-4 shrink-0" size={16} />
+                                )}
+                              </button>
+                            ) : showBedChip ? (
                               <HousekeepingBedStatusSelect
                                 status={bedStatus}
                                 disabled={housekeepingBusy || moveActive}
                                 locked={bedStatus === 'ready'}
                                 onChange={(status) => onSetBedStatus(row.bedId, status)}
+                                className={
+                                  isPickBedPhase
+                                    ? 'box-border h-7 w-[6.75rem] max-w-[6.75rem] py-0 leading-none'
+                                    : undefined
+                                }
+                              />
+                            ) : isPickBedPhase ? (
+                              <span
+                                className="inline-flex h-7 w-[6.75rem] shrink-0"
+                                aria-hidden
                               />
                             ) : null}
                           </div>
@@ -733,7 +799,8 @@ export function BedAccessCalendar({
                               key={`${row.bedId}-${cell.nightDate}`}
                               className={cn(
                                 'border p-0.5 align-top',
-                                isTodayColumn && 'bg-primary/5'
+                                isTodayColumn && 'bg-primary/5',
+                                isPendingMoveTarget && isMoveDropCell && 'bg-primary/10'
                               )}
                             >
                               {cell.status === 'free' ? (
@@ -742,7 +809,7 @@ export function BedAccessCalendar({
                                   disabled={moveBusy || (moveActive && !isMoveDropCell)}
                                   onClick={() => {
                                     if (moveMode?.phase === 'pickBed' && isMoveDropCell) {
-                                      onPickBedForMove?.(row.bedId);
+                                      setPendingMoveTargetBedId(row.bedId);
                                       return;
                                     }
                                     if (moveActive) return;
@@ -750,13 +817,18 @@ export function BedAccessCalendar({
                                   }}
                                   className={cn(
                                     'flex min-h-10 w-full items-center justify-center rounded bg-muted/10 px-1 text-[10px] text-muted-foreground hover:bg-muted/30',
+                                    isPendingMoveTarget &&
+                                      isMoveDropCell &&
+                                      'ring-2 ring-primary ring-offset-1 ring-offset-background',
                                     moveActive && !isMoveDropCell && 'opacity-40'
                                   )}
-                                  aria-label={
-                                    isMoveDropCell
-                                      ? `Move guest to ${row.displayLabel}`
-                                      : undefined
-                                  }
+                                    aria-label={
+                                      isMoveDropCell
+                                        ? isPendingMoveTarget
+                                          ? `Selected ${row.displayLabel} — confirm with checkmark`
+                                          : `Select ${row.displayLabel} as move target`
+                                        : undefined
+                                    }
                                 >
                                   ·
                                 </button>
@@ -845,6 +917,12 @@ export function BedAccessCalendar({
                                     }
                                     if (moveMode?.phase === 'pickStay') {
                                       onPickStayForMove?.(cell.stay.id);
+                                      return;
+                                    }
+                                    if (moveMode?.phase === 'pickBed') {
+                                      if (cell.stay.id === movingStayId && pendingMoveTargetBedId) {
+                                        setPendingMoveTargetBedId(null);
+                                      }
                                       return;
                                     }
                                     if (moveActive) return;

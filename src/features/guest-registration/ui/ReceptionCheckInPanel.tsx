@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
@@ -337,10 +337,6 @@ export function ReceptionCheckInPanel({
   const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
   const [planFocusToken, setPlanFocusToken] = useState(0);
   const [planMoveMode, setPlanMoveMode] = useState<PlanCalendarMoveMode | null>(null);
-  const [pendingPlanMove, setPendingPlanMove] = useState<{
-    stayId: string;
-    bedId: string;
-  } | null>(null);
   const [planMoveError, setPlanMoveError] = useState<string | null>(null);
   const [planQuickError, setPlanQuickError] = useState<string | null>(null);
   const [pendingPlanTakePaymentStayId, setPendingPlanTakePaymentStayId] = useState<string | null>(
@@ -1468,13 +1464,11 @@ export function ReceptionCheckInPanel({
 
   const cancelPlanMoveMode = useCallback(() => {
     setPlanMoveMode(null);
-    setPendingPlanMove(null);
     setPlanMoveError(null);
   }, []);
 
   const startPlanMoveMode = useCallback(() => {
     setPlanMoveError(null);
-    setPendingPlanMove(null);
     setPlanMoveMode({ phase: 'pickStay' });
   }, []);
 
@@ -1485,7 +1479,6 @@ export function ReceptionCheckInPanel({
       setEditBaseline(null);
       setDiscardEditConfirmOpen(false);
       setPlanMoveError(null);
-      setPendingPlanMove(null);
       setPlanMoveMode({ phase: 'pickBed', stayId });
       navigateDeskTab('plan');
     },
@@ -1510,81 +1503,66 @@ export function ReceptionCheckInPanel({
     [canEditPastStays, hubSnapshot.operational.operationalDate, planStays]
   );
 
-  const pickBedForPlanMove = useCallback(
+  const confirmPlanMoveToBed = useCallback(
     (bedId: string) => {
-      if (planMoveMode?.phase !== 'pickBed') return;
+      if (planMoveMode?.phase !== 'pickBed' || planMoveBusy) return;
       if (!planMoveTargetBedIds.has(bedId)) return;
+      const stay = planStays.find((entry) => entry.id === planMoveMode.stayId);
+      if (!stay) {
+        setPlanMoveError('Booking not found. Refresh and try again.');
+        return;
+      }
+
+      const balanceDue =
+        stay.booking_amount_due_minor != null &&
+        stay.booking_amount_currency &&
+        isCurrencyCode(stay.booking_amount_currency)
+          ? formatMinorAsDecimalInput(stay.booking_amount_due_minor, stay.booking_amount_currency)
+          : '';
+
       setPlanMoveError(null);
-      setPendingPlanMove({ stayId: planMoveMode.stayId, bedId });
-    },
-    [planMoveMode, planMoveTargetBedIds]
-  );
+      startPlanMoveTransition(() => {
+        void (async () => {
+          const result = await updateGuestReservationAction({
+            tenantSlug,
+            stayId: stay.id,
+            bedId,
+            guestName: stay.guest_name?.trim() || undefined,
+            guestId: stay.guest_id ?? undefined,
+            checkInDate: stayRecordCheckInDate(stay),
+            checkOutDate: stayRecordCheckOutDate(stay),
+            bookingPlatformId: stay.booking_platform_id || undefined,
+            bookingExternalId: stay.booking_external_id || undefined,
+            bookingAmountDue: balanceDue,
+            contactPhone: stay.contact_phone ?? null,
+            contactEmail: stay.contact_email ?? null,
+            operationalDate: hubSnapshot.operational.operationalDate,
+          });
 
-  const confirmPlanMove = useCallback(() => {
-    if (!pendingPlanMove || planMoveBusy) return;
-    const stay = planStays.find((entry) => entry.id === pendingPlanMove.stayId);
-    if (!stay) {
-      setPendingPlanMove(null);
-      setPlanMoveError('Booking not found. Refresh and try again.');
-      return;
-    }
-
-    const balanceDue =
-      stay.booking_amount_due_minor != null &&
-      stay.booking_amount_currency &&
-      isCurrencyCode(stay.booking_amount_currency)
-        ? formatMinorAsDecimalInput(stay.booking_amount_due_minor, stay.booking_amount_currency)
-        : '';
-    const targetBedId = pendingPlanMove.bedId;
-
-    startPlanMoveTransition(() => {
-      void (async () => {
-        const result = await updateGuestReservationAction({
-          tenantSlug,
-          stayId: stay.id,
-          bedId: targetBedId,
-          guestName: stay.guest_name?.trim() || undefined,
-          guestId: stay.guest_id ?? undefined,
-          checkInDate: stayRecordCheckInDate(stay),
-          checkOutDate: stayRecordCheckOutDate(stay),
-          bookingPlatformId: stay.booking_platform_id || undefined,
-          bookingExternalId: stay.booking_external_id || undefined,
-          bookingAmountDue: balanceDue,
-          contactPhone: stay.contact_phone ?? null,
-          contactEmail: stay.contact_email ?? null,
-          operationalDate: hubSnapshot.operational.operationalDate,
-        });
-
-        if (!result.ok) {
-          setPlanMoveError(createErrorMessage(result.error));
-          setPendingPlanMove(null);
-          if (result.error === 'access_overlap') {
-            await refresh();
+          if (!result.ok) {
+            setPlanMoveError(createErrorMessage(result.error));
+            if (result.error === 'access_overlap') {
+              await refresh();
+            }
+            return;
           }
-          return;
-        }
 
-        setPendingPlanMove(null);
-        setPlanMoveMode(null);
-        setPlanMoveError(null);
-        await refresh();
-      })();
-    });
-  }, [
-    hubSnapshot.operational.operationalDate,
-    pendingPlanMove,
-    planMoveBusy,
-    planStays,
-    refresh,
-    tenantSlug,
-  ]);
-
-  const pendingPlanMoveDescription = useMemo(() => {
-    if (!pendingPlanMove) return '';
-    const stay = planStays.find((entry) => entry.id === pendingPlanMove.stayId);
-    const guestLabel = stay ? resolvePlanStayGuestLabel(stay, planStays) : 'Guest';
-    return `${guestLabel} → ${resolveBedLabel(pendingPlanMove.bedId)}. Dates stay the same.`;
-  }, [pendingPlanMove, planStays, resolveBedLabel]);
+          setPlanMoveMode(null);
+          setPlanMoveError(null);
+          await refresh();
+        })();
+      });
+    },
+    [
+      hubSnapshot.operational.operationalDate,
+      planMoveBusy,
+      planMoveMode,
+      planMoveTargetBedIds,
+      planStays,
+      refresh,
+      tenantSlug,
+    ]
+  );
 
   useEffect(() => {
     if (deskTab === 'plan' || !planMoveMode) return;
@@ -2332,6 +2310,41 @@ export function ReceptionCheckInPanel({
   );
 
   const planMoveFocus = planMoveMode !== null;
+  const [planMoveHint, setPlanMoveHint] = useState<string | null>(null);
+  const planMoveHintShownRef = useRef(false);
+  const planMoveHintTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (planMoveFocus) return;
+    planMoveHintShownRef.current = false;
+    setPlanMoveHint(null);
+    if (planMoveHintTimerRef.current != null) {
+      window.clearTimeout(planMoveHintTimerRef.current);
+      planMoveHintTimerRef.current = null;
+    }
+  }, [planMoveFocus]);
+
+  useEffect(
+    () => () => {
+      if (planMoveHintTimerRef.current != null) {
+        window.clearTimeout(planMoveHintTimerRef.current);
+      }
+    },
+    []
+  );
+
+  const showPlanMoveHeaderHint = useCallback(() => {
+    if (!planMoveFocus || planMoveHintShownRef.current) return;
+    planMoveHintShownRef.current = true;
+    setPlanMoveHint('Move bed mode — tap a free bed or cancel.');
+    if (planMoveHintTimerRef.current != null) {
+      window.clearTimeout(planMoveHintTimerRef.current);
+    }
+    planMoveHintTimerRef.current = window.setTimeout(() => {
+      setPlanMoveHint(null);
+      planMoveHintTimerRef.current = null;
+    }, 2500);
+  }, [planMoveFocus]);
 
   const stickyChromeClassName = cn(
     'sticky top-0',
@@ -2352,9 +2365,26 @@ export function ReceptionCheckInPanel({
 
       {canCheckIn ? (
         <ReceptionIssueAccessFab
-          visible={!(issueOverlayOpen || editDraft !== null || planMoveFocus)}
-          onPress={() => setIssueOverlayOpen(true)}
+          visible={!(issueOverlayOpen || editDraft !== null)}
+          mode={planMoveFocus ? 'cancelMove' : 'newBooking'}
+          disabled={planMoveFocus ? planMoveBusy : false}
+          onPress={() => {
+            if (planMoveFocus) {
+              cancelPlanMoveMode();
+              return;
+            }
+            setIssueOverlayOpen(true);
+          }}
         />
+      ) : null}
+
+      {planMoveHint ? (
+        <div
+          role="status"
+          className="pointer-events-none fixed left-1/2 z-40 max-w-sm -translate-x-1/2 rounded-lg border bg-background px-3 py-2 text-center text-xs text-foreground shadow-lg bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:bottom-24"
+        >
+          {planMoveHint}
+        </div>
       ) : null}
 
       <CancelBookingDialog
@@ -2677,20 +2707,6 @@ export function ReceptionCheckInPanel({
       ) : null}
 
       <ConfirmDialog
-        open={pendingPlanMove !== null}
-        title="Move bed?"
-        description={pendingPlanMoveDescription}
-        cancelLabel="Cancel"
-        confirmLabel={planMoveBusy ? 'Moving…' : 'Move bed'}
-        confirmVariant="default"
-        onCancel={() => {
-          if (planMoveBusy) return;
-          setPendingPlanMove(null);
-        }}
-        onConfirm={confirmPlanMove}
-      />
-
-      <ConfirmDialog
         open={pendingPlanTakePaymentStayId !== null}
         title="Take payment?"
         description={pendingPlanTakePaymentDescription}
@@ -2760,12 +2776,17 @@ export function ReceptionCheckInPanel({
           <Tabs value={deskTab} onValueChange={handleDeskTabChange} className="space-y-3">
             <div className={stickyChromeClassName}>
               <div
-                className={cn(
-                  planMoveFocus && 'pointer-events-none select-none opacity-40'
-                )}
-                aria-hidden={planMoveFocus || undefined}
+                className={cn(planMoveFocus && 'select-none')}
+                onClick={planMoveFocus ? showPlanMoveHeaderHint : undefined}
               >
-                {deskHeader}
+                <div
+                  className={cn(
+                    planMoveFocus && 'pointer-events-none opacity-40'
+                  )}
+                  aria-hidden={planMoveFocus || undefined}
+                >
+                  {deskHeader}
+                </div>
               </div>
               {showBookingsContextTabs && !planMoveFocus ? (
                 <TabsList variant="line" className="mb-0 w-full justify-start">
@@ -2860,7 +2881,7 @@ export function ReceptionCheckInPanel({
                 onStartMoveMode={startPlanMoveMode}
                 onCancelMoveMode={cancelPlanMoveMode}
                 onPickStayForMove={pickStayForPlanMove}
-                onPickBedForMove={pickBedForPlanMove}
+                onPickBedForMove={confirmPlanMoveToBed}
                 getStayQuickActions={canCheckIn ? getStayQuickActions : undefined}
                 onStayQuickAction={canCheckIn ? handleStayQuickAction : undefined}
                 quickActionsBusy={planQuickBusy}
