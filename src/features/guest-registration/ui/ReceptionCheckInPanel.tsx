@@ -159,6 +159,7 @@ import {
 import { ReceptionMoreMenu } from './ReceptionMoreMenu';
 import { ReceptionMySchedulePanel } from './ReceptionMySchedulePanel';
 import { ReceptionDeskHeader } from './ReceptionDeskHeader';
+import { ReceptionPlanBookingShortcuts } from './ReceptionPlanBookingShortcuts';
 import { prefetchMyReceptionSchedule } from '../lib/myReceptionScheduleCache';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
@@ -283,7 +284,6 @@ export function ReceptionCheckInPanel({
     staffPermissions,
     openIssues.length,
     openTransfers.length,
-    bookingInbox.length,
     moreMenuOptions
   );
 
@@ -2757,7 +2757,6 @@ export function ReceptionCheckInPanel({
             items={moreMenuTabs}
             openIssuesCount={openIssues.length}
             openTransfersCount={openTransfers.length}
-            openBookingInboxCount={bookingInbox.length}
             onSelect={(tab) => navigateDeskTab(tab, { clearStayId: true })}
           />
         ) : (
@@ -2777,7 +2776,24 @@ export function ReceptionCheckInPanel({
                 </div>
               </div>
               {deskTab === 'plan' ? (
-                <div id={RECEPTION_PLAN_TOOLBAR_SLOT_ID} className="min-w-0" />
+                <div className="flex items-start gap-2">
+                  <div
+                    id={RECEPTION_PLAN_TOOLBAR_SLOT_ID}
+                    className="min-w-0 flex-1"
+                  />
+                  {!planMoveFocus ? (
+                    <ReceptionPlanBookingShortcuts
+                      className="shrink-0"
+                      openBookingInboxCount={bookingInbox.length}
+                      onOpenBookingInbox={() =>
+                        navigateDeskTab('booking-inbox', { clearStayId: true })
+                      }
+                      onOpenArchive={() =>
+                        navigateDeskTab('archive', { clearStayId: true })
+                      }
+                    />
+                  ) : null}
+                </div>
               ) : null}
             </div>
 

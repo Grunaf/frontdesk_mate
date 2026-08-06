@@ -20,22 +20,51 @@ export type CheckInDeskTab = (typeof CHECK_IN_DESK_TABS)[number];
 export type DeskTab = CheckInDeskTab | 'cleaning' | 'schedule' | 'wash';
 
 /**
- * Screens listed in More (order = menu order).
- * Plan also opens via bottom Bookings; Access/Cash/Wash only via More (or deep-link).
+ * Screens listed in More (type union). Order within groups: see MORE_MENU_GROUPS.
+ * Plan opens via bottom Bookings; Booking.com inbox / Archive via Plan chrome (or deep-link).
+ * Access/Cash/Wash via More (or deep-link).
  */
 export const MORE_MENU_TABS = [
-  'plan',
   'access',
   'cash',
-  'schedule',
   'issues',
   'transfers',
-  'booking-inbox',
-  'archive',
   'cleaning',
   'wash',
+  'schedule',
 ] as const;
 export type MoreMenuTab = (typeof MORE_MENU_TABS)[number];
+
+/** More menu sections — always render non-empty groups in this order. */
+export const MORE_MENU_GROUPS = [
+  { id: 'stay', label: 'Stay', tabs: ['access', 'cash'] },
+  { id: 'inbox', label: 'Inbox', tabs: ['issues', 'transfers'] },
+  { id: 'housekeeping', label: 'Housekeeping', tabs: ['cleaning', 'wash'] },
+  { id: 'other', label: 'Other', tabs: ['schedule'] },
+] as const;
+
+export type MoreMenuGroupId = (typeof MORE_MENU_GROUPS)[number]['id'];
+
+export type MoreMenuGroup = {
+  id: MoreMenuGroupId;
+  label: string;
+  items: MoreMenuTab[];
+};
+
+/**
+ * Project visible More tabs into labeled groups.
+ * Empty groups are omitted; group and item order follow MORE_MENU_GROUPS.
+ */
+export function groupMoreMenuTabs(items: readonly MoreMenuTab[]): MoreMenuGroup[] {
+  const present = new Set<MoreMenuTab>(items);
+  const groups: MoreMenuGroup[] = [];
+  for (const def of MORE_MENU_GROUPS) {
+    const groupItems = def.tabs.filter((tab): tab is MoreMenuTab => present.has(tab));
+    if (groupItems.length === 0) continue;
+    groups.push({ id: def.id, label: def.label, items: [...groupItems] });
+  }
+  return groups;
+}
 
 export type ReceptionPrimaryNav =
   | 'today'
@@ -67,13 +96,13 @@ function resolveCandidateMoreMenuTabs(
   const canClean = receptionStaffCanClean(permissions);
 
   if (canCheckIn) {
-    tabs.push('plan', 'access', 'cash');
+    tabs.push('access', 'cash');
   }
   if (canCheckIn || canClean) {
     tabs.push('schedule');
   }
   if (canCheckIn) {
-    tabs.push('issues', 'transfers', 'booking-inbox', 'archive');
+    tabs.push('issues', 'transfers');
   }
   if (canClean && canCheckIn) {
     // Cleaning-only staff uses Cleaning as primary, not More.
@@ -162,20 +191,19 @@ export function resolveMoreMenuTabs(
 }
 
 /**
- * Open Issues/Transfers/Booking inbox count for the More badge — only tabs visible in More.
+ * Open Issues/Transfers count for the More badge — only tabs visible in More.
+ * Booking.com inbox lives on Plan chrome, not More.
  */
 export function resolveMoreBadgeCount(
   permissions: readonly string[] | null | undefined,
   openIssuesCount: number,
   openTransfersCount: number,
-  openBookingInboxCount = 0,
   options: ResolveMoreMenuTabsOptions = {}
 ): number {
   const tabs = resolveMoreMenuTabs(permissions, options);
   let count = 0;
   if (tabs.includes('issues')) count += openIssuesCount;
   if (tabs.includes('transfers')) count += openTransfersCount;
-  if (tabs.includes('booking-inbox')) count += openBookingInboxCount;
   return count;
 }
 
@@ -218,8 +246,10 @@ export function resolvePrimaryNavForDeskTab(
 ): ReceptionPrimaryNav {
   const bottom = resolveBottomNavItems(permissions, options);
   if (deskTab === 'desk') return 'today';
-  // Bookings bottom item is a Plan shortcut; Access/Cash live under More.
-  if (deskTab === 'plan') return 'bookings';
+  // Bookings cluster: Plan + Booking.com inbox + Archive (shortcuts on Plan chrome).
+  if (deskTab === 'plan' || deskTab === 'booking-inbox' || deskTab === 'archive') {
+    return 'bookings';
+  }
   if (deskTab === 'cleaning') {
     // Cleaning-only: primary Cleaning. Dual role: Cleaning lives under More.
     return bottom.includes('cleaning') ? 'cleaning' : 'more';

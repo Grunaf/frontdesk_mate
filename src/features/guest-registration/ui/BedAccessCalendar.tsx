@@ -540,7 +540,7 @@ export function BedAccessCalendar({
   const quickFiltersHideAll = quickFilteredRoomGroups.length === 0;
 
   const toolbar = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-start gap-2">
       <SegmentedChipBar
         ariaLabel="Calendar view"
         items={viewItems}
