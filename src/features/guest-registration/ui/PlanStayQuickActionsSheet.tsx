@@ -22,7 +22,7 @@ export function PlanStayQuickActionsList({
   onSelect: (id: PlanStayQuickActionId) => void;
 }) {
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col gap-0.5">
       {actions.map((action) => (
         <li key={action.id}>
           <Button
@@ -31,7 +31,7 @@ export function PlanStayQuickActionsList({
             size="default"
             disabled={busy}
             className={cn(
-              'h-auto w-full justify-start px-3 py-2.5 text-sm font-medium',
+              'h-auto w-full justify-start px-3 py-2 text-sm font-medium',
               action.destructive && 'text-destructive hover:text-destructive'
             )}
             onClick={() => onSelect(action.id)}
@@ -127,7 +127,7 @@ export function PlanStayQuickActionsContextMenu({
         }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="space-y-0.5 border-b border-border/60 px-3 py-2">
+        <div className="space-y-0.5 border-b border-border/60 px-3 py-1.5">
           <p className="truncate text-sm font-medium text-foreground">{title}</p>
           <p className="truncate text-xs text-muted-foreground">{meta}</p>
         </div>

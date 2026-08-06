@@ -14,6 +14,7 @@ import {
   type HousekeepingRoomStatus,
 } from '@/entities/housekeeping';
 import type { TenantSettings } from '@/entities/tenant';
+import { resolveReceptionBedLabel } from '@/entities/tenant/lib/resolveBedDisplay';
 import {
   formatCalendarRangeLabel,
   resolveBedDayCalendar,
@@ -459,16 +460,6 @@ export function BedAccessCalendar({
     return map;
   }, [stays]);
 
-  const bedLabelById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const group of snapshot.roomGroups) {
-      for (const row of group.rows) {
-        map.set(row.bedId, row.displayLabel);
-      }
-    }
-    return map;
-  }, [snapshot.roomGroups]);
-
   const quickMenuStay = useMemo(() => {
     if (!quickMenu) return null;
     return stays.find((stay) => stay.id === quickMenu.stayId) ?? null;
@@ -484,7 +475,7 @@ export function BedAccessCalendar({
       resolvePlanStayGuestLabel(quickMenuStay, stays)
     : '';
   const quickMenuMeta = quickMenuStay
-    ? `${bedLabelById.get(quickMenuStay.bed_id) ?? quickMenuStay.bed_id} · ${stayRecordCheckInDate(quickMenuStay)} → ${stayRecordCheckOutDate(quickMenuStay)}`
+    ? `${resolveReceptionBedLabel(settings, quickMenuStay.bed_id) ?? quickMenuStay.bed_id} · ${stayRecordCheckInDate(quickMenuStay)} → ${stayRecordCheckOutDate(quickMenuStay)}`
     : '';
 
   const quickFilteredRoomGroups = useMemo(
@@ -1010,7 +1001,7 @@ export function BedAccessCalendar({
             y={quickMenu.y}
             title={quickMenuTitle}
             meta={quickMenuMeta}
-            actions={quickMenuActions}
+            actions={quickMenuActions.filter((action) => action.id !== 'open')}
             busy={quickActionsBusy}
             onClose={() => setQuickMenu(null)}
             onSelect={(actionId) => {
