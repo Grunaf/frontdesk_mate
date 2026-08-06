@@ -6,14 +6,12 @@ import {
   HOUSEKEEPING_ROOM_STATUSES,
   resolveRoomBedBatchAction,
   type HousekeepingBedStatus,
-  type HousekeepingLaundryProgram,
   type HousekeepingLaundryRunRecord,
   type HousekeepingRoomStatus,
   type HousekeepingStayPresenceStatus,
 } from '@/entities/housekeeping';
 import type { LaundryMachine } from '@/entities/tenant';
 import { cn } from '@/shared/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui';
 
 import { resolveCleaningGuideQueue } from '../lib/resolveCleaningGuideQueue';
 import {
@@ -24,7 +22,6 @@ import {
 import {
   countLaundryUnloadDue,
   resolveCleaningWashCalloutLabel,
-  resolveCleaningWashTabBadgeCount,
   shouldShowCleaningWashTab,
 } from '../lib/resolveCleaningWashVisibility';
 import {
@@ -32,12 +29,10 @@ import {
   ReceptionCleaningGuide,
   type CleaningBedPresenceLink,
 } from './ReceptionCleaningGuide';
-import { LaundryMachinesPanel } from './LaundryMachinesPanel';
 
 export type { CleaningRoomGroup, CleaningBedPresenceLink };
 
 type CleaningViewMode = 'guide' | 'all';
-type CleaningContextTab = 'rooms' | 'wash';
 
 const ROOM_STATUS_LABELS: Record<HousekeepingRoomStatus, string> = {
   cleaned: 'Cleaned',
@@ -210,9 +205,8 @@ export type ReceptionCleaningPanelProps = {
     status: HousekeepingStayPresenceStatus
   ) => void;
   onClearPresence?: (stayId: string) => void;
-  onStartLaundry: (machineId: string, program: HousekeepingLaundryProgram) => void;
-  onCompleteLaundry: (runId: string) => void;
-  onCancelLaundry: (runId: string) => void;
+  /** Open desk Wash tab (More). Required for Wash callout. */
+  onOpenWash?: () => void;
   busy?: boolean;
 };
 
@@ -232,13 +226,10 @@ export function ReceptionCleaningPanel({
   onSetRoomStatus,
   onSetPresence,
   onClearPresence,
-  onStartLaundry,
-  onCompleteLaundry,
-  onCancelLaundry,
+  onOpenWash,
   busy = false,
 }: ReceptionCleaningPanelProps) {
   const [viewMode, setViewMode] = useState<CleaningViewMode>('guide');
-  const [contextTab, setContextTab] = useState<CleaningContextTab>('rooms');
   const [skippedRoomIds, setSkippedRoomIds] = useState<string[]>([]);
 
   const snapshot = useMemo(
@@ -258,19 +249,11 @@ export function ReceptionCleaningPanel({
 
   const showWashTab = shouldShowCleaningWashTab(laundryMachines.length);
   const unloadDueCount = countLaundryUnloadDue(activeLaundryRuns);
-  const washTabBadge = resolveCleaningWashTabBadgeCount(unloadDueCount);
   const washCallout = resolveCleaningWashCalloutLabel({
     machines: laundryMachines,
     activeRuns: activeLaundryRuns,
     makeCount: snapshot.makeCount,
   });
-
-  const activeContextTab: CleaningContextTab =
-    showWashTab && contextTab === 'wash' ? 'wash' : 'rooms';
-
-  const handleContextTabChange = (value: string) => {
-    if (value === 'rooms' || value === 'wash') setContextTab(value);
-  };
 
   const handleSkipRoom = () => {
     const roomId = guideQueue.current?.roomId;
@@ -294,10 +277,10 @@ export function ReceptionCleaningPanel({
         <HubStat label="Done" value={snapshot.doneCount} />
       </div>
 
-      {washCallout && showWashTab ? (
+      {washCallout && showWashTab && onOpenWash ? (
         <button
           type="button"
-          onClick={() => setContextTab('wash')}
+          onClick={onOpenWash}
           className={cn(
             'flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left',
             unloadDueCount > 0
@@ -364,31 +347,6 @@ export function ReceptionCleaningPanel({
     </div>
   );
 
-  const allRoomsContent = showWashTab ? (
-    <Tabs value={activeContextTab} onValueChange={handleContextTabChange}>
-      <TabsList variant="line" className="mb-4 w-full justify-start">
-        <TabsTrigger value="rooms">Rooms</TabsTrigger>
-        <TabsTrigger value="wash">
-          {washTabBadge > 0 ? `Wash · ${washTabBadge}` : 'Wash'}
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="rooms">{roomsContent}</TabsContent>
-      <TabsContent value="wash">
-        <LaundryMachinesPanel
-          machines={laundryMachines}
-          activeRuns={activeLaundryRuns}
-          busy={busy}
-          onStart={onStartLaundry}
-          onComplete={onCompleteLaundry}
-          onCancel={onCancelLaundry}
-        />
-      </TabsContent>
-    </Tabs>
-  ) : (
-    roomsContent
-  );
-
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -437,7 +395,7 @@ export function ReceptionCleaningPanel({
           onShowAllRooms={() => setViewMode('all')}
         />
       ) : (
-        allRoomsContent
+        roomsContent
       )}
     </div>
   );

@@ -99,19 +99,20 @@ import {
   receptionStaffCanClean,
   receptionStaffCanEditPastStays,
 } from '@/entities/reception-user';
-import { ReceptionCleaningPanel, resolveNextCheckInByBedId } from '@/features/reception-cleaning';
+import {
+  LaundryMachinesPanel,
+  ReceptionCleaningPanel,
+  resolveNextCheckInByBedId,
+  shouldShowCleaningWashTab,
+} from '@/features/reception-cleaning';
 import {
   coerceDeskTab,
-  isBookingsContextTab,
   resolveActivePrimaryNav,
   resolveBottomNavItems,
-  resolveBookingsContextTabs,
   resolveDefaultDeskTab,
   resolveDeskTabForPrimaryNav,
   resolveMoreBadgeCount,
   resolveMoreMenuTabs,
-  shouldShowBookingsContextTabs,
-  type BookingsContextTab,
   type DeskTab,
   type ReceptionPrimaryNav,
 } from '../lib/receptionDeskAccess';
@@ -162,7 +163,7 @@ import { prefetchMyReceptionSchedule } from '../lib/myReceptionScheduleCache';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { CancelBookingDialog } from './RevokeAccessDialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger, ConfirmDialog, Button } from '@/shared/ui';
+import { Tabs, TabsContent, ConfirmDialog, Button } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
 import { FALLBACK_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
@@ -264,23 +265,26 @@ export function ReceptionCheckInPanel({
   const canCheckIn = receptionStaffCanCheckIn(staffPermissions);
   const canClean = receptionStaffCanClean(staffPermissions);
   const canEditPastStays = receptionStaffCanEditPastStays(staffPermissions);
-  const bottomNavItems = useMemo(
-    () => resolveBottomNavItems(staffPermissions),
-    [staffPermissions]
+  const laundryMachines = useMemo(
+    () => listLaundryMachines(tenantSettings),
+    [tenantSettings]
   );
-  const bookingsContextTabs = useMemo(
-    () => resolveBookingsContextTabs(staffPermissions),
-    [staffPermissions]
+  const showWash = canClean && shouldShowCleaningWashTab(laundryMachines.length);
+  const moreMenuOptions = useMemo(() => ({ showWash }), [showWash]);
+  const bottomNavItems = useMemo(
+    () => resolveBottomNavItems(staffPermissions, moreMenuOptions),
+    [staffPermissions, moreMenuOptions]
   );
   const moreMenuTabs = useMemo(
-    () => resolveMoreMenuTabs(staffPermissions),
-    [staffPermissions]
+    () => resolveMoreMenuTabs(staffPermissions, moreMenuOptions),
+    [staffPermissions, moreMenuOptions]
   );
   const moreBadgeCount = resolveMoreBadgeCount(
     staffPermissions,
     openIssues.length,
     openTransfers.length,
-    bookingInbox.length
+    bookingInbox.length,
+    moreMenuOptions
   );
 
   const [operationalDayUpdatedNotice, setOperationalDayUpdatedNotice] = useState(false);
@@ -333,7 +337,6 @@ export function ReceptionCheckInPanel({
     prefetchMyReceptionSchedule(tenantSlug);
   }, [moreMenuOpen, deskTab, tenantSlug, canCheckIn, canClean]);
 
-  const [lastBookingsTab, setLastBookingsTab] = useState<BookingsContextTab>('plan');
   const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
   const [planFocusToken, setPlanFocusToken] = useState(0);
   const [planMoveMode, setPlanMoveMode] = useState<PlanCalendarMoveMode | null>(null);
@@ -344,8 +347,6 @@ export function ReceptionCheckInPanel({
   );
   const [planMoveBusy, startPlanMoveTransition] = useTransition();
   const [planQuickBusy, startPlanQuickTransition] = useTransition();
-  const showBookingsContextTabs =
-    shouldShowBookingsContextTabs(deskTab) && bookingsContextTabs.length > 0;
 
   const [mode, setMode] = useState<GuestAccessFormMode>('custom');
   const [guestName, setGuestName] = useState('');
@@ -407,13 +408,9 @@ export function ReceptionCheckInPanel({
     const next = coerceDeskTab(tabParam, staffPermissions);
     setDeskTab(next);
     setMoreMenuOpen(false);
-    if (isBookingsContextTab(next)) {
-      setLastBookingsTab(next);
-    }
 
     if (!stayIdParam || !canCheckIn) return;
     setDeskTab('plan');
-    setLastBookingsTab('plan');
     setStayDetailInitialTab('stay');
     setSelectedStayOverride(null);
     setSelectedStayId(stayIdParam);
@@ -492,7 +489,10 @@ export function ReceptionCheckInPanel({
 
   useEffect(() => {
     const tracksHousekeeping =
-      deskTab === 'plan' || deskTab === 'cleaning' || deskTab === 'desk';
+      deskTab === 'plan' ||
+      deskTab === 'cleaning' ||
+      deskTab === 'wash' ||
+      deskTab === 'desk';
     if (!tracksHousekeeping) return;
 
     void loadHousekeepingStatuses();
@@ -522,9 +522,6 @@ export function ReceptionCheckInPanel({
       const next = coerceDeskTab(value, staffPermissions);
       setDeskTab(next);
       setMoreMenuOpen(false);
-      if (isBookingsContextTab(next)) {
-        setLastBookingsTab(next);
-      }
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', next);
       if (options?.clearStayId) {
@@ -583,6 +580,7 @@ export function ReceptionCheckInPanel({
     deskTab,
     moreMenuOpen,
     permissions: staffPermissions,
+    showWash,
   });
 
   const handlePrimaryNavSelect = useCallback(
@@ -591,12 +589,12 @@ export function ReceptionCheckInPanel({
         setMoreMenuOpen(true);
         return;
       }
-      const next = resolveDeskTabForPrimaryNav(item, staffPermissions, lastBookingsTab);
+      const next = resolveDeskTabForPrimaryNav(item, staffPermissions);
       if (next) {
         navigateDeskTab(next, { clearStayId: true });
       }
     },
-    [lastBookingsTab, navigateDeskTab, staffPermissions]
+    [navigateDeskTab, staffPermissions]
   );
 
   const handleMarkBedReady = useCallback(async (bedId: string): Promise<boolean> => {
@@ -736,11 +734,6 @@ export function ReceptionCheckInPanel({
       });
     },
     [presenceByStayId, tenantSlug]
-  );
-
-  const laundryMachines = useMemo(
-    () => listLaundryMachines(tenantSettings),
-    [tenantSettings]
   );
 
   const handleStartLaundry = useCallback(
@@ -2783,19 +2776,6 @@ export function ReceptionCheckInPanel({
                   {deskHeader}
                 </div>
               </div>
-              {showBookingsContextTabs && !planMoveFocus ? (
-                <TabsList variant="line" className="mb-0 w-full justify-start">
-                  {bookingsContextTabs.includes('plan') ? (
-                    <TabsTrigger value="plan">Plan</TabsTrigger>
-                  ) : null}
-                  {bookingsContextTabs.includes('access') ? (
-                    <TabsTrigger value="access">Access</TabsTrigger>
-                  ) : null}
-                  {bookingsContextTabs.includes('cash') ? (
-                    <TabsTrigger value="cash">Cash</TabsTrigger>
-                  ) : null}
-                </TabsList>
-              ) : null}
               {deskTab === 'plan' ? (
                 <div id={RECEPTION_PLAN_TOOLBAR_SLOT_ID} className="min-w-0" />
               ) : null}
@@ -2966,6 +2946,7 @@ export function ReceptionCheckInPanel({
             ) : null}
 
             {canClean ? (
+              <>
               <TabsContent value="cleaning">
                 <ReceptionCleaningPanel
                   roomGroups={cleaningRoomGroups}
@@ -2983,12 +2964,30 @@ export function ReceptionCheckInPanel({
                   onSetRoomStatus={handleSetRoomStatus}
                   onSetPresence={handleSetPresence}
                   onClearPresence={handleClearPresence}
-                  onStartLaundry={handleStartLaundry}
-                  onCompleteLaundry={handleCompleteLaundry}
-                  onCancelLaundry={handleCancelLaundry}
+                  onOpenWash={
+                    showWash
+                      ? () => navigateDeskTab('wash', { clearStayId: true })
+                      : undefined
+                  }
                   busy={housekeepingBusy}
                 />
               </TabsContent>
+              {canClean ? (
+                <TabsContent value="wash">
+                  <div className="space-y-3">
+                    <h2 className="text-base font-semibold">Wash</h2>
+                    <LaundryMachinesPanel
+                      machines={laundryMachines}
+                      activeRuns={activeLaundryRuns}
+                      busy={housekeepingBusy}
+                      onStart={handleStartLaundry}
+                      onComplete={handleCompleteLaundry}
+                      onCancel={handleCancelLaundry}
+                    />
+                  </div>
+                </TabsContent>
+              ) : null}
+              </>
             ) : null}
           </Tabs>
         )}

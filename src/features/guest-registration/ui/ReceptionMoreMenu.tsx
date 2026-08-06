@@ -4,12 +4,16 @@ import { cn } from '@/shared/lib/utils';
 import type { MoreMenuTab } from '../lib/receptionDeskAccess';
 
 const MORE_LABELS: Record<MoreMenuTab, string> = {
+  plan: 'Plan',
+  access: 'Access',
+  cash: 'Cash',
   schedule: 'My schedule',
   issues: 'Issues',
   transfers: 'Transfers',
   'booking-inbox': 'Booking.com',
   archive: 'Archive',
   cleaning: 'Cleaning',
+  wash: 'Wash',
 };
 
 interface ReceptionMoreMenuProps {
@@ -36,7 +40,7 @@ export function ReceptionMoreMenu({
       <div>
         <h2 className="text-sm font-semibold text-foreground">More</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Schedule, issues, Booking.com inbox, and utilities.
+          Plan, Access, Cash, schedule, and utilities.
         </p>
       </div>
       <ul className="divide-y divide-border/80 overflow-hidden rounded-lg border bg-card">
