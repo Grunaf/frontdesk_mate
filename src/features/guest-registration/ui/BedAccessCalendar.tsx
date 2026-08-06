@@ -112,13 +112,10 @@ interface BedAccessCalendarProps {
   moveTargetBedIds?: ReadonlySet<string>;
   moveGuestLabel?: string | null;
   moveBusy?: boolean;
-  onStartMoveMode?: () => void;
   onCancelMoveMode?: () => void;
   onPickStayForMove?: (stayId: string) => void;
   /** Confirm vertical move to this bed (after in-grid target selection). */
   onPickBedForMove?: (bedId: string) => void;
-  /** When false, hide Move bed entry (e.g. no check-in permission). */
-  canMoveBeds?: boolean;
   /** Plan long-press / right-click actions. */
   getStayQuickActions?: (stayId: string) => PlanStayQuickAction[];
   onStayQuickAction?: (stayId: string, actionId: PlanStayQuickActionId) => void;
@@ -254,7 +251,7 @@ function HousekeepingBedStatusSelect({
         }
       }}
       className={cn(
-        'max-w-[6.75rem] shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight',
+        'max-w-[5.5rem] shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight',
         unset && 'border-border bg-background text-muted-foreground',
         !unset && needsWork && 'border-amber-200 bg-amber-50 text-amber-900',
         !unset && !needsWork && 'border-transparent bg-muted text-muted-foreground',
@@ -296,7 +293,7 @@ function HousekeepingChip({
         onClick();
       }}
       className={cn(
-        'max-w-[6.75rem] shrink-0 truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors',
+        'max-w-[5.5rem] shrink-0 truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors',
         unset && 'border-border bg-background text-muted-foreground hover:bg-muted/40',
         !unset && needsWork && 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100',
         !unset && !needsWork && 'border-transparent bg-muted text-muted-foreground hover:bg-muted/80',
@@ -329,11 +326,9 @@ export function BedAccessCalendar({
   moveMode = null,
   moveTargetBedIds,
   moveBusy = false,
-  onStartMoveMode,
   onCancelMoveMode,
   onPickStayForMove,
   onPickBedForMove,
-  canMoveBeds = false,
   getStayQuickActions,
   onStayQuickAction,
   quickActionsBusy = false,
@@ -581,11 +576,6 @@ export function BedAccessCalendar({
           />
         ) : null}
       </Button>
-      {canMoveBeds && onStartMoveMode && !moveActive ? (
-        <Button type="button" size="sm" variant="outline" onClick={onStartMoveMode}>
-          Move bed
-        </Button>
-      ) : null}
       <Button
         type="button"
         size="sm"
@@ -678,8 +668,8 @@ export function BedAccessCalendar({
                 <Fragment key={group.roomId}>
                   <tr className="border-t-2 border-border">
                     <td className="sticky left-0 z-10 border bg-muted px-2 py-1.5">
-                      <div className="flex flex-nowrap items-center gap-2">
-                        <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
                           {group.roomLabel}
                         </span>
                         {showRoomChip ? (
@@ -718,7 +708,7 @@ export function BedAccessCalendar({
                             isPendingMoveTarget && 'z-20'
                           )}
                         >
-                          <div className="flex flex-nowrap items-center gap-2">
+                          <div className="flex flex-nowrap items-center gap-3.5">
                             <span className="min-w-0 truncate font-medium text-foreground">
                               {row.displayLabel}
                             </span>
@@ -733,7 +723,7 @@ export function BedAccessCalendar({
                                     : `Confirm move to ${row.displayLabel}`
                                 }
                                 className={cn(
-                                  'inline-flex h-7 w-[6.75rem] shrink-0 items-center justify-center rounded-md border px-1.5',
+                                  'inline-flex h-7 w-[5.5rem] shrink-0 items-center justify-center rounded-md border px-1.5',
                                   'border-primary/30 bg-primary/10 text-primary',
                                   'hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                   'disabled:pointer-events-none disabled:opacity-60'
@@ -753,13 +743,13 @@ export function BedAccessCalendar({
                                 onChange={(status) => onSetBedStatus(row.bedId, status)}
                                 className={
                                   isPickBedPhase
-                                    ? 'box-border h-7 w-[6.75rem] max-w-[6.75rem] py-0 leading-none'
+                                    ? 'box-border h-7 w-[5.5rem] max-w-[5.5rem] py-0 leading-none'
                                     : undefined
                                 }
                               />
                             ) : isPickBedPhase ? (
                               <span
-                                className="inline-flex h-7 w-[6.75rem] shrink-0"
+                                className="inline-flex h-7 w-[5.5rem] shrink-0"
                                 aria-hidden
                               />
                             ) : null}

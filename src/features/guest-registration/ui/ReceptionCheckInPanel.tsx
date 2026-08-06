@@ -1467,11 +1467,6 @@ export function ReceptionCheckInPanel({
     setPlanMoveError(null);
   }, []);
 
-  const startPlanMoveMode = useCallback(() => {
-    setPlanMoveError(null);
-    setPlanMoveMode({ phase: 'pickStay' });
-  }, []);
-
   const beginPlanMoveBed = useCallback(
     (stayId: string) => {
       closeStayDetail();
@@ -2877,8 +2872,6 @@ export function ReceptionCheckInPanel({
                 moveTargetBedIds={planMoveTargetBedIds}
                 moveGuestLabel={planMoveGuestLabel}
                 moveBusy={planMoveBusy}
-                canMoveBeds={canCheckIn}
-                onStartMoveMode={startPlanMoveMode}
                 onCancelMoveMode={cancelPlanMoveMode}
                 onPickStayForMove={pickStayForPlanMove}
                 onPickBedForMove={confirmPlanMoveToBed}
