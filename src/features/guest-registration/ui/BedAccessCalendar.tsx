@@ -3,6 +3,8 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
+import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
+import { guestStayCoversNight } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import {
   HOUSEKEEPING_BED_STATUS_LABELS,
   HOUSEKEEPING_BED_STATUSES,
@@ -44,12 +46,40 @@ import {
 import {
   resolvePlanStayGuestLabel,
 } from '../lib/resolvePartyTitle';
+import type {
+  PlanStayQuickAction,
+  PlanStayQuickActionId,
+} from '../lib/resolvePlanStayQuickActions';
 import { RECEPTION_PLAN_TOOLBAR_SLOT_ID } from '../lib/receptionStickyChrome';
 import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
+import {
+  PlanStayQuickActionsContextMenu,
+  PlanStayQuickActionsSheet,
+} from './PlanStayQuickActionsSheet';
 import { Button, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
 import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
+
+/** Vertical bed move on Plan: pick stay → pick free bed (same nights). */
+export type PlanCalendarMoveMode =
+  | { phase: 'pickStay' }
+  | { phase: 'pickBed'; stayId: string };
+
+const LONG_PRESS_MS = 450;
+const LONG_PRESS_MOVE_PX = 10;
+
+type StayQuickMenuState =
+  | {
+      stayId: string;
+      surface: 'sheet';
+    }
+  | {
+      stayId: string;
+      surface: 'context';
+      x: number;
+      y: number;
+    };
 
 interface BedAccessCalendarProps {
   settings: TenantSettings;
@@ -74,6 +104,22 @@ interface BedAccessCalendarProps {
   onBedFilterChange?: (filter: PlanBedFilter) => void;
   /** Increment to snap the calendar anchor to plan today (e.g. Desk → Free). */
   focusToken?: number;
+  /** Vertical Move bed mode owned by the parent. */
+  moveMode?: PlanCalendarMoveMode | null;
+  /** Bed ids free for the moving stay’s full night range. */
+  moveTargetBedIds?: ReadonlySet<string>;
+  moveGuestLabel?: string | null;
+  moveBusy?: boolean;
+  onStartMoveMode?: () => void;
+  onCancelMoveMode?: () => void;
+  onPickStayForMove?: (stayId: string) => void;
+  onPickBedForMove?: (bedId: string) => void;
+  /** When false, hide Move bed entry (e.g. no check-in permission). */
+  canMoveBeds?: boolean;
+  /** Plan long-press / right-click actions. */
+  getStayQuickActions?: (stayId: string) => PlanStayQuickAction[];
+  onStayQuickAction?: (stayId: string, actionId: PlanStayQuickActionId) => void;
+  quickActionsBusy?: boolean;
 }
 
 const VIEW_ITEMS = [
@@ -274,6 +320,17 @@ export function BedAccessCalendar({
   bedFilter = 'all',
   onBedFilterChange,
   focusToken,
+  moveMode = null,
+  moveTargetBedIds,
+  moveBusy = false,
+  onStartMoveMode,
+  onCancelMoveMode,
+  onPickStayForMove,
+  onPickBedForMove,
+  canMoveBeds = false,
+  getStayQuickActions,
+  onStayQuickAction,
+  quickActionsBusy = false,
 }: BedAccessCalendarProps) {
   const isMobile = useIsMobileCalendar();
   const [view, setView] = useState<BedDayCalendarView>('week');
@@ -283,11 +340,40 @@ export function BedAccessCalendar({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [toolbarSlotEl, setToolbarSlotEl] = useState<HTMLElement | null>(null);
   const quickFiltersSlugRef = useRef<string | null>(null);
+  const [quickMenu, setQuickMenu] = useState<StayQuickMenuState | null>(null);
+  const suppressStayClickRef = useRef(false);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressOriginRef = useRef<{ x: number; y: number; stayId: string } | null>(null);
 
   const effectiveView = isMobile && view === 'month' ? 'week' : view;
   const housekeepingEnabled = Boolean(onSetBedStatus || onSetRoomStatus);
   const lifecycleToday = planToday ?? todayUtcDate();
   const effectiveBedFilter = onBedFilterChange ? bedFilter : internalBedFilter;
+  const moveActive = moveMode !== null;
+  const movingStayId = moveMode?.phase === 'pickBed' ? moveMode.stayId : null;
+  const movingStay = useMemo(
+    () => (movingStayId ? stays.find((stay) => stay.id === movingStayId) ?? null : null),
+    [movingStayId, stays]
+  );
+  const quickActionsEnabled = Boolean(getStayQuickActions && onStayQuickAction) && !moveActive;
+
+  const clearLongPress = () => {
+    if (longPressTimerRef.current != null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressOriginRef.current = null;
+  };
+
+  const openQuickMenu = (stayId: string, surface: StayQuickMenuState['surface'], point?: { x: number; y: number }) => {
+    if (!quickActionsEnabled) return;
+    suppressStayClickRef.current = true;
+    if (surface === 'context' && point) {
+      setQuickMenu({ stayId, surface: 'context', x: point.x, y: point.y });
+      return;
+    }
+    setQuickMenu({ stayId, surface: 'sheet' });
+  };
 
   const snapAnchorToPlanToday = () => {
     setAnchorDate(lifecycleToday);
@@ -297,6 +383,23 @@ export function BedAccessCalendar({
     if (!focusToken) return;
     setAnchorDate(lifecycleToday);
   }, [focusToken, lifecycleToday]);
+
+  useEffect(() => {
+    if (!moveActive || !onCancelMoveMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !moveBusy) {
+        onCancelMoveMode();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [moveActive, moveBusy, onCancelMoveMode]);
+
+  useEffect(() => {
+    if (moveActive) setQuickMenu(null);
+  }, [moveActive]);
+
+  useEffect(() => () => clearLongPress(), []);
 
   useLayoutEffect(() => {
     if (!embedded) {
@@ -344,6 +447,34 @@ export function BedAccessCalendar({
     }
     return map;
   }, [stays]);
+
+  const bedLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const group of snapshot.roomGroups) {
+      for (const row of group.rows) {
+        map.set(row.bedId, row.displayLabel);
+      }
+    }
+    return map;
+  }, [snapshot.roomGroups]);
+
+  const quickMenuStay = useMemo(() => {
+    if (!quickMenu) return null;
+    return stays.find((stay) => stay.id === quickMenu.stayId) ?? null;
+  }, [quickMenu, stays]);
+
+  const quickMenuActions = useMemo(() => {
+    if (!quickMenu || !getStayQuickActions) return null;
+    return getStayQuickActions(quickMenu.stayId);
+  }, [getStayQuickActions, quickMenu]);
+
+  const quickMenuTitle = quickMenuStay
+    ? guestLabelByStayId.get(quickMenuStay.id) ??
+      resolvePlanStayGuestLabel(quickMenuStay, stays)
+    : '';
+  const quickMenuMeta = quickMenuStay
+    ? `${bedLabelById.get(quickMenuStay.bed_id) ?? quickMenuStay.bed_id} · ${stayRecordCheckInDate(quickMenuStay)} → ${stayRecordCheckOutDate(quickMenuStay)}`
+    : '';
 
   const quickFilteredRoomGroups = useMemo(
     () => filterPlanRoomGroupsByQuickFilters(snapshot.roomGroups, settings, quickFilters),
@@ -418,6 +549,23 @@ export function BedAccessCalendar({
           />
         ) : null}
       </Button>
+      {canMoveBeds && onStartMoveMode && onCancelMoveMode ? (
+        moveActive ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            disabled={moveBusy}
+            onClick={onCancelMoveMode}
+          >
+            Cancel
+          </Button>
+        ) : (
+          <Button type="button" size="sm" variant="outline" onClick={onStartMoveMode}>
+            Move bed
+          </Button>
+        )
+      ) : null}
       <Button
         type="button"
         size="sm"
@@ -466,7 +614,7 @@ export function BedAccessCalendar({
         </div>
       ) : null}
 
-      {!embedded ? (
+      {!embedded && !moveActive ? (
         <p className="text-xs text-muted-foreground">
           Click a guest cell to open their access card. Click a free cell to prefill the issue form.
         </p>
@@ -533,6 +681,8 @@ export function BedAccessCalendar({
                   {group.rows.map((row) => {
                     const bedStatus = bedStatuses?.[row.bedId];
                     const showBedChip = housekeepingEnabled && onSetBedStatus;
+                    const isMoveTargetBed =
+                      moveMode?.phase === 'pickBed' && Boolean(moveTargetBedIds?.has(row.bedId));
 
                     return (
                       <tr key={row.bedId}>
@@ -542,7 +692,7 @@ export function BedAccessCalendar({
                             {showBedChip ? (
                               <HousekeepingBedStatusSelect
                                 status={bedStatus}
-                                disabled={housekeepingBusy}
+                                disabled={housekeepingBusy || moveActive}
                                 locked={bedStatus === 'ready'}
                                 onChange={(status) => onSetBedStatus(row.bedId, status)}
                               />
@@ -571,6 +721,12 @@ export function BedAccessCalendar({
                               : null;
                           const lifecycleChip = planLifecycleChipStatus(lifecycle);
                           const isTodayColumn = cell.nightDate === lifecycleToday;
+                          const isMovingStayCell =
+                            Boolean(movingStayId) && cell.stay?.id === movingStayId;
+                          const isMoveDropCell =
+                            isMoveTargetBed &&
+                            cell.status === 'free' &&
+                            Boolean(movingStay && guestStayCoversNight(movingStay, cell.nightDate));
 
                           return (
                             <td
@@ -583,13 +739,29 @@ export function BedAccessCalendar({
                               {cell.status === 'free' ? (
                                 <button
                                   type="button"
-                                  onClick={() => onSelectFreeNight(row.bedId, cell.nightDate)}
-                                  className="flex min-h-10 w-full items-center justify-center rounded bg-muted/10 px-1 text-[10px] text-muted-foreground hover:bg-muted/30"
+                                  disabled={moveBusy || (moveActive && !isMoveDropCell)}
+                                  onClick={() => {
+                                    if (moveMode?.phase === 'pickBed' && isMoveDropCell) {
+                                      onPickBedForMove?.(row.bedId);
+                                      return;
+                                    }
+                                    if (moveActive) return;
+                                    onSelectFreeNight(row.bedId, cell.nightDate);
+                                  }}
+                                  className={cn(
+                                    'flex min-h-10 w-full items-center justify-center rounded bg-muted/10 px-1 text-[10px] text-muted-foreground hover:bg-muted/30',
+                                    moveActive && !isMoveDropCell && 'opacity-40'
+                                  )}
+                                  aria-label={
+                                    isMoveDropCell
+                                      ? `Move guest to ${row.displayLabel}`
+                                      : undefined
+                                  }
                                 >
                                   ·
                                 </button>
                               ) : cell.status === 'blocked' ? (
-                                onSelectBlockedNight ? (
+                                onSelectBlockedNight && !moveActive ? (
                                   <button
                                     type="button"
                                     onClick={() => onSelectBlockedNight(row.bedId, cell.nightDate)}
@@ -610,7 +782,8 @@ export function BedAccessCalendar({
                                       'flex min-h-10 w-full items-center justify-center rounded px-1 text-[10px]',
                                       inactive
                                         ? 'bg-muted/30 text-muted-foreground/40'
-                                        : 'bg-muted/20 text-muted-foreground/50'
+                                        : 'bg-muted/20 text-muted-foreground/50',
+                                      moveActive && 'opacity-40'
                                     )}
                                     title="Held by whole-room booking"
                                     aria-label="Held by whole-room booking"
@@ -621,8 +794,62 @@ export function BedAccessCalendar({
                               ) : (
                                 <button
                                   type="button"
-                                  disabled={!cell.stay}
-                                  onClick={() => cell.stay && onViewStay(cell.stay.id)}
+                                  disabled={!cell.stay || moveBusy}
+                                  onPointerDown={(event) => {
+                                    if (
+                                      !quickActionsEnabled ||
+                                      !cell.stay ||
+                                      !isMobile ||
+                                      event.button !== 0
+                                    ) {
+                                      return;
+                                    }
+                                    clearLongPress();
+                                    longPressOriginRef.current = {
+                                      x: event.clientX,
+                                      y: event.clientY,
+                                      stayId: cell.stay.id,
+                                    };
+                                    longPressTimerRef.current = window.setTimeout(() => {
+                                      const origin = longPressOriginRef.current;
+                                      longPressTimerRef.current = null;
+                                      if (!origin) return;
+                                      openQuickMenu(origin.stayId, 'sheet');
+                                    }, LONG_PRESS_MS);
+                                  }}
+                                  onPointerMove={(event) => {
+                                    const origin = longPressOriginRef.current;
+                                    if (!origin) return;
+                                    const dx = Math.abs(event.clientX - origin.x);
+                                    const dy = Math.abs(event.clientY - origin.y);
+                                    if (dx > LONG_PRESS_MOVE_PX || dy > LONG_PRESS_MOVE_PX) {
+                                      clearLongPress();
+                                    }
+                                  }}
+                                  onPointerUp={clearLongPress}
+                                  onPointerCancel={clearLongPress}
+                                  onPointerLeave={clearLongPress}
+                                  onContextMenu={(event) => {
+                                    if (!quickActionsEnabled || !cell.stay || isMobile) return;
+                                    event.preventDefault();
+                                    openQuickMenu(cell.stay.id, 'context', {
+                                      x: event.clientX,
+                                      y: event.clientY,
+                                    });
+                                  }}
+                                  onClick={() => {
+                                    if (!cell.stay) return;
+                                    if (suppressStayClickRef.current) {
+                                      suppressStayClickRef.current = false;
+                                      return;
+                                    }
+                                    if (moveMode?.phase === 'pickStay') {
+                                      onPickStayForMove?.(cell.stay.id);
+                                      return;
+                                    }
+                                    if (moveActive) return;
+                                    onViewStay(cell.stay.id);
+                                  }}
                                   className={cn(
                                     'flex min-h-10 w-full flex-col items-start justify-center gap-0.5 rounded px-1 py-0.5 text-left text-[10px]',
                                     occupiedCellSurfaceClass({
@@ -630,7 +857,13 @@ export function BedAccessCalendar({
                                       isTodayColumn,
                                       admitted,
                                       scheduled: cell.status === 'scheduled',
-                                    })
+                                    }),
+                                    isMovingStayCell &&
+                                      'ring-2 ring-primary ring-offset-1 ring-offset-background',
+                                    moveMode?.phase === 'pickStay' && 'ring-1 ring-primary/40',
+                                    moveMode?.phase === 'pickBed' &&
+                                      !isMovingStayCell &&
+                                      'opacity-40'
                                   )}
                                 >
                                   <span className="flex min-w-0 items-center gap-0.5">
@@ -685,6 +918,40 @@ export function BedAccessCalendar({
         </table>
       </div>
       )}
+
+      {quickMenuStay && quickMenuActions && quickMenu ? (
+        quickMenu.surface === 'sheet' ? (
+          <PlanStayQuickActionsSheet
+            open
+            onOpenChange={(open) => {
+              if (!open) setQuickMenu(null);
+            }}
+            title={quickMenuTitle}
+            meta={quickMenuMeta}
+            actions={quickMenuActions}
+            busy={quickActionsBusy}
+            onSelect={(actionId) => {
+              onStayQuickAction?.(quickMenu.stayId, actionId);
+              setQuickMenu(null);
+            }}
+          />
+        ) : (
+          <PlanStayQuickActionsContextMenu
+            open
+            x={quickMenu.x}
+            y={quickMenu.y}
+            title={quickMenuTitle}
+            meta={quickMenuMeta}
+            actions={quickMenuActions}
+            busy={quickActionsBusy}
+            onClose={() => setQuickMenu(null)}
+            onSelect={(actionId) => {
+              onStayQuickAction?.(quickMenu.stayId, actionId);
+              setQuickMenu(null);
+            }}
+          />
+        )
+      ) : null}
     </div>
   );
 }

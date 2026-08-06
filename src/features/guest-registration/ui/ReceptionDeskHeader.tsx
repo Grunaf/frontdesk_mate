@@ -123,15 +123,9 @@ export function ReceptionDeskHeader({
 
   return (
     <>
-      <header className="space-y-1.5">
+      <header>
+        <h1 className="sr-only">{tenantName}</h1>
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Reception desk
-            </p>
-            <h1 className="truncate text-lg font-semibold sm:text-xl">{tenantName}</h1>
-          </div>
-
           {showBookingSearch ? (
             <Popover
               open={showDropdown}
@@ -140,7 +134,7 @@ export function ReceptionDeskHeader({
               }}
             >
               <PopoverAnchor asChild>
-                <form className="relative w-1/2 min-w-0 max-w-md shrink" onSubmit={handleSubmit}>
+                <form className="relative min-w-0 flex-1 max-w-md" onSubmit={handleSubmit}>
                   <div
                     className={cn(
                       'flex w-full items-center gap-0.5 rounded-md border border-input bg-background pr-0.5',
@@ -215,7 +209,9 @@ export function ReceptionDeskHeader({
                 )}
               </PopoverContent>
             </Popover>
-          ) : null}
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
 
           {showNewBookingCta ? (
             <Button
