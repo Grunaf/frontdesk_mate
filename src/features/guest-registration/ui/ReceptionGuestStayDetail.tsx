@@ -1095,7 +1095,7 @@ export function ReceptionGuestStayDetail({
                   : 'Bed is not marked ready — confirm readiness before unlocking.'
               }
               onUnlockBed={requestUnlockBed}
-              showMoveBed={isParty && canEditOccupancy}
+              showMoveBed={canEditOccupancy}
               onMoveBed={() => onEditStay(stay, { intent: 'moveBed' })}
             />
           )
