@@ -53,12 +53,13 @@ import { RECEPTION_PLAN_DAY_HEADER_STICKY_TOP, RECEPTION_PLAN_TOOLBAR_SLOT_ID } 
 import { usePlanCalendarPeriodSwipe } from '../lib/usePlanCalendarPeriodSwipe';
 import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
 import { PlanQuickFiltersSheet } from './PlanQuickFiltersSheet';
+import { PlanCleaningIndicatorHelpSheet } from './PlanCleaningIndicatorHelpSheet';
 import {
   PlanStayQuickActionsContextMenu,
   PlanStayQuickActionsSheet,
 } from './PlanStayQuickActionsSheet';
 import { useIsReceptionStayDetailBelowLg } from './ReceptionStayDetailShell';
-import { Calendar, Check, Funnel } from 'lucide-react';
+import { Calendar, Check, CircleHelp, Funnel } from 'lucide-react';
 import { Button, Icon, SegmentedControl } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
@@ -127,7 +128,7 @@ const VIEW_MODE_ITEMS: {
 }[] = [
   { id: '3days', label: '3 days', surfaces: ['mobile'] },
   { id: 'week', label: 'Week', surfaces: ['mobile', 'desktop'] },
-  { id: 'month', label: 'Month', surfaces: ['desktop'] },
+  { id: '14days', label: '14 days', surfaces: ['desktop'] },
 ];
 
 function lifecycleChipClass(status: Extract<PlanStayLifecycleStatus, 'late' | 'leaving'>): string {
@@ -232,6 +233,7 @@ export function BedAccessCalendar({
   const [internalBedFilter, setInternalBedFilter] = useState<PlanBedFilter>('all');
   const [quickFilters, setQuickFilters] = useState<PlanQuickFiltersState>(DEFAULT_PLAN_QUICK_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [cleaningHelpOpen, setCleaningHelpOpen] = useState(false);
   const [toolbarSlotEl, setToolbarSlotEl] = useState<HTMLElement | null>(null);
   const quickFiltersSlugRef = useRef<string | null>(null);
   const [quickMenu, setQuickMenu] = useState<StayQuickMenuState | null>(null);
@@ -240,9 +242,9 @@ export function BedAccessCalendar({
   const longPressTimerRef = useRef<number | null>(null);
   const longPressOriginRef = useRef<{ x: number; y: number; stayId: string } | null>(null);
 
-  // Mobile/tablet: 3days | week. Desktop: week | month (no 3days).
+  // Mobile/tablet: 3days | week. Desktop: week | 14days (no 3days).
   const effectiveView: BedDayCalendarView = isBelowLg
-    ? view === 'month'
+    ? view === '14days'
       ? 'week'
       : view
     : view === '3days'
@@ -559,6 +561,11 @@ export function BedAccessCalendar({
         onToggleFreeBeds={toggleFreeBedsFilter}
       />
 
+      <PlanCleaningIndicatorHelpSheet
+        open={cleaningHelpOpen}
+        onOpenChange={setCleaningHelpOpen}
+      />
+
       {!embedded && !moveActive ? (
         <p className="text-xs text-muted-foreground">
           Click a guest cell to open their access card. Click a free cell to prefill the issue form.
@@ -572,68 +579,75 @@ export function BedAccessCalendar({
       ) : (
       <div
         className={cn(
-          // Match sticky day-header gap so top air does not shrink on scroll.
-          'mt-2',
-          // `clip` (not `auto`/`hidden`) keeps window scroll sticky day headers working.
-          fitWidth || effectiveView !== 'month'
-            ? 'w-full overflow-x-clip touch-pan-y'
-            : 'overflow-x-auto',
+          // Always fit period width — no horizontal day scroll (sticky day headers need clip, not auto).
+          'w-full overflow-x-clip touch-pan-y',
           periodSwipeEnabled && 'touch-pan-y'
         )}
         {...periodSwipe}
       >
-        <table
-          className={cn(
-            'w-full border-collapse text-xs',
-            fitWidth || effectiveView !== 'month' ? 'table-fixed' : 'min-w-full'
-          )}
-        >
+        <table className="w-full table-fixed border-collapse text-xs">
           <thead>
             <tr>
-              <th
-                data-plan-calendar-sticky
-                aria-label="Bed"
-                className={cn(
-                  // Label rail + sticky day corner (stable gap under chrome).
-                  'sticky left-0 z-[16] border-0 bg-background p-0 pt-2 pb-2.5',
-                  RECEPTION_PLAN_DAY_HEADER_STICKY_TOP,
-                  fitWidth ? 'w-10 max-w-10' : 'w-28'
-                )}
-              />
-              {snapshot.days.map((nightDate) => {
-                const isTodayColumn = nightDate === lifecycleToday;
-                const { weekday, day } = formatDayHeaderParts(nightDate);
-                return (
-                  <th
-                    key={nightDate}
-                    title={`${weekday} ${day}${isTodayColumn ? ' · Today' : ''}`}
-                    className={cn(
-                      // Day labels outside booking table; sticky top gap matches resting air.
-                      'sticky z-[15] border-0 bg-background pt-2 pb-2.5 font-medium',
-                      RECEPTION_PLAN_DAY_HEADER_STICKY_TOP,
-                      fitWidth || effectiveView !== 'month'
-                        ? 'min-w-0 px-0.5 text-center'
-                        : 'min-w-16 px-1.5 text-center'
-                    )}
-                  >
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-xs font-medium tracking-wide text-muted-foreground">
-                        {weekday}
-                      </span>
-                      <span
-                        className={cn(
-                          'text-base leading-none tabular-nums',
-                          isTodayColumn
-                            ? 'font-semibold text-primary'
-                            : 'font-medium text-foreground'
-                        )}
+              {[
+                <th
+                  key="__bed-rail"
+                  data-plan-calendar-sticky
+                  className={cn(
+                    // Label rail + sticky day corner (stable gap under chrome).
+                    'sticky left-0 z-[16] border-0 bg-background p-0 pt-2 pb-2.5',
+                    RECEPTION_PLAN_DAY_HEADER_STICKY_TOP,
+                    fitWidth ? 'w-10 max-w-10' : 'w-28'
+                  )}
+                >
+                  {bedStatuses != null ? (
+                    <div className="flex items-start justify-start pr-2 pl-0">
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label="What cleaning indicators mean"
+                        className="size-8 text-muted-foreground"
+                        onClick={() => setCleaningHelpOpen(true)}
                       >
-                        {day}
-                      </span>
+                        <Icon icon={CircleHelp} />
+                      </Button>
                     </div>
-                  </th>
-                );
-              })}
+                  ) : (
+                    <span className="sr-only">Bed</span>
+                  )}
+                </th>,
+                ...snapshot.days.map((nightDate) => {
+                  const isTodayColumn = nightDate === lifecycleToday;
+                  const { weekday, day } = formatDayHeaderParts(nightDate);
+                  return (
+                    <th
+                      key={nightDate}
+                      title={`${weekday} ${day}${isTodayColumn ? ' · Today' : ''}`}
+                      className={cn(
+                        // Day labels outside booking table; sticky top gap matches resting air.
+                        'sticky z-[15] min-w-0 border-0 bg-background px-0.5 pt-2 pb-2.5 text-center font-medium',
+                        RECEPTION_PLAN_DAY_HEADER_STICKY_TOP
+                      )}
+                    >
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-xs font-medium tracking-wide text-muted-foreground">
+                          {weekday}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-base leading-none tabular-nums',
+                            isTodayColumn
+                              ? 'font-semibold text-primary'
+                              : 'font-medium text-foreground'
+                          )}
+                        >
+                          {day}
+                        </span>
+                      </div>
+                    </th>
+                  );
+                }),
+              ]}
             </tr>
           </thead>
           <tbody>
@@ -731,8 +745,8 @@ export function BedAccessCalendar({
                               ) : showNotReadyDot ? (
                                 <span
                                   role="img"
-                                  aria-label="Bed not ready"
-                                  title="Bed not ready"
+                                  aria-label="Needs cleaning work"
+                                  title="Needs cleaning work"
                                   className="size-1.5 rounded-full bg-amber-500"
                                 />
                               ) : null}

@@ -24,7 +24,7 @@ export default function ReceptionSiteLayout({ children }: { children: React.Reac
   return (
     <div className="min-h-screen bg-muted/30">
       <ReceptionPwaBootstrap />
-      <main className="mx-auto max-w-6xl px-4 py-4">{children}</main>
+      <main className="w-full px-4 py-4">{children}</main>
     </div>
   );
 }

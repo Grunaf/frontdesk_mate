@@ -15,13 +15,9 @@ export const RECEPTION_PLAN_TOOLBAR_SLOT_ID = 'reception-plan-calendar-toolbar-s
 export const RECEPTION_STICKY_CHROME_HEIGHT_VAR = '--reception-sticky-chrome-height';
 
 /**
- * Extra air between sticky chrome and day header row — kept equal before and while stuck.
- */
-export const RECEPTION_PLAN_DAY_HEADER_GAP_REM = '0.5rem';
-
-/**
- * Day header row sticks under measured sticky chrome + stable top gap.
+ * Day header row sticks flush under measured sticky chrome.
+ * Top air comes only from header `pt` (same before and while stuck).
  * Fallback approx. when the CSS var is not set yet.
  */
 export const RECEPTION_PLAN_DAY_HEADER_STICKY_TOP =
-  'top-[calc(var(--reception-sticky-chrome-height,7.25rem)+0.5rem)]';
+  'top-[var(--reception-sticky-chrome-height,7.25rem)]';

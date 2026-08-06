@@ -13,7 +13,7 @@ import { addNights, todayUtcDate } from './guestAccessDates';
 import { listWholeRoomBlockedBedIdsForNight } from './resolveRoomOccupancyBlocks';
 import { isPlanCalendarOccupancyStay } from './resolvePlanStayCalendarPresentation';
 
-export type BedDayCalendarView = '3days' | 'week' | 'month';
+export type BedDayCalendarView = '3days' | 'week' | '14days';
 
 export interface BedDayCalendarCell {
   nightDate: string;
@@ -91,20 +91,14 @@ export function resolveCalendarRange(
     };
   }
 
-  const rangeStart = `${anchorDate.slice(0, 8)}01`;
-  const days = listCalendarDays(rangeStart, daysInMonth(rangeStart));
+  // 14days: fourteen nights from anchor (inclusive).
+  const rangeStart = anchorDate;
+  const days = listCalendarDays(rangeStart, 14);
   return {
     rangeStart,
     rangeEnd: days[days.length - 1] ?? rangeStart,
     days,
   };
-}
-
-function daysInMonth(monthStart: string): number {
-  const date = parseUtcDate(monthStart);
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth();
-  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
 }
 
 function findStayForNight(
@@ -241,9 +235,7 @@ export function shiftCalendarAnchor(
     return addNights(anchorDate, direction * 7);
   }
 
-  const date = parseUtcDate(`${anchorDate.slice(0, 8)}01`);
-  date.setUTCMonth(date.getUTCMonth() + direction);
-  return formatUtcDate(date);
+  return addNights(anchorDate, direction * 14);
 }
 
 export function flattenCalendarRoomGroups(

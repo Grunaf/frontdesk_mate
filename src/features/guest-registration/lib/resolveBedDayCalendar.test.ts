@@ -103,10 +103,16 @@ describe('resolveBedDayCalendar', () => {
     );
   });
 
-  it('builds a month view from the first day of the month', () => {
-    const range = resolveCalendarRange('month', '2026-06-22');
-    expect(range.rangeStart).toBe('2026-06-01');
-    expect(range.days).toHaveLength(30);
+  it('builds a 14-day view from the anchor date', () => {
+    const range = resolveCalendarRange('14days', '2026-06-22');
+    expect(range.rangeStart).toBe('2026-06-22');
+    expect(range.rangeEnd).toBe('2026-07-05');
+    expect(range.days).toHaveLength(14);
+  });
+
+  it('shifts 14days anchor by ±14 days', () => {
+    expect(shiftCalendarAnchor('2026-06-22', '14days', -1)).toBe('2026-06-08');
+    expect(shiftCalendarAnchor('2026-06-22', '14days', 1)).toBe('2026-07-06');
   });
 
   it('marks sibling beds blocked when whole-room offer room is occupied', () => {
