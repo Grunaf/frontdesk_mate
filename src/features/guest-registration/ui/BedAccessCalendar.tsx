@@ -567,6 +567,18 @@ export function BedAccessCalendar({
           />
         ) : null}
       </Button>
+      {moveActive && onCancelMoveMode ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={moveBusy}
+          className="hidden sm:inline-flex"
+          onClick={onCancelMoveMode}
+        >
+          Cancel move
+        </Button>
+      ) : null}
       <Button
         type="button"
         size="sm"
