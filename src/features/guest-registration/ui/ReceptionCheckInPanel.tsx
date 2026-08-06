@@ -1462,6 +1462,33 @@ export function ReceptionCheckInPanel({
 
   const beginPlanMoveBed = useCallback(
     (stayId: string) => {
+      const stay = planStays.find((entry) => entry.id === stayId);
+      if (!stay) {
+        setPlanMoveError('Booking not found. Refresh and try again.');
+        return;
+      }
+
+      const stayEnded = isReceptionStayPastCheckOut(
+        stay,
+        hubSnapshot.operational.operationalDate
+      );
+      if (!canEditReceptionStayOccupancy({ stayEnded, canEditPastStays })) {
+        closeStayDetail();
+        setPlanMoveError('You cannot move this booking.');
+        return;
+      }
+
+      const targets = listValidVerticalMoveTargetBedIds({
+        settings: tenantSettings,
+        stays: planStays,
+        stay,
+      });
+      if (targets.length === 0) {
+        closeStayDetail();
+        setPlanMoveError('No free beds for this stay’s dates.');
+        return;
+      }
+
       closeStayDetail();
       setEditDraft(null);
       setEditBaseline(null);
@@ -1470,7 +1497,14 @@ export function ReceptionCheckInPanel({
       setPlanMoveMode({ phase: 'pickBed', stayId });
       navigateDeskTab('plan');
     },
-    [closeStayDetail, navigateDeskTab]
+    [
+      canEditPastStays,
+      closeStayDetail,
+      hubSnapshot.operational.operationalDate,
+      navigateDeskTab,
+      planStays,
+      tenantSettings,
+    ]
   );
 
   const pickStayForPlanMove = useCallback(
