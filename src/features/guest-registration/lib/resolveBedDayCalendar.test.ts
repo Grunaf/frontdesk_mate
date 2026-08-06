@@ -4,6 +4,7 @@ import { makeGuestStayRecordFixture } from '@/entities/guest-stay/testing/makeGu
 import type { TenantSettings } from '@/entities/tenant';
 import {
   listCalendarDays,
+  formatPlanMonthLabel,
   resolveBedDayCalendar,
   resolveCalendarRange,
   shiftCalendarAnchor,
@@ -46,6 +47,18 @@ describe('resolveBedDayCalendar', () => {
     expect(shiftCalendarAnchor('2026-07-26', 'week', 1)).toBe('2026-08-02');
     expect(resolveCalendarRange('week', '2026-07-19').rangeStart).toBe('2026-07-18');
     expect(resolveCalendarRange('week', '2026-08-02').rangeStart).toBe('2026-08-01');
+  });
+
+  it('3days starts at anchor and spans three nights', () => {
+    const range = resolveCalendarRange('3days', '2026-07-26');
+    expect(range.rangeStart).toBe('2026-07-26');
+    expect(range.rangeEnd).toBe('2026-07-28');
+    expect(range.days).toEqual(['2026-07-26', '2026-07-27', '2026-07-28']);
+  });
+
+  it('shifts 3days anchor by ±3 days', () => {
+    expect(shiftCalendarAnchor('2026-07-26', '3days', -1)).toBe('2026-07-23');
+    expect(shiftCalendarAnchor('2026-07-26', '3days', 1)).toBe('2026-07-29');
   });
 
   it('marks occupied and scheduled nights on the grid', () => {
@@ -208,5 +221,15 @@ describe('resolveBedDayCalendar', () => {
       })
     );
     expect(cancelledCell?.status).toBe('free');
+  });
+});
+
+describe('formatPlanMonthLabel', () => {
+  it('omits year when range is in the same UTC year as reference today', () => {
+    expect(formatPlanMonthLabel('2026-08-01', '2026-07-26')).toBe('August');
+  });
+
+  it('uses short month + year when range year differs from reference today', () => {
+    expect(formatPlanMonthLabel('2027-01-01', '2026-07-26')).toBe('Jan 2027');
   });
 });

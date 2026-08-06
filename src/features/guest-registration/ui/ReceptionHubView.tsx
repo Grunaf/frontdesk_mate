@@ -50,6 +50,14 @@ interface ReceptionHubViewProps {
     onOpenIssues: () => void;
     onOpenTransfers: () => void;
   } | null;
+  /**
+   * Receptionist control: beds still without a cleaning status after tracking is on.
+   * Edits happen in Cleaning — not on Plan.
+   */
+  cleaningStatusesUnsetCallout?: {
+    unsetCount: number;
+    onOpenCleaning?: () => void;
+  } | null;
 }
 
 function formatOperationalDayCaption(
@@ -291,6 +299,7 @@ export function ReceptionHubView({
   housekeepingDayStart = null,
   paymentDueCallout = null,
   interruptCallouts = null,
+  cleaningStatusesUnsetCallout = null,
 }: ReceptionHubViewProps) {
   const showInterruptRow = interruptCallouts !== null;
 
@@ -303,6 +312,30 @@ export function ReceptionHubView({
         >
           Operational day updated
         </p>
+      ) : null}
+      {cleaningStatusesUnsetCallout && cleaningStatusesUnsetCallout.unsetCount > 0 ? (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2"
+        >
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-xs font-medium text-amber-950">Cleaning statuses not set</p>
+            <p className="text-[11px] text-amber-900/80">
+              {cleaningStatusesUnsetCallout.unsetCount === 1
+                ? '1 bed still needs a status. Housekeeping should set it in Cleaning.'
+                : `${cleaningStatusesUnsetCallout.unsetCount} beds still need a status. Housekeeping should set them in Cleaning.`}
+            </p>
+          </div>
+          {cleaningStatusesUnsetCallout.onOpenCleaning ? (
+            <button
+              type="button"
+              onClick={cleaningStatusesUnsetCallout.onOpenCleaning}
+              className="shrink-0 text-xs font-medium text-amber-950 underline-offset-4 hover:underline"
+            >
+              Open Cleaning
+            </button>
+          ) : null}
+        </div>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">

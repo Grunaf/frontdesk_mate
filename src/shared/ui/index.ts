@@ -20,6 +20,11 @@ export {
   type SegmentedChipBarProps,
   type SegmentedChipItem,
 } from './SegmentedChipBar';
+export {
+  SegmentedControl,
+  type SegmentedControlItem,
+  type SegmentedControlProps,
+} from './SegmentedControl';
 export { NumberStepper, type NumberStepperProps } from './NumberStepper';
 export { StepRingProgress } from './StepRingProgress';
 export { BaseHeader } from './BaseHeader/BaseHeader';

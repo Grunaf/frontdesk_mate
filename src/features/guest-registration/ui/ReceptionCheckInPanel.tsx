@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
@@ -126,6 +126,7 @@ import {
 import { resolveBedInventory, flattenBedInventory } from '../lib/resolveBedInventory';
 import { resolveBedStayPresenceLinks } from '../lib/resolveBedStayPresenceLinks';
 import { resolveOccupiedCleaningBedIds } from '../lib/resolveOccupiedCleaningBedIds';
+import { countUnsetHousekeepingBeds } from '../lib/countUnsetHousekeepingBeds';
 import { resolveReceptionHubSnapshot } from '../lib/resolveReceptionHubSnapshot';
 import { resolveReceptionCashSnapshot } from '../lib/resolveReceptionCashSnapshot';
 import type { PlanBedFilter } from '../lib/filterPlanRoomGroupsByFreeTonight';
@@ -153,6 +154,7 @@ import {
 } from './ReceptionBottomNav';
 import {
   RECEPTION_PLAN_TOOLBAR_SLOT_ID,
+  RECEPTION_STICKY_CHROME_HEIGHT_VAR,
   RECEPTION_STICKY_CHROME_SURFACE,
   RECEPTION_STICKY_CHROME_Z,
 } from '../lib/receptionStickyChrome';
@@ -401,6 +403,7 @@ export function ReceptionCheckInPanel({
   const [housekeepingBusy, startHousekeepingTransition] = useTransition();
   const [bedStatuses, setBedStatuses] = useState<Record<string, HousekeepingBedStatus>>({});
   const [roomStatuses, setRoomStatuses] = useState<Record<string, HousekeepingRoomStatus>>({});
+  const [housekeepingStatusesLoaded, setHousekeepingStatusesLoaded] = useState(false);
   const [presenceByStayId, setPresenceByStayId] = useState<
     Record<string, HousekeepingStayPresenceStatus>
   >({});
@@ -430,6 +433,7 @@ export function ReceptionCheckInPanel({
         setRoomStatuses(maps.rooms);
         setActiveLaundryRuns(maps.activeLaundryRuns);
         setPresenceByStayId(maps.presenceByStayId);
+        setHousekeepingStatusesLoaded(true);
       });
     } catch {
       // Transient network / HMR abort on server action — keep last known maps.
@@ -555,6 +559,16 @@ export function ReceptionCheckInPanel({
       })),
     }));
   }, [tenantSettings, operational.operationalDate]);
+
+  const cleaningBedIds = useMemo(
+    () => cleaningRoomGroups.flatMap((group) => group.beds.map((bed) => bed.bedId)),
+    [cleaningRoomGroups]
+  );
+
+  const unsetHousekeepingBedCount = useMemo(
+    () => countUnsetHousekeepingBeds(cleaningBedIds, bedStatuses),
+    [cleaningBedIds, bedStatuses]
+  );
 
   const cleaningNextCheckInByBedId = useMemo(
     () => resolveNextCheckInByBedId(planStays, operational.operationalDate),
@@ -2373,6 +2387,36 @@ export function ReceptionCheckInPanel({
   );
 
   const planMoveFocus = planMoveMode !== null;
+  const planStickyChromeRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (deskTab !== 'plan' || moreMenuOpen) {
+      document.documentElement.style.removeProperty(RECEPTION_STICKY_CHROME_HEIGHT_VAR);
+      return;
+    }
+
+    const el = planStickyChromeRef.current;
+    if (!el) return;
+
+    const publishHeight = () => {
+      const height = Math.ceil(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty(
+        RECEPTION_STICKY_CHROME_HEIGHT_VAR,
+        `${height}px`
+      );
+    };
+
+    publishHeight();
+    const observer = new ResizeObserver(publishHeight);
+    observer.observe(el);
+    window.addEventListener('resize', publishHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', publishHeight);
+      document.documentElement.style.removeProperty(RECEPTION_STICKY_CHROME_HEIGHT_VAR);
+    };
+  }, [deskTab, moreMenuOpen, planMoveFocus]);
 
   const stickyChromeClassName = cn(
     'sticky top-0',
@@ -2813,9 +2857,15 @@ export function ReceptionCheckInPanel({
             onSelect={(tab) => navigateDeskTab(tab, { clearStayId: true })}
           />
         ) : (
-          <Tabs value={deskTab} onValueChange={handleDeskTabChange} className="space-y-3">
-            <div className={stickyChromeClassName}>
-              <div
+          <Tabs
+            value={deskTab}
+            onValueChange={handleDeskTabChange}
+            className={cn(deskTab === 'plan' ? 'space-y-0' : 'space-y-3')}
+          >
+            <div
+              ref={deskTab === 'plan' ? planStickyChromeRef : undefined}
+              className={stickyChromeClassName}
+            >              <div
                 className={cn(
                   planMoveFocus && 'pointer-events-none select-none opacity-40'
                 )}
@@ -2890,6 +2940,16 @@ export function ReceptionCheckInPanel({
                   onOpenIssues: () => navigateDeskTab('issues', { clearStayId: true }),
                   onOpenTransfers: () => navigateDeskTab('transfers', { clearStayId: true }),
                 }}
+                cleaningStatusesUnsetCallout={
+                  housekeepingStatusesLoaded && unsetHousekeepingBedCount > 0
+                    ? {
+                        unsetCount: unsetHousekeepingBedCount,
+                        onOpenCleaning: canClean
+                          ? () => navigateDeskTab('cleaning', { clearStayId: true })
+                          : undefined,
+                      }
+                    : null
+                }
               />
             </TabsContent>
 
@@ -2902,11 +2962,7 @@ export function ReceptionCheckInPanel({
                 onViewStay={openStayFromChildSurface}
                 onSelectFreeNight={handleSelectFreeNight}
                 onSelectBlockedNight={canCheckIn ? handleSelectBlockedNight : undefined}
-                bedStatuses={bedStatuses}
-                roomStatuses={roomStatuses}
-                onSetBedStatus={handleSetBedStatus}
-                onSetRoomStatus={handleSetRoomStatus}
-                housekeepingBusy={housekeepingBusy}
+                bedStatuses={housekeepingStatusesLoaded ? bedStatuses : undefined}
                 planStayStatusEnabled={resolvePlanStayStatusEnabled(tenantSettings)}
                 planToday={hubSnapshot.operational.operationalDate}
                 bedFilter={planBedFilter}
