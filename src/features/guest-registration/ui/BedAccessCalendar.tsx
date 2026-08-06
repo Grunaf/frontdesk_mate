@@ -53,6 +53,7 @@ import type {
   PlanStayQuickActionId,
 } from '../lib/resolvePlanStayQuickActions';
 import { RECEPTION_PLAN_TOOLBAR_SLOT_ID } from '../lib/receptionStickyChrome';
+import { usePlanCalendarPeriodSwipe } from '../lib/usePlanCalendarPeriodSwipe';
 import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
 import { PlanQuickFiltersSheet } from './PlanQuickFiltersSheet';
 import {
@@ -361,6 +362,13 @@ export function BedAccessCalendar({
     () => (movingStayId ? stays.find((stay) => stay.id === movingStayId) ?? null : null),
     [movingStayId, stays]
   );
+  const periodSwipeEnabled = isBelowLg && !moveActive;
+  const periodSwipe = usePlanCalendarPeriodSwipe({
+    enabled: periodSwipeEnabled,
+    onShift: (direction) => {
+      setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, direction));
+    },
+  });
   const quickActionsEnabled = Boolean(getStayQuickActions && onStayQuickAction) && !moveActive;
 
   const clearLongPress = () => {
@@ -607,6 +615,7 @@ export function BedAccessCalendar({
         type="button"
         size="sm"
         variant="outline"
+        className="hidden lg:inline-flex"
         onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, -1))}
       >
         Prev
@@ -618,6 +627,7 @@ export function BedAccessCalendar({
         type="button"
         size="sm"
         variant="outline"
+        className="hidden lg:inline-flex"
         onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, 1))}
       >
         Next
@@ -674,11 +684,17 @@ export function BedAccessCalendar({
       ) : effectiveBedFilter === 'free_tonight' && visibleRoomGroups.length === 0 ? (
         <p className="text-xs text-muted-foreground">No free beds for this night.</p>
       ) : (
-      <div className="overflow-x-auto">
+      <div
+        className={cn('overflow-x-auto', periodSwipeEnabled && 'touch-pan-y')}
+        {...periodSwipe}
+      >
         <table className="min-w-full border-collapse text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 border bg-background px-2 py-1.5 text-left font-medium">
+              <th
+                data-plan-calendar-sticky
+                className="sticky left-0 z-10 border bg-background px-2 py-1.5 text-left font-medium"
+              >
                 Bed
               </th>
               {snapshot.days.map((nightDate) => {
@@ -706,8 +722,10 @@ export function BedAccessCalendar({
               return (
                 <Fragment key={group.roomId}>
                   <tr className="border-t-2 border-border">
-                    <td className="sticky left-0 z-10 border bg-muted px-2 py-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
+                    <td
+                      data-plan-calendar-sticky
+                      className="sticky left-0 z-10 border bg-muted px-2 py-1.5"
+                    >                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
                           {group.roomLabel}
                         </span>
@@ -742,6 +760,7 @@ export function BedAccessCalendar({
                         className={cn(isPendingMoveTarget && 'bg-primary/5')}
                       >
                         <td
+                          data-plan-calendar-sticky
                           className={cn(
                             'sticky left-0 z-10 border bg-background px-2 py-1.5 pl-4',
                             isPendingMoveTarget && 'z-20'
