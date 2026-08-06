@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import {
@@ -164,7 +164,7 @@ import { prefetchMyReceptionSchedule } from '../lib/myReceptionScheduleCache';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { CancelBookingDialog } from './RevokeAccessDialog';
-import { Tabs, TabsContent, ConfirmDialog, Button } from '@/shared/ui';
+import { Tabs, TabsContent, ConfirmDialog, Button, Toast } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
 import { FALLBACK_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
@@ -340,8 +340,10 @@ export function ReceptionCheckInPanel({
   const [planBedFilter, setPlanBedFilter] = useState<PlanBedFilter>('all');
   const [planFocusToken, setPlanFocusToken] = useState(0);
   const [planMoveMode, setPlanMoveMode] = useState<PlanCalendarMoveMode | null>(null);
-  const [planMoveError, setPlanMoveError] = useState<string | null>(null);
-  const [planQuickError, setPlanQuickError] = useState<string | null>(null);
+  const [deskToast, setDeskToast] = useState<{
+    variant: 'info' | 'warning' | 'success';
+    message: string;
+  } | null>(null);
   const [pendingPlanTakePaymentStayId, setPendingPlanTakePaymentStayId] = useState<string | null>(
     null
   );
@@ -1455,16 +1457,28 @@ export function ReceptionCheckInPanel({
     return resolvePlanStayGuestLabel(planMoveStay, planStays);
   }, [planMoveStay, planStays]);
 
+  const dismissDeskToast = useCallback(() => {
+    setDeskToast(null);
+  }, []);
+
+  const showDeskWarning = useCallback((message: string) => {
+    setDeskToast({ variant: 'warning', message });
+  }, []);
+
+  const showDeskSuccess = useCallback((message: string) => {
+    setDeskToast({ variant: 'success', message });
+  }, []);
+
   const cancelPlanMoveMode = useCallback(() => {
     setPlanMoveMode(null);
-    setPlanMoveError(null);
+    setDeskToast(null);
   }, []);
 
   const beginPlanMoveBed = useCallback(
     (stayId: string) => {
       const stay = planStays.find((entry) => entry.id === stayId);
       if (!stay) {
-        setPlanMoveError('Booking not found. Refresh and try again.');
+        showDeskWarning('Booking not found. Refresh and try again.');
         return;
       }
 
@@ -1474,7 +1488,7 @@ export function ReceptionCheckInPanel({
       );
       if (!canEditReceptionStayOccupancy({ stayEnded, canEditPastStays })) {
         closeStayDetail();
-        setPlanMoveError('You cannot move this booking.');
+        showDeskWarning('You cannot move this booking.');
         return;
       }
 
@@ -1485,7 +1499,7 @@ export function ReceptionCheckInPanel({
       });
       if (targets.length === 0) {
         closeStayDetail();
-        setPlanMoveError('No free beds for this stay’s dates.');
+        showDeskWarning('No free beds for this stay’s dates.');
         return;
       }
 
@@ -1493,7 +1507,7 @@ export function ReceptionCheckInPanel({
       setEditDraft(null);
       setEditBaseline(null);
       setDiscardEditConfirmOpen(false);
-      setPlanMoveError(null);
+      setDeskToast(null);
       setPlanMoveMode({ phase: 'pickBed', stayId });
       navigateDeskTab('plan');
     },
@@ -1503,6 +1517,7 @@ export function ReceptionCheckInPanel({
       hubSnapshot.operational.operationalDate,
       navigateDeskTab,
       planStays,
+      showDeskWarning,
       tenantSettings,
     ]
   );
@@ -1516,13 +1531,18 @@ export function ReceptionCheckInPanel({
         hubSnapshot.operational.operationalDate
       );
       if (!canEditReceptionStayOccupancy({ stayEnded, canEditPastStays })) {
-        setPlanMoveError('You cannot move this booking.');
+        showDeskWarning('You cannot move this booking.');
         return;
       }
-      setPlanMoveError(null);
+      setDeskToast(null);
       setPlanMoveMode({ phase: 'pickBed', stayId });
     },
-    [canEditPastStays, hubSnapshot.operational.operationalDate, planStays]
+    [
+      canEditPastStays,
+      hubSnapshot.operational.operationalDate,
+      planStays,
+      showDeskWarning,
+    ]
   );
 
   const confirmPlanMoveToBed = useCallback(
@@ -1531,7 +1551,7 @@ export function ReceptionCheckInPanel({
       if (!planMoveTargetBedIds.has(bedId)) return;
       const stay = planStays.find((entry) => entry.id === planMoveMode.stayId);
       if (!stay) {
-        setPlanMoveError('Booking not found. Refresh and try again.');
+        showDeskWarning('Booking not found. Refresh and try again.');
         return;
       }
 
@@ -1542,7 +1562,7 @@ export function ReceptionCheckInPanel({
           ? formatMinorAsDecimalInput(stay.booking_amount_due_minor, stay.booking_amount_currency)
           : '';
 
-      setPlanMoveError(null);
+      setDeskToast(null);
       startPlanMoveTransition(() => {
         void (async () => {
           const result = await updateGuestReservationAction({
@@ -1562,7 +1582,7 @@ export function ReceptionCheckInPanel({
           });
 
           if (!result.ok) {
-            setPlanMoveError(createErrorMessage(result.error));
+            showDeskWarning(createErrorMessage(result.error));
             if (result.error === 'access_overlap') {
               await refresh();
             }
@@ -1570,7 +1590,7 @@ export function ReceptionCheckInPanel({
           }
 
           setPlanMoveMode(null);
-          setPlanMoveError(null);
+          setDeskToast(null);
           await refresh();
         })();
       });
@@ -1582,9 +1602,18 @@ export function ReceptionCheckInPanel({
       planMoveTargetBedIds,
       planStays,
       refresh,
+      showDeskWarning,
       tenantSlug,
     ]
   );
+
+  useEffect(() => {
+    if (planMoveMode?.phase !== 'pickBed') return;
+    setDeskToast({
+      variant: 'info',
+      message: 'Move bed mode',
+    });
+  }, [planMoveMode]);
 
   useEffect(() => {
     if (deskTab === 'plan' || !planMoveMode) return;
@@ -1697,14 +1726,21 @@ export function ReceptionCheckInPanel({
     (stayId: string) => {
       const stay = planStays.find((entry) => entry.id === stayId);
       if (!stay) return [];
+      const hasMoveBedTargets =
+        listValidVerticalMoveTargetBedIds({
+          settings: tenantSettings,
+          stays: planStays,
+          stay,
+        }).length > 0;
       return resolvePlanStayQuickActions({
         stay,
         balanceStay: resolvePlanStayBalanceStay(stay, planStays),
         operationalDate: hubSnapshot.operational.operationalDate,
         canEditPastStays,
+        hasMoveBedTargets,
       });
     },
-    [canEditPastStays, hubSnapshot.operational.operationalDate, planStays]
+    [canEditPastStays, hubSnapshot.operational.operationalDate, planStays, tenantSettings]
   );
 
   const mapPlanCheckInError = (code: string): string => {
@@ -1729,7 +1765,7 @@ export function ReceptionCheckInPanel({
     const stay = planStays.find((entry) => entry.id === pendingPlanTakePaymentStayId);
     if (!stay) {
       setPendingPlanTakePaymentStayId(null);
-      setPlanQuickError('Booking not found. Refresh and try again.');
+      showDeskWarning('Booking not found. Refresh and try again.');
       return;
     }
     const balanceStay = resolvePlanStayBalanceStay(stay, planStays);
@@ -1743,20 +1779,25 @@ export function ReceptionCheckInPanel({
         });
         setPendingPlanTakePaymentStayId(null);
         if (!result.ok) {
-          setPlanQuickError(createErrorMessage(result.error));
+          showDeskWarning(createErrorMessage(result.error));
           return;
         }
-        setPlanQuickError(null);
         await refresh();
       })();
     });
-  }, [pendingPlanTakePaymentStayId, planQuickBusy, planStays, refresh, tenantSlug]);
+  }, [
+    pendingPlanTakePaymentStayId,
+    planQuickBusy,
+    planStays,
+    refresh,
+    showDeskWarning,
+    tenantSlug,
+  ]);
 
   const handleStayQuickAction = useCallback(
     (stayId: string, actionId: PlanStayQuickActionId) => {
       const stay = planStays.find((entry) => entry.id === stayId);
       if (!stay) return;
-      setPlanQuickError(null);
 
       switch (actionId) {
         case 'open':
@@ -1770,7 +1811,7 @@ export function ReceptionCheckInPanel({
                 stayId,
               });
               if (!result.ok) {
-                setPlanQuickError(mapPlanCheckInError(result.error));
+                showDeskWarning(mapPlanCheckInError(result.error));
                 openStayFromChildSurface(stayId);
                 return;
               }
@@ -1800,7 +1841,7 @@ export function ReceptionCheckInPanel({
           return;
       }
     },
-    [beginPlanMoveBed, openStayFromChildSurface, planStays, refresh, tenantSlug]
+    [beginPlanMoveBed, openStayFromChildSurface, planStays, refresh, showDeskWarning, tenantSlug]
   );
 
   const pendingPlanTakePaymentDescription = useMemo(() => {
@@ -2332,41 +2373,6 @@ export function ReceptionCheckInPanel({
   );
 
   const planMoveFocus = planMoveMode !== null;
-  const [planMoveHint, setPlanMoveHint] = useState<string | null>(null);
-  const planMoveHintShownRef = useRef(false);
-  const planMoveHintTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (planMoveFocus) return;
-    planMoveHintShownRef.current = false;
-    setPlanMoveHint(null);
-    if (planMoveHintTimerRef.current != null) {
-      window.clearTimeout(planMoveHintTimerRef.current);
-      planMoveHintTimerRef.current = null;
-    }
-  }, [planMoveFocus]);
-
-  useEffect(
-    () => () => {
-      if (planMoveHintTimerRef.current != null) {
-        window.clearTimeout(planMoveHintTimerRef.current);
-      }
-    },
-    []
-  );
-
-  const showPlanMoveHeaderHint = useCallback(() => {
-    if (!planMoveFocus || planMoveHintShownRef.current) return;
-    planMoveHintShownRef.current = true;
-    setPlanMoveHint('Move bed mode — tap a free bed or cancel.');
-    if (planMoveHintTimerRef.current != null) {
-      window.clearTimeout(planMoveHintTimerRef.current);
-    }
-    planMoveHintTimerRef.current = window.setTimeout(() => {
-      setPlanMoveHint(null);
-      planMoveHintTimerRef.current = null;
-    }, 2500);
-  }, [planMoveFocus]);
 
   const stickyChromeClassName = cn(
     'sticky top-0',
@@ -2387,26 +2393,24 @@ export function ReceptionCheckInPanel({
 
       {canCheckIn ? (
         <ReceptionIssueAccessFab
-          visible={!(issueOverlayOpen || editDraft !== null)}
-          mode={planMoveFocus ? 'cancelMove' : 'newBooking'}
-          disabled={planMoveFocus ? planMoveBusy : false}
+          visible={!(planMoveFocus || issueOverlayOpen || editDraft !== null)}
           onPress={() => {
-            if (planMoveFocus) {
-              cancelPlanMoveMode();
-              return;
-            }
             setIssueOverlayOpen(true);
           }}
         />
       ) : null}
 
-      {planMoveHint ? (
-        <div
-          role="status"
-          className="pointer-events-none fixed left-1/2 z-40 max-w-sm -translate-x-1/2 rounded-lg border bg-background px-3 py-2 text-center text-xs text-foreground shadow-lg bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:bottom-24"
-        >
-          {planMoveHint}
-        </div>
+      {deskToast ? (
+        <Toast
+          variant={deskToast.variant}
+          message={deskToast.message}
+          placement="bottom"
+          onDismiss={planMoveFocus ? cancelPlanMoveMode : dismissDeskToast}
+          autoDismissMs={
+            planMoveFocus ? null : deskToast.variant === 'success' ? 2000 : 5000
+          }
+          dismissAriaLabel={planMoveFocus ? 'Cancel move' : 'Dismiss'}
+        />
       ) : null}
 
       <CancelBookingDialog
@@ -2510,6 +2514,16 @@ export function ReceptionCheckInPanel({
             closeStayDetail();
             beginExtendFromStay(stay);
           }}
+          onAccessCopied={() => {
+            showDeskSuccess('Copied');
+          }}
+          hasMoveBedTargets={
+            listValidVerticalMoveTargetBedIds({
+              settings: tenantSettings,
+              stays: planStays,
+              stay: selectedStay,
+            }).length > 0
+          }
           editDismissBlocked={discardEditConfirmOpen}
           editSurface={
             editDraft
@@ -2797,17 +2811,12 @@ export function ReceptionCheckInPanel({
           <Tabs value={deskTab} onValueChange={handleDeskTabChange} className="space-y-3">
             <div className={stickyChromeClassName}>
               <div
-                className={cn(planMoveFocus && 'select-none')}
-                onClick={planMoveFocus ? showPlanMoveHeaderHint : undefined}
+                className={cn(
+                  planMoveFocus && 'pointer-events-none select-none opacity-40'
+                )}
+                aria-hidden={planMoveFocus || undefined}
               >
-                <div
-                  className={cn(
-                    planMoveFocus && 'pointer-events-none opacity-40'
-                  )}
-                  aria-hidden={planMoveFocus || undefined}
-                >
-                  {deskHeader}
-                </div>
+                {deskHeader}
               </div>
               {deskTab === 'plan' ? (
                 <div className="flex items-start gap-2">
@@ -2909,11 +2918,6 @@ export function ReceptionCheckInPanel({
                 onStayQuickAction={canCheckIn ? handleStayQuickAction : undefined}
                 quickActionsBusy={planQuickBusy}
               />
-              {planMoveError || planQuickError ? (
-                <p className="text-xs text-destructive" role="alert">
-                  {planMoveError ?? planQuickError}
-                </p>
-              ) : null}
             </TabsContent>
 
             <TabsContent value="access">

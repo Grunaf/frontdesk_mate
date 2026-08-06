@@ -26,6 +26,7 @@ export interface PlanQuickFiltersBarProps {
   visibleRoomCount: number;
   freeBedsFilterOn: boolean;
   onToggleFreeBeds: () => void;
+  className?: string;
 }
 
 export function PlanQuickFiltersBar({
@@ -36,6 +37,7 @@ export function PlanQuickFiltersBar({
   visibleRoomCount,
   freeBedsFilterOn,
   onToggleFreeBeds,
+  className,
 }: PlanQuickFiltersBarProps) {
   const floors = useMemo(() => listPlanFloorFilterOptions(settings), [settings]);
   const offers = useMemo(() => listStayOffers(settings), [settings]);
@@ -83,7 +85,12 @@ export function PlanQuickFiltersBar({
   const showOfferRow = offers.length > 0;
 
   return (
-    <div className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+    <div
+      className={cn(
+        'space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5',
+        className
+      )}
+    >
       <PlanFilterField label="Availability">
         <button
           type="button"

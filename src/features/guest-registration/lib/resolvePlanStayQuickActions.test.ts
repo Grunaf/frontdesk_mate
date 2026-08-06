@@ -91,6 +91,18 @@ describe('resolvePlanStayQuickActions', () => {
     }).find((action) => action.id === 'cancelBooking');
     expect(cancel?.destructive).toBe(true);
   });
+
+  it('mutes Move bed when hasMoveBedTargets is false but keeps the action', () => {
+    const current = stay({ desk_checked_in_at: null });
+    const move = resolvePlanStayQuickActions({
+      stay: current,
+      balanceStay: current,
+      operationalDate: '2026-07-27',
+      canEditPastStays: false,
+      hasMoveBedTargets: false,
+    }).find((action) => action.id === 'moveBed');
+    expect(move).toEqual({ id: 'moveBed', label: 'Move bed', muted: true });
+  });
 });
 
 describe('resolvePlanStayBalanceStay', () => {

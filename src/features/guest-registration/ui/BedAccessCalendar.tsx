@@ -54,11 +54,13 @@ import type {
 } from '../lib/resolvePlanStayQuickActions';
 import { RECEPTION_PLAN_TOOLBAR_SLOT_ID } from '../lib/receptionStickyChrome';
 import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
+import { PlanQuickFiltersSheet } from './PlanQuickFiltersSheet';
 import {
   PlanStayQuickActionsContextMenu,
   PlanStayQuickActionsSheet,
 } from './PlanStayQuickActionsSheet';
-import { Check } from 'lucide-react';
+import { useIsReceptionStayDetailBelowLg } from './ReceptionStayDetailShell';
+import { Check, Funnel } from 'lucide-react';
 import { Button, Icon, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
@@ -335,6 +337,7 @@ export function BedAccessCalendar({
   quickActionsBusy = false,
 }: BedAccessCalendarProps) {
   const isMobile = useIsMobileCalendar();
+  const isBelowLg = useIsReceptionStayDetailBelowLg();
   const [view, setView] = useState<BedDayCalendarView>('week');
   const [anchorDate, setAnchorDate] = useState(() => planToday ?? todayUtcDate());
   const [internalBedFilter, setInternalBedFilter] = useState<PlanBedFilter>('all');
@@ -551,22 +554,43 @@ export function BedAccessCalendar({
         }}
         className="min-w-0"
       />
-      <Button
-        type="button"
-        size="sm"
-        variant={filtersOpen || anyFiltersActive ? 'default' : 'outline'}
-        aria-expanded={filtersOpen}
-        aria-controls="plan-filters-panel"
-        onClick={() => setFiltersOpen((open) => !open)}
-      >
-        Filters
-        {anyFiltersActive && !filtersOpen ? (
-          <span
-            aria-hidden
-            className="ml-1.5 inline-block size-1.5 rounded-full bg-primary-foreground"
-          />
-        ) : null}
-      </Button>
+      {isBelowLg ? (
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          aria-label="Filters"
+          aria-expanded={filtersOpen}
+          aria-haspopup="dialog"
+          className="relative"
+          onClick={() => setFiltersOpen(true)}
+        >
+          <Icon icon={Funnel} />
+          {anyFiltersActive ? (
+            <span
+              aria-hidden
+              className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary"
+            />
+          ) : null}
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          variant={filtersOpen || anyFiltersActive ? 'default' : 'outline'}
+          aria-expanded={filtersOpen}
+          aria-controls="plan-filters-panel"
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          Filters
+          {anyFiltersActive && !filtersOpen ? (
+            <span
+              aria-hidden
+              className="ml-1.5 inline-block size-1.5 rounded-full bg-primary-foreground"
+            />
+          ) : null}
+        </Button>
+      )}
       {moveActive && onCancelMoveMode ? (
         <Button
           type="button"
@@ -606,7 +630,7 @@ export function BedAccessCalendar({
     <div className="space-y-3">
       {toolbarSlotEl ? createPortal(toolbar, toolbarSlotEl) : toolbar}
 
-      {filtersOpen ? (
+      {!isBelowLg && filtersOpen ? (
         <div id="plan-filters-panel">
           <PlanQuickFiltersBar
             settings={settings}
@@ -619,6 +643,18 @@ export function BedAccessCalendar({
           />
         </div>
       ) : null}
+
+      <PlanQuickFiltersSheet
+        open={isBelowLg && filtersOpen}
+        onOpenChange={setFiltersOpen}
+        settings={settings}
+        filters={quickFilters}
+        onFiltersChange={handleQuickFiltersChange}
+        totalRoomCount={snapshot.roomGroups.length}
+        visibleRoomCount={quickFilteredRoomGroups.length}
+        freeBedsFilterOn={freeBedsFilterOn}
+        onToggleFreeBeds={toggleFreeBedsFilter}
+      />
 
       {showHousekeepingBanner ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">

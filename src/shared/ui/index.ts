@@ -29,6 +29,7 @@ export { AppHeaderScrollProvider, useAppHeaderScroll } from './BaseHeader/AppHea
 export { ConciergeModuleSection } from './ConciergeModuleSection';
 export { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card';
 export { Alert, AlertTitle, AlertDescription, AlertAction } from './alert';
+export { Toast, type ToastProps, type ToastVariant, type ToastPlacement } from './Toast';
 export { Badge, badgeVariants } from './badge';
 export { Input } from './input';
 export {
