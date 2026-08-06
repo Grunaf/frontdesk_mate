@@ -11,6 +11,7 @@ interface ReceptionPlanBookingShortcutsProps {
   className?: string;
 }
 
+/** Plan sticky shortcuts — desktop (`lg+`); mobile uses FAB speed-dial. */
 export function ReceptionPlanBookingShortcuts({
   openBookingInboxCount,
   onOpenBookingInbox,

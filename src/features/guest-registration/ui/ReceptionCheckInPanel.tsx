@@ -136,7 +136,7 @@ import {
   IssueGuestAccessFormFields,
   resolveIssueGuestAccessSubmitLabel,
 } from './IssueGuestAccessForm';
-import { ReceptionIssueAccessFab } from './ReceptionIssueAccessFab';
+import { ReceptionDeskFabCluster } from './ReceptionDeskFabCluster';
 import { ReceptionHubView } from './ReceptionHubView';
 import { ReceptionCashView } from './ReceptionCashView';
 import { IssuedAccessList } from './IssuedAccessList';
@@ -2392,11 +2392,16 @@ export function ReceptionCheckInPanel({
       {moreMenuOpen ? <ReceptionPushOptIn tenantSlug={tenantSlug} /> : null}
 
       {canCheckIn ? (
-        <ReceptionIssueAccessFab
+        <ReceptionDeskFabCluster
           visible={!(planMoveFocus || issueOverlayOpen || editDraft !== null)}
-          onPress={() => {
+          openBookingInboxCount={bookingInbox.length}
+          onNewBooking={() => {
             setIssueOverlayOpen(true);
           }}
+          onOpenBookingInbox={() =>
+            navigateDeskTab('booking-inbox', { clearStayId: true })
+          }
+          onOpenArchive={() => navigateDeskTab('archive', { clearStayId: true })}
         />
       ) : null}
 
@@ -2826,7 +2831,7 @@ export function ReceptionCheckInPanel({
                   />
                   {!planMoveFocus ? (
                     <ReceptionPlanBookingShortcuts
-                      className="shrink-0"
+                      className="hidden shrink-0 lg:flex"
                       openBookingInboxCount={bookingInbox.length}
                       onOpenBookingInbox={() =>
                         navigateDeskTab('booking-inbox', { clearStayId: true })
