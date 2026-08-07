@@ -1,22 +1,18 @@
 'use client';
 
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
 import { guestStayCoversNight } from '@/entities/guest-stay/lib/guestAccessIntervals';
 import {
-  HOUSEKEEPING_BED_STATUS_LABELS,
-  HOUSEKEEPING_BED_STATUSES,
-  HOUSEKEEPING_ROOM_STATUSES,
   isHousekeepingBedNeedsWork,
   type HousekeepingBedStatus,
-  type HousekeepingRoomStatus,
 } from '@/entities/housekeeping';
 import type { TenantSettings } from '@/entities/tenant';
 import { resolveReceptionBedLabel } from '@/entities/tenant/lib/resolveBedDisplay';
 import {
-  formatCalendarRangeLabel,
+  formatPlanMonthLabel,
+  isPlanTodayInVisibleDays,
   resolveBedDayCalendar,
   shiftCalendarAnchor,
   type BedDayCalendarView,
@@ -52,14 +48,23 @@ import type {
   PlanStayQuickAction,
   PlanStayQuickActionId,
 } from '../lib/resolvePlanStayQuickActions';
-import { RECEPTION_PLAN_TOOLBAR_SLOT_ID } from '../lib/receptionStickyChrome';
-import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
+import {
+  RECEPTION_PLAN_DAY_HEADER_STICKY_TOP,
+  RECEPTION_PLAN_TOOLBAR_STICKY_TOP,
+  RECEPTION_PLAN_TOOLBAR_SURFACE,
+  RECEPTION_STICKY_CHROME_Z,
+  RECEPTION_STICKY_TOOLBAR_HEIGHT_VAR,
+} from '../lib/receptionStickyChrome';
+import { usePlanCalendarPeriodSwipe } from '../lib/usePlanCalendarPeriodSwipe';
+import { PlanQuickFiltersDialog } from './PlanQuickFiltersDialog';
+import { PlanCleaningIndicatorHelpSheet } from './PlanCleaningIndicatorHelpSheet';
 import {
   PlanStayQuickActionsContextMenu,
   PlanStayQuickActionsSheet,
 } from './PlanStayQuickActionsSheet';
-import { Check } from 'lucide-react';
-import { Button, Icon, SegmentedChipBar } from '@/shared/ui';
+import { useIsReceptionStayDetailBelowLg } from './ReceptionStayDetailShell';
+import { Calendar, Check, CircleHelp, Funnel } from 'lucide-react';
+import { Button, Icon, SegmentedControl } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { getCurrencyDefinition, isCurrencyCode } from '@/shared/lib/currency';
 import { resolveTenantCurrency } from '@/entities/tenant/lib/resolveHostelMoney';
@@ -94,11 +99,8 @@ interface BedAccessCalendarProps {
   embedded?: boolean;
   /** Used for plan quick-filter localStorage key. */
   tenantSlug?: string;
+  /** When provided, yellow dot marks beds that are not ready (edit in Cleaning). */
   bedStatuses?: Record<string, HousekeepingBedStatus>;
-  roomStatuses?: Record<string, HousekeepingRoomStatus>;
-  onSetBedStatus?: (bedId: string, status: HousekeepingBedStatus) => void;
-  onSetRoomStatus?: (roomId: string, status: HousekeepingRoomStatus) => void;
-  housekeepingBusy?: boolean;
   /** When true, show arrival/in/leaving/late chips on today's occupied cells. */
   planStayStatusEnabled?: boolean;
   /** Operational / Plan “today” column (YYYY-MM-DD). Defaults to UTC calendar today. */
@@ -121,17 +123,19 @@ interface BedAccessCalendarProps {
   getStayQuickActions?: (stayId: string) => PlanStayQuickAction[];
   onStayQuickAction?: (stayId: string, actionId: PlanStayQuickActionId) => void;
   quickActionsBusy?: boolean;
+  /** Trailing sticky tool-row content (e.g. Inbox/Archive on desktop). */
+  toolbarAccessory?: ReactNode;
 }
 
-const VIEW_ITEMS = [
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
-] as const;
-
-const ROOM_STATUS_LABELS: Record<HousekeepingRoomStatus, string> = {
-  cleaned: 'Cleaned',
-  not_cleaned: 'Not cleaned',
-};
+const VIEW_MODE_ITEMS: {
+  id: BedDayCalendarView;
+  label: string;
+  surfaces: Array<'mobile' | 'desktop'>;
+}[] = [
+  { id: '3days', label: '3 days', surfaces: ['mobile'] },
+  { id: 'week', label: 'Week', surfaces: ['mobile', 'desktop'] },
+  { id: '14days', label: '14 days', surfaces: ['desktop'] },
+];
 
 function lifecycleChipClass(status: Extract<PlanStayLifecycleStatus, 'late' | 'leaving'>): string {
   switch (status) {
@@ -183,10 +187,11 @@ function planUnpaidCurrencySymbol(
   return getCurrencyDefinition(resolveTenantCurrency(settings).primary).symbol;
 }
 
-function formatDayHeader(nightDate: string, isToday: boolean): string {
+function formatDayHeaderParts(nightDate: string): { weekday: string; day: string } {
   const date = new Date(`${nightDate}T00:00:00.000Z`);
-  const label = date.toLocaleDateString('en', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
-  return isToday ? `${label} · Today` : label;
+  const weekday = date.toLocaleDateString('en', { weekday: 'short', timeZone: 'UTC' });
+  const day = date.toLocaleDateString('en', { day: 'numeric', timeZone: 'UTC' });
+  return { weekday, day };
 }
 
 function useIsMobileCalendar(): boolean {
@@ -203,109 +208,6 @@ function useIsMobileCalendar(): boolean {
   return isMobile;
 }
 
-function nextRoomStatus(current: HousekeepingRoomStatus | undefined): HousekeepingRoomStatus {
-  if (!current) return HOUSEKEEPING_ROOM_STATUSES[0];
-  const index = HOUSEKEEPING_ROOM_STATUSES.indexOf(current);
-  return HOUSEKEEPING_ROOM_STATUSES[(index + 1) % HOUSEKEEPING_ROOM_STATUSES.length];
-}
-
-function isSyntheticRoomId(roomId: string): boolean {
-  return roomId.startsWith('__');
-}
-
-function roomStatusNeedsWork(status: HousekeepingRoomStatus): boolean {
-  return status === 'not_cleaned';
-}
-
-function HousekeepingBedStatusSelect({
-  status,
-  disabled,
-  locked,
-  onChange,
-  className,
-}: {
-  status: HousekeepingBedStatus | undefined;
-  disabled?: boolean;
-  /** Ready is locked on Plan — change via Cleaning if needed. */
-  locked?: boolean;
-  onChange: (status: HousekeepingBedStatus) => void;
-  className?: string;
-}) {
-  const needsWork = isHousekeepingBedNeedsWork(status);
-  const unset = !status;
-
-  return (
-    <select
-      aria-label="Bed cleaning status"
-      disabled={disabled || locked}
-      value={status ?? ''}
-      onClick={(event) => event.stopPropagation()}
-      onChange={(event) => {
-        event.stopPropagation();
-        const value = event.target.value;
-        if (
-          value === 'needs_strip' ||
-          value === 'stripped' ||
-          value === 'ready'
-        ) {
-          onChange(value);
-        }
-      }}
-      className={cn(
-        'max-w-[5.5rem] shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight',
-        unset && 'border-border bg-background text-muted-foreground',
-        !unset && needsWork && 'border-amber-200 bg-amber-50 text-amber-900',
-        !unset && !needsWork && 'border-transparent bg-muted text-muted-foreground',
-        (disabled || locked) && 'pointer-events-none opacity-60',
-        className
-      )}
-    >
-      <option value="" disabled={Boolean(status)}>
-        Unset
-      </option>
-      {HOUSEKEEPING_BED_STATUSES.map((choice) => (
-        <option key={choice} value={choice}>
-          {HOUSEKEEPING_BED_STATUS_LABELS[choice]}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-function HousekeepingChip({
-  label,
-  needsWork,
-  unset,
-  disabled,
-  onClick,
-}: {
-  label: string;
-  needsWork: boolean;
-  unset: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-      className={cn(
-        'max-w-[5.5rem] shrink-0 truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors',
-        unset && 'border-border bg-background text-muted-foreground hover:bg-muted/40',
-        !unset && needsWork && 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100',
-        !unset && !needsWork && 'border-transparent bg-muted text-muted-foreground hover:bg-muted/80',
-        disabled && 'pointer-events-none opacity-60'
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
 export function BedAccessCalendar({
   settings,
   stays,
@@ -315,10 +217,6 @@ export function BedAccessCalendar({
   embedded = false,
   tenantSlug,
   bedStatuses,
-  roomStatuses,
-  onSetBedStatus,
-  onSetRoomStatus,
-  housekeepingBusy = false,
   planStayStatusEnabled = false,
   planToday,
   bedFilter = 'all',
@@ -333,14 +231,17 @@ export function BedAccessCalendar({
   getStayQuickActions,
   onStayQuickAction,
   quickActionsBusy = false,
+  toolbarAccessory,
 }: BedAccessCalendarProps) {
   const isMobile = useIsMobileCalendar();
+  const isBelowLg = useIsReceptionStayDetailBelowLg();
   const [view, setView] = useState<BedDayCalendarView>('week');
   const [anchorDate, setAnchorDate] = useState(() => planToday ?? todayUtcDate());
   const [internalBedFilter, setInternalBedFilter] = useState<PlanBedFilter>('all');
   const [quickFilters, setQuickFilters] = useState<PlanQuickFiltersState>(DEFAULT_PLAN_QUICK_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [toolbarSlotEl, setToolbarSlotEl] = useState<HTMLElement | null>(null);
+  const [cleaningHelpOpen, setCleaningHelpOpen] = useState(false);
+  const toolbarStickyRef = useRef<HTMLDivElement | null>(null);
   const quickFiltersSlugRef = useRef<string | null>(null);
   const [quickMenu, setQuickMenu] = useState<StayQuickMenuState | null>(null);
   const [pendingMoveTargetBedId, setPendingMoveTargetBedId] = useState<string | null>(null);
@@ -348,8 +249,14 @@ export function BedAccessCalendar({
   const longPressTimerRef = useRef<number | null>(null);
   const longPressOriginRef = useRef<{ x: number; y: number; stayId: string } | null>(null);
 
-  const effectiveView = isMobile && view === 'month' ? 'week' : view;
-  const housekeepingEnabled = Boolean(onSetBedStatus || onSetRoomStatus);
+  // Mobile/tablet: 3days | week. Desktop: week | 14days (no 3days).
+  const effectiveView: BedDayCalendarView = isBelowLg
+    ? view === '14days'
+      ? 'week'
+      : view
+    : view === '3days'
+      ? 'week'
+      : view;
   const lifecycleToday = planToday ?? todayUtcDate();
   const effectiveBedFilter = onBedFilterChange ? bedFilter : internalBedFilter;
   const moveActive = moveMode !== null;
@@ -358,6 +265,15 @@ export function BedAccessCalendar({
     () => (movingStayId ? stays.find((stay) => stay.id === movingStayId) ?? null : null),
     [movingStayId, stays]
   );
+  const periodSwipeEnabled = isBelowLg && !moveActive;
+  /** Compact sticky room/bed rail on all breakpoints (fit period width, no wide desktop rail). */
+  const fitWidth = true;
+  const periodSwipe = usePlanCalendarPeriodSwipe({
+    enabled: periodSwipeEnabled,
+    onShift: (direction) => {
+      setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, direction));
+    },
+  });
   const quickActionsEnabled = Boolean(getStayQuickActions && onStayQuickAction) && !moveActive;
 
   const clearLongPress = () => {
@@ -413,13 +329,29 @@ export function BedAccessCalendar({
 
   useEffect(() => () => clearLongPress(), []);
 
-  useLayoutEffect(() => {
-    if (!embedded) {
-      setToolbarSlotEl(null);
-      return;
-    }
-    setToolbarSlotEl(document.getElementById(RECEPTION_PLAN_TOOLBAR_SLOT_ID));
-  }, [embedded]);
+  useEffect(() => {
+    const el = toolbarStickyRef.current;
+    if (!el) return;
+
+    const publishHeight = () => {
+      const height = Math.ceil(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty(
+        RECEPTION_STICKY_TOOLBAR_HEIGHT_VAR,
+        `${height}px`
+      );
+    };
+
+    publishHeight();
+    const observer = new ResizeObserver(publishHeight);
+    observer.observe(el);
+    window.addEventListener('resize', publishHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', publishHeight);
+      document.documentElement.style.removeProperty(RECEPTION_STICKY_TOOLBAR_HEIGHT_VAR);
+    };
+  }, [moveActive, toolbarAccessory]);
 
   useEffect(() => {
     const slug = tenantSlug?.trim() ?? '';
@@ -504,16 +436,6 @@ export function BedAccessCalendar({
     quickFilteredRoomGroups,
   ]);
 
-  const planBedIds = useMemo(
-    () => snapshot.roomGroups.flatMap((group) => group.rows.map((row) => row.bedId)),
-    [snapshot.roomGroups]
-  );
-
-  const showHousekeepingBanner =
-    housekeepingEnabled &&
-    planBedIds.length > 0 &&
-    planBedIds.some((bedId) => !bedStatuses?.[bedId]);
-
   const handleBedFilterChange = (next: PlanBedFilter) => {
     if (onBedFilterChange) {
       onBedFilterChange(next);
@@ -529,21 +451,21 @@ export function BedAccessCalendar({
   const toggleFreeBedsFilter = () => {
     handleBedFilterChange(freeBedsFilterOn ? 'all' : 'free_tonight');
   };
-  const anyFiltersActive = freeBedsFilterOn || isPlanQuickFiltersActive(quickFilters);
+  const structuralFiltersActive = isPlanQuickFiltersActive(quickFilters);
 
-  if (snapshot.roomGroups.length === 0) {
-    return <p className="text-xs text-muted-foreground">No beds to show on the calendar.</p>;
-  }
-
-  const rangeLabel = formatCalendarRangeLabel(snapshot.rangeStart, snapshot.rangeEnd);
-  const viewItems = isMobile ? VIEW_ITEMS.filter((item) => item.id === 'week') : [...VIEW_ITEMS];
+  const monthLabel = formatPlanMonthLabel(snapshot.rangeStart, lifecycleToday);
+  const todayInView = isPlanTodayInVisibleDays(lifecycleToday, snapshot.days);
+  const viewSurface = isBelowLg ? 'mobile' : 'desktop';
+  const viewModeItems = VIEW_MODE_ITEMS.filter((item) => item.surfaces.includes(viewSurface));
   const quickFiltersHideAll = quickFilteredRoomGroups.length === 0;
+  const noBeds = snapshot.roomGroups.length === 0;
 
   const toolbar = (
-    <div className="flex flex-wrap items-center gap-2">
-      <SegmentedChipBar
+    <div className="flex w-full flex-nowrap items-center gap-2">
+      <span className="shrink-0 text-base font-semibold text-foreground">{monthLabel}</span>
+      <SegmentedControl
         ariaLabel="Calendar view"
-        items={viewItems}
+        items={viewModeItems.map((item) => ({ id: item.id, label: item.label }))}
         value={effectiveView}
         onValueChange={(id) => {
           setView(id as BedDayCalendarView);
@@ -551,69 +473,122 @@ export function BedAccessCalendar({
         }}
         className="min-w-0"
       />
+      {moveActive && onCancelMoveMode ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={moveBusy}
+          className="hidden sm:inline-flex"
+          onClick={onCancelMoveMode}
+        >
+          Cancel move
+        </Button>
+      ) : null}
       <Button
         type="button"
-        size="sm"
-        variant={filtersOpen || anyFiltersActive ? 'default' : 'outline'}
-        aria-expanded={filtersOpen}
-        aria-controls="plan-filters-panel"
-        onClick={() => setFiltersOpen((open) => !open)}
-      >
-        Filters
-        {anyFiltersActive && !filtersOpen ? (
-          <span
-            aria-hidden
-            className="ml-1.5 inline-block size-1.5 rounded-full bg-primary-foreground"
-          />
-        ) : null}
-      </Button>
-      <Button
-        type="button"
-        size="sm"
+        size="default"
         variant="outline"
+        className="hidden lg:inline-flex"
         onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, -1))}
       >
         Prev
       </Button>
-      <Button type="button" size="sm" variant="outline" onClick={snapAnchorToPlanToday}>
-        Today
-      </Button>
+      {!todayInView ? (
+        <Button type="button" size="sm" variant="outline" onClick={snapAnchorToPlanToday}>
+          <Icon icon={Calendar} />
+          Today
+        </Button>
+      ) : null}
       <Button
         type="button"
-        size="sm"
+        size="default"
         variant="outline"
+        className="hidden lg:inline-flex"
         onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, 1))}
       >
         Next
       </Button>
-      <span className="text-xs text-muted-foreground">{rangeLabel}</span>
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        <Button
+          type="button"
+          size="sm"
+          variant={freeBedsFilterOn ? 'default' : 'outline'}
+          aria-pressed={freeBedsFilterOn}
+          aria-label="Show beds free tonight"
+          className="hidden lg:inline-flex"
+          onClick={toggleFreeBedsFilter}
+        >
+          Free tonight
+        </Button>
+        <Button
+          type="button"
+          size="icon-lg"
+          variant="ghost"
+          aria-label="Filters"
+          aria-expanded={filtersOpen}
+          aria-haspopup="dialog"
+          className="relative size-11 lg:size-10"
+          onClick={() => setFiltersOpen(true)}
+        >
+          <Icon icon={Funnel} className="size-5" />
+          {structuralFiltersActive ? (
+            <span
+              aria-hidden
+              className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary"
+            />
+          ) : null}
+        </Button>
+      </div>
     </div>
   );
 
+  const stickyToolPanel = (
+    <div
+      ref={toolbarStickyRef}
+      className={cn(
+        'sticky -mx-4 px-4 py-1',
+        RECEPTION_STICKY_CHROME_Z,
+        RECEPTION_PLAN_TOOLBAR_STICKY_TOP,
+        RECEPTION_PLAN_TOOLBAR_SURFACE,
+        'border-b'
+      )}
+    >
+      <div className="flex w-full items-start gap-2">
+        <div className="min-w-0 flex-1">{toolbar}</div>
+        {toolbarAccessory}
+      </div>
+    </div>
+  );
+
+  if (noBeds) {
+    return (
+      <div>
+        {stickyToolPanel}
+        <p className="text-xs text-muted-foreground">No beds to show on the calendar.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      {toolbarSlotEl ? createPortal(toolbar, toolbarSlotEl) : toolbar}
+    <div>
+      {stickyToolPanel}
 
-      {filtersOpen ? (
-        <div id="plan-filters-panel">
-          <PlanQuickFiltersBar
-            settings={settings}
-            filters={quickFilters}
-            onFiltersChange={handleQuickFiltersChange}
-            totalRoomCount={snapshot.roomGroups.length}
-            visibleRoomCount={quickFilteredRoomGroups.length}
-            freeBedsFilterOn={freeBedsFilterOn}
-            onToggleFreeBeds={toggleFreeBedsFilter}
-          />
-        </div>
-      ) : null}
+      <div className="space-y-3">
+      <PlanQuickFiltersDialog
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        settings={settings}
+        filters={quickFilters}
+        onFiltersChange={handleQuickFiltersChange}
+        totalRoomCount={snapshot.roomGroups.length}
+        visibleRoomCount={quickFilteredRoomGroups.length}
+      />
 
-      {showHousekeepingBanner ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
-          <p className="text-xs text-foreground">Set cleaning status for all beds</p>
-          <span className="text-[11px] text-muted-foreground">Tap Strip / Make on each bed</span>
-        </div>
-      ) : null}
+      <PlanCleaningIndicatorHelpSheet
+        open={cleaningHelpOpen}
+        onOpenChange={setCleaningHelpOpen}
+      />
 
       {!embedded && !moveActive ? (
         <p className="text-xs text-muted-foreground">
@@ -624,64 +599,130 @@ export function BedAccessCalendar({
       {quickFiltersHideAll ? (
         <p className="text-xs text-muted-foreground">No rooms match these filters.</p>
       ) : effectiveBedFilter === 'free_tonight' && visibleRoomGroups.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No free beds for this night.</p>
+        <p className="text-xs text-muted-foreground">No beds free tonight.</p>
       ) : (
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse text-xs">
+      <div
+        className={cn(
+          // Always fit period width — no horizontal day scroll (sticky day headers need clip, not auto).
+          'w-full overflow-x-clip touch-pan-y',
+          periodSwipeEnabled && 'touch-pan-y'
+        )}
+        {...periodSwipe}
+      >
+        <table className="w-full table-fixed border-collapse text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 border bg-background px-2 py-1.5 text-left font-medium">
-                Bed
-              </th>
-              {snapshot.days.map((nightDate) => {
-                const isTodayColumn = nightDate === lifecycleToday;
-                return (
-                  <th
-                    key={nightDate}
-                    className={cn(
-                      'min-w-16 border px-1.5 py-1.5 text-left font-medium',
-                      isTodayColumn && 'bg-primary/5 font-semibold text-foreground'
-                    )}
-                  >
-                    {formatDayHeader(nightDate, isTodayColumn)}
-                  </th>
-                );
-              })}
+              {[
+                <th
+                  key="__bed-rail"
+                  data-plan-calendar-sticky
+                  className={cn(
+                    // Label rail + sticky day corner (stable gap under chrome).
+                    'sticky left-0 z-[16] border-0 bg-background p-0 pt-2 pb-2.5',
+                    RECEPTION_PLAN_DAY_HEADER_STICKY_TOP,
+                    fitWidth ? 'w-10 max-w-10' : 'w-28'
+                  )}
+                >
+                  <div className="flex items-start justify-start pr-2 pl-0">
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label="Plan help"
+                      className="size-8 text-muted-foreground"
+                      onClick={() => setCleaningHelpOpen(true)}
+                    >
+                      <Icon icon={CircleHelp} />
+                    </Button>
+                  </div>
+                </th>,
+                ...snapshot.days.map((nightDate) => {
+                  const isTodayColumn = nightDate === lifecycleToday;
+                  const { weekday, day } = formatDayHeaderParts(nightDate);
+                  const dayHeaderInner = (
+                    <>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">
+                        {weekday}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-base leading-none tabular-nums',
+                          isTodayColumn
+                            ? 'font-semibold text-primary'
+                            : 'font-medium text-foreground'
+                        )}
+                      >
+                        {day}
+                      </span>
+                    </>
+                  );
+                  return (
+                    <th
+                      key={nightDate}
+                      title={`${weekday} ${day}${isTodayColumn ? ' · Today' : ''}${isTodayColumn && freeBedsFilterOn ? ' · Free tonight' : ''}`}
+                      className={cn(
+                        // Day labels outside booking table; sticky top gap matches resting air.
+                        'sticky z-[15] min-w-0 border-0 bg-background px-0.5 pt-2 pb-2.5 text-center font-medium',
+                        RECEPTION_PLAN_DAY_HEADER_STICKY_TOP
+                      )}
+                    >
+                      {isTodayColumn ? (
+                        <button
+                          type="button"
+                          aria-pressed={freeBedsFilterOn}
+                          aria-label={
+                            freeBedsFilterOn
+                              ? 'Show all beds'
+                              : 'Show beds free tonight'
+                          }
+                          disabled={moveActive}
+                          onClick={toggleFreeBedsFilter}
+                          className={cn(
+                            'mx-auto flex w-full max-w-full flex-col items-center gap-0.5 rounded-md px-0.5 py-0.5 outline-none',
+                            'focus-visible:ring-2 focus-visible:ring-ring/30',
+                            moveActive
+                              ? 'cursor-default bg-muted opacity-60'
+                              : freeBedsFilterOn
+                                ? 'cursor-pointer bg-primary/10'
+                                : 'cursor-pointer bg-muted'
+                          )}
+                        >
+                          {dayHeaderInner}
+                        </button>
+                      ) : (
+                        <div className="flex flex-col items-center gap-0.5 px-0.5 py-0.5">
+                          {dayHeaderInner}
+                        </div>
+                      )}
+                    </th>
+                  );
+                }),
+              ]}
             </tr>
           </thead>
           <tbody>
             {visibleRoomGroups.map((group) => {
-              const roomStatus = roomStatuses?.[group.roomId];
-              const showRoomChip =
-                housekeepingEnabled && onSetRoomStatus && !isSyntheticRoomId(group.roomId);
-
               return (
                 <Fragment key={group.roomId}>
-                  <tr className="border-t-2 border-border">
-                    <td className="sticky left-0 z-10 border bg-muted px-2 py-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
-                          {group.roomLabel}
-                        </span>
-                        {showRoomChip ? (
-                          <HousekeepingChip
-                            label={roomStatus ? ROOM_STATUS_LABELS[roomStatus] : 'Set…'}
-                            needsWork={roomStatus ? roomStatusNeedsWork(roomStatus) : false}
-                            unset={!roomStatus}
-                            disabled={housekeepingBusy}
-                            onClick={() => onSetRoomStatus(group.roomId, nextRoomStatus(roomStatus))}
-                          />
-                        ) : null}
-                      </div>
+                  <tr>
+                    <td
+                      data-plan-calendar-sticky
+                      className={cn(
+                        'sticky left-0 z-10 border-0 bg-background py-1.5 pr-2 pl-0',
+                        fitWidth ? 'w-10 max-w-10' : 'w-28'
+                      )}
+                    >
+                      <span className="font-medium text-foreground">{group.roomLabel}</span>
                     </td>
                     <td
                       colSpan={snapshot.days.length}
-                      className="border bg-muted px-2 py-1.5"
+                      className="border border-t-2 border-border bg-muted px-2 py-1.5"
                     />
                   </tr>
                   {group.rows.map((row) => {
                     const bedStatus = bedStatuses?.[row.bedId];
-                    const showBedChip = housekeepingEnabled && onSetBedStatus;
+                    const showNotReadyDot =
+                      bedStatuses != null && isHousekeepingBedNeedsWork(bedStatus);
                     const isPickBedPhase = moveMode?.phase === 'pickBed';
                     const isMoveTargetBed =
                       isPickBedPhase && Boolean(moveTargetBedIds?.has(row.bedId));
@@ -694,56 +735,72 @@ export function BedAccessCalendar({
                         className={cn(isPendingMoveTarget && 'bg-primary/5')}
                       >
                         <td
+                          data-plan-calendar-sticky
                           className={cn(
-                            'sticky left-0 z-10 border bg-background px-2 py-1.5 pl-4',
+                            'sticky left-0 z-10 border-0 bg-background py-1.5 pr-2 pl-0',
+                            fitWidth ? 'w-10 max-w-10' : 'w-28',
                             isPendingMoveTarget && 'z-20'
                           )}
                         >
-                          <div className="flex flex-nowrap items-center gap-3.5">
-                            <span className="min-w-0 truncate font-medium text-foreground">
+                          <div className="flex min-w-0 items-center gap-0.5">
+                            <span
+                              className="min-w-0 flex-1 truncate font-medium text-foreground"
+                              title={row.displayLabel}
+                            >
                               {row.displayLabel}
                             </span>
-                            {isPendingMoveTarget ? (
-                              <button
-                                type="button"
-                                disabled={moveBusy}
-                                onClick={() => onPickBedForMove?.(row.bedId)}
-                                aria-label={
-                                  moveBusy
-                                    ? `Moving to ${row.displayLabel}`
-                                    : `Confirm move to ${row.displayLabel}`
-                                }
-                                className={cn(
-                                  'inline-flex h-7 w-[5.5rem] shrink-0 items-center justify-center rounded-md border px-1.5',
-                                  'border-primary/30 bg-primary/10 text-primary',
-                                  'hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                  'disabled:pointer-events-none disabled:opacity-60'
-                                )}
-                              >
-                                {moveBusy ? (
-                                  <span className="text-xs font-medium leading-none">…</span>
-                                ) : (
-                                  <Icon icon={Check} className="size-4 shrink-0" size={16} />
-                                )}
-                              </button>
-                            ) : showBedChip ? (
-                              <HousekeepingBedStatusSelect
-                                status={bedStatus}
-                                disabled={housekeepingBusy || moveActive}
-                                locked={bedStatus === 'ready'}
-                                onChange={(status) => onSetBedStatus(row.bedId, status)}
-                                className={
-                                  isPickBedPhase
-                                    ? 'box-border h-7 w-[5.5rem] max-w-[5.5rem] py-0 leading-none'
-                                    : undefined
-                                }
-                              />
-                            ) : isPickBedPhase ? (
-                              <span
-                                className="inline-flex h-7 w-[5.5rem] shrink-0"
-                                aria-hidden
-                              />
-                            ) : null}
+                            {/* Fixed-width trailing slot so the indicator does not shift with label length. */}
+                            <span
+                              className={cn(
+                                'inline-flex shrink-0 items-center justify-center',
+                                fitWidth ? 'size-1.5' : 'h-7 w-7'
+                              )}
+                            >
+                              {isPendingMoveTarget ? (
+                                <button
+                                  type="button"
+                                  disabled={moveBusy}
+                                  onClick={() => onPickBedForMove?.(row.bedId)}
+                                  aria-label={
+                                    moveBusy
+                                      ? `Moving to ${row.displayLabel}`
+                                      : `Confirm move to ${row.displayLabel}`
+                                  }
+                                  className={cn(
+                                    'inline-flex items-center justify-center rounded-sm',
+                                    fitWidth
+                                      ? 'size-1.5 bg-primary text-primary-foreground'
+                                      : 'size-7 rounded-md border border-primary/30 bg-primary/10 text-primary',
+                                    'hover:opacity-90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                                    'disabled:pointer-events-none disabled:opacity-60'
+                                  )}
+                                >
+                                  {moveBusy ? (
+                                    <span
+                                      className={cn(
+                                        'font-medium leading-none',
+                                        fitWidth ? 'text-[6px]' : 'text-xs'
+                                      )}
+                                    >
+                                      …
+                                    </span>
+                                  ) : (
+                                    <Icon
+                                      icon={Check}
+                                      className={cn('shrink-0', fitWidth ? 'size-1.5' : 'size-4')}
+                                      size={fitWidth ? 6 : 16}
+                                    />
+                                  )}
+                                </button>
+                              ) : showNotReadyDot ? (
+                                <span
+                                  role="img"
+                                  aria-label="Needs cleaning work"
+                                  title="Needs cleaning work"
+                                  className="size-1.5 rounded-full bg-amber-500"
+                                />
+                              ) : null}
+                            </span>
                           </div>
                         </td>
                         {row.cells.map((cell) => {
@@ -779,8 +836,8 @@ export function BedAccessCalendar({
                             <td
                               key={`${row.bedId}-${cell.nightDate}`}
                               className={cn(
-                                'border p-0.5 align-top',
-                                isTodayColumn && 'bg-primary/5',
+                                'border align-top',
+                                fitWidth ? 'min-w-0 p-px' : 'p-0.5',
                                 isPendingMoveTarget && isMoveDropCell && 'bg-primary/10'
                               )}
                             >
@@ -797,7 +854,8 @@ export function BedAccessCalendar({
                                     onSelectFreeNight(row.bedId, cell.nightDate);
                                   }}
                                   className={cn(
-                                    'flex min-h-10 w-full items-center justify-center rounded bg-muted/10 px-1 text-[10px] text-muted-foreground hover:bg-muted/30',
+                                    'flex min-h-10 w-full min-w-0 items-center justify-center rounded bg-muted/10 text-[10px] text-muted-foreground hover:bg-muted/30',
+                                    fitWidth ? 'px-0' : 'px-1',
                                     isPendingMoveTarget &&
                                       isMoveDropCell &&
                                       'ring-2 ring-primary ring-offset-1 ring-offset-background',
@@ -819,7 +877,8 @@ export function BedAccessCalendar({
                                     type="button"
                                     onClick={() => onSelectBlockedNight(row.bedId, cell.nightDate)}
                                     className={cn(
-                                      'flex min-h-10 w-full items-center justify-center rounded px-1 text-[10px]',
+                                      'flex min-h-10 w-full min-w-0 items-center justify-center rounded text-[10px]',
+                                      fitWidth ? 'px-0' : 'px-1',
                                       inactive
                                         ? 'bg-muted/30 text-muted-foreground/50'
                                         : 'bg-muted/20 text-muted-foreground/70 hover:bg-muted/40 hover:text-muted-foreground'
@@ -832,7 +891,8 @@ export function BedAccessCalendar({
                                 ) : (
                                   <div
                                     className={cn(
-                                      'flex min-h-10 w-full items-center justify-center rounded px-1 text-[10px]',
+                                      'flex min-h-10 w-full min-w-0 items-center justify-center rounded text-[10px]',
+                                      fitWidth ? 'px-0' : 'px-1',
                                       inactive
                                         ? 'bg-muted/30 text-muted-foreground/40'
                                         : 'bg-muted/20 text-muted-foreground/50',
@@ -910,7 +970,8 @@ export function BedAccessCalendar({
                                     onViewStay(cell.stay.id);
                                   }}
                                   className={cn(
-                                    'flex min-h-10 w-full flex-col items-start justify-center gap-0.5 rounded px-1 py-0.5 text-left text-[10px]',
+                                    'flex min-h-10 w-full min-w-0 flex-col items-start justify-center gap-0.5 overflow-hidden rounded py-0.5 text-left text-[10px]',
+                                    fitWidth ? 'px-0.5' : 'px-1',
                                     occupiedCellSurfaceClass({
                                       inactive,
                                       isTodayColumn,
@@ -925,7 +986,7 @@ export function BedAccessCalendar({
                                       'opacity-40'
                                   )}
                                 >
-                                  <span className="flex min-w-0 items-center gap-0.5">
+                                  <span className="flex min-w-0 max-w-full items-center gap-0.5">
                                     <span
                                       className={cn(
                                         'min-w-0 truncate font-medium',
@@ -1011,6 +1072,7 @@ export function BedAccessCalendar({
           />
         )
       ) : null}
+      </div>
     </div>
   );
 }

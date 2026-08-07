@@ -146,6 +146,7 @@ export function ReceptionGuestStayDetailOverflowMenu({
   unlockBedHint = null,
   onUnlockBed,
   showMoveBed = false,
+  moveBedMuted = false,
   onMoveBed,
 }: {
   stay: GuestStayRecordWithLink;
@@ -162,6 +163,8 @@ export function ReceptionGuestStayDetailOverflowMenu({
   unlockBedHint?: string | null;
   onUnlockBed?: () => void;
   showMoveBed?: boolean;
+  /** Looks unavailable but stays clickable (toast on attempt). */
+  moveBedMuted?: boolean;
   onMoveBed?: () => void;
 }) {
   const endAction = resolveStayCancelCheckoutAction({
@@ -214,7 +217,11 @@ export function ReceptionGuestStayDetailOverflowMenu({
           </DropdownMenuItem>
         ) : null}
         {canMoveBed ? (
-          <DropdownMenuItem disabled={busy} onSelect={() => onMoveBed?.()}>
+          <DropdownMenuItem
+            disabled={busy}
+            className={moveBedMuted ? 'opacity-50' : undefined}
+            onSelect={() => onMoveBed?.()}
+          >
             Move bed
           </DropdownMenuItem>
         ) : null}

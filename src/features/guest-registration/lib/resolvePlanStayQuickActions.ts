@@ -18,6 +18,11 @@ export type PlanStayQuickAction = {
   label: string;
   /** Destructive styling for cancel. */
   destructive?: boolean;
+  /**
+   * Looks unavailable but stays clickable (e.g. Move bed with 0 targets → toast).
+   * Do not map to native `disabled` — that blocks the click.
+   */
+  muted?: boolean;
 };
 
 const LABELS: Record<PlanStayQuickActionId, string> = {
@@ -34,6 +39,8 @@ const LABELS: Record<PlanStayQuickActionId, string> = {
 /**
  * Ordered quick actions for Plan long-press / right-click menus.
  * Hidden when unavailable — never a disabled graveyard.
+ * Exception: Move bed stays visible when occupancy is editable but has no
+ * vertical targets (`muted`) so the click can still surface a toast.
  */
 export function resolvePlanStayQuickActions(input: {
   stay: GuestStayRecordWithLink;
@@ -41,8 +48,16 @@ export function resolvePlanStayQuickActions(input: {
   balanceStay: GuestStayRecordWithLink;
   operationalDate: string;
   canEditPastStays: boolean;
+  /** When false, Move bed is muted but still selectable. Defaults to true. */
+  hasMoveBedTargets?: boolean;
 }): PlanStayQuickAction[] {
-  const { stay, balanceStay, operationalDate, canEditPastStays } = input;
+  const {
+    stay,
+    balanceStay,
+    operationalDate,
+    canEditPastStays,
+    hasMoveBedTargets = true,
+  } = input;
   const stayEnded = isReceptionStayPastCheckOut(stay, operationalDate);
   const canEditOccupancy = canEditReceptionStayOccupancy({
     stayEnded,
@@ -74,7 +89,11 @@ export function resolvePlanStayQuickActions(input: {
   }
 
   if (canEditOccupancy) {
-    actions.push({ id: 'moveBed', label: LABELS.moveBed });
+    actions.push({
+      id: 'moveBed',
+      label: LABELS.moveBed,
+      ...(hasMoveBedTargets ? {} : { muted: true }),
+    });
   }
 
   if (stay.stay_kind !== 'volunteer' && !stay.is_archived) {

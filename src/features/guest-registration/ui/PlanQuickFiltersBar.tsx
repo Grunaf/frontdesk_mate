@@ -1,10 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Check } from 'lucide-react';
 import type { TenantSettings } from '@/entities/tenant';
 import { listStayOffers } from '@/entities/tenant';
-import { Button, Icon, SegmentedChipBar } from '@/shared/ui';
+import { Button, SegmentedChipBar } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import {
   DEFAULT_PLAN_QUICK_FILTERS,
@@ -22,10 +21,9 @@ export interface PlanQuickFiltersBarProps {
   onFiltersChange: (next: PlanQuickFiltersState) => void;
   /** Room groups before quick filters (after inventory/calendar). */
   totalRoomCount: number;
-  /** Room groups after quick filters (before Free beds). */
+  /** Room groups after quick filters. */
   visibleRoomCount: number;
-  freeBedsFilterOn: boolean;
-  onToggleFreeBeds: () => void;
+  className?: string;
 }
 
 export function PlanQuickFiltersBar({
@@ -34,8 +32,7 @@ export function PlanQuickFiltersBar({
   onFiltersChange,
   totalRoomCount,
   visibleRoomCount,
-  freeBedsFilterOn,
-  onToggleFreeBeds,
+  className,
 }: PlanQuickFiltersBarProps) {
   const floors = useMemo(() => listPlanFloorFilterOptions(settings), [settings]);
   const offers = useMemo(() => listStayOffers(settings), [settings]);
@@ -83,34 +80,12 @@ export function PlanQuickFiltersBar({
   const showOfferRow = offers.length > 0;
 
   return (
-    <div className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
-      <PlanFilterField label="Availability">
-        <button
-          type="button"
-          aria-pressed={freeBedsFilterOn}
-          onClick={onToggleFreeBeds}
-          className={cn(
-            'inline-flex h-auto min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium whitespace-nowrap transition-colors',
-            freeBedsFilterOn
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border bg-background text-muted-foreground hover:bg-muted/40 hover:text-foreground'
-          )}
-        >
-          <span
-            aria-hidden
-            className={cn(
-              'inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm border',
-              freeBedsFilterOn
-                ? 'border-primary-foreground/80 bg-primary-foreground text-primary'
-                : 'border-muted-foreground/50 bg-background'
-            )}
-          >
-            {freeBedsFilterOn ? <Icon icon={Check} className="size-2.5" size={10} /> : null}
-          </span>
-          Free beds
-        </button>
-      </PlanFilterField>
-
+    <div
+      className={cn(
+        'space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5',
+        className
+      )}
+    >
       {showFloorRow ? (
         <PlanFilterField label="Floor">
           <SegmentedChipBar

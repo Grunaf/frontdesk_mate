@@ -20,6 +20,8 @@ interface MagicLinkCardProps {
   onDismiss?: () => void;
   /** Increment to open the on-site desk QR details and scroll into view. */
   deskQrFocusKey?: number;
+  /** Fired after a successful clipboard write (desk toast host). */
+  onCopied?: () => void;
 }
 
 function formatGuestPin(pin: string): string {
@@ -27,8 +29,6 @@ function formatGuestPin(pin: string): string {
   if (digits.length !== 6) return pin;
   return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
-
-type CopiedKind = 'message' | 'send' | 'onsite' | null;
 
 export function MagicLinkCard({
   magicLinkUrl,
@@ -39,9 +39,9 @@ export function MagicLinkCard({
   guestAccessPinMissingText,
   onDismiss,
   deskQrFocusKey = 0,
+  onCopied,
 }: MagicLinkCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState<CopiedKind>(null);
   const deskQrDetailsRef = useRef<HTMLDetailsElement>(null);
 
   const sendMagicLinkUrl = useMemo(
@@ -100,13 +100,12 @@ export function MagicLinkCard({
     return () => cancelAnimationFrame(frame);
   }, [deskQrFocusKey]);
 
-  const copyText = async (value: string, kind: Exclude<CopiedKind, null>) => {
+  const copyText = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(kind);
-      window.setTimeout(() => setCopied(null), 2000);
+      onCopied?.();
     } catch {
-      setCopied(null);
+      // Clipboard may be blocked; keep button labels stable.
     }
   };
 
@@ -138,17 +137,17 @@ export function MagicLinkCard({
           (directions and prep). PIN / link unlock the app via Check in on Concierge.
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => copyText(guestMessage, 'message')}>
-            {copied === 'message' ? 'Copied' : 'Copy message for guest'}
+          <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => copyText(guestMessage)}>
+            Copy message for guest
           </Button>
           <Button
             type="button"
             size="sm"
             variant="outline"
             className="w-full sm:w-auto"
-            onClick={() => copyText(sendMagicLinkUrl, 'send')}
+            onClick={() => copyText(sendMagicLinkUrl)}
           >
-            {copied === 'send' ? 'Copied' : 'Copy send link'}
+            Copy send link
           </Button>
         </div>
       </div>
@@ -180,9 +179,9 @@ export function MagicLinkCard({
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => copyText(onsiteMagicLinkUrl, 'onsite')}
+            onClick={() => copyText(onsiteMagicLinkUrl)}
           >
-            {copied === 'onsite' ? 'Copied' : 'Copy on-site link'}
+            Copy on-site link
           </Button>
         </div>
       </details>

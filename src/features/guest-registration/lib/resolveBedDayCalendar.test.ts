@@ -4,6 +4,7 @@ import { makeGuestStayRecordFixture } from '@/entities/guest-stay/testing/makeGu
 import type { TenantSettings } from '@/entities/tenant';
 import {
   listCalendarDays,
+  formatPlanMonthLabel,
   resolveBedDayCalendar,
   resolveCalendarRange,
   shiftCalendarAnchor,
@@ -48,6 +49,18 @@ describe('resolveBedDayCalendar', () => {
     expect(resolveCalendarRange('week', '2026-08-02').rangeStart).toBe('2026-08-01');
   });
 
+  it('3days starts at anchor and spans three nights', () => {
+    const range = resolveCalendarRange('3days', '2026-07-26');
+    expect(range.rangeStart).toBe('2026-07-26');
+    expect(range.rangeEnd).toBe('2026-07-28');
+    expect(range.days).toEqual(['2026-07-26', '2026-07-27', '2026-07-28']);
+  });
+
+  it('shifts 3days anchor by ±3 days', () => {
+    expect(shiftCalendarAnchor('2026-07-26', '3days', -1)).toBe('2026-07-23');
+    expect(shiftCalendarAnchor('2026-07-26', '3days', 1)).toBe('2026-07-29');
+  });
+
   it('marks occupied and scheduled nights on the grid', () => {
     const now = new Date('2026-06-23T12:00:00.000Z');
     // Rolling week for anchor 2026-06-24: 23 … 29
@@ -90,10 +103,16 @@ describe('resolveBedDayCalendar', () => {
     );
   });
 
-  it('builds a month view from the first day of the month', () => {
-    const range = resolveCalendarRange('month', '2026-06-22');
-    expect(range.rangeStart).toBe('2026-06-01');
-    expect(range.days).toHaveLength(30);
+  it('builds a 14-day view from the anchor date', () => {
+    const range = resolveCalendarRange('14days', '2026-06-22');
+    expect(range.rangeStart).toBe('2026-06-22');
+    expect(range.rangeEnd).toBe('2026-07-05');
+    expect(range.days).toHaveLength(14);
+  });
+
+  it('shifts 14days anchor by ±14 days', () => {
+    expect(shiftCalendarAnchor('2026-06-22', '14days', -1)).toBe('2026-06-08');
+    expect(shiftCalendarAnchor('2026-06-22', '14days', 1)).toBe('2026-07-06');
   });
 
   it('marks sibling beds blocked when whole-room offer room is occupied', () => {
@@ -208,5 +227,15 @@ describe('resolveBedDayCalendar', () => {
       })
     );
     expect(cancelledCell?.status).toBe('free');
+  });
+});
+
+describe('formatPlanMonthLabel', () => {
+  it('omits year when range is in the same UTC year as reference today', () => {
+    expect(formatPlanMonthLabel('2026-08-01', '2026-07-26')).toBe('August');
+  });
+
+  it('uses short month + year when range year differs from reference today', () => {
+    expect(formatPlanMonthLabel('2027-01-01', '2026-07-26')).toBe('Jan 2027');
   });
 });

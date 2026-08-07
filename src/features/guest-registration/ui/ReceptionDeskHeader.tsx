@@ -224,7 +224,7 @@ export function ReceptionDeskHeader({
 
           <Button
             type="button"
-            size="icon"
+            size="icon-lg"
             variant="ghost"
             className="shrink-0"
             aria-label="Open profile"

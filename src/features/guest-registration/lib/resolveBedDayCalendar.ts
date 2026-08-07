@@ -13,7 +13,7 @@ import { addNights, todayUtcDate } from './guestAccessDates';
 import { listWholeRoomBlockedBedIdsForNight } from './resolveRoomOccupancyBlocks';
 import { isPlanCalendarOccupancyStay } from './resolvePlanStayCalendarPresentation';
 
-export type BedDayCalendarView = 'week' | 'month';
+export type BedDayCalendarView = '3days' | 'week' | '14days';
 
 export interface BedDayCalendarCell {
   nightDate: string;
@@ -71,21 +71,34 @@ export function resolveCalendarRange(
   view: BedDayCalendarView,
   anchorDate: string
 ): { rangeStart: string; rangeEnd: string; days: string[] } {
-  const rangeStart = view === 'week' ? addNights(anchorDate, -1) : `${anchorDate.slice(0, 8)}01`;
-  const dayCount = view === 'week' ? 7 : daysInMonth(rangeStart);
-  const days = listCalendarDays(rangeStart, dayCount);
+  if (view === '3days') {
+    const rangeStart = anchorDate;
+    const days = listCalendarDays(rangeStart, 3);
+    return {
+      rangeStart,
+      rangeEnd: days[days.length - 1] ?? rangeStart,
+      days,
+    };
+  }
+
+  if (view === 'week') {
+    const rangeStart = addNights(anchorDate, -1);
+    const days = listCalendarDays(rangeStart, 7);
+    return {
+      rangeStart,
+      rangeEnd: days[days.length - 1] ?? rangeStart,
+      days,
+    };
+  }
+
+  // 14days: fourteen nights from anchor (inclusive).
+  const rangeStart = anchorDate;
+  const days = listCalendarDays(rangeStart, 14);
   return {
     rangeStart,
     rangeEnd: days[days.length - 1] ?? rangeStart,
     days,
   };
-}
-
-function daysInMonth(monthStart: string): number {
-  const date = parseUtcDate(monthStart);
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth();
-  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
 }
 
 function findStayForNight(
@@ -185,6 +198,26 @@ export function formatCalendarRangeLabel(rangeStart: string, rangeEnd: string): 
   return `${start} – ${end}`;
 }
 
+export function formatPlanMonthLabel(rangeStart: string, referenceToday: string): string {
+  const range = parseUtcDate(rangeStart);
+  const reference = parseUtcDate(referenceToday);
+  if (range.getUTCFullYear() === reference.getUTCFullYear()) {
+    return range.toLocaleDateString('en', { month: 'long', timeZone: 'UTC' });
+  }
+  return range.toLocaleDateString('en', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+export function isPlanTodayInVisibleDays(
+  planToday: string,
+  days: readonly string[]
+): boolean {
+  return days.includes(planToday);
+}
+
 export function shiftCalendarAnchor(
   anchorDate: string,
   view: BedDayCalendarView,
@@ -194,13 +227,15 @@ export function shiftCalendarAnchor(
     return todayUtcDate();
   }
 
+  if (view === '3days') {
+    return addNights(anchorDate, direction * 3);
+  }
+
   if (view === 'week') {
     return addNights(anchorDate, direction * 7);
   }
 
-  const date = parseUtcDate(`${anchorDate.slice(0, 8)}01`);
-  date.setUTCMonth(date.getUTCMonth() + direction);
-  return formatUtcDate(date);
+  return addNights(anchorDate, direction * 14);
 }
 
 export function flattenCalendarRoomGroups(

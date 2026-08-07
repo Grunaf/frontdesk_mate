@@ -15,10 +15,13 @@ import type { PlanStayQuickAction, PlanStayQuickActionId } from '../lib/resolveP
 export function PlanStayQuickActionsList({
   actions,
   busy = false,
+  density = 'compact',
   onSelect,
 }: {
   actions: PlanStayQuickAction[];
   busy?: boolean;
+  /** `touch` ≈44px rows (bottom sheet); `compact` for desktop context menu. */
+  density?: 'touch' | 'compact';
   onSelect: (id: PlanStayQuickActionId) => void;
 }) {
   return (
@@ -31,8 +34,10 @@ export function PlanStayQuickActionsList({
             size="default"
             disabled={busy}
             className={cn(
-              'h-auto w-full justify-start px-3 py-2 text-sm font-medium',
-              action.destructive && 'text-destructive hover:text-destructive'
+              'w-full justify-start px-3 text-sm font-medium',
+              density === 'touch' ? 'min-h-11 py-2.5' : 'h-auto py-2',
+              action.destructive && 'text-destructive hover:text-destructive',
+              action.muted && 'opacity-50'
             )}
             onClick={() => onSelect(action.id)}
           >
@@ -72,6 +77,7 @@ export function PlanStayQuickActionsSheet({
           <PlanStayQuickActionsList
             actions={actions}
             busy={busy}
+            density="touch"
             onSelect={(id) => {
               onSelect(id);
               onOpenChange(false);

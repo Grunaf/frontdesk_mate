@@ -12,3 +12,4 @@ export {
   resolveCleaningGuideQueue,
   type CleaningGuideQueue,
 } from './lib/resolveCleaningGuideQueue';
+export { shouldShowCleaningWashTab } from './lib/resolveCleaningWashVisibility';

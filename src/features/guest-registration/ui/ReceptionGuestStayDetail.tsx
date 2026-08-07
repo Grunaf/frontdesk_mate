@@ -126,6 +126,13 @@ export interface ReceptionGuestStayDetailProps {
   onReissueAccess: (stay: GuestStayRecordWithLink) => void;
   /** Prefill new booking from this stay (extend). */
   onExtendStay: (stay: GuestStayRecordWithLink) => void;
+  /** Clipboard copy from access MagicLinkCard succeeded. */
+  onAccessCopied?: () => void;
+  /**
+   * When false, More → Move bed is muted but still fires onMoveBed (toast).
+   * Defaults to true when omitted.
+   */
+  hasMoveBedTargets?: boolean;
   tenantSettings?: TenantSettings;
   /** Current operational calendar day — gates Check out vs ended stays. */
   operationalDate: string;
@@ -185,6 +192,8 @@ export function ReceptionGuestStayDetail({
   onEditStay,
   onReissueAccess,
   onExtendStay,
+  onAccessCopied,
+  hasMoveBedTargets = true,
   tenantSettings,
   operationalDate,
   bedStatus,
@@ -871,6 +880,7 @@ export function ReceptionGuestStayDetail({
             guestAccessMessageTemplate={guestAccessMessageTemplate}
             guestAccessPinMissingText={guestAccessPinMissingText}
             deskQrFocusKey={deskQrFocusKey}
+            onCopied={onAccessCopied}
           />
         )}
       </TabsContent>
@@ -1096,6 +1106,7 @@ export function ReceptionGuestStayDetail({
               }
               onUnlockBed={requestUnlockBed}
               showMoveBed={canEditOccupancy}
+              moveBedMuted={!hasMoveBedTargets}
               onMoveBed={() => onEditStay(stay, { intent: 'moveBed' })}
             />
           )
