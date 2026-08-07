@@ -565,7 +565,7 @@ export function BedAccessCalendar({
     return (
       <div>
         {stickyToolPanel}
-        <p className="mt-3 text-xs text-muted-foreground">No beds to show on the calendar.</p>
+        <p className="text-xs text-muted-foreground">No beds to show on the calendar.</p>
       </div>
     );
   }
@@ -574,7 +574,7 @@ export function BedAccessCalendar({
     <div>
       {stickyToolPanel}
 
-      <div className="mt-3 space-y-3">
+      <div className="space-y-3">
       <PlanQuickFiltersDialog
         open={filtersOpen}
         onOpenChange={setFiltersOpen}

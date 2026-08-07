@@ -33,4 +33,4 @@ export const RECEPTION_PLAN_TOOLBAR_STICKY_TOP =
  * Top air on day cells comes from their own `pt` (same before and while stuck).
  */
 export const RECEPTION_PLAN_DAY_HEADER_STICKY_TOP =
-  'top-[calc(var(--reception-sticky-header-height,3.75rem)+var(--reception-sticky-toolbar-height,2.75rem))]';
+  'top-[calc(var(--reception-sticky-header-height,3.75rem)+var(--reception-sticky-toolbar-height,2.25rem))]';
