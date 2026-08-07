@@ -82,3 +82,10 @@ export function ReceptionBottomNav({
 /** Bottom padding so page content clears the fixed bottom nav. */
 export const RECEPTION_BOTTOM_NAV_CONTENT_PAD =
   'pb-[calc(4rem+env(safe-area-inset-bottom,0px))]';
+
+/**
+ * Fixed toast above the bottom nav (+ gap) for mode chrome (move / free tonight).
+ * Default Toast bottom placement sits too low and collides with nav.
+ */
+export const RECEPTION_MODE_TOAST_BOTTOM_CLASS =
+  'bottom-[calc(4rem+0.75rem+env(safe-area-inset-bottom,0px))] lg:bottom-8';

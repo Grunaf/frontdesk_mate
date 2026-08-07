@@ -11,7 +11,7 @@ interface ReceptionPlanBookingShortcutsProps {
   className?: string;
 }
 
-/** Plan sticky shortcuts — desktop (`lg+`); mobile uses FAB speed-dial. */
+/** Plan tool-panel shortcuts — desktop (`lg+`); mobile uses FAB speed-dial. */
 export function ReceptionPlanBookingShortcuts({
   openBookingInboxCount,
   onOpenBookingInbox,
@@ -19,11 +19,11 @@ export function ReceptionPlanBookingShortcuts({
   className,
 }: ReceptionPlanBookingShortcutsProps) {
   return (
-    <div className={cn('flex items-center justify-end gap-2', className)}>
+    <div className={cn('flex items-center justify-end gap-1', className)}>
       <Button
         type="button"
-        size="icon"
-        variant="outline"
+        size="icon-lg"
+        variant="ghost"
         className="relative shrink-0"
         aria-label="Booking.com inbox"
         onClick={onOpenBookingInbox}
@@ -33,7 +33,7 @@ export function ReceptionPlanBookingShortcuts({
           <span
             aria-label={`${openBookingInboxCount} open`}
             className={cn(
-              'absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full',
+              'absolute -right-0.5 -top-0.5 inline-flex min-w-5 items-center justify-center rounded-full',
               'bg-destructive px-1 py-0.5 text-[10px] font-semibold leading-none text-destructive-foreground'
             )}
           >
@@ -43,8 +43,8 @@ export function ReceptionPlanBookingShortcuts({
       </Button>
       <Button
         type="button"
-        size="icon"
-        variant="outline"
+        size="icon-lg"
+        variant="ghost"
         className="shrink-0"
         aria-label="Archive"
         onClick={onOpenArchive}

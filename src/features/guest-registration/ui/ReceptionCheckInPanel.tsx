@@ -151,10 +151,10 @@ import { hasBookingComListPriceOnlyWarning } from '@/entities/booking-com-extern
 import {
   ReceptionBottomNav,
   RECEPTION_BOTTOM_NAV_CONTENT_PAD,
+  RECEPTION_MODE_TOAST_BOTTOM_CLASS,
 } from './ReceptionBottomNav';
 import {
-  RECEPTION_PLAN_TOOLBAR_SLOT_ID,
-  RECEPTION_STICKY_CHROME_HEIGHT_VAR,
+  RECEPTION_STICKY_HEADER_HEIGHT_VAR,
   RECEPTION_STICKY_CHROME_SURFACE,
   RECEPTION_STICKY_CHROME_Z,
 } from '../lib/receptionStickyChrome';
@@ -166,7 +166,7 @@ import { prefetchMyReceptionSchedule } from '../lib/myReceptionScheduleCache';
 import { ReissueAccessDialog } from './ReissueAccessDialog';
 import { ReceptionGuestStayDetail } from './ReceptionGuestStayDetail';
 import { CancelBookingDialog } from './RevokeAccessDialog';
-import { Tabs, TabsContent, ConfirmDialog, Button, Toast } from '@/shared/ui';
+import { Tabs, TabsContent, ConfirmDialog, Button, Toast, Separator } from '@/shared/ui';
 import { ReceptionPushOptIn } from '@/features/reception-pwa';
 import type { ReceptionOperationalContext } from '@/features/reception-sync/model/types';
 import { FALLBACK_RECEPTION_ACTOR_LABEL } from '@/features/reception-sync/model/types';
@@ -1630,6 +1630,20 @@ export function ReceptionCheckInPanel({
   }, [planMoveMode]);
 
   useEffect(() => {
+    if (planMoveMode != null) return;
+    if (planBedFilter === 'free_tonight') {
+      setDeskToast({
+        variant: 'info',
+        message: 'Free tonight',
+      });
+      return;
+    }
+    setDeskToast((current) =>
+      current?.message === 'Free tonight' ? null : current
+    );
+  }, [planBedFilter, planMoveMode]);
+
+  useEffect(() => {
     if (deskTab === 'plan' || !planMoveMode) return;
     cancelPlanMoveMode();
   }, [cancelPlanMoveMode, deskTab, planMoveMode]);
@@ -2387,11 +2401,12 @@ export function ReceptionCheckInPanel({
   );
 
   const planMoveFocus = planMoveMode !== null;
+  const freeTonightFocus = planBedFilter === 'free_tonight' && !planMoveFocus;
   const planStickyChromeRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (deskTab !== 'plan' || moreMenuOpen) {
-      document.documentElement.style.removeProperty(RECEPTION_STICKY_CHROME_HEIGHT_VAR);
+      document.documentElement.style.removeProperty(RECEPTION_STICKY_HEADER_HEIGHT_VAR);
       return;
     }
 
@@ -2401,7 +2416,7 @@ export function ReceptionCheckInPanel({
     const publishHeight = () => {
       const height = Math.ceil(el.getBoundingClientRect().height);
       document.documentElement.style.setProperty(
-        RECEPTION_STICKY_CHROME_HEIGHT_VAR,
+        RECEPTION_STICKY_HEADER_HEIGHT_VAR,
         `${height}px`
       );
     };
@@ -2414,7 +2429,7 @@ export function ReceptionCheckInPanel({
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', publishHeight);
-      document.documentElement.style.removeProperty(RECEPTION_STICKY_CHROME_HEIGHT_VAR);
+      document.documentElement.style.removeProperty(RECEPTION_STICKY_HEADER_HEIGHT_VAR);
     };
   }, [deskTab, moreMenuOpen, planMoveFocus]);
 
@@ -2437,7 +2452,9 @@ export function ReceptionCheckInPanel({
 
       {canCheckIn ? (
         <ReceptionDeskFabCluster
-          visible={!(planMoveFocus || issueOverlayOpen || editDraft !== null)}
+          visible={
+            !(planMoveFocus || freeTonightFocus || issueOverlayOpen || editDraft !== null)
+          }
           openBookingInboxCount={bookingInbox.length}
           onNewBooking={() => {
             setIssueOverlayOpen(true);
@@ -2454,11 +2471,32 @@ export function ReceptionCheckInPanel({
           variant={deskToast.variant}
           message={deskToast.message}
           placement="bottom"
-          onDismiss={planMoveFocus ? cancelPlanMoveMode : dismissDeskToast}
-          autoDismissMs={
-            planMoveFocus ? null : deskToast.variant === 'success' ? 2000 : 5000
+          className={
+            planMoveFocus || freeTonightFocus
+              ? RECEPTION_MODE_TOAST_BOTTOM_CLASS
+              : undefined
           }
-          dismissAriaLabel={planMoveFocus ? 'Cancel move' : 'Dismiss'}
+          onDismiss={
+            planMoveFocus
+              ? cancelPlanMoveMode
+              : freeTonightFocus
+                ? () => setPlanBedFilter('all')
+                : dismissDeskToast
+          }
+          autoDismissMs={
+            planMoveFocus || freeTonightFocus
+              ? null
+              : deskToast.variant === 'success'
+                ? 2000
+                : 5000
+          }
+          dismissAriaLabel={
+            planMoveFocus
+              ? 'Cancel move'
+              : freeTonightFocus
+                ? 'Show all beds'
+                : 'Dismiss'
+          }
         />
       ) : null}
 
@@ -2865,7 +2903,8 @@ export function ReceptionCheckInPanel({
             <div
               ref={deskTab === 'plan' ? planStickyChromeRef : undefined}
               className={stickyChromeClassName}
-            >              <div
+            >
+              <div
                 className={cn(
                   planMoveFocus && 'pointer-events-none select-none opacity-40'
                 )}
@@ -2873,26 +2912,6 @@ export function ReceptionCheckInPanel({
               >
                 {deskHeader}
               </div>
-              {deskTab === 'plan' ? (
-                <div className="flex items-start gap-2">
-                  <div
-                    id={RECEPTION_PLAN_TOOLBAR_SLOT_ID}
-                    className="min-w-0 flex-1"
-                  />
-                  {!planMoveFocus ? (
-                    <ReceptionPlanBookingShortcuts
-                      className="hidden shrink-0 lg:flex"
-                      openBookingInboxCount={bookingInbox.length}
-                      onOpenBookingInbox={() =>
-                        navigateDeskTab('booking-inbox', { clearStayId: true })
-                      }
-                      onOpenArchive={() =>
-                        navigateDeskTab('archive', { clearStayId: true })
-                      }
-                    />
-                  ) : null}
-                </div>
-              ) : null}
             </div>
 
             {!planMoveFocus ? <ReceptionPushOptIn tenantSlug={tenantSlug} /> : null}
@@ -2978,6 +2997,26 @@ export function ReceptionCheckInPanel({
                 getStayQuickActions={canCheckIn ? getStayQuickActions : undefined}
                 onStayQuickAction={canCheckIn ? handleStayQuickAction : undefined}
                 quickActionsBusy={planQuickBusy}
+                toolbarAccessory={
+                  !planMoveFocus && canCheckIn ? (
+                    <>
+                      <Separator
+                        orientation="vertical"
+                        className="hidden h-8 self-center lg:block"
+                      />
+                      <ReceptionPlanBookingShortcuts
+                        className="hidden shrink-0 lg:flex"
+                        openBookingInboxCount={bookingInbox.length}
+                        onOpenBookingInbox={() =>
+                          navigateDeskTab('booking-inbox', { clearStayId: true })
+                        }
+                        onOpenArchive={() =>
+                          navigateDeskTab('archive', { clearStayId: true })
+                        }
+                      />
+                    </>
+                  ) : null
+                }
               />
             </TabsContent>
 

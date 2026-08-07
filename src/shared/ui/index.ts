@@ -10,6 +10,19 @@ export {
   type ConfirmDialogActionVariant,
   type ConfirmDialogProps,
 } from './ConfirmDialog';
+export {
+  Dialog,
+  DialogTrigger,
+  DialogClose,
+  DialogPortal,
+  DialogOverlay,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from './dialog';
 export { Spinner, type SpinnerSize } from './spinner';
 export { useActionFeedback, useLinkPressFeedback } from './action-feedback';
 export { AppLink, RoutePendingProvider, useAppNavigation, useRoutePending } from './navigation';

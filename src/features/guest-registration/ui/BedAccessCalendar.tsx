@@ -1,7 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { GuestStayRecordWithLink } from '@/entities/guest-stay';
 import { stayRecordCheckInDate, stayRecordCheckOutDate } from '@/entities/guest-stay';
 import { guestStayCoversNight } from '@/entities/guest-stay/lib/guestAccessIntervals';
@@ -49,10 +48,15 @@ import type {
   PlanStayQuickAction,
   PlanStayQuickActionId,
 } from '../lib/resolvePlanStayQuickActions';
-import { RECEPTION_PLAN_DAY_HEADER_STICKY_TOP, RECEPTION_PLAN_TOOLBAR_SLOT_ID } from '../lib/receptionStickyChrome';
+import {
+  RECEPTION_PLAN_DAY_HEADER_STICKY_TOP,
+  RECEPTION_PLAN_TOOLBAR_STICKY_TOP,
+  RECEPTION_PLAN_TOOLBAR_SURFACE,
+  RECEPTION_STICKY_CHROME_Z,
+  RECEPTION_STICKY_TOOLBAR_HEIGHT_VAR,
+} from '../lib/receptionStickyChrome';
 import { usePlanCalendarPeriodSwipe } from '../lib/usePlanCalendarPeriodSwipe';
-import { PlanQuickFiltersBar } from './PlanQuickFiltersBar';
-import { PlanQuickFiltersSheet } from './PlanQuickFiltersSheet';
+import { PlanQuickFiltersDialog } from './PlanQuickFiltersDialog';
 import { PlanCleaningIndicatorHelpSheet } from './PlanCleaningIndicatorHelpSheet';
 import {
   PlanStayQuickActionsContextMenu,
@@ -119,6 +123,8 @@ interface BedAccessCalendarProps {
   getStayQuickActions?: (stayId: string) => PlanStayQuickAction[];
   onStayQuickAction?: (stayId: string, actionId: PlanStayQuickActionId) => void;
   quickActionsBusy?: boolean;
+  /** Trailing sticky tool-row content (e.g. Inbox/Archive on desktop). */
+  toolbarAccessory?: ReactNode;
 }
 
 const VIEW_MODE_ITEMS: {
@@ -225,6 +231,7 @@ export function BedAccessCalendar({
   getStayQuickActions,
   onStayQuickAction,
   quickActionsBusy = false,
+  toolbarAccessory,
 }: BedAccessCalendarProps) {
   const isMobile = useIsMobileCalendar();
   const isBelowLg = useIsReceptionStayDetailBelowLg();
@@ -234,7 +241,7 @@ export function BedAccessCalendar({
   const [quickFilters, setQuickFilters] = useState<PlanQuickFiltersState>(DEFAULT_PLAN_QUICK_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [cleaningHelpOpen, setCleaningHelpOpen] = useState(false);
-  const [toolbarSlotEl, setToolbarSlotEl] = useState<HTMLElement | null>(null);
+  const toolbarStickyRef = useRef<HTMLDivElement | null>(null);
   const quickFiltersSlugRef = useRef<string | null>(null);
   const [quickMenu, setQuickMenu] = useState<StayQuickMenuState | null>(null);
   const [pendingMoveTargetBedId, setPendingMoveTargetBedId] = useState<string | null>(null);
@@ -259,8 +266,8 @@ export function BedAccessCalendar({
     [movingStayId, stays]
   );
   const periodSwipeEnabled = isBelowLg && !moveActive;
-  /** `<lg`: entire period fits viewport width (no horizontal day scroll). */
-  const fitWidth = isBelowLg;
+  /** Compact sticky room/bed rail on all breakpoints (fit period width, no wide desktop rail). */
+  const fitWidth = true;
   const periodSwipe = usePlanCalendarPeriodSwipe({
     enabled: periodSwipeEnabled,
     onShift: (direction) => {
@@ -322,13 +329,29 @@ export function BedAccessCalendar({
 
   useEffect(() => () => clearLongPress(), []);
 
-  useLayoutEffect(() => {
-    if (!embedded) {
-      setToolbarSlotEl(null);
-      return;
-    }
-    setToolbarSlotEl(document.getElementById(RECEPTION_PLAN_TOOLBAR_SLOT_ID));
-  }, [embedded]);
+  useEffect(() => {
+    const el = toolbarStickyRef.current;
+    if (!el) return;
+
+    const publishHeight = () => {
+      const height = Math.ceil(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty(
+        RECEPTION_STICKY_TOOLBAR_HEIGHT_VAR,
+        `${height}px`
+      );
+    };
+
+    publishHeight();
+    const observer = new ResizeObserver(publishHeight);
+    observer.observe(el);
+    window.addEventListener('resize', publishHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', publishHeight);
+      document.documentElement.style.removeProperty(RECEPTION_STICKY_TOOLBAR_HEIGHT_VAR);
+    };
+  }, [moveActive, toolbarAccessory]);
 
   useEffect(() => {
     const slug = tenantSlug?.trim() ?? '';
@@ -428,17 +451,14 @@ export function BedAccessCalendar({
   const toggleFreeBedsFilter = () => {
     handleBedFilterChange(freeBedsFilterOn ? 'all' : 'free_tonight');
   };
-  const anyFiltersActive = freeBedsFilterOn || isPlanQuickFiltersActive(quickFilters);
-
-  if (snapshot.roomGroups.length === 0) {
-    return <p className="text-xs text-muted-foreground">No beds to show on the calendar.</p>;
-  }
+  const structuralFiltersActive = isPlanQuickFiltersActive(quickFilters);
 
   const monthLabel = formatPlanMonthLabel(snapshot.rangeStart, lifecycleToday);
   const todayInView = isPlanTodayInVisibleDays(lifecycleToday, snapshot.days);
   const viewSurface = isBelowLg ? 'mobile' : 'desktop';
   const viewModeItems = VIEW_MODE_ITEMS.filter((item) => item.surfaces.includes(viewSurface));
   const quickFiltersHideAll = quickFilteredRoomGroups.length === 0;
+  const noBeds = snapshot.roomGroups.length === 0;
 
   const toolbar = (
     <div className="flex w-full flex-nowrap items-center gap-2">
@@ -467,7 +487,7 @@ export function BedAccessCalendar({
       ) : null}
       <Button
         type="button"
-        size="sm"
+        size="default"
         variant="outline"
         className="hidden lg:inline-flex"
         onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, -1))}
@@ -482,83 +502,87 @@ export function BedAccessCalendar({
       ) : null}
       <Button
         type="button"
-        size="sm"
+        size="default"
         variant="outline"
         className="hidden lg:inline-flex"
         onClick={() => setAnchorDate((current) => shiftCalendarAnchor(current, effectiveView, 1))}
       >
         Next
       </Button>
-      <div className="ml-auto shrink-0">
-        {isBelowLg ? (
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="ghost"
-            aria-label="Filters"
-            aria-expanded={filtersOpen}
-            aria-haspopup="dialog"
-            className="relative"
-            onClick={() => setFiltersOpen(true)}
-          >
-            <Icon icon={Funnel} />
-            {anyFiltersActive ? (
-              <span
-                aria-hidden
-                className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary"
-              />
-            ) : null}
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant={filtersOpen || anyFiltersActive ? 'default' : 'outline'}
-            aria-expanded={filtersOpen}
-            aria-controls="plan-filters-panel"
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            Filters
-            {anyFiltersActive && !filtersOpen ? (
-              <span
-                aria-hidden
-                className="ml-1.5 inline-block size-1.5 rounded-full bg-primary-foreground"
-              />
-            ) : null}
-          </Button>
-        )}
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        <Button
+          type="button"
+          size="sm"
+          variant={freeBedsFilterOn ? 'default' : 'outline'}
+          aria-pressed={freeBedsFilterOn}
+          aria-label="Show beds free tonight"
+          className="hidden lg:inline-flex"
+          onClick={toggleFreeBedsFilter}
+        >
+          Free tonight
+        </Button>
+        <Button
+          type="button"
+          size="icon-lg"
+          variant="ghost"
+          aria-label="Filters"
+          aria-expanded={filtersOpen}
+          aria-haspopup="dialog"
+          className="relative size-11 lg:size-10"
+          onClick={() => setFiltersOpen(true)}
+        >
+          <Icon icon={Funnel} className="size-5" />
+          {structuralFiltersActive ? (
+            <span
+              aria-hidden
+              className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary"
+            />
+          ) : null}
+        </Button>
       </div>
     </div>
   );
 
+  const stickyToolPanel = (
+    <div
+      ref={toolbarStickyRef}
+      className={cn(
+        'sticky -mx-4 px-4 py-1',
+        RECEPTION_STICKY_CHROME_Z,
+        RECEPTION_PLAN_TOOLBAR_STICKY_TOP,
+        RECEPTION_PLAN_TOOLBAR_SURFACE,
+        'border-b'
+      )}
+    >
+      <div className="flex w-full items-start gap-2">
+        <div className="min-w-0 flex-1">{toolbar}</div>
+        {toolbarAccessory}
+      </div>
+    </div>
+  );
+
+  if (noBeds) {
+    return (
+      <div>
+        {stickyToolPanel}
+        <p className="mt-3 text-xs text-muted-foreground">No beds to show on the calendar.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      {toolbarSlotEl ? createPortal(toolbar, toolbarSlotEl) : toolbar}
+    <div>
+      {stickyToolPanel}
 
-      {!isBelowLg && filtersOpen ? (
-        <div id="plan-filters-panel">
-          <PlanQuickFiltersBar
-            settings={settings}
-            filters={quickFilters}
-            onFiltersChange={handleQuickFiltersChange}
-            totalRoomCount={snapshot.roomGroups.length}
-            visibleRoomCount={quickFilteredRoomGroups.length}
-            freeBedsFilterOn={freeBedsFilterOn}
-            onToggleFreeBeds={toggleFreeBedsFilter}
-          />
-        </div>
-      ) : null}
-
-      <PlanQuickFiltersSheet
-        open={isBelowLg && filtersOpen}
+      <div className="mt-3 space-y-3">
+      <PlanQuickFiltersDialog
+        open={filtersOpen}
         onOpenChange={setFiltersOpen}
         settings={settings}
         filters={quickFilters}
         onFiltersChange={handleQuickFiltersChange}
         totalRoomCount={snapshot.roomGroups.length}
         visibleRoomCount={quickFilteredRoomGroups.length}
-        freeBedsFilterOn={freeBedsFilterOn}
-        onToggleFreeBeds={toggleFreeBedsFilter}
       />
 
       <PlanCleaningIndicatorHelpSheet
@@ -575,7 +599,7 @@ export function BedAccessCalendar({
       {quickFiltersHideAll ? (
         <p className="text-xs text-muted-foreground">No rooms match these filters.</p>
       ) : effectiveBedFilter === 'free_tonight' && visibleRoomGroups.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No free beds for this night.</p>
+        <p className="text-xs text-muted-foreground">No beds free tonight.</p>
       ) : (
       <div
         className={cn(
@@ -599,51 +623,77 @@ export function BedAccessCalendar({
                     fitWidth ? 'w-10 max-w-10' : 'w-28'
                   )}
                 >
-                  {bedStatuses != null ? (
-                    <div className="flex items-start justify-start pr-2 pl-0">
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        aria-label="What cleaning indicators mean"
-                        className="size-8 text-muted-foreground"
-                        onClick={() => setCleaningHelpOpen(true)}
-                      >
-                        <Icon icon={CircleHelp} />
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="sr-only">Bed</span>
-                  )}
+                  <div className="flex items-start justify-start pr-2 pl-0">
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label="Plan help"
+                      className="size-8 text-muted-foreground"
+                      onClick={() => setCleaningHelpOpen(true)}
+                    >
+                      <Icon icon={CircleHelp} />
+                    </Button>
+                  </div>
                 </th>,
                 ...snapshot.days.map((nightDate) => {
                   const isTodayColumn = nightDate === lifecycleToday;
                   const { weekday, day } = formatDayHeaderParts(nightDate);
+                  const dayHeaderInner = (
+                    <>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">
+                        {weekday}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-base leading-none tabular-nums',
+                          isTodayColumn
+                            ? 'font-semibold text-primary'
+                            : 'font-medium text-foreground'
+                        )}
+                      >
+                        {day}
+                      </span>
+                    </>
+                  );
                   return (
                     <th
                       key={nightDate}
-                      title={`${weekday} ${day}${isTodayColumn ? ' · Today' : ''}`}
+                      title={`${weekday} ${day}${isTodayColumn ? ' · Today' : ''}${isTodayColumn && freeBedsFilterOn ? ' · Free tonight' : ''}`}
                       className={cn(
                         // Day labels outside booking table; sticky top gap matches resting air.
                         'sticky z-[15] min-w-0 border-0 bg-background px-0.5 pt-2 pb-2.5 text-center font-medium',
                         RECEPTION_PLAN_DAY_HEADER_STICKY_TOP
                       )}
                     >
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span className="text-xs font-medium tracking-wide text-muted-foreground">
-                          {weekday}
-                        </span>
-                        <span
+                      {isTodayColumn ? (
+                        <button
+                          type="button"
+                          aria-pressed={freeBedsFilterOn}
+                          aria-label={
+                            freeBedsFilterOn
+                              ? 'Show all beds'
+                              : 'Show beds free tonight'
+                          }
+                          disabled={moveActive}
+                          onClick={toggleFreeBedsFilter}
                           className={cn(
-                            'text-base leading-none tabular-nums',
-                            isTodayColumn
-                              ? 'font-semibold text-primary'
-                              : 'font-medium text-foreground'
+                            'mx-auto flex w-full max-w-full flex-col items-center gap-0.5 rounded-md px-0.5 py-0.5 outline-none',
+                            'focus-visible:ring-2 focus-visible:ring-ring/30',
+                            moveActive
+                              ? 'cursor-default bg-muted opacity-60'
+                              : freeBedsFilterOn
+                                ? 'cursor-pointer bg-primary/10'
+                                : 'cursor-pointer bg-muted'
                           )}
                         >
-                          {day}
-                        </span>
-                      </div>
+                          {dayHeaderInner}
+                        </button>
+                      ) : (
+                        <div className="flex flex-col items-center gap-0.5 px-0.5 py-0.5">
+                          {dayHeaderInner}
+                        </div>
+                      )}
                     </th>
                   );
                 }),
@@ -1022,6 +1072,7 @@ export function BedAccessCalendar({
           />
         )
       ) : null}
+      </div>
     </div>
   );
 }
